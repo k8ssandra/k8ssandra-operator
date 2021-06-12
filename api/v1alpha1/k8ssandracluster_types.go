@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	cassdcv1beta1 "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +26,17 @@ import (
 
 // K8ssandraClusterSpec defines the desired state of K8ssandraCluster
 type K8ssandraClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Cassandra *Cassandra `json:"cassandra,omitempty"`
+}
 
-	// Foo is an example field of K8ssandraCluster. Edit k8ssandracluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+type Cassandra struct {
+	Datacenters []CassandraDatacenterTemplateSpec `json:"datacenters,omitempty"`
+}
+
+type CassandraDatacenterTemplateSpec struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec cassdcv1beta1.CassandraDatacenterSpec `json:"spec,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
