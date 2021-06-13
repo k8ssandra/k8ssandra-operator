@@ -1,0 +1,15 @@
+# The cass-operator-crb ClusterRoleBinding requires a namespace for the ServiceAccount.
+# Running `kustomize build | kubectl apply -f -` directly against this directory will fail
+# since the namespace is not declared. You will instead need to run against another
+# kustomization.yaml that declares the namespace and that declares this parent directory as
+# a resource.
+
+resources:
+- crd
+- service_account.yaml
+- webhook_secret.yaml
+- cluster_role.yaml
+- cluster_role_binding.yaml
+- role.yaml
+- role_binding.yaml
+- deployment.yaml
