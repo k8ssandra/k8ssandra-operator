@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/hash"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -128,7 +128,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func deepHashString(obj interface{}) string {
 	hasher := sha256.New()
-	util.DeepHashObject(hasher, obj)
+	hash.DeepHashObject(hasher, obj)
 	hashBytes := hasher.Sum([]byte{})
 	b64Hash := base64.StdEncoding.EncodeToString(hashBytes)
 	return b64Hash
