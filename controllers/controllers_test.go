@@ -17,11 +17,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"testing"
+	"time"
 )
 
 var cfg *rest.Config
 var testClient client.Client
 var testEnv *envtest.Environment
+
+const (
+	timeout  = time.Second * 10
+	interval = time.Millisecond * 250
+)
 
 func TestControllers(t *testing.T) {
 	defer afterSuite(t)
