@@ -45,9 +45,9 @@ type K8ssandraClusterReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=k8ssandra.io.k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=k8ssandra.io.k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=k8ssandra.io.k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
+//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -78,8 +78,8 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			key := types.NamespacedName{Namespace: template.Namespace, Name: template.Name}
 			desired := &cassdcapi.CassandraDatacenter{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: template.Namespace,
-					Name: template.Name,
+					Namespace:   req.Namespace,
+					Name:        template.Name,
 					Annotations: map[string]string{},
 				},
 				Spec: template.Spec,
@@ -89,6 +89,8 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			desired.Annotations[resourceHashAnnotation] = deepHashString(desiredHash)
 
 			actual := &cassdcapi.CassandraDatacenter{}
+
+			// TODO set controller reference
 
 			if err = r.Get(ctx, key, actual); err == nil {
 				if actualHash, found := actual.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredHash) {
@@ -109,7 +111,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 					}
 				} else {
-					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter")
+					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", key)
 					return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 				}
 			}

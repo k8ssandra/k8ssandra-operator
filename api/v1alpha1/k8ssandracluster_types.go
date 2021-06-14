@@ -36,6 +36,8 @@ type Cassandra struct {
 type CassandraDatacenterTemplateSpec struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	Name string `json:"name,omitempty"`
+
 	Spec cassdcv1beta1.CassandraDatacenterSpec `json:"spec,omitempty"`
 }
 

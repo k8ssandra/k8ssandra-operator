@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: k8ssandraclusters.k8ssandra.io.k8ssandra.io
+  name: k8ssandraclusters.k8ssandra.io
 spec:
-  group: k8ssandra.io.k8ssandra.io
+  group: k8ssandra.io
   names:
     kind: K8ssandraCluster
     listKind: K8ssandraClusterList
@@ -43,6 +43,8 @@ spec:
                       properties:
                         metadata:
                           type: object
+                        name:
+                          type: string
                         spec:
                           description: CassandraDatacenterSpec defines the desired
                             state of a CassandraDatacenter
