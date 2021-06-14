@@ -76,16 +76,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if k8ssandra.Spec.Cassandra != nil {
 		for _, template := range k8ssandra.Spec.Cassandra.Datacenters {
 			key := types.NamespacedName{Namespace: template.Meta.Namespace, Name: template.Meta.Name}
-			desired := &cassdcapi.CassandraDatacenter{
-				ObjectMeta: metav1.ObjectMeta{
-					// TODO Check to see if Meta.Namespace is set
-					Namespace:   req.Namespace,
-					Name:        template.Meta.Name,
-					Annotations: map[string]string{},
-				},
-				Spec: template.Spec,
-			}
-
+			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template)
 			desiredHash := deepHashString(desired)
 			desired.Annotations[resourceHashAnnotation] = deepHashString(desiredHash)
 
@@ -127,6 +118,27 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}).
 		Complete(r)
+}
+
+func newDatacenter(namespace, cluster string, template api.CassandraDatacenterTemplateSpec) *cassdcapi.CassandraDatacenter {
+	return &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			// TODO Check to see if Meta.Namespace is set
+			Name:        template.Meta.Name,
+			Annotations: map[string]string{},
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:   cluster,
+			Size:          template.Size,
+			ServerType:    "cassandra",
+			ServerVersion: template.ServerVersion,
+			Resources:     template.Resources,
+			Config:        template.Config,
+			Racks:         template.Racks,
+			StorageConfig: template.StorageConfig,
+		},
+	}
 }
 
 func deepHashString(obj interface{}) string {

@@ -12,6 +12,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
 	golang.org/x/sys v0.0.0-20210426230700-d19ff857e887 // indirect
+	k8s.io/api v0.20.2 // indirect
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kubernetes v1.20.2

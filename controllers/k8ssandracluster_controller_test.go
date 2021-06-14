@@ -19,17 +19,14 @@ func createDatacenter(t *testing.T, ctx context.Context, namespace string) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.Cassandra{
+				Cluster: "test",
 				Datacenters: []api.CassandraDatacenterTemplateSpec{
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						Spec: cassdcapi.CassandraDatacenterSpec{
-							ClusterName:   "test",
-							Size:          1,
-							ServerType:    "cassandra",
-							ServerVersion: "3.11.10",
-						},
+						Size:          1,
+						ServerVersion: "3.11.10",
 					},
 				},
 			},
