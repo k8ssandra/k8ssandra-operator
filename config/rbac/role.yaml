@@ -1,26 +1,6 @@
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: k8ssandra-operator
-rules:
-- apiGroups:
-  - k8ssandra.io
-  resources:
-  - k8ssandraclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
@@ -31,6 +11,18 @@ rules:
   - cassandra.datastax.com
   resources:
   - cassandradatacenters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - k8ssandraclusters
   verbs:
   - create
   - delete

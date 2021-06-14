@@ -44,7 +44,9 @@ func beforeSuite(t *testing.T) {
 
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "build", "config", "crds")},
+			//filepath.Join("..", "build", "config", "crds")},
+			filepath.Join("..", "config", "crd", "bases"),
+			filepath.Join("..", "config", "cass-operator", "crd", "bases")},
 	}
 
 	var err error
@@ -67,6 +69,14 @@ func beforeSuite(t *testing.T) {
 		Scheme: scheme.Scheme,
 	}).SetupWithManager(k8sManager)
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler")
+
+	go func() {
+		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		assert.NoError(t, err, "failed to start manager")
+	}()
+
+	testClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	require.NoError(err, "failed to create controller-runtime client")
 }
 
 func afterSuite(t *testing.T) {

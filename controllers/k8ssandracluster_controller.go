@@ -75,11 +75,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if k8ssandra.Spec.Cassandra != nil {
 		for _, template := range k8ssandra.Spec.Cassandra.Datacenters {
-			key := types.NamespacedName{Namespace: template.Namespace, Name: template.Name}
+			key := types.NamespacedName{Namespace: template.Meta.Namespace, Name: template.Meta.Name}
 			desired := &cassdcapi.CassandraDatacenter{
 				ObjectMeta: metav1.ObjectMeta{
+					// TODO Check to see if Meta.Namespace is set
 					Namespace:   req.Namespace,
-					Name:        template.Name,
+					Name:        template.Meta.Name,
 					Annotations: map[string]string{},
 				},
 				Spec: template.Spec,

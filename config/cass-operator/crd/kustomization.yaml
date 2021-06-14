@@ -1,2 +1,2 @@
 resources:
-- cassandradatacenter.yaml
+- bases/cassandradatacenter.yaml

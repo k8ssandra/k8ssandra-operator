@@ -34,9 +34,7 @@ type Cassandra struct {
 }
 
 type CassandraDatacenterTemplateSpec struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Name string `json:"name,omitempty"`
+	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
 
 	Spec cassdcv1beta1.CassandraDatacenterSpec `json:"spec,omitempty"`
 }
@@ -66,6 +64,16 @@ type K8ssandraClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []K8ssandraCluster `json:"items"`
+}
+
+type EmbeddedObjectMeta struct {
+	Namespace string `json:"namespace,omitempty"`
+
+	Name string `json:"name,omitempty"`
+
+	Labels map[string]string `json:"labels,omitempty"`
+
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 func init() {

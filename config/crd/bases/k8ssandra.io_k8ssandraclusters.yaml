@@ -42,9 +42,20 @@ spec:
                     items:
                       properties:
                         metadata:
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            name:
+                              type: string
+                            namespace:
+                              type: string
                           type: object
-                        name:
-                          type: string
                         spec:
                           description: CassandraDatacenterSpec defines the desired
                             state of a CassandraDatacenter

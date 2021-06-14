@@ -21,10 +21,11 @@ func createDatacenter(t *testing.T, ctx context.Context, namespace string) {
 			Cassandra: &api.Cassandra{
 				Datacenters: []api.CassandraDatacenterTemplateSpec{
 					{
-						ObjectMeta: metav1.ObjectMeta{
+						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
 						Spec: cassdcapi.CassandraDatacenterSpec{
+							ClusterName:   "test",
 							Size:          1,
 							ServerType:    "cassandra",
 							ServerVersion: "3.11.10",
