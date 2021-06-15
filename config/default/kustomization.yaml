@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-#namespace: k8ssandra-operator-system
+namespace: k8ssandra-operator
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named

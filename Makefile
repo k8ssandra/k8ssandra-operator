@@ -108,6 +108,11 @@ docker-push: ## Push docker image with the manager.
 kind-load-image:
 	kind load docker-image ${IMG}
 
+PHONY: e2e-test
+e2e-test:
+	@echo Running e2e tests
+	go test -v -timeout 3600s ./test/e2e/...
+
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
