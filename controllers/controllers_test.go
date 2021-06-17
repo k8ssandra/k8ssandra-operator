@@ -36,7 +36,7 @@ func TestControllers(t *testing.T) {
 	ctx := context.Background()
 	namespace := "default"
 
-	t.Run("Create Datacenter", controllerTest(t, ctx, namespace, createDatacenter))
+	t.Run("Create Datacenter", controllerTest(ctx, namespace, createDatacenter))
 }
 
 func beforeSuite(t *testing.T) {
@@ -100,7 +100,7 @@ func registerApis() error {
 
 type ControllerTest func(*testing.T, context.Context, string)
 
-func controllerTest(t *testing.T, ctx context.Context, namespace string, test ControllerTest) func(*testing.T) {
+func controllerTest(ctx context.Context, namespace string, test ControllerTest) func(*testing.T) {
 	//err := testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
 	//require.NoError(t, err, "failed to create namespace")
 

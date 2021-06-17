@@ -64,6 +64,8 @@ type Cassandra struct {
 	Datacenters []CassandraDatacenterTemplateSpec `json:"datacenters,omitempty"`
 }
 
+// +kubebuilder:pruning:PreserveUnknownFields
+
 type CassandraDatacenterTemplateSpec struct {
 	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
 
