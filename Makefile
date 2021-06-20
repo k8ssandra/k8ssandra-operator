@@ -1,3 +1,6 @@
+# Makefile uses sh by default, but Github Actions (ubuntu-latest) requires dash/bash to work.
+SHELL := /bin/bash
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -110,8 +113,13 @@ kind-load-image:
 
 PHONY: e2e-test
 e2e-test:
+ifdef E2E_TEST
+	@echo Running e2e test $(E2E_TEST)
+	go test -v -timeout 3600s ./test/e2e/... -run="TestOperator/$(E2E_TEST)"
+else
 	@echo Running e2e tests
 	go test -v -timeout 3600s ./test/e2e/...
+endif
 
 ##@ Deployment
 

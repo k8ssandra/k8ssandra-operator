@@ -1,0 +1,101 @@
+name: Run e2e Tests
+on:
+  push:
+    branches:
+      - main
+      - initial-cassandra
+  pull_request: [ main ]
+jobs:
+  build_image:
+    name: Build Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-integ-
+      - name: Build image
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          file: Dockerfile
+          context: .
+          push: false
+          tags: k8ssandra/k8ssandra-operator:latest
+          platforms: linux/amd64
+          outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Upload k8ssandra-operator image
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp/k8ssandra-operator.tar
+  kind_e2e_tests:
+    runs-on: ubuntu-latest
+    needs: build_image
+    strategy:
+      matrix:
+        e2e_test:
+          - CreateSingleDatacenterCluster
+        fail_fast: false
+    name: ${{ matrix.e2e_test }}
+    env:
+      GOPATH: /home/runner/go
+      GOROOT: /usr/local/go1.16
+      CGO_ENABLED: 0
+    steps:
+      - name: Free diskspace by removing unused packages
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+      - uses: actions/checkout@v2
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Create Kind Cluster
+        uses: helm/kind-action@v1.1.0
+        with:
+          version: v0.11.1
+          node_image: kindest/node:v1.20.7
+          cluster_name: kind
+          config: tests/testdata/kind/kind-config-six-workers.yaml
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download k8ssandra-operator image
+        uses: actions/download-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/k8ssandra-operator.tar
+      - name: Load image on kind nodes
+        run: make kind-load-image
+      - name: Run e2e test ( ${{ matrix.e2e_test }} )
+        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
+      - name: Archive k8s logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8s-logs-${{ matrix.e2e_test }}
+          path: ./build/test

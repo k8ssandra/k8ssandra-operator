@@ -189,7 +189,7 @@ func DumpClusterInfo(t *testing.T, namespace string) error {
 
 	now := time.Now()
 	outputDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", t.Name(), now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
-	
+
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create test output directory %s: %s", outputDir, err)
 	}

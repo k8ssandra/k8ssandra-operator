@@ -38,7 +38,7 @@ func e2eTest(ctx context.Context, dir string, test e2eTestFunc) func(*testing.T)
 		defer afterTest(t, namespace)
 
 		if err == nil {
-			//test(t, ctx, namespace)
+			test(t, ctx, namespace)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}
