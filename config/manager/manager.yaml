@@ -29,7 +29,7 @@ spec:
         - /manager
         args: []
 #        - --leader-elect
-        image: k8ssandra.io/k8ssandra-operator:latest
+        image: k8ssandra/k8ssandra-operator:latest
         imagePullPolicy: IfNotPresent
         name: k8ssandra-operator
         env:
