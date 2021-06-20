@@ -79,7 +79,7 @@ jobs:
           version: v0.11.1
           node_image: kindest/node:v1.20.7
           cluster_name: kind
-          config: tests/testdata/kind/kind-config-six-workers.yaml
+          config: test/testdata/kind/kind-config-six-workers.yaml
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Download k8ssandra-operator image
