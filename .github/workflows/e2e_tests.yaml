@@ -92,6 +92,8 @@ jobs:
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Load image on kind nodes
         run: make kind-load-image
+      - name: Install kustomize
+        run: make kustomize
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
       - name: Archive k8s logs
