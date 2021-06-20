@@ -46,7 +46,7 @@ jobs:
       matrix:
         e2e_test:
           - CreateSingleDatacenterCluster
-        fail_fast: false
+      fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
       GOPATH: /home/runner/go
