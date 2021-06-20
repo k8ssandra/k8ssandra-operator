@@ -32,7 +32,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # k8ssandra.io/k8ssandra-operator-bundle:$VERSION and k8ssandra.io/k8ssandra-operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= k8ssandra.io/k8ssandra-operator
+IMAGE_TAG_BASE ?= k8ssandra/k8ssandra-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
