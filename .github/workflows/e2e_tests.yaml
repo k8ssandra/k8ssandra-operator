@@ -4,7 +4,8 @@ on:
     branches:
       - main
       - initial-cassandra
-  pull_request: [ main ]
+  pull_request:
+    branches: [ main ]
 jobs:
   build_image:
     name: Build Image
