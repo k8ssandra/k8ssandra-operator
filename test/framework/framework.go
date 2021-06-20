@@ -2,18 +2,20 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
+	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,19 +82,6 @@ func DeleteNamespace(name string, timeout, interval time.Duration) error {
 }
 
 func DeployK8ssandraOperator(t *testing.T, namespace string) error {
-	//err := KustomizeAndApply(t, "../testdata/k8ssandra-operator", namespace)
-	//require.NoError(t, err, "failed to run kustomize")
-	//
-	//key := types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"}
-	//require.Eventually(t, func() bool {
-	//	deployment := &appsv1.Deployment{}
-	//	if err := Client.Get(context.TODO(), key, deployment); err != nil {
-	//		t.Logf("failed to get k8ssandra-operator deployment: %v", err)
-	//		return false
-	//	}
-	//	return deployment.Status.Replicas == deployment.Status.ReadyReplicas
-	//}, 60 * time.Second, 3 * time.Second)
-
 	dir := "../testdata/k8ssandra-operator"
 	kdir, err := GetAbsPath(dir)
 	if err != nil {
@@ -148,6 +137,17 @@ func GetAbsPath(dir string) (string, error) {
 	}
 }
 
+func WaitForDeploymentToBeReady(t *testing.T, key types.NamespacedName, timeout, interval time.Duration) error {
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		deployment := &appsv1.Deployment{}
+		if err := Client.Get(context.TODO(), key, deployment); err != nil {
+			t.Logf("failed to get deployment %s: %v", key, err)
+			return false, err
+		}
+		return deployment.Status.Replicas == deployment.Status.ReadyReplicas, nil
+	})
+}
+
 func WaitForCrdsToBecomeActive(t *testing.T) error {
 	return kubectl.WaitForCondition(t, "established", "--timeout=60s", "--all", "crd")
 }
@@ -184,6 +184,16 @@ func DeleteDatacenters(t *testing.T, namespace string) error {
 	})
 }
 
-func WithRandomSuffix(s string) string {
-	return s + "-" + rand.String(6)
+func DumpClusterInfo(t *testing.T, namespace string) error {
+	t.Log("dumping cluster info")
+
+	now := time.Now()
+	outputDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", t.Name(), now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
+	
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create test output directory %s: %s", outputDir, err)
+	}
+
+	return kubectl.DumpClusterInfo(t, namespace, outputDir)
 }
+

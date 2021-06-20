@@ -35,10 +35,10 @@ func e2eTest(ctx context.Context, dir string, test e2eTestFunc) func(*testing.T)
 		testDir := "../testdata/" + dir
 
 		err := beforeTest(t, namespace, testDir)
-		defer afterTest(t, namespace, testDir)
+		defer afterTest(t, namespace)
 
 		if err == nil {
-			test(t, ctx, namespace)
+			//test(t, ctx, namespace)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}
@@ -73,11 +73,15 @@ func beforeTest(t *testing.T, namespace, dir string) error {
 	return nil
 }
 
-func afterTest(t *testing.T, namespace, dir string) {
-	assert.NoError(t, cleanUp(t, namespace, dir), "after test cleanup failed")
+func afterTest(t *testing.T, namespace string) {
+	assert.NoError(t, cleanUp(t, namespace), "after test cleanup failed")
 }
 
-func cleanUp(t *testing.T, namespace, dir string) error {
+func cleanUp(t *testing.T, namespace string) error {
+	if err := framework.DumpClusterInfo(t, namespace); err != nil {
+		t.Logf("failed to dump cluster info: %v", err)
+	}
+
 	if err := framework.DeleteK8ssandraClusters(t, namespace); err != nil {
 		return err
 	}

@@ -58,7 +58,22 @@ func WaitForCondition(t *testing.T, condition string, args ...string) error {
 	kargs = append(kargs, args...)
 
 	cmd := exec.Command("kubectl", kargs...)
-	t.Logf("wait command: %s", cmd.String())
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	t.Log(stdout.String())
+	t.Log(stderr.String())
+
+	return err
+}
+
+func DumpClusterInfo(t *testing.T, namespace, outputDir string) error {
+	args := []string{"cluster-info", "dump", "--namespaces", namespace, "-o", "yaml", "--output-directory", outputDir}
+	cmd := exec.Command("kubectl", args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
