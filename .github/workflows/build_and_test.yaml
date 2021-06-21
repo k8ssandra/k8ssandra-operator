@@ -1,6 +1,7 @@
 name: Run unit and integration tests
 
 on:
+
   push:
     branches:
       - master
@@ -9,7 +10,7 @@ on:
     branches: [ master ]
 
 jobs:
-  testing:
+  unit_integration_tests:
     name: Run unit/integration tests
     runs-on: ubuntu-latest
     env:
