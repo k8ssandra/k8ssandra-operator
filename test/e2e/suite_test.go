@@ -65,8 +65,7 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 
 // beforeTest Creates the test namepace, deploys k8ssandra-operator, and then deploys the
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
-// required by both operators. dir should just be the base name of the text fixture
-// directory that contains manifests to be deployed.
+// required by both operators.
 func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 	if err := framework.CreateNamespace(t, namespace); err != nil {
 		t.Log("failed to create namespace")
@@ -78,7 +77,20 @@ func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 		return err
 	}
 
-	fixtureDir, err := framework.GetAbsPath(fixtureDir)
+	timeout := 1 * time.Minute
+	interval := 1 * time.Second
+
+	if err := framework.WaitForCassOperatorToBeReady(t, namespace, timeout, interval); err != nil {
+		t.Log("failed waiting for cass-operator to be ready")
+		return err
+	}
+
+	if err := framework.WaitForK8ssandraOperatorToBeReady(t, namespace, timeout, interval); err != nil {
+		t.Log("failed waiting for k8ssandra-operator to be ready")
+		return err
+	}
+
+	fixtureDir, err := filepath.Abs(fixtureDir)
 	if err != nil {
 		return err
 	}

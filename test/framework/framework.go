@@ -27,6 +27,11 @@ var (
 	Client client.Client
 )
 
+// TODO Add a Framework type and make functions method on that type
+// By making these functions methods we can pass the testing.T and namespace arguments just
+// once in the constructor. We can also include defaults for the timeout and interval
+// parameters that show up in multiple functions. 
+
 func Init(t *testing.T) {
 	var err error
 
@@ -81,9 +86,11 @@ func DeleteNamespace(name string, timeout, interval time.Duration) error {
 	})
 }
 
+// DeployK8ssandraOperator Deploys k8ssandra-operator, cass-operator, and CRDs. This
+// function blocks until CRDs are ready.
 func DeployK8ssandraOperator(t *testing.T, namespace string) error {
 	dir := "../testdata/k8ssandra-operator"
-	kdir, err := GetAbsPath(dir)
+	kdir, err := filepath.Abs(dir)
 	if err != nil {
 		t.Logf("failed to get full path for %s: %v", dir, err)
 		return err
@@ -112,7 +119,7 @@ func DeployK8ssandraOperator(t *testing.T, namespace string) error {
 }
 
 func UndeployK8ssandraOperator(t *testing.T) error {
-	dir, err := GetAbsPath("../testdata/k8ssandra-operator")
+	dir, err := filepath.Abs("../testdata/k8ssandra-operator")
 	if err != nil {
 		return err
 	}
@@ -129,14 +136,16 @@ func UndeployK8ssandraOperator(t *testing.T) error {
 	return nil
 }
 
-func GetAbsPath(dir string) (string, error) {
-	if path, err := filepath.Abs(dir); err == nil {
-		return filepath.Clean(path), nil
-	} else {
-		return "", err
-	}
+func WaitForK8ssandraOperatorToBeReady(t *testing.T, namespace string, timeout, interval time.Duration) error {
+	return WaitForDeploymentToBeReady(t, types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"}, timeout, interval)
 }
 
+func WaitForCassOperatorToBeReady(t *testing.T, namespace string, timeout, interval time.Duration) error {
+	return WaitForDeploymentToBeReady(t, types.NamespacedName{Namespace: namespace, Name: "cass-operator"}, timeout, interval)
+}
+
+// WaitForDeploymentToBeReady Blocks until the Deployment's
+// .Status.Replicas == .Status.ReadyReplicas.
 func WaitForDeploymentToBeReady(t *testing.T, key types.NamespacedName, timeout, interval time.Duration) error {
 	return wait.Poll(interval, timeout, func() (bool, error) {
 		deployment := &appsv1.Deployment{}
@@ -148,6 +157,7 @@ func WaitForDeploymentToBeReady(t *testing.T, key types.NamespacedName, timeout,
 	})
 }
 
+// WaitForCrdsToBecomeActive Waits for up to 60 seconds until all CRDS are ready.
 func WaitForCrdsToBecomeActive(t *testing.T) error {
 	return kubectl.WaitForCondition(t, "established", "--timeout=60s", "--all", "crd")
 }
@@ -161,6 +171,8 @@ func DeleteK8ssandraClusters(t *testing.T, namespace string) error {
 	return Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace))
 }
 
+// DeleteDatacenters deletes all CassandraDatacenters in namespace. This function blocks
+// all pods have terminated.
 func DeleteDatacenters(t *testing.T, namespace string) error {
 	t.Logf("deleting datacenters in namespace %s", namespace)
 
