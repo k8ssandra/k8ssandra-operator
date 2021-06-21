@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -27,14 +28,22 @@ func beforeSuite(t *testing.T) {
 	framework.Init(t)
 }
 
+// A TestFixture specifies the name of a subdirectory under the test/testdata/fixtures
+// directory. It should consist of one or more yaml manifests.
+type TestFixture string
+
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string)
 
-func e2eTest(ctx context.Context, dir string, test e2eTestFunc) func(*testing.T) {
+func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*testing.T) {
 	return func(t *testing.T) {
-		namespace := dir + "-" + rand.String(6)
-		testDir := "../testdata/" + dir
+		namespace := getTestNamespace(fixture)
+		fixtureDir, err := getTestFixtureDir(fixture)
 
-		err := beforeTest(t, namespace, testDir)
+		if err != nil {
+			t.Fatalf("failed to get fixture directory for %s: %v", fixture, err)
+		}
+
+		err = beforeTest(t, namespace, fixtureDir)
 		defer afterTest(t, namespace)
 
 		if err == nil {
@@ -45,11 +54,20 @@ func e2eTest(ctx context.Context, dir string, test e2eTestFunc) func(*testing.T)
 	}
 }
 
+func getTestNamespace(fixture TestFixture) string {
+	return string(fixture) + "-" + rand.String(6)
+}
+
+func getTestFixtureDir(fixture TestFixture) (string, error) {
+	path := filepath.Join("..", "testdata", "fixtures", string(fixture))
+	return filepath.Abs(path)
+}
+
 // beforeTest Creates the test namepace, deploys k8ssandra-operator, and then deploys the
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
 // required by both operators. dir should just be the base name of the text fixture
 // directory that contains manifests to be deployed.
-func beforeTest(t *testing.T, namespace, dir string) error {
+func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 	if err := framework.CreateNamespace(t, namespace); err != nil {
 		t.Log("failed to create namespace")
 		return err
@@ -60,12 +78,12 @@ func beforeTest(t *testing.T, namespace, dir string) error {
 		return err
 	}
 
-	dir, err := framework.GetAbsPath(dir)
+	fixtureDir, err := framework.GetAbsPath(fixtureDir)
 	if err != nil {
 		return err
 	}
 
-	if err := kubectl.Apply(t, namespace, dir); err != nil {
+	if err := kubectl.Apply(t, namespace, fixtureDir); err != nil {
 		t.Log("kubectl apply failed")
 		return err
 	}
