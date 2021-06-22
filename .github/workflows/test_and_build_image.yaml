@@ -33,7 +33,7 @@ jobs:
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
