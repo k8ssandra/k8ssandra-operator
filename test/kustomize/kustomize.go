@@ -37,7 +37,7 @@ func SetNamespace(t *testing.T, dir, namespace string) error {
 }
 
 func AddResource(t *testing.T, path string) error {
-	cmd := exec.Command("kustomize" ,"edit", "add", "resource", path)
+	cmd := exec.Command("kustomize", "edit", "add", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
 	var out bytes.Buffer
@@ -51,7 +51,7 @@ func AddResource(t *testing.T, path string) error {
 }
 
 func RemoveResource(t *testing.T, path string) error {
-	cmd := exec.Command("kustomize" ,"edit", "remove", "resource", path)
+	cmd := exec.Command("kustomize", "edit", "remove", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
 	var out bytes.Buffer

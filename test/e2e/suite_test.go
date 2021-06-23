@@ -150,7 +150,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
-	}), 3 * time.Minute, 15 * time.Second, "timed out waiting for datacenter to become ready")
+	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter to become ready")
 
 	t.Log("test passed!")
 }

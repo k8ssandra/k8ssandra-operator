@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/util/hash"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -77,6 +78,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		for _, template := range k8ssandra.Spec.Cassandra.Datacenters {
 			key := types.NamespacedName{Namespace: template.Meta.Namespace, Name: template.Meta.Name}
 			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template)
+
+			if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
+				logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
+				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			}
+
 			desiredHash := deepHashString(desired)
 			desired.Annotations[resourceHashAnnotation] = deepHashString(desiredHash)
 

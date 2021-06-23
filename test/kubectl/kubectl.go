@@ -54,7 +54,7 @@ func DeleteBuffer(t *testing.T, b *bytes.Buffer) error {
 }
 
 func WaitForCondition(t *testing.T, condition string, args ...string) error {
-	kargs := []string {"wait", "--for", "condition=" + condition}
+	kargs := []string{"wait", "--for", "condition=" + condition}
 	kargs = append(kargs, args...)
 
 	cmd := exec.Command("kubectl", kargs...)

@@ -30,7 +30,7 @@ var (
 // TODO Add a Framework type and make functions method on that type
 // By making these functions methods we can pass the testing.T and namespace arguments just
 // once in the constructor. We can also include defaults for the timeout and interval
-// parameters that show up in multiple functions. 
+// parameters that show up in multiple functions.
 
 func Init(t *testing.T) {
 	var err error
@@ -164,7 +164,7 @@ func WaitForCrdsToBecomeActive(t *testing.T) error {
 
 func DeleteK8ssandraClusters(t *testing.T, namespace string) error {
 	// TODO This will need to be updated when we add a finalizer in K8ssandraCluster
-    // We will want to block until that finalizer is removed.
+	// We will want to block until that finalizer is removed.
 
 	t.Logf("deleting k8ssandra clusters in namespace %s", namespace)
 	k8ssandra := &api.K8ssandraCluster{}
@@ -208,4 +208,3 @@ func DumpClusterInfo(t *testing.T, namespace string) error {
 
 	return kubectl.DumpClusterInfo(t, namespace, outputDir)
 }
-
