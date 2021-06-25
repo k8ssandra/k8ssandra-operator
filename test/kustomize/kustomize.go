@@ -2,24 +2,25 @@ package kustomize
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"testing"
 )
 
-func Build(t *testing.T, dir string) (*bytes.Buffer, error) {
+func Build(dir string) (*bytes.Buffer, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = dir
 
-	var out, stderr bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 
-	//t.Log(out.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
 
-	return &out, err
+	return &stdout, err
 }
 
 func SetNamespace(t *testing.T, dir, namespace string) error {
@@ -31,7 +32,8 @@ func SetNamespace(t *testing.T, dir, namespace string) error {
 
 	err := cmd.Run()
 
-	t.Log(out.String())
+	fmt.Println(out.String())
+	//t.Log(out.String())
 
 	return err
 }

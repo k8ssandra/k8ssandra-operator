@@ -6,9 +6,11 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"path/filepath"
@@ -34,9 +36,9 @@ func TestControllers(t *testing.T) {
 	beforeSuite(t)
 
 	ctx := context.Background()
-	namespace := "default"
 
-	t.Run("Create Datacenter", controllerTest(ctx, namespace, createDatacenter))
+	t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
+	t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
 }
 
 func beforeSuite(t *testing.T) {
@@ -44,7 +46,6 @@ func beforeSuite(t *testing.T) {
 
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			//filepath.Join("..", "build", "config", "crds")},
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", "config", "cass-operator", "crd", "bases")},
 	}
@@ -98,13 +99,17 @@ func registerApis() error {
 	return nil
 }
 
-type ControllerTest func(*testing.T, context.Context, string)
+type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
-func controllerTest(ctx context.Context, namespace string, test ControllerTest) func(*testing.T) {
-	//err := testClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}})
-	//require.NoError(t, err, "failed to create namespace")
-
+func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
+	namespace := rand.String(9)
 	return func(t *testing.T) {
-		test(t, ctx, namespace)
+		f := framework.NewFramework(testClient)
+
+		if err := f.CreateNamespace(namespace); err != nil {
+			t.Fatalf("failed to create namespace %s: %v", namespace, err)
+		}
+
+		test(t, ctx, f, namespace)
 	}
 }

@@ -32,10 +32,12 @@ func beforeSuite(t *testing.T) {
 // directory. It should consist of one or more yaml manifests.
 type TestFixture string
 
-type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string)
+type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
 
 func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*testing.T) {
 	return func(t *testing.T) {
+		f := framework.NewE2eFramework(framework.Client)
+
 		namespace := getTestNamespace(fixture)
 		fixtureDir, err := getTestFixtureDir(fixture)
 
@@ -43,11 +45,11 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 			t.Fatalf("failed to get fixture directory for %s: %v", fixture, err)
 		}
 
-		err = beforeTest(t, namespace, fixtureDir)
-		defer afterTest(t, namespace)
+		err = beforeTest(t, namespace, fixtureDir, f)
+		defer afterTest(t, namespace, f)
 
 		if err == nil {
-			test(t, ctx, namespace)
+			test(t, ctx, namespace, f)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}
@@ -66,13 +68,13 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 // beforeTest Creates the test namepace, deploys k8ssandra-operator, and then deploys the
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
 // required by both operators.
-func beforeTest(t *testing.T, namespace, fixtureDir string) error {
-	if err := framework.CreateNamespace(t, namespace); err != nil {
+func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFramework) error {
+	if err := f.CreateNamespace(namespace); err != nil {
 		t.Log("failed to create namespace")
 		return err
 	}
 
-	if err := framework.DeployK8ssandraOperator(t, namespace); err != nil {
+	if err := f.DeployK8ssandraOperator(namespace); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
 		return err
 	}
@@ -80,12 +82,12 @@ func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 	timeout := 1 * time.Minute
 	interval := 1 * time.Second
 
-	if err := framework.WaitForCassOperatorToBeReady(t, namespace, timeout, interval); err != nil {
+	if err := f.WaitForCassOperatorToBeReady(namespace, timeout, interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
 		return err
 	}
 
-	if err := framework.WaitForK8ssandraOperatorToBeReady(t, namespace, timeout, interval); err != nil {
+	if err := f.WaitForK8ssandraOperatorToBeReady(namespace, timeout, interval); err != nil {
 		t.Log("failed waiting for k8ssandra-operator to be ready")
 		return err
 	}
@@ -95,7 +97,7 @@ func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 		return err
 	}
 
-	if err := kubectl.Apply(t, namespace, fixtureDir); err != nil {
+	if err := kubectl.Apply(namespace, fixtureDir); err != nil {
 		t.Log("kubectl apply failed")
 		return err
 	}
@@ -103,38 +105,38 @@ func beforeTest(t *testing.T, namespace, fixtureDir string) error {
 	return nil
 }
 
-func afterTest(t *testing.T, namespace string) {
-	assert.NoError(t, cleanUp(t, namespace), "after test cleanup failed")
+func afterTest(t *testing.T, namespace string, f *framework.E2eFramework) {
+	assert.NoError(t, cleanUp(t, namespace, f), "after test cleanup failed")
 }
 
-func cleanUp(t *testing.T, namespace string) error {
-	if err := framework.DumpClusterInfo(t, namespace); err != nil {
+func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
+	if err := f.DumpClusterInfo(t.Name(), namespace); err != nil {
 		t.Logf("failed to dump cluster info: %v", err)
 	}
 
-	if err := framework.DeleteK8ssandraClusters(t, namespace); err != nil {
+	if err := f.DeleteK8ssandraClusters(namespace); err != nil {
 		return err
 	}
 
-	if err := framework.DeleteDatacenters(t, namespace); err != nil {
+	timeout := 3 * time.Minute
+	interval := 10 * time.Second
+
+	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
 		return err
 	}
 
-	if err := framework.UndeployK8ssandraOperator(t); err != nil {
+	if err := f.UndeployK8ssandraOperator(); err != nil {
 		return err
 	}
 
-	timeout := 1 * time.Minute
-	interval := 5 * time.Second
-
-	if err := framework.DeleteNamespace(namespace, timeout, interval); err != nil {
+	if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string) {
+func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	time.Sleep(3 * time.Second)
 
 	require := require.New(t)
@@ -145,32 +147,11 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc1"}
-	withDatacenter := newWithDatacenter(t, ctx, dcKey)
+	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
 
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter to become ready")
 
-	t.Log("test passed!")
-}
-
-// newWithDatacenter is a function generator for withDatacenter that is bound to t, ctx, and key.
-func newWithDatacenter(t *testing.T, ctx context.Context, key types.NamespacedName) func(func(*cassdcapi.CassandraDatacenter) bool) func() bool {
-	return func(condition func(dc *cassdcapi.CassandraDatacenter) bool) func() bool {
-		return withDatacenter(t, ctx, key, condition)
-	}
-}
-
-// withDatacenter Fetches the CassandraDatacenter specified by key and then calls condition.
-func withDatacenter(t *testing.T, ctx context.Context, key types.NamespacedName, condition func(*cassdcapi.CassandraDatacenter) bool) func() bool {
-	return func() bool {
-		dc := &cassdcapi.CassandraDatacenter{}
-		if err := framework.Client.Get(ctx, key, dc); err == nil {
-			return condition(dc)
-		} else {
-			t.Logf("failed to get CassandraDatacenter: %s", err)
-			return false
-		}
-	}
 }

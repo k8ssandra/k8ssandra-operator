@@ -2,11 +2,12 @@ package kubectl
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"testing"
 )
 
-func ApplyBuffer(t *testing.T, b *bytes.Buffer) error {
+func ApplyBuffer(b *bytes.Buffer) error {
 	cmd := exec.Command("kubectl", "apply", "-f", "-")
 
 	var stdout, stderr bytes.Buffer
@@ -16,13 +17,13 @@ func ApplyBuffer(t *testing.T, b *bytes.Buffer) error {
 
 	err := cmd.Run()
 
-	t.Log(stdout.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
 
 	return err
 }
 
-func Apply(t *testing.T, namespace, path string) error {
+func Apply(namespace, path string) error {
 	cmd := exec.Command("kubectl", "-n", namespace, "apply", "-f", path)
 
 	var stdout, stderr bytes.Buffer
@@ -31,24 +32,24 @@ func Apply(t *testing.T, namespace, path string) error {
 
 	err := cmd.Run()
 
-	t.Log(stdout.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
 
 	return err
 }
 
-func DeleteBuffer(t *testing.T, b *bytes.Buffer) error {
+func DeleteBuffer(b *bytes.Buffer) error {
 	cmd := exec.Command("kubectl", "delete", "-f", "-")
 
-	var out, stderr bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stdin = b
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 
-	t.Log(out.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
 
 	return err
 }
@@ -65,13 +66,15 @@ func WaitForCondition(t *testing.T, condition string, args ...string) error {
 
 	err := cmd.Run()
 
-	t.Log(stdout.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
+	//t.Log(stdout.String())
+	//t.Log(stderr.String())
 
 	return err
 }
 
-func DumpClusterInfo(t *testing.T, namespace, outputDir string) error {
+func DumpClusterInfo(namespace, outputDir string) error {
 	args := []string{"cluster-info", "dump", "--namespaces", namespace, "-o", "yaml", "--output-directory", outputDir}
 	cmd := exec.Command("kubectl", args...)
 
@@ -81,8 +84,10 @@ func DumpClusterInfo(t *testing.T, namespace, outputDir string) error {
 
 	err := cmd.Run()
 
-	t.Log(stdout.String())
-	t.Log(stderr.String())
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
+	//t.Log(stdout.String())
+	//t.Log(stderr.String())
 
 	return err
 }
