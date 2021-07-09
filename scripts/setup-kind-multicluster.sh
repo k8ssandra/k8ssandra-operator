@@ -54,6 +54,16 @@ EOF
   docker network connect "kind" "$registry_name" || true
 }
 
+function create_clusters() {
+  echo "Creating clusters"
+
+  for ((i=0; i<$num_clusters; i++))
+  do
+    create_cluster "k8ssandra-$i" $kind_worker_nodes $kind_node_version
+  done
+  echo
+}
+
 function create_kubeconfig() {
   echo "Generating kubeconfig"
 
@@ -90,17 +100,9 @@ while true; do
   esac
 done
 
-#create_registry
-#
-#echo "Creating clusters"
-#echo
-#
-#for ((i=0; i<$num_clusters; i++))
-#do
-#  create_cluster "k8ssandra-$i" $kind_worker_nodes $kind_node_version
-#done
-#
-#echo
+create_registry
+
+create_clusters
 
 create_kubeconfig
 
