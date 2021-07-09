@@ -80,6 +80,15 @@ function create_kubeconfig() {
   yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/kubeconfig
 }
 
+function deploy_cass_operator() {
+  echo "Deploying Cass Operator"
+
+  for ((i=0; i<$num_clusters; i++))
+  do
+    kustomize build config/cass-operator | kubectl --context kind-k8ssandra-$i apply -f -
+  done
+}
+
 registry_name='kind-registry'
 registry_port='5000'
 
@@ -106,4 +115,5 @@ create_clusters
 
 create_kubeconfig
 
+deploy_cass_operator
 
