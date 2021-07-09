@@ -89,6 +89,15 @@ function deploy_cass_operator() {
   done
 }
 
+function create_k8s_contexts_secret() {
+  echo "Creating Kubernetes contexts secrets"
+
+  for ((i=0; i<$num_clusters; i++))
+  do
+    kubectl --context kind-k8ssandra-$i create secret generic k8s-contexts --from-file=./build/kubeconfig
+  done
+}
+
 registry_name='kind-registry'
 registry_port='5000'
 
@@ -116,4 +125,6 @@ create_clusters
 create_kubeconfig
 
 deploy_cass_operator
+
+create_k8s_contexts_secret
 
