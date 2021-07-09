@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+#
+# This script requires the following to be installed and available on your path:
+#
+#    - jq
+#    - yq
+#    - kustomize
+#    - kind
 
 # TODO add check to make sure gnu getopt is installed. This can be done with the -T option
 # of getopt.
@@ -47,6 +54,22 @@ EOF
   docker network connect "kind" "$registry_name" || true
 }
 
+function create_kubeconfig() {
+  echo "Generating kubeconfig"
+
+  mkdir -p build/kubeconfigs/updated
+  for ((i=0; i<$num_clusters; i++))
+  do
+    kubeconfig_base="build/kubeconfigs/k8ssandra-$i.yaml"
+    kubeconfig_updated="build/kubeconfigs/updated/k8ssandra-$i.yaml"
+    kind get kubeconfig --name "k8ssandra-$i" > $kubeconfig_base
+    api_server_ip_addr=$(kubectl -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
+    api_server_port=6443
+    yq eval ".clusters[0].cluster.server |= \"https://$api_server_ip_addr:$api_server_port\"" "$kubeconfig_base" > "$kubeconfig_updated"
+  done
+  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/kubeconfig
+}
+
 registry_name='kind-registry'
 registry_port='5000'
 
@@ -67,11 +90,18 @@ while true; do
   esac
 done
 
-create_registry
+#create_registry
+#
+#echo "Creating clusters"
+#echo
+#
+#for ((i=0; i<$num_clusters; i++))
+#do
+#  create_cluster "k8ssandra-$i" $kind_worker_nodes $kind_node_version
+#done
+#
+#echo
 
-for ((i=0; i<$num_clusters; i++))
-do
-  create_cluster "k8ssandra-$i" $kind_worker_nodes $kind_node_version
-done
+create_kubeconfig
 
 
