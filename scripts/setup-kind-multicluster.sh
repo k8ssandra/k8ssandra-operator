@@ -38,7 +38,6 @@ function create_cluster() {
   num_workers=$2
   node_version=$3
 
-#cat <<EOF | cat - > test.yaml
 cat <<EOF | kind create cluster --name $cluster_name --image kindest/node:$node_version --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -64,8 +63,30 @@ function create_clusters() {
   echo
 }
 
+# Creates a kubeconfig file that has entries for each of the clusters created.
+# The file created is <project-root>/build/kubeconfig and is intended for use
+# primarily by tests running out of cluster.
 function create_kubeconfig() {
   echo "Generating kubeconfig"
+
+  mkdir -p build/kubeconfigs
+  for ((i=0; i<$num_clusters; i++))
+  do
+    kubeconfig_base="build/kubeconfigs/k8ssandra-$i.yaml"
+    kind get kubeconfig --name "k8ssandra-$i" > $kubeconfig_base
+  done
+
+  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/*.yaml > build/kubeconfig
+}
+
+# Creates a kubeconfig file that has entries for each of the clusters created.
+# This file created is <project-root>/build/in_cluster_kubeconfig and is
+# intended for in-cluster use primarily by the k8ssandra cluster controller.
+# This file differs from the one created in create_kubeconfig in that the
+# server addresses are set to their pod IPs which are docker container
+# adddresses.
+function create_in_cluster_kubeconfig() {
+  echo "Generating in-cluster kubeconfig"
 
   mkdir -p build/kubeconfigs/updated
   for ((i=0; i<$num_clusters; i++))
@@ -77,7 +98,8 @@ function create_kubeconfig() {
     api_server_port=6443
     yq eval ".clusters[0].cluster.server |= \"https://$api_server_ip_addr:$api_server_port\"" "$kubeconfig_base" > "$kubeconfig_updated"
   done
-  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/kubeconfig
+
+  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/in_cluster_kubeconfig
 }
 
 function deploy_cass_operator() {
@@ -124,7 +146,9 @@ create_clusters
 
 create_kubeconfig
 
-deploy_cass_operator
+create_in_cluster_kubeconfig
 
-create_k8s_contexts_secret
+#deploy_cass_operator
+
+#create_k8s_contexts_secret
 
