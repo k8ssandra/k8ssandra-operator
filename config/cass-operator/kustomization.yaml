@@ -4,6 +4,8 @@
 # kustomization.yaml that declares the namespace and that declares this parent directory as
 # a resource.
 
+namespace: default
+
 resources:
 - crd
 - service_account.yaml

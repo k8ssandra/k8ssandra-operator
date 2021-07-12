@@ -5,6 +5,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		defer afterTest(t, namespace, f)
 
 		if err == nil {
-			//test(t, ctx, namespace, f)
+			test(t, ctx, namespace, f)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}
@@ -76,14 +77,16 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	// TODO Deploy cass-operator to all clusters
+
 	if err := f.DeployCassOperator(namespace); err != nil {
 		t.Log("failed to deploy cass-operator")
 		return  err
 	}
 
-	// TODO Deploy contexts secret to control plane cluster
-	// TODO Deploy k8ssandra-operator to control plane cluster
+	if err := f.DeployK8sContextsSecret(namespace); err != nil {
+		t.Logf("failed to deploy k8s contexts secret")
+		return err
+	}
 
 	if err := f.DeployK8ssandraOperator(namespace); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
@@ -108,15 +111,15 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	//fixtureDir, err := filepath.Abs(fixtureDir)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if err := kubectl.Apply(namespace, fixtureDir); err != nil {
-	//	t.Log("kubectl apply failed")
-	//	return err
-	//}
+	fixtureDir, err := filepath.Abs(fixtureDir)
+	if err != nil {
+		return err
+	}
+
+	if err := kubectl.Apply(kubectl.Options{Namespace: namespace}, fixtureDir); err != nil {
+		t.Log("kubectl apply failed")
+		return err
+	}
 
 	return nil
 }
@@ -138,10 +141,6 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 	interval := 10 * time.Second
 
 	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-		return err
-	}
-
-	if err := f.UndeployK8ssandraOperator(namespace); err != nil {
 		return err
 	}
 

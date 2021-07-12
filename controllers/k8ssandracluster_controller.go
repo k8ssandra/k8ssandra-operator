@@ -20,12 +20,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/util/hash"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,13 +44,15 @@ const (
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme      *runtime.Scheme
+	ClientCache *clientcache.ClientCache
 }
 
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -70,39 +73,48 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			key := types.NamespacedName{Namespace: template.Meta.Namespace, Name: template.Meta.Name}
 			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template)
 
-			if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
-				logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
-				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-			}
+			//if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
+			//	logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
+			//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+			//}
 
 			desiredHash := deepHashString(desired)
 			desired.Annotations[resourceHashAnnotation] = deepHashString(desiredHash)
 
+			remoteClient, err := r.ClientCache.GetClient(req.NamespacedName, k8ssandra.Spec.K8sContextsSecret, template.K8sContext)
+			if err != nil {
+				logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", key)
+				return ctrl.Result{}, err
+			}
+
+			if remoteClient == nil {
+				logger.Info("remoteClient cannot be nil")
+				return ctrl.Result{}, fmt.Errorf("remoteClient cannot be nil")
+			}
+
 			actual := &cassdcapi.CassandraDatacenter{}
 
-			// TODO set controller reference
-
-			if err = r.Get(ctx, key, actual); err == nil {
+			if err = remoteClient.Get(ctx, key, actual); err == nil {
 				if actualHash, found := actual.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredHash) {
 					logger.Info("Updating datacenter", "CassandraDatacenter", key)
 					actual = actual.DeepCopy()
 					desired.DeepCopyInto(actual)
 
-					if err = r.Update(ctx, actual); err != nil {
+					if err = remoteClient.Update(ctx, actual); err != nil {
 						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", key)
-						return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+						return ctrl.Result{}, err
 					}
 				}
 			} else {
 				if errors.IsNotFound(err) {
 					logger.Info("Creating datacenter", "CassandraDatacenter", key)
-					if err = r.Create(ctx, desired); err != nil {
+					if err = remoteClient.Create(ctx, desired); err != nil {
 						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", key)
-						return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+						return ctrl.Result{}, err
 					}
 				} else {
 					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", key)
-					return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+					return ctrl.Result{}, err
 				}
 			}
 		}

@@ -50,6 +50,8 @@ spec:
                           format: byte
                           type: string
                           x-kubernetes-preserve-unknown-fields: true
+                        k8sContext:
+                          type: string
                         metadata:
                           properties:
                             annotations:
@@ -429,6 +431,8 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
                 type: object
+              k8sContextsSecret:
+                type: string
             type: object
           status:
             description: K8ssandraClusterStatus defines the observed state of K8ssandraCluster

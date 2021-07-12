@@ -20,8 +20,8 @@ import (
 	"flag"
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"os"
-
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -90,9 +90,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	clientCache := clientcache.New(mgr.GetClient(), scheme)
+
 	if err = (&controllers.K8ssandraClusterReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		ClientCache: clientCache,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 		os.Exit(1)

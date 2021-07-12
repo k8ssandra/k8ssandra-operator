@@ -1,5 +1,6 @@
 # Adds namespace to all resources.
-namespace: k8ssandra-operator
+#namespace: k8ssandra-operator
+namespace: default
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
@@ -11,6 +12,9 @@ namespace: k8ssandra-operator
 # Labels to add to all resources and selectors.
 #commonLabels:
 #  someName: someValue
+
+#bases:
+#  -
 
 resources:
 - ../cass-operator

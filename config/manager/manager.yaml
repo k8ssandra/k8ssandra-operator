@@ -11,16 +11,16 @@ metadata:
   name: k8ssandra-operator
 #  namespace: system
   labels:
-    control-plane: controller-manager
+    control-plane: k8ssandra-operator
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: k8ssandra-operator
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        control-plane: k8ssandra-operator
     spec:
       securityContext:
         runAsNonRoot: true

@@ -3,6 +3,7 @@ package kubectl
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"os/exec"
 )
 
@@ -11,7 +12,7 @@ type Options struct {
 	Context   string
 }
 
-func Apply(opts Options, config fmt.Stringer) error {
+func Apply(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
@@ -28,11 +29,13 @@ func Apply(opts Options, config fmt.Stringer) error {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if buf, ok := config.(*bytes.Buffer); ok {
+	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf
 		cmd.Args = append(cmd.Args, "-")
+	} else if s, ok := arg.(string); ok {
+		cmd.Args = append(cmd.Args, s)
 	} else {
-		cmd.Args = append(cmd.Args, config.String())
+		return errors.New("Expected arg to be a *bytes.Buffer or a string")
 	}
 
 	fmt.Println(cmd)
@@ -45,7 +48,7 @@ func Apply(opts Options, config fmt.Stringer) error {
 	return err
 }
 
-func Delete(opts Options, config fmt.Stringer) error {
+func Delete(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
@@ -62,11 +65,13 @@ func Delete(opts Options, config fmt.Stringer) error {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if buf, ok := config.(*bytes.Buffer); ok {
+	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf
 		cmd.Args = append(cmd.Args, "-")
+	} else if s, ok := arg.(string); ok {
+		cmd.Args = append(cmd.Args, s)
 	} else {
-		cmd.Args = append(cmd.Args, config.String())
+		return errors.New("Expected arg to be a *bytes.Buffer or a string")
 	}
 
 	fmt.Println(cmd)

@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
 - ../../../config/cass-operator
-namespace: single-dc-bghnfs
+namespace: single-dc-hs7rrk

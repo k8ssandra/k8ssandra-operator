@@ -28,6 +28,8 @@ import (
 
 // K8ssandraClusterSpec defines the desired state of K8ssandraCluster
 type K8ssandraClusterSpec struct {
+	K8sContextsSecret string `json:"k8sContextsSecret,omitempty"`
+
 	Cassandra *Cassandra `json:"cassandra,omitempty"`
 }
 
@@ -68,6 +70,8 @@ type Cassandra struct {
 
 type CassandraDatacenterTemplateSpec struct {
 	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
+
+	K8sContext string `json:"k8sContext,omitempty"`
 
 	// TODO Determine which fields from CassandraDatacenterSpec should be copied here.
 	// This is only a subset set of the fields. More fields do need to be copied. Some are
