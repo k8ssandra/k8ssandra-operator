@@ -4,16 +4,38 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"testing"
 )
 
-func ApplyBuffer(b *bytes.Buffer) error {
-	cmd := exec.Command("kubectl", "apply", "-f", "-")
+type Options struct {
+	Namespace string
+	Context   string
+}
+
+func Apply(opts Options, config fmt.Stringer) error {
+	cmd := exec.Command("kubectl")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args,"--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "apply", "-f")
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
-	cmd.Stdin = b
 	cmd.Stderr = &stderr
+
+	if buf, ok := config.(*bytes.Buffer); ok {
+		cmd.Stdin = buf
+		cmd.Args = append(cmd.Args, "-")
+	} else {
+		cmd.Args = append(cmd.Args, config.String())
+	}
+
+	fmt.Println(cmd)
 
 	err := cmd.Run()
 
@@ -23,12 +45,31 @@ func ApplyBuffer(b *bytes.Buffer) error {
 	return err
 }
 
-func Apply(namespace, path string) error {
-	cmd := exec.Command("kubectl", "-n", namespace, "apply", "-f", path)
+func Delete(opts Options, config fmt.Stringer) error {
+	cmd := exec.Command("kubectl")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args,"--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "delete", "-f")
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
+	if buf, ok := config.(*bytes.Buffer); ok {
+		cmd.Stdin = buf
+		cmd.Args = append(cmd.Args, "-")
+	} else {
+		cmd.Args = append(cmd.Args, config.String())
+	}
+
+	fmt.Println(cmd)
 
 	err := cmd.Run()
 
@@ -38,23 +79,7 @@ func Apply(namespace, path string) error {
 	return err
 }
 
-func DeleteBuffer(b *bytes.Buffer) error {
-	cmd := exec.Command("kubectl", "delete", "-f", "-")
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stdin = b
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
-
-	return err
-}
-
-func WaitForCondition(t *testing.T, condition string, args ...string) error {
+func WaitForCondition(condition string, args ...string) error {
 	kargs := []string{"wait", "--for", "condition=" + condition}
 	kargs = append(kargs, args...)
 
@@ -68,8 +93,6 @@ func WaitForCondition(t *testing.T, condition string, args ...string) error {
 
 	fmt.Println(stdout.String())
 	fmt.Println(stderr.String())
-	//t.Log(stdout.String())
-	//t.Log(stderr.String())
 
 	return err
 }

@@ -3,11 +3,14 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  k8sContextsSecret: k8s-contexts
   cassandra:
     cluster: test
     datacenters:
       - metadata:
+          namespace: default
           name: dc1
+        k8sContext: kind-k8ssandra-1
         size: 1
         serverVersion: "3.11.10"
         storageConfig:

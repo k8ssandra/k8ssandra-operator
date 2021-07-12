@@ -50,6 +50,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+KIND_CLUSTER ?= kind
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -109,7 +111,7 @@ docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
 kind-load-image:
-	kind load docker-image ${IMG}
+	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
 
 PHONY: e2e-test
 e2e-test:

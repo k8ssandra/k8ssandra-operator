@@ -23,7 +23,7 @@ func Build(dir string) (*bytes.Buffer, error) {
 	return &stdout, err
 }
 
-func SetNamespace(t *testing.T, dir, namespace string) error {
+func SetNamespace(dir, namespace string) error {
 	cmd := exec.Command("kustomize", "edit", "set", "namespace", namespace)
 	cmd.Dir = dir
 

@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
@@ -45,56 +46,93 @@ func Init(t *testing.T) {
 	require.NoError(t, err, "failed to create controller-runtime client")
 }
 
+// Framework provides methods for use in both integration and e2e tests.
 type Framework struct {
+	// Client is the client for the control plane cluster, i.e., the cluster in which the
+	// K8ssandraCluster controller is deployed. Note that this may also be one of the
+	// remote clusters.
 	Client client.Client
+
+	// The Kubernetes context in which the K8ssandraCluser controller is running.
+	controlPlaneContext string
+
+	// RemoteClients is mapping of Kubernetes context names to clients.
+	remoteClients map[string]client.Client
 
 	logger logr.Logger
 }
 
-func NewFramework(client client.Client) *Framework {
+type ClusterKey struct {
+	types.NamespacedName
+
+	K8sContext string
+}
+
+func (k ClusterKey) String() string {
+	return k.K8sContext + string(types.Separator) + k.Namespace + string(types.Separator) + k.Name
+}
+
+func NewFramework(client client.Client, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
 
-	return &Framework{Client: client, logger: log}
+	// TODO controlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
+	return &Framework{Client: client, controlPlaneContext: "kind-k8ssandra-0", remoteClients: remoteClients, logger: log}
 }
 
 func (f *Framework) CreateNamespace(name string) error {
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+	for k8sContext, remoteClient := range f.remoteClients {
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		}
+		f.logger.WithValues("creating namespace", "Namespace", name, "Context", k8sContext)
+		if err := remoteClient.Create(context.Background(), namespace); err != nil {
+			return err
+		}
 	}
 
-	f.logger.WithValues("creating namespace", "Namespace", name)
-	if err := f.Client.Create(context.Background(), namespace); err != nil {
-		return err
-	}
 	return nil
 }
 
-// WaitForDeploymentToBeReady Blocks until the Deployment is ready.
-func (f *Framework) WaitForDeploymentToBeReady(key types.NamespacedName, timeout, interval time.Duration) error {
+func (f *Framework) k8sContextNotFound(k8sContext string) error {
+	return fmt.Errorf("context %s not found", k8sContext)
+}
+
+// WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
+// ClusterKey.K8sContext is empty, this method blocks until the deployment is ready in all
+// remote clusters.
+func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval time.Duration) error {
 	return wait.Poll(interval, timeout, func() (bool, error) {
+		if len(key.K8sContext) == 0 {
+			for _, remoteClient := range f.remoteClients {
+				deployment := &appsv1.Deployment{}
+				if err := remoteClient.Get(context.TODO(), key.NamespacedName, deployment); err != nil {
+					f.logger.Error(err, "failed to get deployment", "key", key)
+					return false, err
+				}
+
+				if deployment.Status.Replicas != deployment.Status.ReadyReplicas {
+					return false, nil
+				}
+			}
+
+			return true, nil
+		}
+
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			return false, f.k8sContextNotFound(key.K8sContext)
+		}
+
 		deployment := &appsv1.Deployment{}
-		if err := Client.Get(context.TODO(), key, deployment); err != nil {
+		if err := remoteClient.Get(context.TODO(), key.NamespacedName, deployment); err != nil {
 			f.logger.Error(err, "failed to get deployment", "key", key)
 			return false, err
 		}
 		return deployment.Status.Replicas == deployment.Status.ReadyReplicas, nil
 	})
-}
-
-func CreateNamespace(t *testing.T, name string) error {
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	t.Logf("creating namespace %s", name)
-	if err := Client.Create(context.Background(), namespace); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *Framework) DeleteK8ssandraClusters(namespace string) error {
@@ -107,17 +145,23 @@ func (f *Framework) DeleteK8ssandraClusters(namespace string) error {
 }
 
 // NewWithDatacenter is a function generator for withDatacenter that is bound to ctx, and key.
-func (f *Framework) NewWithDatacenter(ctx context.Context, key types.NamespacedName) func(func(*cassdcapi.CassandraDatacenter) bool) func() bool {
+func (f *Framework) NewWithDatacenter(ctx context.Context, key ClusterKey) func(func(*cassdcapi.CassandraDatacenter) bool) func() bool {
 	return func(condition func(dc *cassdcapi.CassandraDatacenter) bool) func() bool {
 		return f.withDatacenter(ctx, key, condition)
 	}
 }
 
 // withDatacenter Fetches the CassandraDatacenter specified by key and then calls condition.
-func (f *Framework) withDatacenter(ctx context.Context, key types.NamespacedName, condition func(*cassdcapi.CassandraDatacenter) bool) func() bool {
+func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, condition func(*cassdcapi.CassandraDatacenter) bool) func() bool {
 	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup CassandraDatacenter", "key", key)
+			return false
+		}
+
 		dc := &cassdcapi.CassandraDatacenter{}
-		if err := f.Client.Get(ctx, key, dc); err == nil {
+		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
 			f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
@@ -126,7 +170,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key types.NamespacedName
 	}
 }
 
-func (f *Framework) DatacenterExists(ctx context.Context, key types.NamespacedName) func() bool {
+func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func() bool {
 	withDc := f.NewWithDatacenter(ctx, key)
 	return withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
 		return true
