@@ -8,6 +8,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -25,6 +26,33 @@ func TestOperator(t *testing.T) {
 }
 
 func beforeSuite(t *testing.T) {
+	cfgFile, err := filepath.Abs("../../build/kubeconfig")
+	if err != nil {
+		t.Fatalf("failed to get path of src kind kubeconfig file: %v", err)
+	}
+	require.FileExistsf(t, cfgFile, "kind kubeconfig file is missing", "path", cfgFile)
+
+	inClusterCfgFile, err := filepath.Abs("../../build/in_cluster_kubeconfig")
+	if err != nil {
+		t.Fatalf("failed to get path of src kind kubeconfig file: %v", err)
+	}
+	require.FileExistsf(t, inClusterCfgFile, "in-cluster kind kubeconfig file is missing", "path", inClusterCfgFile)
+
+	buf, err := ioutil.ReadFile(inClusterCfgFile)
+	if err != nil {
+		t.Fatalf("failed to read %s: %v", inClusterCfgFile, err)
+	}
+
+	dest, err := filepath.Abs("test/testdata/k8s-contexts/kubeconfig")
+	if err != nil {
+		t.Fatalf("failed to get path of dest kind kubeconfig file: %v", err)
+	}
+
+	err = ioutil.WriteFile(dest, buf, 0644)
+	if err != nil {
+		t.Fatalf("failed to write %s: %v", dest, err)
+	}
+
 	framework.Init(t)
 }
 
