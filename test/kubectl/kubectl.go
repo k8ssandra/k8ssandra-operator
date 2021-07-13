@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"os/exec"
+	"path/filepath"
 )
 
 type Options struct {
@@ -102,20 +103,40 @@ func WaitForCondition(condition string, args ...string) error {
 	return err
 }
 
-func DumpClusterInfo(namespace, outputDir string) error {
-	args := []string{"cluster-info", "dump", "--namespaces", namespace, "-o", "yaml", "--output-directory", outputDir}
-	cmd := exec.Command("kubectl", args...)
+type ClusterInfoOptions struct {
+	Options
+
+	OutputDirectory string
+}
+
+func DumpClusterInfo(opts ClusterInfoOptions) error {
+	cmd := exec.Command("kubectl", "cluster-info", "dump")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args,"--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "-o", "yaml")
+
+	dir, err := filepath.Abs(opts.OutputDirectory)
+	if err != nil {
+		return err
+	}
+
+	cmd.Args = append(cmd.Args, "--output-directory", dir)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 
 	fmt.Println(stdout.String())
 	fmt.Println(stderr.String())
-	//t.Log(stdout.String())
-	//t.Log(stderr.String())
 
 	return err
 }

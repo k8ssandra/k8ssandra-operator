@@ -10,6 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
@@ -172,21 +173,33 @@ func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, i
 }
 
 func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
-	// TODO Dump cluster info for each cluster
 	f.logger.Info("dumping cluster info")
 
 	now := time.Now()
-	outputDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", test, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
+	baseDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", test, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
+	errs := make([]error, 0)
 
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return fmt.Errorf("failed to create test output directory %s: %s", outputDir, err)
+	for ctx, _ := range f.remoteClients {
+		outputDir := filepath.Join(baseDir, ctx)
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			errs = append(errs, fmt.Errorf("failed to make output for cluster %s: %w", ctx, err))
+			return err
+		}
+
+		opts := kubectl.ClusterInfoOptions{Options: kubectl.Options{Namespace: namespace, Context: ctx}, OutputDirectory: outputDir}
+		if err := kubectl.DumpClusterInfo(opts); err != nil {
+			errs = append(errs, fmt.Errorf("failed to dump cluster info for cluster %s: %w", ctx, err))
+		}
 	}
 
-	return kubectl.DumpClusterInfo(namespace, outputDir)
+	if len(errs) > 0 {
+		return errors.NewAggregate(errs)
+	}
+	return nil
 }
 
-// DeleteDatacenters deletes all CassandraDatacenters in namespace. This function blocks
-// all pods have terminated.
+// DeleteDatacenters deletes all CassandraDatacenters in namespace in all remote clusters.
+// This function blocks until all pods from all CassandraDatacenters have terminated.
 func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all CassandraDatacenters", "Namespace", namespace)
 
