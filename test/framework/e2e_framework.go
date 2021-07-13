@@ -24,7 +24,7 @@ type E2eFramework struct {
 	*Framework
 }
 
-func NewE2eFramework(cl client.Client) (*E2eFramework, error) {
+func NewE2eFramework() (*E2eFramework, error) {
 	configFile, err := filepath.Abs("../../build/kubeconfig")
 	if err != nil {
 		return nil, err
@@ -39,6 +39,8 @@ func NewE2eFramework(cl client.Client) (*E2eFramework, error) {
 		return nil, err
 	}
 
+	controlPlaneContext := ""
+	var controlPlaneClient client.Client
 	remoteClients := make(map[string]client.Client, 0)
 
 	for name, _ := range config.Contexts {
@@ -54,15 +56,21 @@ func NewE2eFramework(cl client.Client) (*E2eFramework, error) {
 			return nil, err
 		}
 
+		// TODO Add a flag or option to allow the user to specify the control plane cluster
+		if len(controlPlaneContext) == 0 {
+			controlPlaneContext = name
+			controlPlaneClient = remoteClient
+		}
+
 		remoteClients[name] = remoteClient
 	}
 
-	f := NewFramework(cl, remoteClients)
+	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
 
 	return &E2eFramework{Framework: f}, nil
 }
 
-func (f *E2eFramework) getK8sContexts() []string {
+func (f *E2eFramework) getRemoteClusterContexts() []string {
 	contexts := make([]string, 0, len(f.remoteClients))
 	for ctx, _ := range f.remoteClients {
 		contexts = append(contexts, ctx)
@@ -109,26 +117,32 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	return nil
 }
 
-// DeployK8ssandraOperator Deploys k8ssandra-operator, cass-operator, and CRDs. This
-// function blocks until CRDs are ready.
+// DeployK8ssandraOperator Deploys k8ssandra-operator in the control plane cluster. Note
+// that the control plane cluster can also be one of the remote clusters.
 func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 	dir := "../testdata/k8ssandra-operator"
 
 	return f.kustomizeAndApply(dir, namespace);
 }
 
+// DeployCassOperator deploys cass-operator in all remote clusters.
 func (f *E2eFramework) DeployCassOperator(namespace string) error {
 	dir := "../testdata/cass-operator"
-	return f.kustomizeAndApply(dir, namespace, f.getK8sContexts()...)
+	return f.kustomizeAndApply(dir, namespace, f.getRemoteClusterContexts()...)
 }
 
+// DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.
 func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 	dir := "../testdata/k8s-contexts"
 
 	return f.kustomizeAndApply(dir, namespace)
 }
 
+// DeleteNamespace Deletes the namespace from all remote clusters and blocks until they
+// have completely terminated.
 func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Duration) error {
+	// TODO Make sure we delete from the control plane cluster as well
+
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -156,6 +170,9 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 }
 
 func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
+	// TODO Add multi-cluster support.
+	// By default this should wait for all clusters including the control plane cluster.
+
 	return kubectl.WaitForCondition("established", "--timeout=60s", "--all", "crd")
 }
 

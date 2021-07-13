@@ -64,7 +64,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*testing.T) {
 	return func(t *testing.T) {
-		f, err := framework.NewE2eFramework(framework.Client)
+		f, err := framework.NewE2eFramework()
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -80,7 +80,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		defer afterTest(t, namespace, f)
 
 		if err == nil {
-			//test(t, ctx, namespace, f)
+			test(t, ctx, namespace, f)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}

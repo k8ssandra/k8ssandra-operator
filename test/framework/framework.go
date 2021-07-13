@@ -72,7 +72,7 @@ func (k ClusterKey) String() string {
 	return k.K8sContext + string(types.Separator) + k.Namespace + string(types.Separator) + k.Name
 }
 
-func NewFramework(client client.Client, remoteClients map[string]client.Client) *Framework {
+func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
 

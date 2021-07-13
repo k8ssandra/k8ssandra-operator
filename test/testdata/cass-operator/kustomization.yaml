@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
 - ../../../config/cass-operator
-namespace: single-dc-bdw8t8
+namespace: single-dc-pft648
