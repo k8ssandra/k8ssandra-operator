@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,8 +71,8 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if k8ssandra.Spec.Cassandra != nil {
 		for _, template := range k8ssandra.Spec.Cassandra.Datacenters {
-			key := types.NamespacedName{Namespace: template.Meta.Namespace, Name: template.Meta.Name}
 			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template)
+			dcKey := types.NamespacedName{Namespace: desired.Namespace, Name: desired.Name}
 
 			//if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
 			//	logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
@@ -79,11 +80,11 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			//}
 
 			desiredHash := deepHashString(desired)
-			desired.Annotations[resourceHashAnnotation] = deepHashString(desiredHash)
+			desired.Annotations[resourceHashAnnotation] = desiredHash
 
 			remoteClient, err := r.ClientCache.GetClient(req.NamespacedName, k8ssandra.Spec.K8sContextsSecret, template.K8sContext)
 			if err != nil {
-				logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", key)
+				logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", dcKey)
 				return ctrl.Result{}, err
 			}
 
@@ -94,32 +95,39 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			actual := &cassdcapi.CassandraDatacenter{}
 
-			if err = remoteClient.Get(ctx, key, actual); err == nil {
+			if err = remoteClient.Get(ctx, dcKey, actual); err == nil {
 				if actualHash, found := actual.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredHash) {
-					logger.Info("Updating datacenter", "CassandraDatacenter", key)
+					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
 					actual = actual.DeepCopy()
 					desired.DeepCopyInto(actual)
 
 					if err = remoteClient.Update(ctx, actual); err != nil {
-						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", key)
+						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
 						return ctrl.Result{}, err
 					}
 				}
+
+				if !cassandra.DatacenterReady(actual) {
+					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
+					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+				}
+
+				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
 			} else {
 				if errors.IsNotFound(err) {
-					logger.Info("Creating datacenter", "CassandraDatacenter", key)
-					if err = remoteClient.Create(ctx, desired); err != nil {
-						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", key)
+					if err = remoteClient.Create(ctx, &desired); err != nil {
+						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
 						return ctrl.Result{}, err
 					}
+					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 				} else {
-					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", key)
+					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
 				}
 			}
 		}
 	}
-	logger.Info("Finished reconciling datacenters")
+	logger.Info("Finished reconciling the k8ssandracluster")
 	return ctrl.Result{}, nil
 }
 
@@ -130,11 +138,15 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func newDatacenter(namespace, cluster string, template api.CassandraDatacenterTemplateSpec) *cassdcapi.CassandraDatacenter {
-	return &cassdcapi.CassandraDatacenter{
+func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDatacenterTemplateSpec) cassdcapi.CassandraDatacenter {
+	namespace := template.Meta.Namespace
+	if len(namespace) == 0 {
+		namespace = k8ssandraNamespace
+	}
+
+	return cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			// TODO Check to see if Meta.Namespace is set
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 		},

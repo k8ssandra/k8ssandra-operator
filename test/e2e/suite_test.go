@@ -22,7 +22,8 @@ func TestOperator(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
+	//t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
+	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", createMultiDatacenterCluster))
 }
 
 func beforeSuite(t *testing.T) {
@@ -77,7 +78,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f)
-		defer afterTest(t, namespace, f)
+		//defer afterTest(t, namespace, f)
 
 		if err == nil {
 			test(t, ctx, namespace, f)
@@ -179,8 +180,6 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 }
 
 func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	time.Sleep(3 * time.Second)
-
 	require := require.New(t)
 
 	t.Log("check that the K8ssandraCluster was created")
@@ -195,5 +194,31 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter to become ready")
+}
 
+func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	t.Log("check that datacenter dc1 is ready")
+	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	withDatacenter := f.NewWithDatacenter(ctx, dc1Key)
+
+	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
+	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc1 to become ready")
+
+	t.Log("check that datacenter dc2 is ready")
+	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	withDatacenter = f.NewWithDatacenter(ctx, dc2Key)
+
+	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
+	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc2 to become ready")
 }

@@ -94,7 +94,7 @@ function create_in_cluster_kubeconfig() {
     kubeconfig_base="build/kubeconfigs/k8ssandra-$i.yaml"
     kubeconfig_updated="build/kubeconfigs/updated/k8ssandra-$i.yaml"
     kind get kubeconfig --name "k8ssandra-$i" > $kubeconfig_base
-    api_server_ip_addr=$(kubectl -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
+    api_server_ip_addr=$(kubectl --context kind-k8ssandra-$i -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
     api_server_port=6443
     yq eval ".clusters[0].cluster.server |= \"https://$api_server_ip_addr:$api_server_port\"" "$kubeconfig_base" > "$kubeconfig_updated"
   done

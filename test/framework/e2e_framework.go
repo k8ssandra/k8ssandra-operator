@@ -13,11 +13,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
+)
+
+const (
+	defaultControlPlaneContext = "kind-k8ssandra-0"
 )
 
 type E2eFramework struct {
@@ -57,12 +62,22 @@ func NewE2eFramework() (*E2eFramework, error) {
 		}
 
 		// TODO Add a flag or option to allow the user to specify the control plane cluster
-		if len(controlPlaneContext) == 0 {
-			controlPlaneContext = name
-			controlPlaneClient = remoteClient
-		}
-
+		//if len(controlPlaneContext) == 0 {
+		//	controlPlaneContext = name
+		//	controlPlaneClient = remoteClient
+		//}
 		remoteClients[name] = remoteClient
+	}
+
+	if remoteClient, found := remoteClients[defaultControlPlaneContext]; found {
+		controlPlaneContext = defaultControlPlaneContext
+		controlPlaneClient = remoteClient
+	} else {
+		for k8sContext, remoteClient := range remoteClients {
+			controlPlaneContext = k8sContext
+			controlPlaneClient = remoteClient
+			break
+		}
 	}
 
 	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
@@ -135,7 +150,7 @@ func (f *E2eFramework) DeployCassOperator(namespace string) error {
 func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 	dir := "../testdata/k8s-contexts"
 
-	return f.kustomizeAndApply(dir, namespace)
+	return f.kustomizeAndApply(dir, namespace, f.controlPlaneContext)
 }
 
 // DeleteNamespace Deletes the namespace from all remote clusters and blocks until they
@@ -156,6 +171,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 		}
 	}
 
+	// Should this wait.Poll call be per cluster?
 	return wait.Poll(interval, timeout, func() (bool, error) {
 		for _, remoteClient := range f.remoteClients {
 			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
@@ -176,6 +192,8 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 	return kubectl.WaitForCondition("established", "--timeout=60s", "--all", "crd")
 }
 
+// WaitForK8ssandraOperatorToBeReady blocks until the k8ssandra-operator deployment is
+// ready in the control plane cluster.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := ClusterKey{
 		K8sContext: f.controlPlaneContext,
@@ -184,11 +202,15 @@ func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeo
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
+// WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in all
+// clusters.
 func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cass-operator"}}
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
+// DumpClusterInfo Executes `kubectl cluster-info dump -o yaml` on each cluster. The output
+// is stored under <project-root>/build/test.
 func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	f.logger.Info("dumping cluster info")
 
@@ -229,6 +251,7 @@ func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval tim
 		}
 	}
 
+	// Should there be a separate wait.Poll call per cluster?
 	return wait.Poll(interval, timeout, func() (bool, error) {
 		for k8sContext, remoteClient := range f.remoteClients {
 			list := &corev1.PodList{}

@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
@@ -39,11 +38,11 @@ func Init(t *testing.T) {
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
 
-	cfg, err := ctrl.GetConfig()
-	require.NoError(t, err, "failed to get *rest.Config")
-
-	Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	require.NoError(t, err, "failed to create controller-runtime client")
+	//cfg, err := ctrl.GetConfig()
+	//require.NoError(t, err, "failed to get *rest.Config")
+	//
+	//Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	//require.NoError(t, err, "failed to create controller-runtime client")
 }
 
 // Framework provides methods for use in both integration and e2e tests.
@@ -87,7 +86,7 @@ func (f *Framework) CreateNamespace(name string) error {
 				Name: name,
 			},
 		}
-		f.logger.WithValues("creating namespace", "Namespace", name, "Context", k8sContext)
+		f.logger.Info("creating namespace", "Namespace", name, "Context", k8sContext)
 		if err := remoteClient.Create(context.Background(), namespace); err != nil {
 			return err
 		}
@@ -141,7 +140,7 @@ func (f *Framework) DeleteK8ssandraClusters(namespace string) error {
 
 	f.logger.Info("deleting all K8ssandraClusters", "Namespace", namespace)
 	k8ssandra := &api.K8ssandraCluster{}
-	return Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace))
+	return f.Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace))
 }
 
 // NewWithDatacenter is a function generator for withDatacenter that is bound to ctx, and key.
