@@ -22,7 +22,7 @@ func TestOperator(t *testing.T) {
 
 	ctx := context.Background()
 
-	//t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
+	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", createMultiDatacenterCluster))
 }
 
@@ -78,7 +78,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f)
-		//defer afterTest(t, namespace, f)
+		defer afterTest(t, namespace, f)
 
 		if err == nil {
 			test(t, ctx, namespace, f)

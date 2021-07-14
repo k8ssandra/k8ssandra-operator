@@ -8,4 +8,4 @@ secretGenerator:
 - files:
   - kubeconfig
   name: k8s-contexts
-namespace: multi-dc-r2bk68
+namespace: multi-dc-wl5pvj
