@@ -24,6 +24,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,8 +71,10 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	k8ssandra = k8ssandra.DeepCopy()
 
 	if k8ssandra.Spec.Cassandra != nil {
-		for _, template := range k8ssandra.Spec.Cassandra.Datacenters {
-			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template)
+		var seeds []string
+
+		for i, template := range k8ssandra.Spec.Cassandra.Datacenters {
+			desired := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, template, seeds)
 			dcKey := types.NamespacedName{Namespace: desired.Namespace, Name: desired.Name}
 
 			//if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
@@ -113,6 +116,19 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 
 				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
+
+				endpoints, err := r.resolveSeedEndpoints(ctx, actual, remoteClient)
+				if err != nil {
+					logger.Error(err,"Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
+					return ctrl.Result{}, err
+				}
+
+				seeds = append(seeds, endpoints...)
+
+				if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
+					logger.Error(err, "Failed to update seeds")
+					return ctrl.Result{}, err
+				}
 			} else {
 				if errors.IsNotFound(err) {
 					if err = remoteClient.Create(ctx, &desired); err != nil {
@@ -131,14 +147,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}).
-		Complete(r)
-}
-
-func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDatacenterTemplateSpec) cassdcapi.CassandraDatacenter {
+func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string) cassdcapi.CassandraDatacenter {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = k8ssandraNamespace
@@ -159,6 +168,10 @@ func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDat
 			Config:        template.Config,
 			Racks:         template.Racks,
 			StorageConfig: template.StorageConfig,
+			AdditionalSeeds: additionalSeeds,
+			Networking: &cassdcapi.NetworkingConfig{
+				HostNetwork: true,
+			},
 		},
 	}
 }
@@ -170,3 +183,97 @@ func deepHashString(obj interface{}) string {
 	b64Hash := base64.StdEncoding.EncodeToString(hashBytes)
 	return b64Hash
 }
+
+func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
+	//ips, err := net.LookupIP(dc.GetSeedServiceName())
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	//endpoints := make([]string, len(ips))
+	//
+	//for _, ip := range ips {
+	//	if ip.To4() == nil {
+	//		return nil, fmt.Errorf("failed to get IPv4 address for ip %s from seed service %s", ip, dc.GetSeedServiceName())
+	//	}
+	//	endpoints = append(endpoints, ip.String())
+	//}
+	//
+	//return endpoints, nil
+
+	podList := &corev1.PodList{}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
+
+	err := remoteClient.List(ctx, podList, labels)
+	if err != nil {
+		return nil, err
+	}
+
+	endpoints := make([]string, 0, 3)
+
+	for _, pod := range podList.Items {
+		endpoints = append(endpoints, pod.Status.PodIP)
+		if len(endpoints) > 2 {
+			break
+		}
+	}
+
+	return endpoints, nil
+}
+
+func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, k8ssandra *api.K8ssandraCluster, seeds []string, start, end int) error {
+	for i := start; i < end; i++ {
+		dc, remoteClient, err := r.getDatacenterForTemplate(ctx, k8ssandra, i)
+		if err != nil {
+			return err
+		}
+
+		if err = r.updateAdditionalSeedsForDatacenter(ctx, dc, seeds, remoteClient); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []string, remoteClient client.Client) error {
+	patch := client.MergeFromWithOptions(dc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if dc.Spec.AdditionalSeeds == nil {
+		dc.Spec.AdditionalSeeds = make([]string, 0, len(seeds))
+	}
+	// TODO make sure we do not have duplicates
+	dc.Spec.AdditionalSeeds = append(dc.Spec.AdditionalSeeds, seeds...)
+
+	return remoteClient.Patch(ctx, dc, patch)
+}
+
+func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Context, k8ssandra *api.K8ssandraCluster, idx int) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+	dcTemplate := k8ssandra.Spec.Cassandra.Datacenters[idx]
+	k8ssandraKey := types.NamespacedName{Namespace: k8ssandra.Namespace, Name: k8ssandra.Name}
+	remoteClient, err := r.ClientCache.GetClient(k8ssandraKey, k8ssandra.Spec.K8sContextsSecret, dcTemplate.K8sContext)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dc := &cassdcapi.CassandraDatacenter{}
+	dcKey := getDatacenterKey(dcTemplate, k8ssandraKey)
+	err = remoteClient.Get(ctx, dcKey, dc)
+
+	return dc, remoteClient, err
+}
+
+func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, k8ssandraKey types.NamespacedName) types.NamespacedName {
+	if len(dcTemplate.Meta.Namespace) == 0 {
+		return types.NamespacedName{Namespace: k8ssandraKey.Namespace, Name: dcTemplate.Meta.Name}
+	}
+	return types.NamespacedName{Namespace: dcTemplate.Meta.Namespace, Name: dcTemplate.Meta.Name}
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&api.K8ssandraCluster{}).
+		Complete(r)
+}
+

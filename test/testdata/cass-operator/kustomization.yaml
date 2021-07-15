@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
 - ../../../config/cass-operator
-namespace: multi-dc-wl5pvj
+namespace: multi-dc-wdbk6v

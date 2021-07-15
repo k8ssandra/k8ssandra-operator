@@ -17,8 +17,12 @@ type ClientCache struct {
 
 	scheme *runtime.Scheme
 
+	// A mapping of K8ssandraCluster keys (in the form of NamespacedNames) to kubeconfig
+	// files stored as byte slices.
 	kubecConfigs map[types.NamespacedName][]byte
 
+	// A mapping of K8ssandraCluster keys (in the form of NamespacedNames) to clients where
+	// the clients itself a mapping of kubeconfig context name to client.
 	remoteClients map[types.NamespacedName]map[string]client.Client
 }
 
