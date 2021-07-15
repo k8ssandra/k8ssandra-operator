@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
+	cassdcv1beta1 "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,11 +28,9 @@ import (
 
 // K8ssandraClusterSpec defines the desired state of K8ssandraCluster
 type K8ssandraClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	K8sContextsSecret string `json:"k8sContextsSecret,omitempty"`
 
-	// Foo is an example field of K8ssandraCluster. Edit k8ssandracluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Cassandra *Cassandra `json:"cassandra,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -57,6 +58,50 @@ type K8ssandraClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []K8ssandraCluster `json:"items"`
+}
+
+type Cassandra struct {
+	Cluster string `json:"cluster,omitempty"`
+
+	Datacenters []CassandraDatacenterTemplateSpec `json:"datacenters,omitempty"`
+}
+
+// +kubebuilder:pruning:PreserveUnknownFields
+
+type CassandraDatacenterTemplateSpec struct {
+	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
+
+	K8sContext string `json:"k8sContext,omitempty"`
+
+	// TODO Determine which fields from CassandraDatacenterSpec should be copied here.
+	// This is only a subset set of the fields. More fields do need to be copied. Some are
+	// unnecessary though. Some belong at the cluster level. I have created
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/9 to sort it out.
+
+	// +kubebuilder:validation:Minimum=1
+	Size int32 `json:"size"`
+
+	ServerVersion string `json:"serverVersion"`
+
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Config json.RawMessage `json:"config,omitempty"`
+
+	// Kubernetes resource requests and limits, per pod
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	Racks []cassdcv1beta1.Rack `json:"racks,omitempty"`
+
+	StorageConfig cassdcv1beta1.StorageConfig `json:"storageConfig"`
+}
+
+type EmbeddedObjectMeta struct {
+	Namespace string `json:"namespace,omitempty"`
+
+	Name string `json:"name,omitempty"`
+
+	Labels map[string]string `json:"labels,omitempty"`
+
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 func init() {

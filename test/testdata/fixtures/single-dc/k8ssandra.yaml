@@ -1,0 +1,26 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  k8sContextsSecret: k8s-contexts
+  cassandra:
+    cluster: test
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-1
+        size: 1
+        serverVersion: "3.11.10"
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvm-options:
+            initial_heap_size: "512m"
+            max_heap_size: "512m"

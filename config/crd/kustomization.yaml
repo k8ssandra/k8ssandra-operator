@@ -2,8 +2,16 @@
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/k8ssandra.io.k8ssandra.io_k8ssandraclusters.yaml
+- bases/k8ssandra.io_k8ssandraclusters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
+
+patches:
+- path: patches/remove_config_validation.json
+  target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: k8ssandraclusters.k8ssandra.io
 
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.

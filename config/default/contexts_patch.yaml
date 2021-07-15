@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8ssandra-operator
+spec:
+  template:
+    spec:
+      containers:
+        - name: k8ssandra-operator
+          volumeMounts:
+            - mountPath: /k8ssandra-operator
+              name: contexts
+      volumes:
+        - name: contexts
+          secret:
+            secretName: k8s-contexts

@@ -1,0 +1,13 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: cass-operator-crb
+subjects:
+  - kind: ServiceAccount
+    name: cass-operator
+    # The namespace is removed here in order for it to be set by kustomize. See
+    # https://github.com/kubernetes-sigs/kustomize/pull/166 for details.
+roleRef:
+  kind: ClusterRole
+  name: cass-operator-cr
+  apiGroup: rbac.authorization.k8s.io
