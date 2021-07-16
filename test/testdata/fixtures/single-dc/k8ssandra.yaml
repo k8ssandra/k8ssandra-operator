@@ -9,7 +9,7 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: kind-k8ssandra-1
+        k8sContext: kind-k8ssandra-0
         size: 1
         serverVersion: "3.11.10"
         storageConfig:
@@ -24,3 +24,6 @@ spec:
           jvm-options:
             initial_heap_size: "512m"
             max_heap_size: "512m"
+        stargate:
+          size: 1
+          heapSize: 256Mi

@@ -14,4 +14,12 @@ resources:
   kind: K8ssandraCluster
   path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  kind: Stargate
+  path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
