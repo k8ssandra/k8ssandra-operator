@@ -78,6 +78,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if k8ssandra.Spec.Cassandra != nil {
 		var seeds []string
+		dcNames := make([]string, 0, len(k8ssandra.Spec.Cassandra.Datacenters))
 
 		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
 			desiredDc := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcTemplate, seeds)
@@ -208,33 +209,38 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string) cassdcapi.CassandraDatacenter {
+func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = k8ssandraNamespace
 	}
 
-	return cassdcapi.CassandraDatacenter{
+	config, err := cassandra.GetMergedConfig(template.Config, dcNames)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:     cluster,
-			Size:            template.Size,
-			ServerType:      "cassandra",
-			ServerVersion:   template.ServerVersion,
-			Resources:       template.Resources,
-			Config:          template.Config,
-			Racks:           template.Racks,
-			StorageConfig:   template.StorageConfig,
+			ClusterName:   cluster,
+			Size:          template.Size,
+			ServerType:    "cassandra",
+			ServerVersion: template.ServerVersion,
+			Resources:     template.Resources,
+			Config:        config,
+			Racks:         template.Racks,
+			StorageConfig: template.StorageConfig,
 			AdditionalSeeds: additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
 			},
 		},
-	}
+	}, nil
 }
 
 func deepHashString(obj interface{}) string {
