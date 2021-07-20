@@ -161,6 +161,9 @@ namespace: {{ .Namespace }}
 	return generateKustomizationFile("k8ssandra-operator", k, tmpl)
 }
 
+// generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
+// and generates a kustomization.yaml file using the template tmpl. k defines values that
+// will be substituted in the template.
 func generateKustomizationFile(name string, k Kustomization, tmpl string) error {
 	dir := filepath.Join("..", "..", "build", "test-config", name)
 
