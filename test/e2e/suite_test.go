@@ -8,7 +8,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -39,21 +38,7 @@ func beforeSuite(t *testing.T) {
 	}
 	require.FileExistsf(t, inClusterCfgFile, "in-cluster kind kubeconfig file is missing", "path", inClusterCfgFile)
 
-	buf, err := ioutil.ReadFile(inClusterCfgFile)
-	if err != nil {
-		t.Fatalf("failed to read %s: %v", inClusterCfgFile, err)
-	}
-
-	dest, err := filepath.Abs("../testdata/k8s-contexts/kubeconfig")
-	if err != nil {
-		t.Fatalf("failed to get path of dest kind kubeconfig file: %v", err)
-	}
-
-	err = ioutil.WriteFile(dest, buf, 0644)
-	if err != nil {
-		t.Fatalf("failed to write %s: %v", dest, err)
-	}
-
+	// TODO this needs to go away since we are create a Framework instance per test now
 	framework.Init(t)
 }
 
@@ -78,7 +63,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f)
-		//defer afterTest(t, namespace, f)
+		defer afterTest(t, namespace, f)
 
 		if err == nil {
 			test(t, ctx, namespace, f)

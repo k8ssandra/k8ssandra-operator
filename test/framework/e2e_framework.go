@@ -6,6 +6,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
+	"io"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"text/template"
 	"time"
 )
 
@@ -93,6 +95,93 @@ func (f *E2eFramework) getRemoteClusterContexts() []string {
 	return contexts
 }
 
+type Kustomization struct {
+	Namespace string
+}
+
+func generateCassOperatorKustomization(namespace string) error {
+	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../../config/cass-operator
+namespace: {{ .Namespace }}
+`
+	k := Kustomization{Namespace: namespace}
+
+	return generateKustomizationFile("cass-operator", k, tmpl)
+}
+
+func generateContextsKustomization(namespace string) error {
+	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+- files:
+  - kubeconfig
+  name: k8s-contexts
+namespace: {{ .Namespace }}
+`
+	k := Kustomization{Namespace: namespace}
+
+	if err := generateKustomizationFile("k8s-contexts", k, tmpl); err != nil {
+		return err
+	}
+
+	src := filepath.Join("..", "..", "build", "in_cluster_kubeconfig")
+	dest := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
+
+	srcFile, err := os.Create(src)
+	if err != nil {
+		return err
+	}
+
+	destFile, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(destFile, srcFile)
+	return err
+}
+
+func generateK8ssandraOperatorKustomization(namespace string) error {
+	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../../config/default
+namespace: {{ .Namespace }}
+`
+	k := Kustomization{Namespace: namespace}
+
+	return generateKustomizationFile("k8ssandra-operator", k, tmpl)
+}
+
+func generateKustomizationFile(name string, k Kustomization, tmpl string) error {
+	dir := filepath.Join("..", "..", "build", "test-config", name)
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	parsed, err := template.New(name).Parse(tmpl)
+	if err != nil {
+		return nil
+	}
+
+	file, err := os.Create(filepath.Join(dir, "kustomization.yaml"))
+	if err != nil {
+		return err
+	}
+
+	return parsed.Execute(file, k)
+}
+
+
 func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...string) error {
 	kdir, err := filepath.Abs(dir)
 	if err != nil {
@@ -135,20 +224,33 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 // DeployK8ssandraOperator Deploys k8ssandra-operator in the control plane cluster. Note
 // that the control plane cluster can also be one of the remote clusters.
 func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
-	dir := "../testdata/k8ssandra-operator"
+	if err := generateK8ssandraOperatorKustomization(namespace); err != nil {
+		return err
+	}
+
+	dir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
 
 	return f.kustomizeAndApply(dir, namespace);
 }
 
 // DeployCassOperator deploys cass-operator in all remote clusters.
 func (f *E2eFramework) DeployCassOperator(namespace string) error {
-	dir := "../testdata/cass-operator"
+	if err := generateCassOperatorKustomization(namespace); err != nil {
+		return err
+	}
+
+	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
+
 	return f.kustomizeAndApply(dir, namespace, f.getRemoteClusterContexts()...)
 }
 
 // DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.
 func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
-	dir := "../testdata/k8s-contexts"
+	if err := generateContextsKustomization(namespace); err != nil {
+		return err
+	}
+
+	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
 
 	return f.kustomizeAndApply(dir, namespace, f.controlPlaneContext)
 }
