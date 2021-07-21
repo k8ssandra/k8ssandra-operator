@@ -34,6 +34,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/util/hash"
+	"math"
+	"time"
+
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,13 +82,22 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if k8ssandra.Spec.Cassandra != nil {
 		var seeds []string
+		systemDistributedRF := getSystemDistributedRF(k8ssandra)
 		dcNames := make([]string, 0, len(k8ssandra.Spec.Cassandra.Datacenters))
 
 		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
 			desiredDc := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcTemplate, seeds)
 			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 
-			//if err := controllerutil.SetControllerReference(k8ssandra, desiredDc, r.Scheme); err != nil {
+		for i, template := range k8ssandra.Spec.Cassandra.Datacenters {
+			desired, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, template, seeds, systemDistributedRF)
+			if err != nil {
+				logger.Error(err, "Failed to CassandraDatacenter")
+				return ctrl.Result{}, err
+			}
+			dcKey := types.NamespacedName{Namespace: desired.Namespace, Name: desired.Name}
+
+			//if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
 			//	logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
 			//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 			//}
@@ -209,13 +222,13 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string) (*cassdcapi.CassandraDatacenter, error) {
+func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string, systemDistributedRF int) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = k8ssandraNamespace
 	}
 
-	config, err := cassandra.GetMergedConfig(template.Config, dcNames)
+	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF)
 	if err != nil {
 		return nil, err
 	}
@@ -241,6 +254,16 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 			},
 		},
 	}, nil
+}
+
+func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {
+	size := 1.0
+	for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+		size := math.Min(size, float64(dc.Size))
+	}
+	replicationFactor := math.Min(size, float64(3.0))
+
+	return int(replicationFactor)
 }
 
 func deepHashString(obj interface{}) string {
