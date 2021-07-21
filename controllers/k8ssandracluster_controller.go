@@ -261,6 +261,16 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 	}
 }
 
+func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {
+	size := 1.0
+	for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+		size := math.Min(size, float64(dc.Size))
+	}
+	replicationFactor := math.Min(size, float64(3.0))
+
+	return int(replicationFactor)
+}
+
 func deepHashString(obj interface{}) string {
 	hasher := sha256.New()
 	hash.DeepHashObject(hasher, obj)
