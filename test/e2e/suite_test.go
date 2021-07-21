@@ -56,6 +56,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		namespace := getTestNamespace(fixture)
+		namespace = "multi-dc-fsl6j5"
 		fixtureDir, err := getTestFixtureDir(fixture)
 
 		if err != nil {
@@ -170,6 +171,7 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 
 func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
+	//assert := assert.New(t)
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
@@ -229,4 +231,22 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	count, err := f.GetNodeToolStatusUN(kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}, "test-dc1-default-sts-0")
+
+	if err != nil {
+		t.Errorf("failed to execute nodetool status in dc1: %s", err)
+	} else {
+		assert.Equal(t, 6, count, "The number of nodes with an UN status is wrong")
+	}
+
+	t.Log("check that nodes in dc2 see nodes in dc1")
+	count, err = f.GetNodeToolStatusUN(kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-1"}, "test-dc2-default-sts-0")
+
+	if err != nil {
+		t.Errorf("failed to execute nodetool status in dc2: %s", err)
+	} else {
+		assert.Equal(t, 6, count, "The number of nodes with an UN status is wrong")
+	}
 }

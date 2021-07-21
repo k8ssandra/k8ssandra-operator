@@ -10,7 +10,7 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 1
+        size: 3
         serverVersion: "3.11.10"
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -29,7 +29,7 @@ spec:
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
-        size: 1
+        size: 3
         serverVersion: "3.11.10"
         storageConfig:
           cassandraDataVolumeClaimSpec:

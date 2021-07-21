@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"text/template"
 	"time"
@@ -409,4 +410,18 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 	options := kubectl.Options{Namespace: namespace}
 
 	return kubectl.Delete(options, buf)
+}
+
+// GetNodeToolStatusUN Executes nodetool status against the Cassandra pod and returns a
+// count of the matching lines reporting a status of Up/Normal.
+func (f *E2eFramework) GetNodeToolStatusUN(opts kubectl.Options, pod string) (int, error) {
+	output, err := kubectl.Exec(opts, pod, "nodetool", "status")
+	if err != nil {
+		return -1, err
+	}
+
+	re := regexp.MustCompile("UN\\s\\s")
+	matches := re.FindAllString(output, -1)
+
+	return len(matches), nil
 }
