@@ -8,18 +8,19 @@ import (
 
 type NodeConfig map[string]interface{}
 
-func getOperatorSuppliedConfig(dcs []string) NodeConfig {
+func getOperatorSuppliedConfig(dcs []string, replicationFactor int) NodeConfig {
 	return NodeConfig{
 		"jvm-options": NodeConfig{
 			"additional-jvm-options": NodeConfig{
 				"-Dcassandra.system_distributed_replication_dc_names": strings.Join(dcs, ","),
+				"-Dcassandra.system_distributed_replication_per_dc": replicationFactor,
 			},
 		},
 	}
 }
 
-func GetMergedConfig(config []byte, dcs []string) ([]byte, error) {
-	operatorValues := getOperatorSuppliedConfig(dcs)
+func GetMergedConfig(config []byte, dcs []string, replicationFactor int) ([]byte, error) {
+	operatorValues := getOperatorSuppliedConfig(dcs, replicationFactor)
 	operatorBytes, err := json.Marshal(operatorValues)
 	if err != nil {
 		return nil, err
