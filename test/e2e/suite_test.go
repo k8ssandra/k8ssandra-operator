@@ -8,7 +8,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -39,21 +38,7 @@ func beforeSuite(t *testing.T) {
 	}
 	require.FileExistsf(t, inClusterCfgFile, "in-cluster kind kubeconfig file is missing", "path", inClusterCfgFile)
 
-	buf, err := ioutil.ReadFile(inClusterCfgFile)
-	if err != nil {
-		t.Fatalf("failed to read %s: %v", inClusterCfgFile, err)
-	}
-
-	dest, err := filepath.Abs("../testdata/k8s-contexts/kubeconfig")
-	if err != nil {
-		t.Fatalf("failed to get path of dest kind kubeconfig file: %v", err)
-	}
-
-	err = ioutil.WriteFile(dest, buf, 0644)
-	if err != nil {
-		t.Fatalf("failed to write %s: %v", dest, err)
-	}
-
+	// TODO this needs to go away since we are create a Framework instance per test now
 	framework.Init(t)
 }
 
@@ -78,7 +63,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f)
-		//defer afterTest(t, namespace, f)
+		defer afterTest(t, namespace, f)
 
 		if err == nil {
 			test(t, ctx, namespace, f)
@@ -144,7 +129,7 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: namespace}, fixtureDir); err != nil {
+	if err := kubectl.Apply(kubectl.Options{Namespace: namespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
 		t.Log("kubectl apply failed")
 		return err
 	}
@@ -204,6 +189,9 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
+	timeout := 8 * time.Minute
+	interval := 15 * time.Second
+
 	t.Log("check that datacenter dc1 is ready")
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	withDatacenter := f.NewWithDatacenter(ctx, dc1Key)
@@ -211,7 +199,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
-	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc1 to become ready")
+	}), timeout, interval, "timed out waiting for datacenter dc1 to become ready")
 
 	t.Log("check that datacenter dc2 is ready")
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -220,5 +208,5 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
-	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc2 to become ready")
+	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
 }
