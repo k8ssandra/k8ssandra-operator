@@ -3,6 +3,7 @@ package cassandra
 import (
 	"encoding/json"
 	"github.com/Jeffail/gabs"
+	"strconv"
 	"strings"
 )
 
@@ -11,9 +12,9 @@ type NodeConfig map[string]interface{}
 func getOperatorSuppliedConfig(dcs []string, replicationFactor int) NodeConfig {
 	return NodeConfig{
 		"jvm-options": NodeConfig{
-			"additional-jvm-options": NodeConfig{
-				"-Dcassandra.system_distributed_replication_dc_names": strings.Join(dcs, ","),
-				"-Dcassandra.system_distributed_replication_per_dc": replicationFactor,
+			"additional-jvm-opts": []string{
+				"-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(dcs, ","),
+				"-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replicationFactor),
 			},
 		},
 	}
