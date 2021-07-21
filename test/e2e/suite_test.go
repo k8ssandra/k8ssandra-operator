@@ -129,7 +129,7 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: namespace}, fixtureDir); err != nil {
+	if err := kubectl.Apply(kubectl.Options{Namespace: namespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
 		t.Log("kubectl apply failed")
 		return err
 	}
@@ -189,6 +189,9 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
+	timeout := 8 * time.Minute
+	interval := 15 * time.Second
+
 	t.Log("check that datacenter dc1 is ready")
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	withDatacenter := f.NewWithDatacenter(ctx, dc1Key)
@@ -196,7 +199,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
-	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc1 to become ready")
+	}), timeout, interval, "timed out waiting for datacenter dc1 to become ready")
 
 	t.Log("check that datacenter dc2 is ready")
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -205,5 +208,5 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
-	}), 3*time.Minute, 15*time.Second, "timed out waiting for datacenter dc2 to become ready")
+	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
 }

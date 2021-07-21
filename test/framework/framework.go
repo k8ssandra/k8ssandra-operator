@@ -53,7 +53,7 @@ type Framework struct {
 	Client client.Client
 
 	// The Kubernetes context in which the K8ssandraCluser controller is running.
-	controlPlaneContext string
+	ControlPlaneContext string
 
 	// RemoteClients is mapping of Kubernetes context names to clients.
 	remoteClients map[string]client.Client
@@ -75,8 +75,8 @@ func NewFramework(client client.Client, controlPlanContext string, remoteClients
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
 
-	// TODO controlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
-	return &Framework{Client: client, controlPlaneContext: "kind-k8ssandra-0", remoteClients: remoteClients, logger: log}
+	// TODO ControlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
+	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
 }
 
 func (f *Framework) CreateNamespace(name string) error {

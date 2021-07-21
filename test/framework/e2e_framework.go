@@ -6,7 +6,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
-	"io"
+	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,8 +64,8 @@ func NewE2eFramework() (*E2eFramework, error) {
 		}
 
 		// TODO Add a flag or option to allow the user to specify the control plane cluster
-		//if len(controlPlaneContext) == 0 {
-		//	controlPlaneContext = name
+		//if len(ControlPlaneContext) == 0 {
+		//	ControlPlaneContext = name
 		//	controlPlaneClient = remoteClient
 		//}
 		remoteClients[name] = remoteClient
@@ -134,18 +134,12 @@ namespace: {{ .Namespace }}
 	src := filepath.Join("..", "..", "build", "in_cluster_kubeconfig")
 	dest := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
 
-	srcFile, err := os.Create(src)
+	buf, err := ioutil.ReadFile(src)
 	if err != nil {
 		return err
 	}
 
-	destFile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(destFile, srcFile)
-	return err
+	return ioutil.WriteFile(dest, buf, 0644)
 }
 
 func generateK8ssandraOperatorKustomization(namespace string) error {
@@ -204,7 +198,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace}
+		options := kubectl.Options{Namespace: namespace, Context: defaultControlPlaneContext}
 		return kubectl.Apply(options, buf)
 	}
 
@@ -233,7 +227,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 
 	dir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
 
-	return f.kustomizeAndApply(dir, namespace);
+	return f.kustomizeAndApply(dir, namespace)
 }
 
 // DeployCassOperator deploys cass-operator in all remote clusters.
@@ -253,9 +247,9 @@ func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 		return err
 	}
 
-	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
+	dir := filepath.Join("..", "..", "build", "test-config", "k8s-contexts")
 
-	return f.kustomizeAndApply(dir, namespace, f.controlPlaneContext)
+	return f.kustomizeAndApply(dir, namespace, f.ControlPlaneContext)
 }
 
 // DeleteNamespace Deletes the namespace from all remote clusters and blocks until they
@@ -301,7 +295,7 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 // ready in the control plane cluster.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := ClusterKey{
-		K8sContext: f.controlPlaneContext,
+		K8sContext: f.ControlPlaneContext,
 		NamespacedName: types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"},
 	}
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
