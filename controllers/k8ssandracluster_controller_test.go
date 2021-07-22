@@ -41,11 +41,11 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	t.Log("check that the datacenter was created")
-	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc1"}
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
 	dc := &cassdcapi.CassandraDatacenter{}
-	err = f.Client.Get(ctx, dcKey, dc)
+	err = f.Client.Get(ctx, dcKey.NamespacedName, dc)
 	require.NoError(err, "failed to get datacenter")
 
 	t.Log("check that the owner reference is set on the datacenter")
