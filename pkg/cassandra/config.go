@@ -24,8 +24,8 @@ func getOperatorSuppliedConfig(dcs []string, replicationFactor int, cassandraVer
 	}
 }
 
-func GetMergedConfig(config []byte, dcs []string, replicationFactor int) ([]byte, error) {
-	operatorValues := getOperatorSuppliedConfig(dcs, replicationFactor)
+func GetMergedConfig(config []byte, dcs []string, replicationFactor int, cassandraVersion string) ([]byte, error) {
+	operatorValues := getOperatorSuppliedConfig(dcs, replicationFactor, cassandraVersion)
 	operatorBytes, err := json.Marshal(operatorValues)
 	if err != nil {
 		return nil, err
