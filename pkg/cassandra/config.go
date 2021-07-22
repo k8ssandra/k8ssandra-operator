@@ -9,9 +9,13 @@ import (
 
 type NodeConfig map[string]interface{}
 
-func getOperatorSuppliedConfig(dcs []string, replicationFactor int) NodeConfig {
+func getOperatorSuppliedConfig(dcs []string, replicationFactor int, cassandraVersion string) NodeConfig {
+	jvmOpts := "jvm-server-options"
+	if strings.HasPrefix(cassandraVersion, "3.") {
+		jvmOpts = "jvm-options"
+	}
 	return NodeConfig{
-		"jvm-options": NodeConfig{
+		jvmOpts: NodeConfig{
 			"additional-jvm-opts": []string{
 				"-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(dcs, ","),
 				"-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replicationFactor),
