@@ -90,16 +90,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	clientCache := clientcache.New(mgr.GetClient(), scheme)
+	if isControlPlane() {
+		clientCache := clientcache.New(mgr.GetClient(), scheme)
 
-	if err = (&controllers.K8ssandraClusterReconciler{
-		Client:      mgr.GetClient(),
-		Scheme:      mgr.GetScheme(),
-		ClientCache: clientCache,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
-		os.Exit(1)
+		if err = (&controllers.K8ssandraClusterReconciler{
+			Client:      mgr.GetClient(),
+			Scheme:      mgr.GetScheme(),
+			ClientCache: clientCache,
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
+			os.Exit(1)
+		}
 	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -130,4 +133,14 @@ func getWatchNamespace() (string, error) {
 		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
 	}
 	return ns, nil
+}
+
+func isControlPlane() bool {
+	controlPlaneEnvVar := "K8SSANDRA_CONTROL_PLANE"
+	val, found := os.LookupEnv(controlPlaneEnvVar)
+	if !found {
+		return false
+	}
+
+	return val == "true"
 }
