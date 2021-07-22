@@ -174,7 +174,7 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 		namespace = k8ssandraNamespace
 	}
 
-	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF)
+	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF, template.ServerVersion)
 	if err != nil {
 		return nil, err
 	}
