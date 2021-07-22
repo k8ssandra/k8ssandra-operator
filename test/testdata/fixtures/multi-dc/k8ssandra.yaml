@@ -24,8 +24,6 @@ spec:
           jvm-options:
             initial_heap_size: "512m"
             max_heap_size: "512m"
-#            additional-jvm-opts:
-#              - "-Dcassandra.system_distributed_replication_dc_names=dc1,dc2"
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1

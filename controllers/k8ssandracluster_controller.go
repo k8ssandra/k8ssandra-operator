@@ -144,7 +144,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return ctrl.Result{}, err
 				}
 
-				seeds = append(seeds, endpoints...)
+				// The following code will update the AdditionalSeeds property for the
+				// datacenters. We will wind up having endpoints from every DC listed in
+				// the AdditionalSeeds property. We really want to exclude the seeds from
+				// the current DC. It is not a major concern right now as this is a short-term
+				// solution for handling seed addresses.
+				seeds = addSeedEndpoints(seeds, endpoints...)
 
 				if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
 					logger.Error(err, "Failed to update seeds")
@@ -324,6 +329,30 @@ func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// addSeedEndpoints returns a new slice with endpoints added to seeds and duplicates
+// removed.
+func addSeedEndpoints(seeds []string, endpoints ...string) []string {
+	updatedSeeds := make([]string, 0, len(seeds))
+	updatedSeeds = append(updatedSeeds, seeds...)
+
+	for _, endpoint := range endpoints {
+		if !contains(updatedSeeds, endpoint) {
+			updatedSeeds = append(updatedSeeds, endpoint)
+		}
+	}
+
+	return updatedSeeds
+}
+
+func contains(slice []string, s string) bool {
+	for _, elem := range slice {
+		if elem == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []string, remoteClient client.Client) error {

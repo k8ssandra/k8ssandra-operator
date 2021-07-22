@@ -32,6 +32,8 @@ const (
 
 type E2eFramework struct {
 	*Framework
+
+	nodeToolStatusUN *regexp.Regexp
 }
 
 func NewE2eFramework() (*E2eFramework, error) {
@@ -87,7 +89,9 @@ func NewE2eFramework() (*E2eFramework, error) {
 
 	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
 
-	return &E2eFramework{Framework: f}, nil
+	re := regexp.MustCompile("UN\\s\\s")
+
+	return &E2eFramework{Framework: f, nodeToolStatusUN: re}, nil
 }
 
 func (f *E2eFramework) getRemoteClusterContexts() []string {
@@ -420,8 +424,22 @@ func (f *E2eFramework) GetNodeToolStatusUN(opts kubectl.Options, pod string) (in
 		return -1, err
 	}
 
-	re := regexp.MustCompile("UN\\s\\s")
-	matches := re.FindAllString(output, -1)
+
+
+	matches := f.nodeToolStatusUN.FindAllString(output, -1)
 
 	return len(matches), nil
+}
+
+// WaitForNodeToolStatusUN polls until nodetool status reports UN for count nodes.
+func (f *E2eFramework) WaitForNodeToolStatusUN(opts kubectl.Options, pod string, count int, timeout, interval time.Duration) error {
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		actual, err := f.GetNodeToolStatusUN(opts, pod)
+		if err != nil {
+			f.logger.Error(err, "failed to execute nodetool status for %s: %s", pod, err)
+			return false, err
+		}
+		return actual == count, nil
+	})
+
 }

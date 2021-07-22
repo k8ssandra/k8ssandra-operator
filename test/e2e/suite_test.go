@@ -56,7 +56,6 @@ func e2eTest(ctx context.Context, fixture TestFixture, test e2eTestFunc) func(*t
 		}
 
 		namespace := getTestNamespace(fixture)
-		namespace = "multi-dc-fsl6j5"
 		fixtureDir, err := getTestFixtureDir(fixture)
 
 		if err != nil {
@@ -233,20 +232,19 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	count, err := f.GetNodeToolStatusUN(kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}, "test-dc1-default-sts-0")
+	timeout = 1 * time.Minute
+	interval = 5 * time.Second
+	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
+	pod := "test-dc1-default-sts-0"
+	count := 6
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, timeout, interval)
 
-	if err != nil {
-		t.Errorf("failed to execute nodetool status in dc1: %s", err)
-	} else {
-		assert.Equal(t, 6, count, "The number of nodes with an UN status is wrong")
-	}
+	assert.NoError(t, err, "timed out waiting for nodetool stauts check against " + pod)
 
-	t.Log("check that nodes in dc2 see nodes in dc1")
-	count, err = f.GetNodeToolStatusUN(kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-1"}, "test-dc2-default-sts-0")
+	t.Log("check nodes in dc2 see nodes in dc1")
+	opts.Context = "kind-k8ssandra-1"
+	pod = "test-dc2-default-sts-0"
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, timeout, interval)
 
-	if err != nil {
-		t.Errorf("failed to execute nodetool status in dc2: %s", err)
-	} else {
-		assert.Equal(t, 6, count, "The number of nodes with an UN status is wrong")
-	}
+	assert.NoError(t, err, "timed out waiting for nodetool status check against " + pod)
 }
