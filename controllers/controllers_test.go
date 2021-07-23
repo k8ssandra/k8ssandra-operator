@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -9,10 +10,12 @@ import (
 	"github.com/bombsimon/logrusr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,10 +42,10 @@ func TestControllers(t *testing.T) {
 	defer afterSuite(t)
 	beforeSuite(t)
 
-	ctx := context.Background()
+	// ctx := context.Background()
 
-	t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
-	t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
+	// t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
+	// t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
 }
 
 func beforeSuite(t *testing.T) {
@@ -85,10 +88,13 @@ func beforeSuite(t *testing.T) {
 		cfgs[i] = cfg
 	}
 
+	clientCache := clientcache.New(k8sManagers[0].GetClient(), scheme.Scheme)
+
 	// We start only one reconciler, for the clusters number 0
 	err := (&K8ssandraClusterReconciler{
-		Client: k8sManagers[0].GetClient(),
-		Scheme: scheme.Scheme,
+		Client:      k8sManagers[0].GetClient(),
+		Scheme:      scheme.Scheme,
+		ClientCache: clientCache,
 	}).SetupWithManager(k8sManagers[0])
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler")
 
@@ -130,14 +136,20 @@ func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 	// Test code is temporarily stubbed out until we sort out
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/35.
 
-	//namespace := rand.String(9)
+	namespace := rand.String(9)
 	return func(t *testing.T) {
-		//f := framework.NewFramework(testClient)
-		//
-		//if err := f.CreateNamespace(namespace); err != nil {
-		//	t.Fatalf("failed to create namespace %s: %v", namespace, err)
-		//}
-		//
-		//test(t, ctx, f, namespace)
+		remoteClients := make(map[string]client.Client, clustersToCreate-1)
+		for i := 0; i < clustersToCreate; i++ {
+			name := fmt.Sprintf("cluster-%d", i)
+			remoteClients[name] = testClients[i]
+		}
+
+		f := framework.NewFramework(testClients[0], "cluster-0", remoteClients)
+
+		if err := f.CreateNamespace(namespace); err != nil {
+			t.Fatalf("failed to create namespace %s: %v", namespace, err)
+		}
+
+		test(t, ctx, f, namespace)
 	}
 }
