@@ -119,7 +119,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				endpoints, err := r.resolveSeedEndpoints(ctx, actual, remoteClient)
 				if err != nil {
-					logger.Error(err,"Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
+					logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
 				}
 
@@ -155,19 +155,19 @@ func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDat
 
 	return cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:   cluster,
-			Size:          template.Size,
-			ServerType:    "cassandra",
-			ServerVersion: template.ServerVersion,
-			Resources:     template.Resources,
-			Config:        template.Config,
-			Racks:         template.Racks,
-			StorageConfig: template.StorageConfig,
+			ClusterName:     cluster,
+			Size:            template.Size,
+			ServerType:      "cassandra",
+			ServerVersion:   template.ServerVersion,
+			Resources:       template.Resources,
+			Config:          template.Config,
+			Racks:           template.Racks,
+			StorageConfig:   template.StorageConfig,
 			AdditionalSeeds: additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
@@ -276,4 +276,3 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&api.K8ssandraCluster{}).
 		Complete(r)
 }
-

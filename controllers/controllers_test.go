@@ -2,8 +2,11 @@ package controllers
 
 import (
 	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/bombsimon/logrusr"
-	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -12,22 +15,24 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"testing"
-	"time"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-var cfg *rest.Config
-var testClient client.Client
-var testEnv *envtest.Environment
-
 const (
-	timeout  = time.Second * 10
-	interval = time.Millisecond * 250
+	clustersToCreate = 2
+	timeout          = time.Second * 10
+	interval         = time.Millisecond * 250
+)
+
+var (
+	cfgs        = make([]*rest.Config, clustersToCreate)
+	testClients = make([]client.Client, clustersToCreate)
+	testEnvs    = make([]*envtest.Environment, clustersToCreate)
 )
 
 func TestControllers(t *testing.T) {
@@ -42,45 +47,66 @@ func TestControllers(t *testing.T) {
 
 func beforeSuite(t *testing.T) {
 	require := require.New(t)
+	log := logrusr.NewLogger(logrus.New())
+	logf.SetLogger(log)
 
-	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "config", "cass-operator", "crd", "bases")},
-	}
-
-	var err error
-	cfg, err = testEnv.Start()
-	require.NoError(err, "failed to start test environment")
+	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
+	metrics.DefaultBindAddress = "0"
 
 	require.NoError(registerApis(), "failed to register apis with scheme")
 
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
-	})
-	require.NoError(err, "failed to create controller-runtime manager")
+	signalCtx := ctrl.SetupSignalHandler()
 
-	var log logr.Logger
-	log = logrusr.NewLogger(logrus.New())
-	logf.SetLogger(log)
+	k8sManagers := make([]manager.Manager, clustersToCreate)
 
-	err = (&K8ssandraClusterReconciler{
-		Client: k8sManager.GetClient(),
+	for i := 0; i < clustersToCreate; i++ {
+		testEnv := &envtest.Environment{
+			CRDDirectoryPaths: []string{
+				filepath.Join("..", "config", "crd", "bases"),
+				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+		}
+
+		testEnvs[i] = testEnv
+
+		cfg, err := testEnv.Start()
+		require.NoError(err, "failed to start test environment")
+
+		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme: scheme.Scheme,
+		})
+		require.NoError(err, "failed to create controller-runtime manager")
+
+		k8sManagers[i] = k8sManager
+
+		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		require.NoError(err, "failed to create controller-runtime client")
+
+		testClients[i] = testClient
+		cfgs[i] = cfg
+	}
+
+	// We start only one reconciler, for the clusters number 0
+	err := (&K8ssandraClusterReconciler{
+		Client: k8sManagers[0].GetClient(),
 		Scheme: scheme.Scheme,
-	}).SetupWithManager(k8sManager)
+	}).SetupWithManager(k8sManagers[0])
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler")
 
-	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		assert.NoError(t, err, "failed to start manager")
-	}()
+	for i := 0; i < clustersToCreate; i++ {
+		go func(i int) {
+			ctx, cancel := context.WithCancel(signalCtx)
+			err = k8sManagers[i].Start(ctx)
+			if cancel != nil {
+				cancel()
+			}
+			assert.NoError(t, err, "failed to start manager")
+		}(i)
+	}
 
-	testClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	require.NoError(err, "failed to create controller-runtime client")
 }
 
 func afterSuite(t *testing.T) {
-	if testEnv != nil {
+	for _, testEnv := range testEnvs {
 		err := testEnv.Stop()
 		assert.NoError(t, err, "failed to stop test environment")
 	}
