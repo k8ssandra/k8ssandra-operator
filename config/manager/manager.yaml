@@ -9,7 +9,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k8ssandra-operator
-#  namespace: system
   labels:
     control-plane: k8ssandra-operator
 spec:
@@ -37,6 +36,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+          - name: K8SSANDRA_CONTROL_PLANE
+            value: "true"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
