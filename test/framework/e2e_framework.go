@@ -178,7 +178,6 @@ func generateKustomizationFile(name string, k Kustomization, tmpl string) error 
 	return parsed.Execute(file, k)
 }
 
-
 func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...string) error {
 	kdir, err := filepath.Abs(dir)
 	if err != nil {
@@ -295,7 +294,7 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 // ready in the control plane cluster.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := ClusterKey{
-		K8sContext: f.ControlPlaneContext,
+		K8sContext:     f.ControlPlaneContext,
 		NamespacedName: types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"},
 	}
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)

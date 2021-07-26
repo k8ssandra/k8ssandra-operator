@@ -21,6 +21,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"time"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -29,12 +31,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/util/hash"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 )
@@ -119,7 +123,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				endpoints, err := r.resolveSeedEndpoints(ctx, actual, remoteClient)
 				if err != nil {
-					logger.Error(err,"Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
+					logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
 				}
 
@@ -155,19 +159,19 @@ func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDat
 
 	return cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:   cluster,
-			Size:          template.Size,
-			ServerType:    "cassandra",
-			ServerVersion: template.ServerVersion,
-			Resources:     template.Resources,
-			Config:        template.Config,
-			Racks:         template.Racks,
-			StorageConfig: template.StorageConfig,
+			ClusterName:     cluster,
+			Size:            template.Size,
+			ServerType:      "cassandra",
+			ServerVersion:   template.ServerVersion,
+			Resources:       template.Resources,
+			Config:          template.Config,
+			Racks:           template.Racks,
+			StorageConfig:   template.StorageConfig,
 			AdditionalSeeds: additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
@@ -277,3 +281,14 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+func (r *K8ssandraClusterReconciler) SetupMultiClusterWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&api.K8ssandraCluster{})
+
+	for _, c := range clusters {
+		builder = builder.Watches(source.NewKindWithCache(&api.K8ssandraCluster{}, c.GetCache()),
+			&handler.EnqueueRequestForObject{})
+	}
+
+	return builder.Complete(r)
+}

@@ -93,7 +93,7 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 
 	if err := f.DeployCassOperator(namespace); err != nil {
 		t.Log("failed to deploy cass-operator")
-		return  err
+		return err
 	}
 
 	if err := f.DeployK8sContextsSecret(namespace); err != nil {

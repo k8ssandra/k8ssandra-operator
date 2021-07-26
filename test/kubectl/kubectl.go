@@ -17,7 +17,7 @@ func Apply(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {
@@ -53,7 +53,7 @@ func Delete(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {
@@ -113,7 +113,7 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 	cmd := exec.Command("kubectl", "cluster-info", "dump")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {
