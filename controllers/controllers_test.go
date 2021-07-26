@@ -20,9 +20,9 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -30,11 +30,11 @@ const (
 	clustersToCreate = 2
 	timeout          = time.Second * 10
 	interval         = time.Millisecond * 250
+	clusterProtoName = "cluster-%d"
 )
 
 var (
-	cfgs        = make([]*rest.Config, clustersToCreate)
-	testClients = make([]client.Client, clustersToCreate)
+	testClients = make(map[string]client.Client, clustersToCreate)
 	testEnvs    = make([]*envtest.Environment, clustersToCreate)
 )
 
@@ -58,11 +58,10 @@ func beforeSuite(t *testing.T) {
 
 	require.NoError(registerApis(), "failed to register apis with scheme")
 
-	signalCtx := ctrl.SetupSignalHandler()
-
-	k8sManagers := make([]manager.Manager, clustersToCreate)
+	cfgs := make([]*rest.Config, clustersToCreate)
 
 	for i := 0; i < clustersToCreate; i++ {
+		clusterName := fmt.Sprintf(clusterProtoName, i)
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "config", "crd", "bases"),
@@ -73,42 +72,46 @@ func beforeSuite(t *testing.T) {
 
 		cfg, err := testEnv.Start()
 		require.NoError(err, "failed to start test environment")
-
-		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme: scheme.Scheme,
-		})
-		require.NoError(err, "failed to create controller-runtime manager")
-
-		k8sManagers[i] = k8sManager
-
 		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		require.NoError(err, "failed to create controller-runtime client")
 
-		testClients[i] = testClient
+		testClients[clusterName] = testClient
 		cfgs[i] = cfg
 	}
 
-	clientCache := clientcache.New(k8sManagers[0].GetClient(), scheme.Scheme)
+	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	require.NoError(err, "failed to create controller-runtime manager")
 
-	// We start only one reconciler, for the clusters number 0
-	err := (&K8ssandraClusterReconciler{
-		Client:      k8sManagers[0].GetClient(),
-		Scheme:      scheme.Scheme,
-		ClientCache: clientCache,
-	}).SetupWithManager(k8sManagers[0])
-	require.NoError(err, "Failed to set up K8ssandraClusterReconciler")
+	clientCache := clientcache.New(k8sManager.GetClient(), scheme.Scheme)
 
-	for i := 0; i < clustersToCreate; i++ {
-		go func(i int) {
-			ctx, cancel := context.WithCancel(signalCtx)
-			err = k8sManagers[i].Start(ctx)
-			if cancel != nil {
-				cancel()
-			}
-			assert.NoError(t, err, "failed to start manager")
-		}(i)
+	additionalClusters := make([]cluster.Cluster, 0, clustersToCreate-1)
+
+	for i := 1; i < clustersToCreate; i++ {
+		// Add rest of the clusters to the same manager
+		c, err := cluster.New(cfgs[i], func(o *cluster.Options) {
+			o.Scheme = scheme.Scheme
+		})
+		require.NoError(err, "failed to create controller-runtime cluster")
+		additionalClusters = append(additionalClusters, c)
+
+		err = k8sManager.Add(c)
+		require.NoError(err, "failed to add cluster to k8sManager")
 	}
 
+	// We start only one reconciler, for the clusters number 0
+	err = (&K8ssandraClusterReconciler{
+		Client:      k8sManager.GetClient(),
+		Scheme:      scheme.Scheme,
+		ClientCache: clientCache,
+	}).SetupMultiClusterWithManager(k8sManager, additionalClusters)
+	require.NoError(err, "Failed to set up K8ssandraClusterReconciler with multicluster test")
+
+	go func() {
+		err = k8sManager.Start(ctrl.SetupSignalHandler())
+		assert.NoError(t, err, "failed to start manager")
+	}()
 }
 
 func afterSuite(t *testing.T) {
@@ -138,13 +141,8 @@ func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 
 	namespace := rand.String(9)
 	return func(t *testing.T) {
-		remoteClients := make(map[string]client.Client, clustersToCreate-1)
-		for i := 0; i < clustersToCreate; i++ {
-			name := fmt.Sprintf("cluster-%d", i)
-			remoteClients[name] = testClients[i]
-		}
-
-		f := framework.NewFramework(testClients[0], "cluster-0", remoteClients)
+		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
+		f := framework.NewFramework(testClients[primaryCluster], primaryCluster, testClients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
