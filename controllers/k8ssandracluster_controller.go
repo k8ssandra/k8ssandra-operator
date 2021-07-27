@@ -54,8 +54,9 @@ const (
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	ClientCache clientcache.ClientCache
+	Scheme        *runtime.Scheme
+	ClientCache   clientcache.ClientCache
+	SeedsResolver cassandra.RemoteSeedsResolver
 }
 
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -274,22 +275,6 @@ func deepHashString(obj interface{}) string {
 }
 
 func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	//ips, err := net.LookupIP(dc.GetSeedServiceName())
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	//endpoints := make([]string, len(ips))
-	//
-	//for _, ip := range ips {
-	//	if ip.To4() == nil {
-	//		return nil, fmt.Errorf("failed to get IPv4 address for ip %s from seed service %s", ip, dc.GetSeedServiceName())
-	//	}
-	//	endpoints = append(endpoints, ip.String())
-	//}
-	//
-	//return endpoints, nil
-
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
 

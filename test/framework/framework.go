@@ -79,6 +79,21 @@ func NewFramework(client client.Client, controlPlanContext string, remoteClients
 	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
 }
 
+// Get fetches the object specified by key from the cluster specified by key. An error is
+// returned is ClusterKey.K8sContext is not set or if there is no corresponding client.
+func (f *Framework) Get(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+
+	return remoteClient.Get(ctx, key.NamespacedName, obj)
+}
+
 func (f *Framework) CreateNamespace(name string) error {
 	for k8sContext, remoteClient := range f.remoteClients {
 		namespace := &corev1.Namespace{
@@ -97,6 +112,25 @@ func (f *Framework) CreateNamespace(name string) error {
 
 func (f *Framework) k8sContextNotFound(k8sContext string) error {
 	return fmt.Errorf("context %s not found", k8sContext)
+}
+
+// PatchDatacenterStatus fetches the datacenter specified by key, applies changes via
+// updateFn, and then performs a patch operation. key.K8sContext must be set and must
+// have a corresponding client.
+func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, updateFn func(dc *cassdcapi.CassandraDatacenter)) error {
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, key, dc)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(dc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(dc)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+
+	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
