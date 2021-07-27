@@ -39,7 +39,7 @@ jobs:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-operator.tar
   kind_e2e_tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build_image
     strategy:
       matrix:
