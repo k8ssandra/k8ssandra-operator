@@ -55,7 +55,7 @@ const (
 type K8ssandraClusterReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
-	ClientCache *clientcache.ClientCache
+	ClientCache clientcache.ClientCache
 }
 
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete

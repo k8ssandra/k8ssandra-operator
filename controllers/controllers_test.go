@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/bombsimon/logrusr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -42,9 +42,9 @@ func TestControllers(t *testing.T) {
 	defer afterSuite(t)
 	beforeSuite(t)
 
-	// ctx := context.Background()
+	ctx := context.Background()
 
-	// t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
+	t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
 	// t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
 
 	t.Run("Test Stargate", testStargate)
@@ -61,6 +61,7 @@ func beforeSuite(t *testing.T) {
 	require.NoError(registerApis(), "failed to register apis with scheme")
 
 	cfgs := make([]*rest.Config, clustersToCreate)
+	clientsCache := &testClientCache{clients: make(map[string]client.Client, 0)}
 
 	for i := 0; i < clustersToCreate; i++ {
 		clusterName := fmt.Sprintf(clusterProtoName, i)
@@ -76,6 +77,8 @@ func beforeSuite(t *testing.T) {
 		require.NoError(err, "failed to start test environment")
 		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		require.NoError(err, "failed to create controller-runtime client")
+
+		clientsCache.clients[clusterName] = testClient
 
 		testClients[clusterName] = testClient
 		cfgs[i] = cfg
@@ -93,17 +96,17 @@ func beforeSuite(t *testing.T) {
 
 	additionalClusters := make([]cluster.Cluster, 0, clustersToCreate-1)
 
-	for i := 1; i < clustersToCreate; i++ {
-		// Add rest of the clusters to the same manager
-		c, err := cluster.New(cfgs[i], func(o *cluster.Options) {
-			o.Scheme = scheme.Scheme
-		})
-		require.NoError(err, "failed to create controller-runtime cluster")
-		additionalClusters = append(additionalClusters, c)
-
-		err = k8sManager.Add(c)
-		require.NoError(err, "failed to add cluster to k8sManager")
-	}
+	//for i := 1; i < clustersToCreate; i++ {
+	//	// Add rest of the clusters to the same manager
+	//	c, err := cluster.New(cfgs[i], func(o *cluster.Options) {
+	//		o.Scheme = scheme.Scheme
+	//	})
+	//	require.NoError(err, "failed to create controller-runtime cluster")
+	//	additionalClusters = append(additionalClusters, c)
+	//
+	//	err = k8sManager.Add(c)
+	//	require.NoError(err, "failed to add cluster to k8sManager")
+	//}
 
 	// We start only one reconciler, for the clusters number 0
 	err = (&K8ssandraClusterReconciler{
@@ -153,7 +156,8 @@ func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 	namespace := rand.String(9)
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		f := framework.NewFramework(testClients[primaryCluster], primaryCluster, testClients)
+		controlPlaneCluster := testClients[primaryCluster]
+		f := framework.NewFramework(controlPlaneCluster, primaryCluster, testClients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
@@ -161,4 +165,17 @@ func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 
 		test(t, ctx, f, namespace)
 	}
+}
+
+type testClientCache struct {
+	// Maps k8s context to client. The real impl maps the K8ssandraCluster key to a
+	// map[string]client.Client where the key is the k8s context name. I am keeping
+	// the mapping here simple since the real impl is likely going to get a complete
+	// make over.
+	clients map[string]client.Client
+}
+
+func (c *testClientCache) GetClient(nsName types.NamespacedName, contextsSecret, k8sContextName string) (client.Client, error) {
+	remoteClient, _ := c.clients[k8sContextName]
+	return remoteClient, nil
 }
