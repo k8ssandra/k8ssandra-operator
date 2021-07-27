@@ -472,8 +472,6 @@ func (f *E2eFramework) GetNodeToolStatusUN(opts kubectl.Options, pod string) (in
 		return -1, err
 	}
 
-
-
 	matches := f.nodeToolStatusUN.FindAllString(output, -1)
 
 	return len(matches), nil
