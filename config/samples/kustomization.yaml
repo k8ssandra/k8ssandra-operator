@@ -2,4 +2,5 @@
 resources:
 - k8ssandra.io_v1alpha1_k8ssandracluster.yaml
 - _v1alpha1_stargate.yaml
+- k8ssandra.io_v1alpha1_replicatedsecret.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
