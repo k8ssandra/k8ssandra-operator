@@ -29,12 +29,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/util/hash"
 	"math"
-	"time"
-
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -199,7 +197,7 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 				HostNetwork: true,
 			},
 		},
-	}
+	}, nil
 }
 
 func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {

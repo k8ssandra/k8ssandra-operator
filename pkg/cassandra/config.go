@@ -3,10 +3,7 @@ package cassandra
 import (
 	"encoding/json"
 	"github.com/Jeffail/gabs"
-<<<<<<< HEAD
 	"strconv"
-=======
->>>>>>> 1c51550 (first pass at configuring replication)
 	"strings"
 )
 
@@ -22,19 +19,13 @@ func getOperatorSuppliedConfig(dcs []string, replicationFactor int, cassandraVer
 			"additional-jvm-opts": []string{
 				"-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(dcs, ","),
 				"-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replicationFactor),
-func getOperatorSuppliedConfig(dcs []string) NodeConfig {
-	return NodeConfig{
-		"jvm-options": NodeConfig{
-			"additional-jvm-options": NodeConfig{
-				"-Dcassandra.system_distributed_replication_dc_names": strings.Join(dcs, ","),
-				"-Dcassandra.system_distributed_replication_per_dc": replicationFactor,
 			},
 		},
 	}
 }
 
-func GetMergedConfig(config []byte, dcs []string) ([]byte, error) {
-	operatorValues := getOperatorSuppliedConfig(dcs)
+func GetMergedConfig(config []byte, dcs []string, replicationFactor int, cassandraVersion string) ([]byte, error) {
+	operatorValues := getOperatorSuppliedConfig(dcs, replicationFactor, cassandraVersion)
 	operatorBytes, err := json.Marshal(operatorValues)
 	if err != nil {
 		return nil, err
