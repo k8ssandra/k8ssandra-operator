@@ -1,0 +1,24 @@
+# permissions for end users to edit stargates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: stargate-editor-role
+rules:
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - stargates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - stargates/status
+  verbs:
+  - get

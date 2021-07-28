@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/errors"
+	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -330,7 +332,7 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	}
 
 	if len(errs) > 0 {
-		return errors.NewAggregate(errs)
+		return k8serrors.NewAggregate(errs)
 	}
 	return nil
 }
@@ -339,30 +341,56 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 // This function blocks until all pods from all CassandraDatacenters have terminated.
 func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all CassandraDatacenters", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&cassdcapi.CassandraDatacenter{},
+		timeout,
+		interval,
+		client.HasLabels{cassdcapi.ClusterLabel},
+	)
+}
 
+// DeleteStargates deletes all Stargates in namespace in all remote clusters.
+// This function blocks until all pods from all Stargates have terminated.
+func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all Stargates", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&api.Stargate{},
+		timeout,
+		interval,
+		client.HasLabels{api.StargateLabel},
+	)
+}
+
+func (f *E2eFramework) deleteAllResources(
+	namespace string,
+	resource client.Object,
+	timeout, interval time.Duration,
+	podListOptions ...client.ListOption,
+) error {
 	for _, remoteClient := range f.remoteClients {
-		ctx := context.TODO()
-		dc := &cassdcapi.CassandraDatacenter{}
-
-		if err := remoteClient.DeleteAllOf(ctx, dc, client.InNamespace(namespace)); err != nil {
-			return err
+		if err := remoteClient.DeleteAllOf(context.TODO(), resource, client.InNamespace(namespace)); err != nil {
+			// If the CRD wasn't deployed at all to this cluster, keep going
+			if _, ok := err.(*meta.NoKindMatchError); !ok {
+				return err
+			}
 		}
 	}
-
-	// Should there be a separate wait.Poll call per cluster?
+	// Check that all pods created by resources are terminated
+	// FIXME Should there be a separate wait.Poll call per cluster?
 	return wait.Poll(interval, timeout, func() (bool, error) {
+		podListOptions = append(podListOptions, client.InNamespace(namespace))
 		for k8sContext, remoteClient := range f.remoteClients {
 			list := &corev1.PodList{}
-			if err := remoteClient.List(context.TODO(), list, client.InNamespace(namespace), client.HasLabels{cassdcapi.ClusterLabel}); err != nil {
-				f.logger.Error(err, "failed to list datacenter pods", "Context", k8sContext)
+			if err := remoteClient.List(context.TODO(), list, podListOptions...); err != nil {
+				f.logger.Error(err, "failed to list pods", "Context", k8sContext)
 				return false, err
 			}
-
 			if len(list.Items) > 0 {
 				return false, nil
 			}
 		}
-
 		return true, nil
 	})
 }

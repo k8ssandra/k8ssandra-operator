@@ -175,3 +175,35 @@ func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func()
 		return true
 	})
 }
+
+// NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
+func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *api.Stargate) bool) func() bool {
+	return func(condition func(*api.Stargate) bool) func() bool {
+		return f.withStargate(ctx, key, condition)
+	}
+}
+
+// withStargate Fetches the stargate specified by key and then calls condition.
+func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*api.Stargate) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
+			return false
+		}
+		stargate := &api.Stargate{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
+			return condition(stargate)
+		} else {
+			f.logger.Error(err, "failed to get Stargate", "key", key)
+			return false
+		}
+	}
+}
+
+func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
+	withStargate := f.NewWithStargate(ctx, key)
+	return withStargate(func(dc *api.Stargate) bool {
+		return true
+	})
+}

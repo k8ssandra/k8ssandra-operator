@@ -1,0 +1,20 @@
+# permissions for end users to view stargates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: stargate-viewer-role
+rules:
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - stargates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - stargates/status
+  verbs:
+  - get

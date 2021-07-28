@@ -92,6 +92,11 @@ type CassandraDatacenterTemplateSpec struct {
 	Racks []cassdcv1beta1.Rack `json:"racks,omitempty"`
 
 	StorageConfig cassdcv1beta1.StorageConfig `json:"storageConfig"`
+
+	// Stargate defines the desired deployment characteristics for Stargate. Leave nil to skip
+	// deploying Stargate in this datacenter.
+	// +optional
+	Stargate *StargateTemplate `json:"stargate,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
