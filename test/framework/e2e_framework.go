@@ -3,11 +3,17 @@ package framework
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"regexp"
+	"text/template"
+	"time"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -18,12 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"path/filepath"
-	"regexp"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"text/template"
-	"time"
 )
 
 const (
@@ -306,6 +307,42 @@ func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 	return f.kustomizeAndApply(dir, namespace, f.ControlPlaneContext)
 }
 
+func (f *E2eFramework) DeployK8sClientConfigs(namespace string) error {
+	// Read from disk whatever the thing deployed..
+	kubeConfigFile := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
+
+	b, err := ioutil.ReadFile(kubeConfigFile)
+	if err != nil {
+		return err
+	}
+
+	apiConfig, err := clientcmd.Load(b)
+	if err != nil {
+		return err
+	}
+	for _, ctx := range apiConfig.Contexts {
+		// Deploy Secrets from here
+		cCfg := api.ClientConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ctx.Cluster,
+				Namespace: namespace,
+			},
+			Spec: api.ClientConfigSpec{
+				ContextName: ctx.Cluster,
+				KubeConfigSecret: corev1.LocalObjectReference{
+					Name: "k8s-contexts",
+				},
+			},
+		}
+		err = f.Client.Create(context.Background(), &cCfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeleteNamespace Deletes the namespace from all remote clusters and blocks until they
 // have completely terminated.
 func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Duration) error {
@@ -413,6 +450,17 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 		timeout,
 		interval,
 		client.HasLabels{api.StargateLabel},
+	)
+}
+
+func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all k8ssandra-operator pods", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&corev1.Pod{},
+		timeout,
+		interval,
+		client.MatchingLabels{"control-plane": "k8ssandra-operator"},
 	)
 }
 

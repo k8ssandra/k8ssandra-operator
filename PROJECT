@@ -11,6 +11,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
+  group: k8ssandra.io
   kind: K8ssandraCluster
   path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
   version: v1alpha1
@@ -20,6 +21,12 @@ resources:
   controller: true
   domain: k8ssandra.io
   kind: Stargate
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: k8ssandra.io
+  group: k8ssandra.io
+  kind: ClientConfig
   path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

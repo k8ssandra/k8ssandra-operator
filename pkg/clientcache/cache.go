@@ -2,13 +2,17 @@ package clientcache
 
 import (
 	"context"
-	"github.com/pkg/errors"
+	"errors"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	//"k8s.io/client-go/tools/clientcmd"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,72 +21,117 @@ type ClientCache struct {
 
 	scheme *runtime.Scheme
 
-	// A mapping of K8ssandraCluster keys (in the form of NamespacedNames) to kubeconfig
-	// files stored as byte slices.
-	kubecConfigs map[types.NamespacedName][]byte
-
-	// A mapping of K8ssandraCluster keys (in the form of NamespacedNames) to clients where
-	// the clients itself a mapping of kubeconfig context name to client.
-	remoteClients map[types.NamespacedName]map[string]client.Client
+	// RemoteClients to other clusters. The string is the name of the KubeConfig item targeting
+	// another cluster.
+	remoteClients map[string]client.Client
 }
 
 func New(localClient client.Client, scheme *runtime.Scheme) *ClientCache {
+
+	// Call to create new RemoteClients here?
 	return &ClientCache{
 		localClient:   localClient,
 		scheme:        scheme,
-		kubecConfigs:  make(map[types.NamespacedName][]byte),
-		remoteClients: make(map[types.NamespacedName]map[string]client.Client),
+		remoteClients: make(map[string]client.Client),
 	}
 }
 
-func (c *ClientCache) GetClient(nsName types.NamespacedName, contextsSecret, k8sContextName string) (client.Client, error) {
-	kubeConfig, found := c.kubecConfigs[nsName]
-
-	if !found {
-		secret := &corev1.Secret{}
-		err := c.localClient.Get(context.Background(), types.NamespacedName{Namespace: nsName.Namespace, Name: contextsSecret}, secret)
-		if err != nil {
-			return nil, err
-		}
-
-		b, found := secret.Data["kubeconfig"]
-		if !found {
-			return nil, errors.New("Secret is missing required kubeconfig property")
-		}
-
-		c.kubecConfigs[nsName] = b
-		kubeConfig = b
+// GetRemoteClient returns the client to remote cluster with name k8sContextName or error if no such client is cached
+func (c *ClientCache) GetRemoteClient(k8sContextName string) (client.Client, error) {
+	if k8sContextName == "" {
+		return c.localClient, nil
 	}
 
-	remoteClients, found := c.remoteClients[nsName]
+	if cli, found := c.remoteClients[k8sContextName]; found {
+		return cli, nil
+	}
+	return nil, errors.New("No known client for context-name " + k8sContextName)
+}
 
-	if !found {
-		remoteClients = make(map[string]client.Client)
-		c.remoteClients[nsName] = remoteClients
+// GetLocalClient returns the current cluster's client used for operator's local communication
+func (c *ClientCache) GetLocalClient() (client.Client, error) {
+	return c.localClient, nil
+}
+
+// GetRemoteClients returns all the remote clients
+func (c *ClientCache) GetRemoteClients() (map[string]client.Client, error) {
+	return c.remoteClients, nil
+}
+
+// AddClient adds a new remoteClient with the name k8sContextName
+func (c *ClientCache) AddClient(k8sContextName string, cli client.Client) error {
+	c.remoteClients[k8sContextName] = cli
+	return nil
+}
+
+// CreateClient creates a remoteClient and stores it in the cache. If already stored, returns the existing client
+func (c *ClientCache) CreateClient(contextName string, restConfig *rest.Config) (client.Client, error) {
+	if cli, found := c.remoteClients[contextName]; found {
+		// We already have created that client
+		return cli, nil
 	}
 
-	remoteClient, found := remoteClients[k8sContextName]
-	var err error
-
-	if !found {
-		apiConfig, err := clientcmd.Load(kubeConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		clientCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, k8sContextName, &clientcmd.ConfigOverrides{}, nil)
-		restConfig, err := clientCfg.ClientConfig()
-
-		if err != nil {
-			return nil, err
-		}
-
-		remoteClient, err = client.New(restConfig, client.Options{Scheme: c.scheme})
-		if err != nil {
-			return nil, err
-		}
-		remoteClients[k8sContextName] = remoteClient
+	remoteClient, err := client.New(restConfig, client.Options{Scheme: c.scheme})
+	if err != nil {
+		return nil, err
 	}
 
-	return remoteClient, err
+	// Store for later use and return to the caller
+	c.remoteClients[contextName] = remoteClient
+	return remoteClient, nil
+
+}
+
+// CreateRemoteClientsFromSecret is a convenience method for testing purposes
+func (c *ClientCache) CreateRemoteClientsFromSecret(namespacedName types.NamespacedName) error {
+	if c.localClient == nil {
+		return errors.New("creating from secret requires local client to be set")
+	}
+
+	apiConfig, err := c.extractClientCmdFromSecret(namespacedName)
+	if err != nil {
+		return err
+	}
+
+	for _, ctx := range apiConfig.Contexts {
+		clientCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, ctx.Cluster, &clientcmd.ConfigOverrides{}, nil)
+		cfg, err := clientCfg.ClientConfig()
+		if err != nil {
+			return err
+		}
+
+		if _, err := c.CreateClient(ctx.Cluster, cfg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// GetRestConfig takes the ClientConfig and parses the *rest.Config from it
+func (c *ClientCache) GetRestConfig(assistCfg *api.ClientConfig) (*rest.Config, error) {
+	apiConfig, err := c.extractClientCmdFromSecret(types.NamespacedName{Namespace: assistCfg.Namespace, Name: assistCfg.Spec.KubeConfigSecret.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	clientCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, assistCfg.Name, &clientcmd.ConfigOverrides{}, nil)
+	return clientCfg.ClientConfig()
+}
+
+func (c *ClientCache) extractClientCmdFromSecret(namespacedName types.NamespacedName) (*clientcmdapi.Config, error) {
+	// Fetch the secret containing the details
+	secret := &corev1.Secret{}
+	err := c.localClient.Get(context.Background(), namespacedName, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	b, found := secret.Data["kubeconfig"]
+	if !found {
+		return nil, errors.New("secret is missing required kubeconfig property")
+	}
+
+	// Create the client from the stored kubeconfig
+	return clientcmd.Load(b)
 }

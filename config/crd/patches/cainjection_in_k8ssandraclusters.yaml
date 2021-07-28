@@ -4,4 +4,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: k8ssandraclusters.k8ssandra.io.k8ssandra.io
+  name: k8ssandraclusters.k8ssandra.io

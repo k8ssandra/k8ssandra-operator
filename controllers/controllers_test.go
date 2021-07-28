@@ -87,6 +87,9 @@ func beforeSuite(t *testing.T) {
 	require.NoError(err, "failed to create controller-runtime manager")
 
 	clientCache := clientcache.New(k8sManager.GetClient(), scheme.Scheme)
+	for ctxName, cli := range testClients {
+		clientCache.AddClient(ctxName, cli)
+	}
 
 	additionalClusters := make([]cluster.Cluster, 0, clustersToCreate-1)
 
@@ -107,7 +110,7 @@ func beforeSuite(t *testing.T) {
 		Client:      k8sManager.GetClient(),
 		Scheme:      scheme.Scheme,
 		ClientCache: clientCache,
-	}).SetupMultiClusterWithManager(k8sManager, additionalClusters)
+	}).SetupWithManager(k8sManager, additionalClusters)
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler with multicluster test")
 
 	err = (&StargateReconciler{
