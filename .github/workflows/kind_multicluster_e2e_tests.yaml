@@ -19,4 +19,4 @@ jobs:
     needs: build_image
     steps:
       - name: Provision kind clusters
-        run: ./scripts/setup-kind-multi-cluster.sh --clusters 2
+        run: ./scripts/setup-kind-multicluster.sh --clusters 2
