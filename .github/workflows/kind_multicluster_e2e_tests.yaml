@@ -14,3 +14,9 @@ jobs:
         uses: actions/checkout@v2
       - name: Build operator image
         run: make docker-build
+  kind_e2e_tests:
+    runs-on: self-hosted
+    needs: build_image
+    steps:
+      - name: Provision kind clusters
+      - run: ./scripts/setup-kind-multi-cluster.sh --clusters 2
