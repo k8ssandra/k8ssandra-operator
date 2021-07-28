@@ -1,0 +1,16 @@
+name: Run kind e2e multi-cluster tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
+jobs:
+  build_image:
+    name: Build Image
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build operator image
+        run: make docker-build
