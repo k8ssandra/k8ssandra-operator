@@ -72,6 +72,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+      - name: Install kustomize
+        run: make kustomize
       - name: Install Kind
         run: go get sigs.k8s.io/kind
       - name: Install yq
@@ -81,26 +87,20 @@ jobs:
           sudo mv yq_linux_amd64.tar.gz /usr/bin
       - name: Create Kind Clusters
         run: ./scripts/setup-kind-multicluster.sh --clusters 2
-#        uses: helm/kind-action@v1.1.0
-#        with:
-#          version: v0.11.1
-#          node_image: kindest/node:v1.20.7
-#          cluster_name: kind
-#          config: test/testdata/kind/kind-config-six-workers.yaml
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v1
-#      - name: Download k8ssandra-operator image
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: k8ssandra-operator
-#          path: /tmp
-#      - name: Load images
-#        run: |
-#          docker load --input /tmp/k8ssandra-operator.tar
-#      - name: Load image on kind nodes
-#        run: make kind-load-image
-#      - name: Install kustomize
-#        run: make kustomize
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download k8ssandra-operator image
+        uses: actions/download-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/k8ssandra-operator.tar
+      - name: Load image on kind nodes
+        run: |
+          make KIND_CLUSTER=k8ssandra-0 kind-load-image
+          make KIND_CLUSTER=k8ssandra-1 kind-load-image
 #      - name: Run e2e test ( ${{ matrix.e2e_test }} )
 #        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
 #      - name: Archive k8s logs
