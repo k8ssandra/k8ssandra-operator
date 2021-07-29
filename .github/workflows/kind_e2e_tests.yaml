@@ -44,7 +44,7 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          - CreateSingleDatacenterCluster
+          - TestOperator/CreateMultiDatacenterCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
@@ -101,11 +101,11 @@ jobs:
         run: |
           make KIND_CLUSTER=k8ssandra-0 kind-load-image
           make KIND_CLUSTER=k8ssandra-1 kind-load-image
-#      - name: Run e2e test ( ${{ matrix.e2e_test }} )
-#        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
-#      - name: Archive k8s logs
-#        if: ${{ failure() }}
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: k8s-logs-${{ matrix.e2e_test }}
-#          path: ./build/test
+      - name: Run e2e test ( ${{ matrix.e2e_test }} )
+        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
+      - name: Archive k8s logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8s-logs-${{ matrix.e2e_test }}
+          path: ./build/test

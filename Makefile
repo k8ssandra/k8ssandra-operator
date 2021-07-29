@@ -117,7 +117,7 @@ PHONY: e2e-test
 e2e-test:
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
-	go test -v -timeout 3600s ./test/e2e/... -run="TestOperator/$(E2E_TEST)"
+	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)"
 else
 	@echo Running e2e tests
 	go test -v -timeout 3600s ./test/e2e/...
