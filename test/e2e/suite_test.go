@@ -21,7 +21,7 @@ func TestOperator(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
+	//t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", createMultiDatacenterCluster))
 }
 
@@ -216,12 +216,12 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), timeout, interval, "timed out waiting for datacenter dc1 to become ready")
 
-	//t.Log("check that Stargate test-dc1-stargate is ready")
-	//stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
-	//withStargate := f.NewWithStargate(ctx, stargateKey)
-	//require.Eventually(withStargate(func(stargate *api.Stargate) bool {
-	//	return stargate.Status.ReadyReplicas == 1
-	//}), timeout, interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
+	t.Log("check that Stargate test-dc1-stargate is ready")
+	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	withStargate := f.NewWithStargate(ctx, stargateKey)
+	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
+		return stargate.Status.ReadyReplicas == 1
+	}), timeout, interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("check that datacenter dc2 is ready")
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
