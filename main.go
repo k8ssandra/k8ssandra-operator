@@ -106,7 +106,7 @@ func main() {
 		}
 	}
 
-        if err = (&controllers.StargateReconciler{
+    if err = (&controllers.StargateReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

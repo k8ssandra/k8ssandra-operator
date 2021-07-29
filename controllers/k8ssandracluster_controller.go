@@ -21,6 +21,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/kubernetes/pkg/util/hash"
+	"math"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"time"
 
@@ -33,8 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util/hash"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,22 +82,17 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		systemDistributedRF := getSystemDistributedRF(k8ssandra)
 		dcNames := make([]string, 0, len(k8ssandra.Spec.Cassandra.Datacenters))
 
-		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
-			desiredDc := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcTemplate, seeds)
-			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+		for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+			dcNames = append(dcNames, dc.Meta.Name)
+		}
 
-		for i, template := range k8ssandra.Spec.Cassandra.Datacenters {
-			desired, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, template, seeds, systemDistributedRF)
+		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
+			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
 				logger.Error(err, "Failed to CassandraDatacenter")
 				return ctrl.Result{}, err
 			}
-			dcKey := types.NamespacedName{Namespace: desired.Namespace, Name: desired.Name}
-
-			//if err := controllerutil.SetControllerReference(k8ssandra, desired, r.Scheme); err != nil {
-			//	logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
-			//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-			//}
+			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 
 			desiredDcHash := deepHashString(desiredDc)
 			desiredDc.Annotations[resourceHashAnnotation] = desiredDcHash
@@ -117,16 +112,16 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
-					actualDc = actualDc.DeepCopy()
-					resourceVersion := actualDc.GetResourceVersion()
-					desiredDc.DeepCopyInto(actualDc)
-					actualDc.SetResourceVersion(resourceVersion)
-					if err = remoteClient.Update(ctx, actualDc); err != nil {
-						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
-						return ctrl.Result{}, err
+						logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
+						actualDc = actualDc.DeepCopy()
+						resourceVersion := actualDc.GetResourceVersion()
+						desiredDc.DeepCopyInto(actualDc)
+						actualDc.SetResourceVersion(resourceVersion)
+						if err = remoteClient.Update(ctx, actualDc); err != nil {
+							logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
+							return ctrl.Result{}, err
+						}
 					}
-				}
 
 				if !cassandra.DatacenterReady(actualDc) {
 					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
@@ -154,7 +149,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 			} else {
 				if errors.IsNotFound(err) {
-					if err = remoteClient.Create(ctx, &desiredDc); err != nil {
+					if err = remoteClient.Create(ctx, desiredDc); err != nil {
 						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
 						return ctrl.Result{}, err
 					}
