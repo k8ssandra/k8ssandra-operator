@@ -22,8 +22,8 @@ spec:
                 storage: 5Gi
         config:
           jvm-options:
-            initial_heap_size: "512m"
-            max_heap_size: "512m"
+            initial_heap_size: "384m"
+            max_heap_size: "384m"
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
@@ -39,5 +39,5 @@ spec:
                 storage: 5Gi
         config:
           jvm-options:
-            initial_heap_size: "512m"
-            max_heap_size: "512m"
+            initial_heap_size: "384m"
+            max_heap_size: "384m"
