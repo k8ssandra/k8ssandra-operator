@@ -72,32 +72,39 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Create Kind Cluster
-        uses: helm/kind-action@v1.1.0
-        with:
-          version: v0.11.1
-          node_image: kindest/node:v1.20.7
-          cluster_name: kind
-          config: test/testdata/kind/kind-config-six-workers.yaml
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v2
-        with:
-          name: k8ssandra-operator
-          path: /tmp
-      - name: Load images
+      - name: Install Kind
+        run: go get sigs.k8s.io/kind
+      - name: Install yq
         run: |
-          docker load --input /tmp/k8ssandra-operator.tar
-      - name: Load image on kind nodes
-        run: make kind-load-image
-      - name: Install kustomize
-        run: make kustomize
-      - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
-      - name: Archive k8s logs
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: k8s-logs-${{ matrix.e2e_test }}
-          path: ./build/test
+          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
+          tar -xzf yq_linux_amd64.tar.gz
+          mv yq_linux_amd64.tar.gz /usr/bin
+#      - name: Create Kind Cluster
+#        uses: helm/kind-action@v1.1.0
+#        with:
+#          version: v0.11.1
+#          node_image: kindest/node:v1.20.7
+#          cluster_name: kind
+#          config: test/testdata/kind/kind-config-six-workers.yaml
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v1
+#      - name: Download k8ssandra-operator image
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: k8ssandra-operator
+#          path: /tmp
+#      - name: Load images
+#        run: |
+#          docker load --input /tmp/k8ssandra-operator.tar
+#      - name: Load image on kind nodes
+#        run: make kind-load-image
+#      - name: Install kustomize
+#        run: make kustomize
+#      - name: Run e2e test ( ${{ matrix.e2e_test }} )
+#        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
+#      - name: Archive k8s logs
+#        if: ${{ failure() }}
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: k8s-logs-${{ matrix.e2e_test }}
+#          path: ./build/test
