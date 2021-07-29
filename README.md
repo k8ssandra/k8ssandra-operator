@@ -36,9 +36,9 @@ The Go type definition for custom resources live under the `api` directory in fi
 ## Updating CRDs
 As mentioned previously, the CRDs are generated based off the contents of the `_types.go` files. The CRDs live under `config/crd`.
 
-Run `make manifest` update CRDs.
+Run `make manifests` to update CRDs.
 
-**Note:** Any changes to the `_types.go` files should be followed by `make manifests`
+**Note:** Any changes to the `_types.go` files should be followed by `make generate manifests`.
 
 ## Installing CRDs
 `make install` will update CRDs then deploy them to the current cluster specified in ~/.kube/config.
@@ -71,4 +71,9 @@ To set up two kind clusters for multi-cluster tests run the following:
 Multi-cluster tests will be more resource intensive than other tests. The Docker VM on my MacBook Pro is configured with 6 CPUs and  10 GB of memory for these tests. Your mileage may vary on other operating systems/setups. 
 
 
-If you are not, please start by checking out the docs at [k8ssandra.io](https://k8ssandra.io/). At
+# Community
+Check out the full K8ssandra docs at [k8ssandra.io](https://k8ssandra.io/).
+
+Start or join a forum discussion at [forum.k8ssandra.io](https://forum.k8ssandra.io/).
+
+Join us on Discord [here](https://discord.gg/YewpWTYP0).
