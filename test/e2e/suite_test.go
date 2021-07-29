@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -11,9 +12,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
+)
+
+var (
+	nodetoolStatusTimeout time.Duration
 )
 
 func TestOperator(t *testing.T) {
@@ -26,6 +32,14 @@ func TestOperator(t *testing.T) {
 }
 
 func beforeSuite(t *testing.T) {
+	if val, ok := os.LookupEnv("NODETOOL_STATUS_TIMEOUT"); ok {
+		timeout, err := time.ParseDuration(val)
+		require.NoError(t, err, fmt.Sprintf("failed to parse NODETOOL_STATUS_TIMEOUT value: %s", val))
+		nodetoolStatusTimeout = timeout
+	} else {
+		nodetoolStatusTimeout = 1 * time.Minute
+	}
+
 	cfgFile, err := filepath.Abs("../../build/kubeconfig")
 	if err != nil {
 		t.Fatalf("failed to get path of src kind kubeconfig file: %v", err)
@@ -232,19 +246,18 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	timeout = 1 * time.Minute
 	interval = 5 * time.Second
 	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-default-sts-0"
 	count := 6
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, timeout, interval)
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, nodetoolStatusTimeout, interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool stauts check against " + pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	opts.Context = "kind-k8ssandra-1"
 	pod = "test-dc2-default-sts-0"
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, timeout, interval)
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, nodetoolStatusTimeout, interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against " + pod)
 }

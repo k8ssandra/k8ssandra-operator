@@ -103,7 +103,7 @@ jobs:
           make KIND_CLUSTER=k8ssandra-0 kind-load-image
           make KIND_CLUSTER=k8ssandra-1 kind-load-image
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
+        run: make E2E_TEST=${{ matrix.e2e_test }} NODETOOL_STATUS_TIMEOUT=2m e2e-test
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
