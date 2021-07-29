@@ -78,7 +78,7 @@ jobs:
         run: |
           wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
           tar -xzf yq_linux_amd64.tar.gz
-          mv yq_linux_amd64.tar.gz /usr/bin
+          sudo mv yq_linux_amd64.tar.gz /usr/bin
 #      - name: Create Kind Cluster
 #        uses: helm/kind-action@v1.1.0
 #        with:
