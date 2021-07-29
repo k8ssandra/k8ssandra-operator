@@ -1,8 +1,8 @@
-apiVersion: k8ssandra.io/v1alpha1
-kind: Stargate
-metadata:
-  name: test-dc1-stargate
-spec:
-  datacenterRef: dc1
-  size: 1
-
+#apiVersion: k8ssandra.io/v1alpha1
+#kind: Stargate
+#metadata:
+#  name: test-dc1-stargate
+#spec:
+#  datacenterRef: dc1
+#  size: 1
+#
