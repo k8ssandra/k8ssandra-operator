@@ -111,8 +111,8 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	timeout := 1 * time.Minute
-	interval := 1 * time.Second
+	timeout := 2 * time.Minute
+	interval := 2 * time.Second
 
 	if err := f.WaitForCassOperatorToBeReady(namespace, timeout, interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
