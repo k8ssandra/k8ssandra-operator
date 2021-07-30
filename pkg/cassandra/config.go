@@ -36,6 +36,10 @@ func GetMergedConfig(config []byte, dcs []string, replicationFactor int, cassand
 		return nil, err
 	}
 
+	if config == nil {
+		return operatorParsedConfig.Bytes(), nil
+	}
+
 	parsedConfig, err := gabs.ParseJSON(config)
 	if err != nil {
 		return nil, err

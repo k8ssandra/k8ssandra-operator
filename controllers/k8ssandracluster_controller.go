@@ -92,7 +92,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
 			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
-				logger.Error(err, "Failed to CassandraDatacenter")
+				logger.Error(err, "Failed to create new CassandraDatacenter")
 				return ctrl.Result{}, err
 			}
 			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}

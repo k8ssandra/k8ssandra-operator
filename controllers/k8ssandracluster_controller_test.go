@@ -178,12 +178,3 @@ func equalsNoOrder(s1, s2 []string) bool {
 
 	return true
 }
-
-func contains(slice []string, s string) bool {
-	for _, s1 := range slice {
-		if s == s1 {
-			return true
-		}
-	}
-	return false
-}
