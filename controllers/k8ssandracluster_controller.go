@@ -21,6 +21,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"k8s.io/kubernetes/pkg/util/hash"
+	"math"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"time"
 
@@ -33,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util/hash"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,15 +79,20 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if k8ssandra.Spec.Cassandra != nil {
 		var seeds []string
+		systemDistributedRF := getSystemDistributedRF(k8ssandra)
+		dcNames := make([]string, 0, len(k8ssandra.Spec.Cassandra.Datacenters))
+
+		for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+			dcNames = append(dcNames, dc.Meta.Name)
+		}
 
 		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
-			desiredDc := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcTemplate, seeds)
+			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+			if err != nil {
+				logger.Error(err, "Failed to CassandraDatacenter")
+				return ctrl.Result{}, err
+			}
 			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-
-			//if err := controllerutil.SetControllerReference(k8ssandra, desiredDc, r.Scheme); err != nil {
-			//	logger.Error(err, "failed to set owner reference", "CassandraDatacenter", key)
-			//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-			//}
 
 			desiredDcHash := deepHashString(desiredDc)
 			desiredDc.Annotations[resourceHashAnnotation] = desiredDcHash
@@ -106,16 +112,16 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
-					actualDc = actualDc.DeepCopy()
-					resourceVersion := actualDc.GetResourceVersion()
-					desiredDc.DeepCopyInto(actualDc)
-					actualDc.SetResourceVersion(resourceVersion)
-					if err = remoteClient.Update(ctx, actualDc); err != nil {
-						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
-						return ctrl.Result{}, err
+						logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
+						actualDc = actualDc.DeepCopy()
+						resourceVersion := actualDc.GetResourceVersion()
+						desiredDc.DeepCopyInto(actualDc)
+						actualDc.SetResourceVersion(resourceVersion)
+						if err = remoteClient.Update(ctx, actualDc); err != nil {
+							logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
+							return ctrl.Result{}, err
+						}
 					}
-				}
 
 				if !cassandra.DatacenterReady(actualDc) {
 					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
@@ -130,7 +136,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return ctrl.Result{}, err
 				}
 
-				seeds = append(seeds, endpoints...)
+				// The following code will update the AdditionalSeeds property for the
+				// datacenters. We will wind up having endpoints from every DC listed in
+				// the AdditionalSeeds property. We really want to exclude the seeds from
+				// the current DC. It is not a major concern right now as this is a short-term
+				// solution for handling seed addresses.
+				seeds = addSeedEndpoints(seeds, endpoints...)
 
 				if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
 					logger.Error(err, "Failed to update seeds")
@@ -138,7 +149,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 			} else {
 				if errors.IsNotFound(err) {
-					if err = remoteClient.Create(ctx, &desiredDc); err != nil {
+					if err = remoteClient.Create(ctx, desiredDc); err != nil {
 						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
 						return ctrl.Result{}, err
 					}
@@ -208,13 +219,18 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string) cassdcapi.CassandraDatacenter {
+func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string, systemDistributedRF int) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = k8ssandraNamespace
 	}
 
-	return cassdcapi.CassandraDatacenter{
+	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF, template.ServerVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
@@ -226,7 +242,7 @@ func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDat
 			ServerType:      "cassandra",
 			ServerVersion:   template.ServerVersion,
 			Resources:       template.Resources,
-			Config:          template.Config,
+			Config:          config,
 			Racks:           template.Racks,
 			StorageConfig:   template.StorageConfig,
 			AdditionalSeeds: additionalSeeds,
@@ -234,7 +250,17 @@ func newDatacenter(k8ssandraNamespace, cluster string, template api.CassandraDat
 				HostNetwork: true,
 			},
 		},
+	}, nil
+}
+
+func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {
+	size := 1.0
+	for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+		size = math.Min(size, float64(dc.Size))
 	}
+	replicationFactor := math.Min(size, 3.0)
+
+	return int(replicationFactor)
 }
 
 func deepHashString(obj interface{}) string {
@@ -295,6 +321,30 @@ func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// addSeedEndpoints returns a new slice with endpoints added to seeds and duplicates
+// removed.
+func addSeedEndpoints(seeds []string, endpoints ...string) []string {
+	updatedSeeds := make([]string, 0, len(seeds))
+	updatedSeeds = append(updatedSeeds, seeds...)
+
+	for _, endpoint := range endpoints {
+		if !contains(updatedSeeds, endpoint) {
+			updatedSeeds = append(updatedSeeds, endpoint)
+		}
+	}
+
+	return updatedSeeds
+}
+
+func contains(slice []string, s string) bool {
+	for _, elem := range slice {
+		if elem == s {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []string, remoteClient client.Client) error {

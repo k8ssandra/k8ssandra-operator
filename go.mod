@@ -3,6 +3,7 @@ module github.com/k8ssandra/k8ssandra-operator
 go 1.16
 
 require (
+	github.com/Jeffail/gabs v1.4.0 // indirect
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/go-logr/logr v0.3.0
 	github.com/google/go-cmp v0.5.4 // indirect
