@@ -33,6 +33,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -94,14 +95,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	uncachedClient, err := client.New(ctrl.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to fetch config connection")
+		os.Exit(1)
+	}
+
 	ctx := ctrl.SetupSignalHandler()
 
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
-		clientCache := clientcache.New(mgr.GetClient(), scheme)
+		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
 
 		cConfigs := k8ssandraiov1alpha1.ClientConfigList{}
-		err = mgr.GetClient().List(ctx, &cConfigs)
+		err = uncachedClient.List(ctx, &cConfigs, client.InNamespace(watchNamespace))
 		if err != nil {
 			setupLog.Error(err, "unable to fetch cluster connections")
 			os.Exit(1)

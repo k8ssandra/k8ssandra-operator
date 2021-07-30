@@ -17,7 +17,8 @@ import (
 )
 
 type ClientCache struct {
-	localClient client.Client
+	localClient   client.Client
+	noCacheClient client.Client
 
 	scheme *runtime.Scheme
 
@@ -26,11 +27,12 @@ type ClientCache struct {
 	remoteClients map[string]client.Client
 }
 
-func New(localClient client.Client, scheme *runtime.Scheme) *ClientCache {
+func New(localClient client.Client, noCacheclient client.Client, scheme *runtime.Scheme) *ClientCache {
 
 	// Call to create new RemoteClients here?
 	return &ClientCache{
 		localClient:   localClient,
+		noCacheClient: noCacheclient,
 		scheme:        scheme,
 		remoteClients: make(map[string]client.Client),
 	}
@@ -122,7 +124,7 @@ func (c *ClientCache) GetRestConfig(assistCfg *api.ClientConfig) (*rest.Config, 
 func (c *ClientCache) extractClientCmdFromSecret(namespacedName types.NamespacedName) (*clientcmdapi.Config, error) {
 	// Fetch the secret containing the details
 	secret := &corev1.Secret{}
-	err := c.localClient.Get(context.Background(), namespacedName, secret)
+	err := c.noCacheClient.Get(context.Background(), namespacedName, secret)
 	if err != nil {
 		return nil, err
 	}
