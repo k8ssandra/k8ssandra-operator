@@ -3,6 +3,11 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -12,10 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 var (
@@ -125,8 +126,19 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
+	if err := f.DeployK8sClientConfigs(namespace); err != nil {
+		t.Logf("failed to deploy client configs to point to secret")
+		return err
+	}
+
 	timeout := 1 * time.Minute
 	interval := 1 * time.Second
+
+	// Kill K8ssandraOperator pod to cause restart and load the client configs
+	if err := f.DeleteK8ssandraOperatorPods(namespace, timeout, interval); err != nil {
+		t.Logf("failed to restart k8ssandra-operator")
+		return err
+	}
 
 	if err := f.WaitForCassOperatorToBeReady(namespace, timeout, interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
@@ -252,12 +264,12 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	count := 6
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, nodetoolStatusTimeout, interval)
 
-	assert.NoError(t, err, "timed out waiting for nodetool stauts check against " + pod)
+	assert.NoError(t, err, "timed out waiting for nodetool stauts check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	opts.Context = "kind-k8ssandra-1"
 	pod = "test-dc2-default-sts-0"
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, nodetoolStatusTimeout, interval)
 
-	assert.NoError(t, err, "timed out waiting for nodetool status check against " + pod)
+	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 }

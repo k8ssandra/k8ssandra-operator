@@ -1,4 +1,4 @@
-apiVersion: k8ssandra.io.k8ssandra.io/v1alpha1
+apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: k8ssandracluster-sample

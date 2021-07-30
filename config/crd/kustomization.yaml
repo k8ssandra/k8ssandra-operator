@@ -4,6 +4,7 @@
 resources:
 - bases/k8ssandra.io_k8ssandraclusters.yaml
 - bases/k8ssandra.io_stargates.yaml
+- bases/k8ssandra.io_clientconfigs.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

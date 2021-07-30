@@ -5,7 +5,7 @@ metadata:
   name: k8ssandracluster-viewer-role
 rules:
 - apiGroups:
-  - k8ssandra.io.k8ssandra.io
+  - k8ssandra.io
   resources:
   - k8ssandraclusters
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - k8ssandra.io.k8ssandra.io
+  - k8ssandra.io
   resources:
   - k8ssandraclusters/status
   verbs:

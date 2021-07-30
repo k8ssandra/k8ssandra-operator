@@ -54,6 +54,7 @@ rules:
 - apiGroups:
   - k8ssandra.io
   resources:
+  - clientconfigs
   - k8ssandraclusters
   verbs:
   - create

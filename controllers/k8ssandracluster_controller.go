@@ -21,10 +21,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"k8s.io/kubernetes/pkg/util/hash"
 	"math"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"time"
+
+	"k8s.io/kubernetes/pkg/util/hash"
+
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -56,7 +58,7 @@ type K8ssandraClusterReconciler struct {
 	ClientCache *clientcache.ClientCache
 }
 
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 //+kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
@@ -97,7 +99,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			desiredDcHash := deepHashString(desiredDc)
 			desiredDc.Annotations[resourceHashAnnotation] = desiredDcHash
 
-			remoteClient, err := r.ClientCache.GetClient(req.NamespacedName, k8ssandra.Spec.K8sContextsSecret, dcTemplate.K8sContext)
+			remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 			if err != nil {
 				logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", dcKey)
 				return ctrl.Result{}, err
@@ -112,16 +114,16 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-						logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
-						actualDc = actualDc.DeepCopy()
-						resourceVersion := actualDc.GetResourceVersion()
-						desiredDc.DeepCopyInto(actualDc)
-						actualDc.SetResourceVersion(resourceVersion)
-						if err = remoteClient.Update(ctx, actualDc); err != nil {
-							logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
-							return ctrl.Result{}, err
-						}
+					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
+					actualDc = actualDc.DeepCopy()
+					resourceVersion := actualDc.GetResourceVersion()
+					desiredDc.DeepCopyInto(actualDc)
+					actualDc.SetResourceVersion(resourceVersion)
+					if err = remoteClient.Update(ctx, actualDc); err != nil {
+						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
+						return ctrl.Result{}, err
 					}
+				}
 
 				if !cassandra.DatacenterReady(actualDc) {
 					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
@@ -361,7 +363,7 @@ func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx cont
 func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Context, k8ssandra *api.K8ssandraCluster, idx int) (*cassdcapi.CassandraDatacenter, client.Client, error) {
 	dcTemplate := k8ssandra.Spec.Cassandra.Datacenters[idx]
 	k8ssandraKey := types.NamespacedName{Namespace: k8ssandra.Namespace, Name: k8ssandra.Name}
-	remoteClient, err := r.ClientCache.GetClient(k8ssandraKey, k8ssandra.Spec.K8sContextsSecret, dcTemplate.K8sContext)
+	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 
 	if err != nil {
 		return nil, nil, err
@@ -382,22 +384,16 @@ func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, k8ssandraK
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}).
+func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+	cb := ctrl.NewControllerManagedBy(mgr).
+		For(&api.K8ssandraCluster{}). // No generation changed predicate here?
 		Owns(&cassdcapi.CassandraDatacenter{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Complete(r)
-}
-
-func (r *K8ssandraClusterReconciler) SetupMultiClusterWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{})
+		Owns(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	for _, c := range clusters {
-		builder = builder.Watches(source.NewKindWithCache(&api.K8ssandraCluster{}, c.GetCache()),
+		cb = cb.Watches(source.NewKindWithCache(&api.K8ssandraCluster{}, c.GetCache()),
 			&handler.EnqueueRequestForObject{})
 	}
 
-	return builder.Complete(r)
+	return cb.Complete(r)
 }
