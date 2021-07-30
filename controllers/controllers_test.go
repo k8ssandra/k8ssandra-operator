@@ -45,10 +45,9 @@ func TestControllers(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
-	// t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
-
-	t.Run("Test Stargate", testStargate)
+	t.Run("CreateSingleDcCluster", controllerTest(ctx, createSingleDcCluster))
+	t.Run("CreateMultiDcCluster", controllerTest(ctx, createMultiDcCluster))
+	t.Run("TestStargate", testStargate)
 }
 
 func beforeSuite(t *testing.T) {

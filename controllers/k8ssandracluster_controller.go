@@ -133,7 +133,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
 
-				endpoints, err := r.resolveSeedEndpoints(ctx, actualDc, remoteClient)
+				endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
 				if err != nil {
 					logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
