@@ -86,7 +86,7 @@ func beforeSuite(t *testing.T) {
 	})
 	require.NoError(err, "failed to create controller-runtime manager")
 
-	clientCache := clientcache.New(k8sManager.GetClient(), scheme.Scheme)
+	clientCache := clientcache.New(k8sManager.GetClient(), testClients["cluster-0"], scheme.Scheme)
 	for ctxName, cli := range testClients {
 		clientCache.AddClient(ctxName, cli)
 	}
