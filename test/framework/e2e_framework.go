@@ -455,13 +455,10 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 
 func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all k8ssandra-operator pods", "Namespace", namespace)
-	return f.deleteAllResources(
-		namespace,
-		&corev1.Pod{},
-		timeout,
-		interval,
-		client.MatchingLabels{"control-plane": "k8ssandra-operator"},
-	)
+	if err := f.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{"control-plane": "k8ssandra-operator"}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (f *E2eFramework) deleteAllResources(
