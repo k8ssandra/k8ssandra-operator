@@ -151,9 +151,9 @@ func main() {
 		// Create the reconciler and start it
 
 		if err = (&controllers.K8ssandraClusterReconciler{
-			Client:      mgr.GetClient(),
-			Scheme:      mgr.GetScheme(),
-			ClientCache: clientCache,
+			Client:        mgr.GetClient(),
+			Scheme:        mgr.GetScheme(),
+			ClientCache:   clientCache,
 			SeedsResolver: cassandra.NewRemoteSeedsResolver(),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")

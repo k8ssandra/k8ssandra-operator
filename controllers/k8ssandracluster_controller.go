@@ -55,7 +55,7 @@ const (
 type K8ssandraClusterReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
-	ClientCache   clientcache.ClientCache
+	ClientCache   *clientcache.ClientCache
 	SeedsResolver cassandra.RemoteSeedsResolver
 }
 

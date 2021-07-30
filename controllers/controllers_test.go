@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"path/filepath"
 	"testing"
 	"time"
@@ -62,7 +62,6 @@ func beforeSuite(t *testing.T) {
 	require.NoError(registerApis(), "failed to register apis with scheme")
 
 	cfgs := make([]*rest.Config, clustersToCreate)
-	clientsCache := &testClientCache{clients: make(map[string]client.Client, 0)}
 
 	for i := 0; i < clustersToCreate; i++ {
 		clusterName := fmt.Sprintf(clusterProtoName, i)
@@ -78,8 +77,6 @@ func beforeSuite(t *testing.T) {
 		require.NoError(err, "failed to start test environment")
 		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		require.NoError(err, "failed to create controller-runtime client")
-
-		clientsCache.clients[clusterName] = testClient
 
 		testClients[clusterName] = testClient
 		cfgs[i] = cfg
@@ -101,7 +98,7 @@ func beforeSuite(t *testing.T) {
 	err = (&K8ssandraClusterReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ClientCache:   clientsCache,
+		ClientCache:   clientCache,
 		SeedsResolver: seedsResolver,
 	}).SetupWithManager(k8sManager, additionalClusters)
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler with multicluster test")
@@ -156,19 +153,6 @@ func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 
 		test(t, ctx, f, namespace)
 	}
-}
-
-type testClientCache struct {
-	// Maps k8s context to client. The real impl maps the K8ssandraCluster key to a
-	// map[string]client.Client where the key is the k8s context name. I am keeping
-	// the mapping here simple since the real impl is likely going to get a complete
-	// make over.
-	clients map[string]client.Client
-}
-
-func (c *testClientCache) GetClient(nsName types.NamespacedName, contextsSecret, k8sContextName string) (client.Client, error) {
-	remoteClient, _ := c.clients[k8sContextName]
-	return remoteClient, nil
 }
 
 type fakeSeedsResolver struct {
