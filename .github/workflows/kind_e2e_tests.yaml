@@ -46,6 +46,7 @@ jobs:
       matrix:
         e2e_test:
           - TestOperator/CreateSingleDatacenterCluster
+          - TestOperator/CreateStandAloneStargate
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
