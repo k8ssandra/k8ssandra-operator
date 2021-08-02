@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"path/filepath"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/bombsimon/logrusr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -28,30 +28,31 @@ import (
 
 const (
 	clustersToCreate = 2
-	timeout          = time.Second * 10
-	interval         = time.Millisecond * 250
+	timeout          = time.Second * 30
+	interval         = time.Second * 1
 	clusterProtoName = "cluster-%d"
 )
 
 var (
-	testClients = make(map[string]client.Client, clustersToCreate)
-	testEnvs    = make([]*envtest.Environment, clustersToCreate)
+	testClients   = make(map[string]client.Client, clustersToCreate)
+	testEnvs      = make([]*envtest.Environment, clustersToCreate)
+	seedsResolver = &fakeSeedsResolver{}
 )
 
 func TestControllers(t *testing.T) {
 	defer afterSuite(t)
 	beforeSuite(t)
 
-	// ctx := context.Background()
+	ctx := context.Background()
 
-	// t.Run("Create Single DC cluster", controllerTest(ctx, createSingleDcCluster))
-	// t.Run("Create multi-DC cluster in one namespace", controllerTest(ctx, createMultiDcCluster))
-
-	t.Run("Test Stargate", testStargate)
+	t.Run("CreateSingleDcCluster", controllerTest(ctx, createSingleDcCluster))
+	t.Run("CreateMultiDcCluster", controllerTest(ctx, createMultiDcCluster))
+	t.Run("TestStargate", testStargate)
 }
 
 func beforeSuite(t *testing.T) {
 	require := require.New(t)
+
 	log := logrusr.NewLogger(logrus.New())
 	logf.SetLogger(log)
 
@@ -93,23 +94,12 @@ func beforeSuite(t *testing.T) {
 
 	additionalClusters := make([]cluster.Cluster, 0, clustersToCreate-1)
 
-	for i := 1; i < clustersToCreate; i++ {
-		// Add rest of the clusters to the same manager
-		c, err := cluster.New(cfgs[i], func(o *cluster.Options) {
-			o.Scheme = scheme.Scheme
-		})
-		require.NoError(err, "failed to create controller-runtime cluster")
-		additionalClusters = append(additionalClusters, c)
-
-		err = k8sManager.Add(c)
-		require.NoError(err, "failed to add cluster to k8sManager")
-	}
-
 	// We start only one reconciler, for the clusters number 0
 	err = (&K8ssandraClusterReconciler{
-		Client:      k8sManager.GetClient(),
-		Scheme:      scheme.Scheme,
-		ClientCache: clientCache,
+		Client:        k8sManager.GetClient(),
+		Scheme:        scheme.Scheme,
+		ClientCache:   clientCache,
+		SeedsResolver: seedsResolver,
 	}).SetupWithManager(k8sManager, additionalClusters)
 	require.NoError(err, "Failed to set up K8ssandraClusterReconciler with multicluster test")
 
@@ -147,18 +137,28 @@ func registerApis() error {
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
 func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
-	// Test code is temporarily stubbed out until we sort out
-	// https://github.com/k8ssandra/k8ssandra-operator/issues/35.
-
 	namespace := rand.String(9)
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		f := framework.NewFramework(testClients[primaryCluster], primaryCluster, testClients)
+		controlPlaneCluster := testClients[primaryCluster]
+		f := framework.NewFramework(controlPlaneCluster, primaryCluster, testClients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
 
+		seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
+			return []string{}, nil
+		}
+
 		test(t, ctx, f, namespace)
 	}
+}
+
+type fakeSeedsResolver struct {
+	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
+}
+
+func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
+	return r.callback(dc)
 }

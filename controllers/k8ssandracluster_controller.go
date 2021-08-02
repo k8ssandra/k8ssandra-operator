@@ -54,8 +54,9 @@ const (
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	ClientCache *clientcache.ClientCache
+	Scheme        *runtime.Scheme
+	ClientCache   *clientcache.ClientCache
+	SeedsResolver cassandra.RemoteSeedsResolver
 }
 
 //+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -91,7 +92,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
 			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
-				logger.Error(err, "Failed to CassandraDatacenter")
+				logger.Error(err, "Failed to create new CassandraDatacenter")
 				return ctrl.Result{}, err
 			}
 			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
@@ -132,7 +133,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
 
-				endpoints, err := r.resolveSeedEndpoints(ctx, actualDc, remoteClient)
+				endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
 				if err != nil {
 					logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
@@ -274,22 +275,6 @@ func deepHashString(obj interface{}) string {
 }
 
 func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	//ips, err := net.LookupIP(dc.GetSeedServiceName())
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	//endpoints := make([]string, len(ips))
-	//
-	//for _, ip := range ips {
-	//	if ip.To4() == nil {
-	//		return nil, fmt.Errorf("failed to get IPv4 address for ip %s from seed service %s", ip, dc.GetSeedServiceName())
-	//	}
-	//	endpoints = append(endpoints, ip.String())
-	//}
-	//
-	//return endpoints, nil
-
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
 
