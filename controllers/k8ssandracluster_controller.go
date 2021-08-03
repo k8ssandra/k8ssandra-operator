@@ -107,7 +107,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			actualDc := &cassdcapi.CassandraDatacenter{}
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+				if err = r.setStatusForDatacenter(ctx, k8ssandra, actualDc); err != nil {
+					logger.Error(err, "Failed to update status for datacenter", "CassandraDatacenter", dcKey)
+					return ctrl.Result{}, err
+				}
+
+				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
 					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
 					actualDc = actualDc.DeepCopy()
 					resourceVersion := actualDc.GetResourceVersion()
@@ -352,6 +357,26 @@ func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, k8ssandraK
 	}
 	return types.NamespacedName{Namespace: dcTemplate.Meta.Namespace, Name: dcTemplate.Meta.Name}
 }
+
+func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context, k8ssandra *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
+	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if len(k8ssandra.Status.Datacenters) == 0 {
+		k8ssandra.Status.Datacenters = make(map[string]api.K8ssandraDatacenterStatus, 0)
+	}
+
+	kdcStatus, found := k8ssandra.Status.Datacenters[dc.Name]
+
+	if found {
+		dc.Status.DeepCopyInto(kdcStatus.Cassandra)
+	} else {
+		k8ssandra.Status.Datacenters[dc.Name] = api.K8ssandraDatacenterStatus{
+			Cassandra: dc.Status.DeepCopy(),
+		}
+	}
+
+	return r.Status().Patch(ctx, k8ssandra, patch)
+}
+
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {

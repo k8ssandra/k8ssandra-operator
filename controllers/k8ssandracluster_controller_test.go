@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"testing"
+	"time"
 )
 
 func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -50,13 +51,45 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
-	//dc := &cassdcapi.CassandraDatacenter{}
-	//err = f.Client.Get(ctx, dcKey.NamespacedName, dc)
-	//require.NoError(err, "failed to get datacenter")
+	lastTransitionTime := metav1.Now().Rfc3339Copy().Time
 
-	//t.Log("check that the owner reference is set on the datacenter")
-	//assert.Equal(1, len(dc.OwnerReferences), "expected to find 1 owner reference for datacenter")
-	//assert.Equal(cluster.UID, dc.OwnerReferences[0].UID)
+	t.Log("update datacenter status")
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.NewTime(lastTransitionTime),
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	time.Sleep(16 * time.Second)
+
+	k8ssandraKey := framework.ClusterKey{K8sContext: "cluster-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	k8ssandra := &api.K8ssandraCluster{}
+	err = f.Get(ctx, k8ssandraKey, k8ssandra)
+	require.NoError(err, "failed to get k8ssandracluster")
+
+	require.Equal(1, len(k8ssandra.Status.Datacenters))
+	kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+	require.True(found, "status not found")
+
+	cassandraStatus := kdcStatus.Cassandra
+
+	found = false
+	condition := cassdcapi.DatacenterCondition{}
+
+	for _, c := range cassandraStatus.Conditions {
+		if c.Type == cassdcapi.DatacenterScalingUp {
+			found = true
+			condition = c
+			break
+		}
+	}
+
+	require.True(found, "did not find status condition")
+	assert.Equal(t, corev1.ConditionTrue, condition.Status)
+	assert.True(t, lastTransitionTime.Equal(condition.LastTransitionTime.Time), fmt.Sprintf("expected %v, got %v", lastTransitionTime, condition.LastTransitionTime.Time))
 }
 
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
