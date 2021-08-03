@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 	"time"
 
@@ -405,7 +406,8 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	f.logger.Info("dumping cluster info")
 
 	now := time.Now()
-	baseDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", test, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
+	testDir := strings.ReplaceAll(test, "/", "_")
+	baseDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", testDir, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
 	errs := make([]error, 0)
 
 	for ctx, _ := range f.remoteClients {
