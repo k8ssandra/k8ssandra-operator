@@ -144,6 +144,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// solution for handling seed addresses.
 				seeds = addSeedEndpoints(seeds, endpoints...)
 
+				logger.Info("Updating seeds", "Seeds", seeds)
 				if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
 					logger.Error(err, "Failed to update seeds")
 					return ctrl.Result{}, err
@@ -329,9 +330,7 @@ func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx cont
 	if dc.Spec.AdditionalSeeds == nil {
 		dc.Spec.AdditionalSeeds = make([]string, 0, len(seeds))
 	}
-	// TODO make sure we do not have duplicates
-	dc.Spec.AdditionalSeeds = append(dc.Spec.AdditionalSeeds, seeds...)
-
+	dc.Spec.AdditionalSeeds = seeds
 	return remoteClient.Patch(ctx, dc, patch)
 }
 
@@ -376,7 +375,6 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context,
 
 	return r.Status().Patch(ctx, k8ssandra, patch)
 }
-
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {

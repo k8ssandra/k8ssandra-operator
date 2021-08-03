@@ -193,6 +193,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			t.Logf("failed to get dc1: %s", err)
 			return false, err
 		}
+		t.Logf("additional seeds for dc1: %v", dc.Spec.AdditionalSeeds)
 		return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
 	})
 	require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
