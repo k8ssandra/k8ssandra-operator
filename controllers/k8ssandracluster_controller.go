@@ -82,7 +82,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			dcNames = append(dcNames, dc.Meta.Name)
 		}
 
-		for i, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
+		for _, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
 			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
 				logger.Error(err, "Failed to create new CassandraDatacenter")
@@ -144,11 +144,13 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// solution for handling seed addresses.
 				seeds = addSeedEndpoints(seeds, endpoints...)
 
-				logger.Info("Updating seeds", "Seeds", seeds)
-				if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
-					logger.Error(err, "Failed to update seeds")
-					return ctrl.Result{}, err
-				}
+				// Temporarily do not update seeds on existing dcs. SEE
+				// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
+				//logger.Info("Updating seeds", "Seeds", seeds)
+				//if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
+				//	logger.Error(err, "Failed to update seeds")
+				//	return ctrl.Result{}, err
+				//}
 			} else {
 				if errors.IsNotFound(err) {
 					if err = remoteClient.Create(ctx, desiredDc); err != nil {
@@ -240,6 +242,7 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			ClusterName:     cluster,
+			ServerImage:     template.ServerImage,
 			Size:            template.Size,
 			ServerType:      "cassandra",
 			ServerVersion:   template.ServerVersion,

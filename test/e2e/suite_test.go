@@ -239,7 +239,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		if kdcStatus.Cassandra == nil {
 			return false
 		}
-		return cassandraDatacenteReady(kdcStatus.Cassandra)
+		return cassandraDatacenterReady(kdcStatus.Cassandra)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check that Stargate test-dc1-stargate is ready")
@@ -313,11 +313,11 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		if cassandraStatus == nil {
 			return false
 		}
-		return cassandraDatacenteReady(cassandraStatus)
+		return cassandraDatacenterReady(cassandraStatus)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check that Stargate test-dc1-stargate is ready")
-	timeout = 4 * time.Minute
+	timeout = 6 * time.Minute
 	interval = 15 * time.Second
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	withStargate := f.NewWithStargate(ctx, stargateKey)
@@ -353,7 +353,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		if cassandraStatus == nil {
 			return false
 		}
-		if !cassandraDatacenteReady(cassandraStatus) {
+		if !cassandraDatacenterReady(cassandraStatus) {
 			return false
 		}
 
@@ -361,7 +361,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		if cassandraStatus == nil {
 			return false
 		}
-		return cassandraDatacenteReady(cassandraStatus)
+		return cassandraDatacenterReady(cassandraStatus)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -389,7 +389,7 @@ func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *c
 	return kdcStatus.Cassandra
 }
 
-func cassandraDatacenteReady(status *cassdcapi.CassandraDatacenterStatus) bool {
+func cassandraDatacenterReady(status *cassdcapi.CassandraDatacenterStatus) bool {
 	return status.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue &&
 		status.CassandraOperatorProgress == cassdcapi.ProgressReady
 }
