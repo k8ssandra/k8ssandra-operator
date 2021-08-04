@@ -25,9 +25,6 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StargateLabel is the distinctive label for objects created by the Stargate controller.
-const StargateLabel = "k8ssandra.io/stargate"
-
 // StargateTemplate defines a template for deploying Stargate.
 type StargateTemplate struct {
 
@@ -78,6 +75,10 @@ type StargateTemplate struct {
 	//# https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ for background.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// CassandraConfigMap is a reference to a ConfigMap that holds Cassandra configuration.
+	// The map should have a key named cassandra_yaml.
+	CassandraConfigMap *corev1.LocalObjectReference `json:"CassandraConfigMap,omitempty"`
 }
 
 // StargateSpec defines the desired state of a Stargate resource.
