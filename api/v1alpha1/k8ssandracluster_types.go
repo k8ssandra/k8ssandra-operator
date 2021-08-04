@@ -93,6 +93,8 @@ type CassandraDatacenterTemplateSpec struct {
 	// unnecessary though. Some belong at the cluster level. I have created
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/9 to sort it out.
 
+	ServerImage string `json:"serverImage,omitempty"`
+
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 

@@ -10,6 +10,7 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
+        serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
         serverVersion: "3.11.10"
         storageConfig:
@@ -62,6 +63,7 @@ spec:
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
+        serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
         serverVersion: "3.11.10"
         storageConfig:

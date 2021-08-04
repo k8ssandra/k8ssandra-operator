@@ -260,6 +260,19 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	return nil
 }
 
+func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
+
+	for _, k8sContext := range f.getClusterContexts() {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeployK8ssandraOperator Deploys k8ssandra-operator in the control plane cluster. Note
 // that the control plane cluster can also be one of the data plane clusters. It then
 // deploys the operator in the data plane clusters with the K8ssandraCluster controller

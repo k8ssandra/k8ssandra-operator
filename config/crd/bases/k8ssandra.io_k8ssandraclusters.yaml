@@ -117,6 +117,8 @@ spec:
                                 value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                               type: object
                           type: object
+                        serverImage:
+                          type: string
                         serverVersion:
                           type: string
                         size:

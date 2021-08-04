@@ -112,6 +112,11 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
+	if err := f.DeployCassandraConfigMap(namespace); err != nil {
+		t.Log("failed to deploy cassandra configmap")
+		return err
+	}
+
 	if err := f.DeployK8sContextsSecret(namespace); err != nil {
 		t.Logf("failed to deploy k8s contexts secret")
 		return err
@@ -321,6 +326,8 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}), timeout, interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("check that datacenter dc2 is ready")
+	timeout = 8 * time.Minute
+	interval = 15 * time.Second
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	withDatacenter = f.NewWithDatacenter(ctx, dc2Key)
 	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
@@ -329,7 +336,11 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}), timeout, interval, "timed out waiting for datacenter dc2 to become ready")
 
 	t.Log("check k8ssandra cluster status")
-	timeout = 1 * time.Minute
+	// We use a larger timeout for this status check because the additional seeds will be
+	// updated for dc1 and dc1's status will be set to updating when cass-operator creates
+	// the endpoints. cass-operator will update the status back to ready when it reaches the
+	// end of its reconciliation.
+	timeout = 3 * time.Minute
 	interval = 5 * time.Second
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
