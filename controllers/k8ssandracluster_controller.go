@@ -18,13 +18,10 @@ package controllers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
 	"time"
-
-	"k8s.io/kubernetes/pkg/util/hash"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
@@ -45,10 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-)
-
-const (
-	resourceHashAnnotation = "k8ssandra.io/resource-hash"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -97,8 +90,8 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 
-			desiredDcHash := deepHashString(desiredDc)
-			desiredDc.Annotations[resourceHashAnnotation] = desiredDcHash
+			desiredDcHash := utils.DeepHashString(desiredDc)
+			desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
 
 			remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 			if err != nil {
@@ -114,7 +107,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			actualDc := &cassdcapi.CassandraDatacenter{}
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
 					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
 					actualDc = actualDc.DeepCopy()
 					resourceVersion := actualDc.GetResourceVersion()
@@ -181,8 +174,8 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						DatacenterRef:    actualDc.Name,
 					},
 				}
-				desiredStargateHash := deepHashString(desiredStargate)
-				desiredStargate.Annotations[resourceHashAnnotation] = desiredStargateHash
+				desiredStargateHash := utils.DeepHashString(desiredStargate)
+				desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
 
 				actualStargate := &api.Stargate{}
 
@@ -202,7 +195,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
 						return ctrl.Result{}, err
 					}
-				} else if actualStargateHash, found := actualStargate.Annotations[resourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
+				} else if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
 					logger.Info("Updating Stargate resource", "Stargate", stargateKey)
 					resourceVersion := actualStargate.GetResourceVersion()
 					desiredStargate.DeepCopyInto(actualStargate)
@@ -264,14 +257,6 @@ func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {
 	replicationFactor := math.Min(size, 3.0)
 
 	return int(replicationFactor)
-}
-
-func deepHashString(obj interface{}) string {
-	hasher := sha256.New()
-	hash.DeepHashObject(hasher, obj)
-	hashBytes := hasher.Sum([]byte{})
-	b64Hash := base64.StdEncoding.EncodeToString(hashBytes)
-	return b64Hash
 }
 
 func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {

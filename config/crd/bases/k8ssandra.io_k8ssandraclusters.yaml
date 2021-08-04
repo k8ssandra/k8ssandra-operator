@@ -128,6 +128,17 @@ spec:
                             for Stargate. Leave nil to skip deploying Stargate in
                             this datacenter.
                           properties:
+                            CassandraConfigMap:
+                              description: CassandraConfigMap is a reference to a
+                                ConfigMap that holds Cassandra configuration. The
+                                map should have a key named cassandra_yaml.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
                             affinity:
                               description: Affinity is the affinity to apply to the
                                 Stargate pods. See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
