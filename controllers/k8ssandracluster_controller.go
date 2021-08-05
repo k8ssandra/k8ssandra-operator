@@ -84,7 +84,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 
 		for _, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
-			desiredDc, err := newDatacenter(req.Namespace, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+			desiredDc, err := newDatacenter(req.NamespacedName, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
 				logger.Error(err, "Failed to create new CassandraDatacenter")
 				return ctrl.Result{}, err
@@ -177,6 +177,10 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						Namespace:   stargateKey.Namespace,
 						Name:        stargateKey.Name,
 						Annotations: map[string]string{},
+						Labels: map[string]string{
+							api.PartOfLabel: api.PartOfLabelValue,
+							api.K8ssandraClusterLabel: req.Name,
+						},
 					},
 					Spec: api.StargateSpec{
 						StargateTemplate: *dcTemplate.Stargate,
@@ -231,10 +235,10 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string, systemDistributedRF int) (*cassdcapi.CassandraDatacenter, error) {
+func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string, systemDistributedRF int) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
-		namespace = k8ssandraNamespace
+		namespace = k8ssandraKey.Namespace
 	}
 
 	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF, template.ServerVersion)
@@ -247,6 +251,10 @@ func newDatacenter(k8ssandraNamespace, cluster string, dcNames []string, templat
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
+			Labels: map[string]string{
+				api.PartOfLabel: api.PartOfLabelValue,
+				api.K8ssandraClusterLabel: k8ssandraKey.Name,
+			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			ClusterName:     cluster,
@@ -417,21 +425,21 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
 
 
-	mapFn := func(mapObj client.Object) []reconcile.Request {
-		stargate := mapObj.(*api.Stargate)
-		// TODO Add a check for labels and get the K8ssandraCluster name from the labels
-		return []reconcile.Request{
-			{
-				// Temporarily hard coded
-				NamespacedName: types.NamespacedName{Namespace: stargate.Namespace, Name: "test"},
-			},
+	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
+		requests := make([]reconcile.Request, 0)
+		labels := mapObj.GetLabels()
+		cluster, found := labels[api.K8ssandraClusterLabel]
+		if found {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: cluster}})
 		}
+		return requests
 	}
 
 	for _, c := range clusters {
 		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
-			&handler.EnqueueRequestForObject{})
-		cb = cb.Watches(source.NewKindWithCache(&api.Stargate{}, c.GetCache()), handler.EnqueueRequestsFromMapFunc(mapFn))
+			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+		cb = cb.Watches(source.NewKindWithCache(&api.Stargate{}, c.GetCache()),
+			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	}
 
 	return cb.Complete(r)
