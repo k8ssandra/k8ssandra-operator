@@ -112,7 +112,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return ctrl.Result{}, err
 				}
 
-				if actualHash, found := actualDc.Annotations[resourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
 					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
 					actualDc = actualDc.DeepCopy()
 					resourceVersion := actualDc.GetResourceVersion()
