@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -203,17 +204,24 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
 						return ctrl.Result{}, err
 					}
-				} else if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
-					logger.Info("Updating Stargate resource", "Stargate", stargateKey)
-					resourceVersion := actualStargate.GetResourceVersion()
-					desiredStargate.DeepCopyInto(actualStargate)
-					actualStargate.SetResourceVersion(resourceVersion)
-					if err := controllerutil.SetControllerReference(k8ssandra, actualStargate, r.Scheme); err != nil {
-						logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
-						return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-					} else if err = remoteClient.Update(ctx, actualStargate); err != nil {
-						logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
+				} else {
+					if err = r.setStatusForStargate(ctx, k8ssandra, actualStargate, dcTemplate.Meta.Name); err != nil {
+						logger.Error(err, "Failed to update status for stargate", "Stargate", stargateKey)
 						return ctrl.Result{}, err
+					}
+
+					if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
+						logger.Info("Updating Stargate resource", "Stargate", stargateKey)
+						resourceVersion := actualStargate.GetResourceVersion()
+						desiredStargate.DeepCopyInto(actualStargate)
+						actualStargate.SetResourceVersion(resourceVersion)
+						if err := controllerutil.SetControllerReference(k8ssandra, actualStargate, r.Scheme); err != nil {
+							logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
+							return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+						} else if err = remoteClient.Update(ctx, actualStargate); err != nil {
+							logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
+							return ctrl.Result{}, err
+						}
 					}
 				}
 			}
@@ -379,16 +387,51 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context,
 	return r.Status().Patch(ctx, k8ssandra, patch)
 }
 
+func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, k8ssandra *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
+	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if len(k8ssandra.Status.Datacenters) == 0 {
+		k8ssandra.Status.Datacenters = make(map[string]api.K8ssandraDatacenterStatus, 0)
+	}
+
+	kdcStatus, found := k8ssandra.Status.Datacenters[dcName]
+
+	if found {
+		if kdcStatus.Stargate == nil {
+			kdcStatus.Stargate = stargate.Status.DeepCopy()
+			k8ssandra.Status.Datacenters[dcName] = kdcStatus
+		} else {
+			stargate.Status.DeepCopyInto(kdcStatus.Stargate)
+		}
+	} else {
+		k8ssandra.Status.Datacenters[dcName] = api.K8ssandraDatacenterStatus{
+			Stargate: stargate.Status.DeepCopy(),
+		}
+	}
+
+	return r.Status().Patch(ctx, k8ssandra, patch)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}). // No generation changed predicate here?
-		Owns(&cassdcapi.CassandraDatacenter{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
+
+
+	mapFn := func(mapObj client.Object) []reconcile.Request {
+		stargate := mapObj.(*api.Stargate)
+		// TODO Add a check for labels and get the K8ssandraCluster name from the labels
+		return []reconcile.Request{
+			{
+				// Temporarily hard coded
+				NamespacedName: types.NamespacedName{Namespace: stargate.Namespace, Name: "test"},
+			},
+		}
+	}
 
 	for _, c := range clusters {
-		cb = cb.Watches(source.NewKindWithCache(&api.K8ssandraCluster{}, c.GetCache()),
+		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
 			&handler.EnqueueRequestForObject{})
+		cb = cb.Watches(source.NewKindWithCache(&api.Stargate{}, c.GetCache()), handler.EnqueueRequestsFromMapFunc(mapFn))
 	}
 
 	return cb.Complete(r)

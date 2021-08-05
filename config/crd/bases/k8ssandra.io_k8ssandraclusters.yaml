@@ -1667,8 +1667,8 @@ spec:
                   The naming is a bit confusing but the mapping makes sense because
                   we have a CassandraDatacenter and then define other components like
                   Stargate and Reaper relative to it. I wanted to inline the field
-                  but when I do it won't serialize correctly. \n TODO Figure out how
-                  to inline this field"
+                  but when I do it won't serialize. \n TODO Figure out how to inline
+                  this field"
                 type: object
             type: object
         type: object

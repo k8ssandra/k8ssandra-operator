@@ -50,45 +50,87 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
-	lastTransitionTime := metav1.Now().Rfc3339Copy().Time
+	lastTransitionTime := metav1.Now()
 
-	t.Log("update datacenter status")
+	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterScalingUp,
 			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.NewTime(lastTransitionTime),
+			LastTransitionTime: lastTransitionTime,
 		})
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	time.Sleep(16 * time.Second)
-
 	k8ssandraKey := framework.ClusterKey{K8sContext: "cluster-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
-	k8ssandra := &api.K8ssandraCluster{}
-	err = f.Get(ctx, k8ssandraKey, k8ssandra)
-	require.NoError(err, "failed to get k8ssandracluster")
-
-	require.Equal(1, len(k8ssandra.Status.Datacenters))
-	kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
-	require.True(found, "status not found")
-
-	cassandraStatus := kdcStatus.Cassandra
-
-	found = false
-	condition := cassdcapi.DatacenterCondition{}
-
-	for _, c := range cassandraStatus.Conditions {
-		if c.Type == cassdcapi.DatacenterScalingUp {
-			found = true
-			condition = c
-			break
+	require.Eventually(func() bool {
+		k8ssandra := &api.K8ssandraCluster{}
+		err = f.Get(ctx, k8ssandraKey, k8ssandra)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
 		}
-	}
 
-	require.True(found, "did not find status condition")
-	assert.Equal(t, corev1.ConditionTrue, condition.Status)
-	assert.True(t, lastTransitionTime.Equal(condition.LastTransitionTime.Time), fmt.Sprintf("expected %v, got %v", lastTransitionTime, condition.LastTransitionTime.Time))
+		if len(k8ssandra.Status.Datacenters) == 0 {
+			return false
+		}
+
+		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dcKey)
+			return false
+		}
+
+		condition := findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		return condition != nil
+	}, 20*time.Second, 1*time.Second, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("update datacenter status to ready")
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		lastTransitionTime = metav1.Now()
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: lastTransitionTime,
+		})
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionFalse,
+			LastTransitionTime: lastTransitionTime,
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	require.Eventually(func() bool {
+		k8ssandra := &api.K8ssandraCluster{}
+		err = f.Get(ctx, k8ssandraKey, k8ssandra)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(k8ssandra.Status.Datacenters) == 0 {
+			return false
+		}
+
+		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dcKey)
+			return false
+		}
+
+		condition := findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		if condition == nil || condition.Status == corev1.ConditionTrue {
+			return false
+		}
+
+		condition = findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterReady)
+		if condition == nil || condition.Status == corev1.ConditionFalse {
+			return false
+		}
+
+		return true
+	}, 20*time.Second, 1*time.Second, "timed out waiting for K8ssandraCluster status update")
 }
 
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -213,4 +255,13 @@ func equalsNoOrder(s1, s2 []string) bool {
 	}
 
 	return true
+}
+
+func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
+	for _, condition := range status.Conditions {
+		if condition.Type == condType {
+			return &condition
+		}
+	}
+	return nil
 }

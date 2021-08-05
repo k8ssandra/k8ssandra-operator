@@ -38,8 +38,7 @@ type K8ssandraClusterStatus struct {
 	// Datacenters maps the CassandraDatacenter name to a K8ssandraDatacenterStatus. The
 	// naming is a bit confusing but the mapping makes sense because we have a
 	// CassandraDatacenter and then define other components like Stargate and Reaper
-	// relative to it. I wanted to inline the field but when I do it won't serialize
-	// correctly.
+	// relative to it. I wanted to inline the field but when I do it won't serialize.
 	//
 	// TODO Figure out how to inline this field
 	Datacenters map[string]K8ssandraDatacenterStatus `json:"datacenters,omitempty"`

@@ -50,6 +50,7 @@ spec:
           resources:
             limits:
               memory: "384Mi"
+          cassandraConfigMap: cassandra
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -100,6 +101,7 @@ spec:
         stargate:
           size: 1
           heapSize: 256Mi
+          cassandraConfigMap: cassandra
           resources:
             limits:
               memory: "384Mi"

@@ -133,6 +133,7 @@ func main() {
 			// Add cluster to the manager
 			c, err := cluster.New(cfg, func(o *cluster.Options) {
 				o.Scheme = scheme
+				o.Namespace = watchNamespace
 			})
 			if err != nil {
 				setupLog.Error(err, "unable to create manager cluster connection")
