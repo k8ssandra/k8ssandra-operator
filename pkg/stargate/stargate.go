@@ -121,6 +121,12 @@ func NewDeployment(stargate *api.Stargate, cassdc *cassdcapi.CassandraDatacenter
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: *stargate.Spec.CassandraConfigMap,
+					Items: []corev1.KeyToPath{
+						{
+							Key: "cassandra.yaml",
+							Path: "cassandra.yaml",
+						},
+					},
 				},
 			},
 		})
@@ -258,4 +264,18 @@ func NewService(sg *api.Stargate, dc *cassdcapi.CassandraDatacenter) *corev1.Ser
 
 func getStargateContainerName(dc *cassdcapi.CassandraDatacenter) string {
 	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate-deployment"
+}
+
+func IsReady(sg *api.Stargate) bool {
+	if sg.Status.Progress != api.StargateProgressRunning {
+		return false
+	}
+
+	for _, condition := range sg.Status.Conditions {
+		if condition.Type == api.StargateReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
 }

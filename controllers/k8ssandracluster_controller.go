@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -38,7 +39,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -195,10 +195,11 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 					if errors.IsNotFound(err) {
 						logger.Info("Creating Stargate resource", "Stargate", stargateKey)
-						if err := controllerutil.SetControllerReference(k8ssandra, desiredStargate, r.Scheme); err != nil {
-							logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
-							return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-						} else if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+						//if err := controllerutil.SetControllerReference(k8ssandra, desiredStargate, r.Scheme); err != nil {
+						//	logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
+						//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+						//} else if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+						if err := remoteClient.Create(ctx, desiredStargate); err != nil {
 							logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
 							return ctrl.Result{}, err
 						} else {
@@ -219,14 +220,30 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						resourceVersion := actualStargate.GetResourceVersion()
 						desiredStargate.DeepCopyInto(actualStargate)
 						actualStargate.SetResourceVersion(resourceVersion)
-						if err := controllerutil.SetControllerReference(k8ssandra, actualStargate, r.Scheme); err != nil {
-							logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
-							return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-						} else if err = remoteClient.Update(ctx, actualStargate); err != nil {
+						//if err := controllerutil.SetControllerReference(k8ssandra, actualStargate, r.Scheme); err != nil {
+						//	logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
+						//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+						//} else {
+						//	if err = remoteClient.Update(ctx, actualStargate); err == nil {
+						//		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+						//	} else {
+						//		logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
+						//		return ctrl.Result{}, err
+						//	}
+						//}
+						if err = remoteClient.Update(ctx, actualStargate); err == nil {
+							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+						} else {
 							logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
 							return ctrl.Result{}, err
 						}
 					}
+
+					if !stargateutil.IsReady(actualStargate) {
+						logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
+						return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+					}
+					logger.Info("Stargate is ready", "Stargate", stargateKey)
 				}
 			}
 		}
