@@ -178,7 +178,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						Name:        stargateKey.Name,
 						Annotations: map[string]string{},
 						Labels: map[string]string{
-							api.PartOfLabel: api.PartOfLabelValue,
+							api.PartOfLabel:           api.PartOfLabelValue,
 							api.K8ssandraClusterLabel: req.Name,
 						},
 					},
@@ -269,7 +269,7 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.PartOfLabel: api.PartOfLabelValue,
+				api.PartOfLabel:           api.PartOfLabelValue,
 				api.K8ssandraClusterLabel: k8ssandraKey.Name,
 			},
 		},
@@ -440,7 +440,6 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, k
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
-
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)

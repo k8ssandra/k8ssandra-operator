@@ -121,12 +121,6 @@ func NewDeployment(stargate *api.Stargate, cassdc *cassdcapi.CassandraDatacenter
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: *stargate.Spec.CassandraConfigMap,
-					Items: []corev1.KeyToPath{
-						{
-							Key: "cassandra.yaml",
-							Path: "cassandra.yaml",
-						},
-					},
 				},
 			},
 		})
