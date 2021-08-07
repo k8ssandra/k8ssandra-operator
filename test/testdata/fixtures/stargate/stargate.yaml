@@ -20,5 +20,5 @@ spec:
     successThreshold: 1
     timeoutSeconds: 10
   cassandraConfigMap:
-    name: cassandra
+    name: cassandra-config
 
