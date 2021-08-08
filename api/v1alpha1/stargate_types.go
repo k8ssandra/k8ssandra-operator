@@ -78,7 +78,7 @@ type StargateTemplate struct {
 
 	// CassandraConfigMap is a reference to a ConfigMap that holds Cassandra configuration.
 	// The map should have a key named cassandra_yaml.
-	CassandraConfigMap *corev1.LocalObjectReference `json:"CassandraConfigMap,omitempty"`
+	CassandraConfigMap *corev1.LocalObjectReference `json:"cassandraConfigMap,omitempty"`
 }
 
 // StargateSpec defines the desired state of a Stargate resource.

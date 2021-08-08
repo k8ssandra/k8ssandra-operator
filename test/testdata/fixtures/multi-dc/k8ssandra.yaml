@@ -10,6 +10,7 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
+        serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
         serverVersion: "3.11.10"
         storageConfig:
@@ -38,17 +39,19 @@ spec:
             concurrent_writes: 2
             concurrent_counter_writes: 2
           jvm-options:
-            initial_heap_size: "384m"
-            max_heap_size: "384m"
+            initial_heap_size: "448m"
+            max_heap_size: "448m"
         resources:
           limits:
-             memory: "768Mi"
+             memory: 800Mi
         stargate:
           size: 1
-          heapSize: 256Mi
+          heapSize: 384Mi
           resources:
             limits:
-              memory: "512Mi"
+              memory: 512Mi
+          cassandraConfigMap:
+            name: cassandra-config
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -62,6 +65,7 @@ spec:
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
+        serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
         serverVersion: "3.11.10"
         storageConfig:
@@ -90,17 +94,19 @@ spec:
             concurrent_writes: 2
             concurrent_counter_writes: 2
           jvm-options:
-            initial_heap_size: "384m"
-            max_heap_size: "384m"
+            initial_heap_size: "448m"
+            max_heap_size: "448m"
         resources:
           limits:
-            memory: "768Mi"
+            memory: 800Mi
         stargate:
           size: 1
-          heapSize: 256Mi
+          heapSize: 384Mi
+          cassandraConfigMap:
+            name: cassandra-config
           resources:
             limits:
-              memory: "512Mi"
+              memory: 512Mi
           livenessProbe:
             failureThreshold: 5
             httpGet:

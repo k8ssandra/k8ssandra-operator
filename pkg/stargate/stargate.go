@@ -259,3 +259,17 @@ func NewService(sg *api.Stargate, dc *cassdcapi.CassandraDatacenter) *corev1.Ser
 func getStargateContainerName(dc *cassdcapi.CassandraDatacenter) string {
 	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate-deployment"
 }
+
+func IsReady(sg *api.Stargate) bool {
+	if sg.Status.Progress != api.StargateProgressRunning {
+		return false
+	}
+
+	for _, condition := range sg.Status.Conditions {
+		if condition.Type == api.StargateReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
+}

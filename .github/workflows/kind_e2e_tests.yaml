@@ -45,8 +45,8 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          - TestOperator/CreateSingleDatacenterCluster
-          - TestOperator/CreateStandAloneStargate
+          - CreateSingleDatacenterCluster
+          - CreateStandAloneStargate
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
@@ -102,7 +102,7 @@ jobs:
       - name: Load image on kind nodes
         run: make KIND_CLUSTER=k8ssandra-0 kind-load-image
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=${{ matrix.e2e_test }} e2e-test
+        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2

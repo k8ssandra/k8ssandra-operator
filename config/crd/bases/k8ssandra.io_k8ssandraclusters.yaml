@@ -117,6 +117,8 @@ spec:
                                 value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                               type: object
                           type: object
+                        serverImage:
+                          type: string
                         serverVersion:
                           type: string
                         size:
@@ -128,17 +130,6 @@ spec:
                             for Stargate. Leave nil to skip deploying Stargate in
                             this datacenter.
                           properties:
-                            CassandraConfigMap:
-                              description: CassandraConfigMap is a reference to a
-                                ConfigMap that holds Cassandra configuration. The
-                                map should have a key named cassandra_yaml.
-                              properties:
-                                name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Add other useful fields. apiVersion, kind,
-                                    uid?'
-                                  type: string
-                              type: object
                             affinity:
                               description: Affinity is the affinity to apply to the
                                 Stargate pods. See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
@@ -837,6 +828,17 @@ spec:
                                       type: array
                                   type: object
                               type: object
+                            cassandraConfigMap:
+                              description: CassandraConfigMap is a reference to a
+                                ConfigMap that holds Cassandra configuration. The
+                                map should have a key named cassandra_yaml.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
                             heapSize:
                               anyOf:
                               - type: integer
@@ -1513,6 +1515,160 @@ spec:
             type: object
           status:
             description: K8ssandraClusterStatus defines the observed state of K8ssandraCluster
+            properties:
+              datacenters:
+                additionalProperties:
+                  description: K8ssandraStatus defines the observed of a k8ssandra
+                    instance
+                  properties:
+                    cassandra:
+                      description: CassandraDatacenterStatus defines the observed
+                        state of CassandraDatacenter
+                      properties:
+                        cassandraOperatorProgress:
+                          description: Last known progress state of the Cassandra
+                            Operator
+                          type: string
+                        conditions:
+                          items:
+                            properties:
+                              lastTransitionTime:
+                                format: date-time
+                                type: string
+                              message:
+                                type: string
+                              reason:
+                                type: string
+                              status:
+                                type: string
+                              type:
+                                type: string
+                            required:
+                            - message
+                            - reason
+                            - status
+                            - type
+                            type: object
+                          type: array
+                        lastRollingRestart:
+                          format: date-time
+                          type: string
+                        lastServerNodeStarted:
+                          description: The timestamp when the operator last started
+                            a Server node with the management API
+                          format: date-time
+                          type: string
+                        nodeReplacements:
+                          items:
+                            type: string
+                          type: array
+                        nodeStatuses:
+                          additionalProperties:
+                            properties:
+                              hostID:
+                                type: string
+                            type: object
+                          type: object
+                        observedGeneration:
+                          format: int64
+                          type: integer
+                        quietPeriod:
+                          format: date-time
+                          type: string
+                        superUserUpserted:
+                          description: Deprecated. Use usersUpserted instead. The
+                            timestamp at which CQL superuser credentials were last
+                            upserted to the management API
+                          format: date-time
+                          type: string
+                        usersUpserted:
+                          description: The timestamp at which managed cassandra users'
+                            credentials were last upserted to the management API
+                          format: date-time
+                          type: string
+                      type: object
+                    stargate:
+                      description: StargateStatus defines the observed state of a
+                        Stargate resource.
+                      properties:
+                        availableReplicas:
+                          description: Total number of available pods targeted by
+                            the Stargate deployment. Will be zero if the deployment
+                            has not been created yet.
+                          format: int32
+                          type: integer
+                        conditions:
+                          items:
+                            properties:
+                              lastTransitionTime:
+                                description: LastTransitionTime is the last time the
+                                  condition transited from one status to another.
+                                format: date-time
+                                type: string
+                              status:
+                                type: string
+                              type:
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          type: array
+                        deploymentRef:
+                          description: DeploymentRef is the name of the Deployment
+                            object that was created for this Stargate object.
+                          type: string
+                        progress:
+                          description: Progress is the progress of this Stargate object.
+                          enum:
+                          - Pending
+                          - Deploying
+                          - Running
+                          type: string
+                        readyReplicas:
+                          description: ReadyReplicas is the total number of ready
+                            pods targeted by the Stargate deployment. Will be zero
+                            if the deployment has not been created yet.
+                          format: int32
+                          type: integer
+                        readyReplicasRatio:
+                          description: ReadyReplicasRatio is a "X/Y" string representing
+                            the ratio between ReadyReplicas and Replicas in the Stargate
+                            deployment.
+                          pattern: \d+/\d+
+                          type: string
+                        replicas:
+                          description: Total number of non-terminated pods targeted
+                            by the Stargate deployment (their labels match the selector).
+                            Will be zero if the deployment has not been created yet.
+                          format: int32
+                          type: integer
+                        serviceRef:
+                          description: ServiceRef is the name of the Service object
+                            that was created for this Stargate object.
+                          type: string
+                        updatedReplicas:
+                          description: UpdatedReplicas is the total number of non-terminated
+                            pods targeted by the Stargate deployment that have the
+                            desired template spec. Will be zero if the deployment
+                            has not been created yet.
+                          format: int32
+                          type: integer
+                      required:
+                      - availableReplicas
+                      - progress
+                      - readyReplicas
+                      - replicas
+                      - updatedReplicas
+                      type: object
+                  type: object
+                description: "Datacenters maps the CassandraDatacenter name to a K8ssandraStatus.
+                  The naming is a bit confusing but the mapping makes sense because
+                  we have a CassandraDatacenter and then define other components like
+                  Stargate and Reaper relative to it. I wanted to inline the field
+                  but when I do it won't serialize. \n TODO Figure out how to inline
+                  this field"
+                type: object
             type: object
         type: object
     served: true
