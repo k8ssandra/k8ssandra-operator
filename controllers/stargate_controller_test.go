@@ -119,8 +119,4 @@ func testStargate(t *testing.T) {
 	req.Len(stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
 	req.Equal(api.StargateReady, stargate.Status.Conditions[0].Type)
 	req.Equal(corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
-
-	t.Log("check that the owner reference is set on the Stargate service")
-	req.Len(service.OwnerReferences, 1, "expected to find 1 owner reference for Stargate service")
-	req.Equal(stargate.UID, service.OwnerReferences[0].UID)
 }

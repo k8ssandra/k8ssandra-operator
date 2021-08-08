@@ -1518,9 +1518,8 @@ spec:
             properties:
               datacenters:
                 additionalProperties:
-                  description: "K8ssandraDatacenterStatus defines the observed of
-                    a k8ssandra datacenter, not to be confused with a CassandraDatacenter.
-                    \n TODO Is there a better name for this struct?"
+                  description: K8ssandraStatus defines the observed of a k8ssandra
+                    instance
                   properties:
                     cassandra:
                       description: CassandraDatacenterStatus defines the observed
@@ -1663,7 +1662,7 @@ spec:
                       - updatedReplicas
                       type: object
                   type: object
-                description: "Datacenters maps the CassandraDatacenter name to a K8ssandraDatacenterStatus.
+                description: "Datacenters maps the CassandraDatacenter name to a K8ssandraStatus.
                   The naming is a bit confusing but the mapping makes sense because
                   we have a CassandraDatacenter and then define other components like
                   Stargate and Reaper relative to it. I wanted to inline the field

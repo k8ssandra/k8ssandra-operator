@@ -63,8 +63,8 @@ type K8ssandraClusterReconciler struct {
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	k8ssandra := &api.K8ssandraCluster{}
-	err := r.Get(ctx, req.NamespacedName, k8ssandra)
+	kc := &api.K8ssandraCluster{}
+	err := r.Get(ctx, req.NamespacedName, kc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -72,19 +72,19 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
-	k8ssandra = k8ssandra.DeepCopy()
+	kc = kc.DeepCopy()
 
-	if k8ssandra.Spec.Cassandra != nil {
+	if kc.Spec.Cassandra != nil {
 		var seeds []string
-		systemDistributedRF := getSystemDistributedRF(k8ssandra)
-		dcNames := make([]string, 0, len(k8ssandra.Spec.Cassandra.Datacenters))
+		systemDistributedRF := getSystemDistributedRF(kc)
+		dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
 
-		for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+		for _, dc := range kc.Spec.Cassandra.Datacenters {
 			dcNames = append(dcNames, dc.Meta.Name)
 		}
 
-		for _, dcTemplate := range k8ssandra.Spec.Cassandra.Datacenters {
-			desiredDc, err := newDatacenter(req.NamespacedName, k8ssandra.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+		for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+			desiredDc, err := newDatacenter(req.NamespacedName, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 			if err != nil {
 				logger.Error(err, "Failed to create new CassandraDatacenter")
 				return ctrl.Result{}, err
@@ -108,7 +108,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			actualDc := &cassdcapi.CassandraDatacenter{}
 
 			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-				if err = r.setStatusForDatacenter(ctx, k8ssandra, actualDc); err != nil {
+				if err = r.setStatusForDatacenter(ctx, kc, actualDc); err != nil {
 					logger.Error(err, "Failed to update status for datacenter", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
 				}
@@ -148,7 +148,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// Temporarily do not update seeds on existing dcs. SEE
 				// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
 				//logger.Info("Updating seeds", "Seeds", seeds)
-				//if err = r.updateAdditionalSeeds(ctx, k8ssandra, seeds, 0, i); err != nil {
+				//if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
 				//	logger.Error(err, "Failed to update seeds")
 				//	return ctrl.Result{}, err
 				//}
@@ -169,7 +169,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				stargateKey := types.NamespacedName{
 					Namespace: actualDc.Namespace,
-					Name:      k8ssandra.Name + "-" + actualDc.Name + "-stargate",
+					Name:      kc.Name + "-" + actualDc.Name + "-stargate",
 				}
 
 				desiredStargate := &api.Stargate{
@@ -195,10 +195,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 					if errors.IsNotFound(err) {
 						logger.Info("Creating Stargate resource", "Stargate", stargateKey)
-						//if err := controllerutil.SetControllerReference(k8ssandra, desiredStargate, r.Scheme); err != nil {
-						//	logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
-						//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-						//} else if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+
 						if err := remoteClient.Create(ctx, desiredStargate); err != nil {
 							logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
 							return ctrl.Result{}, err
@@ -210,7 +207,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						return ctrl.Result{}, err
 					}
 				} else {
-					if err = r.setStatusForStargate(ctx, k8ssandra, actualStargate, dcTemplate.Meta.Name); err != nil {
+					if err = r.setStatusForStargate(ctx, kc, actualStargate, dcTemplate.Meta.Name); err != nil {
 						logger.Error(err, "Failed to update status for stargate", "Stargate", stargateKey)
 						return ctrl.Result{}, err
 					}
@@ -220,17 +217,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						resourceVersion := actualStargate.GetResourceVersion()
 						desiredStargate.DeepCopyInto(actualStargate)
 						actualStargate.SetResourceVersion(resourceVersion)
-						//if err := controllerutil.SetControllerReference(k8ssandra, actualStargate, r.Scheme); err != nil {
-						//	logger.Error(err, "Failed to set owner reference on Stargate resource", "Stargate", stargateKey)
-						//	return ctrl.Result{RequeueAfter: 10 * time.Second}, err
-						//} else {
-						//	if err = remoteClient.Update(ctx, actualStargate); err == nil {
-						//		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-						//	} else {
-						//		logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
-						//		return ctrl.Result{}, err
-						//	}
-						//}
+
 						if err = remoteClient.Update(ctx, actualStargate); err == nil {
 							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 						} else {
@@ -291,9 +278,9 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 	}, nil
 }
 
-func getSystemDistributedRF(k8ssandra *api.K8ssandraCluster) int {
+func getSystemDistributedRF(kc *api.K8ssandraCluster) int {
 	size := 1.0
-	for _, dc := range k8ssandra.Spec.Cassandra.Datacenters {
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
 		size = math.Min(size, float64(dc.Size))
 	}
 	replicationFactor := math.Min(size, 3.0)
@@ -322,9 +309,9 @@ func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, d
 	return endpoints, nil
 }
 
-func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, k8ssandra *api.K8ssandraCluster, seeds []string, start, end int) error {
+func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, kc *api.K8ssandraCluster, seeds []string, start, end int) error {
 	for i := start; i < end; i++ {
-		dc, remoteClient, err := r.getDatacenterForTemplate(ctx, k8ssandra, i)
+		dc, remoteClient, err := r.getDatacenterForTemplate(ctx, kc, i)
 		if err != nil {
 			return err
 		}
@@ -370,9 +357,9 @@ func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx cont
 	return remoteClient.Patch(ctx, dc, patch)
 }
 
-func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Context, k8ssandra *api.K8ssandraCluster, idx int) (*cassdcapi.CassandraDatacenter, client.Client, error) {
-	dcTemplate := k8ssandra.Spec.Cassandra.Datacenters[idx]
-	k8ssandraKey := types.NamespacedName{Namespace: k8ssandra.Namespace, Name: k8ssandra.Name}
+func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Context, kc *api.K8ssandraCluster, idx int) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+	dcTemplate := kc.Spec.Cassandra.Datacenters[idx]
+	k8ssandraKey := types.NamespacedName{Namespace: kc.Namespace, Name: kc.Name}
 	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 
 	if err != nil {
@@ -386,54 +373,54 @@ func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Contex
 	return dc, remoteClient, err
 }
 
-func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, k8ssandraKey types.NamespacedName) types.NamespacedName {
+func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, kcKey types.NamespacedName) types.NamespacedName {
 	if len(dcTemplate.Meta.Namespace) == 0 {
-		return types.NamespacedName{Namespace: k8ssandraKey.Namespace, Name: dcTemplate.Meta.Name}
+		return types.NamespacedName{Namespace: kcKey.Namespace, Name: dcTemplate.Meta.Name}
 	}
 	return types.NamespacedName{Namespace: dcTemplate.Meta.Namespace, Name: dcTemplate.Meta.Name}
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context, k8ssandra *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	if len(k8ssandra.Status.Datacenters) == 0 {
-		k8ssandra.Status.Datacenters = make(map[string]api.K8ssandraDatacenterStatus, 0)
+func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if len(kc.Status.Datacenters) == 0 {
+		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
 
-	kdcStatus, found := k8ssandra.Status.Datacenters[dc.Name]
+	kdcStatus, found := kc.Status.Datacenters[dc.Name]
 
 	if found {
 		dc.Status.DeepCopyInto(kdcStatus.Cassandra)
 	} else {
-		k8ssandra.Status.Datacenters[dc.Name] = api.K8ssandraDatacenterStatus{
+		kc.Status.Datacenters[dc.Name] = api.K8ssandraStatus{
 			Cassandra: dc.Status.DeepCopy(),
 		}
 	}
 
-	return r.Status().Patch(ctx, k8ssandra, patch)
+	return r.Status().Patch(ctx, kc, patch)
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, k8ssandra *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	if len(k8ssandra.Status.Datacenters) == 0 {
-		k8ssandra.Status.Datacenters = make(map[string]api.K8ssandraDatacenterStatus, 0)
+func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, kc *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if len(kc.Status.Datacenters) == 0 {
+		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
 
-	kdcStatus, found := k8ssandra.Status.Datacenters[dcName]
+	kdcStatus, found := kc.Status.Datacenters[dcName]
 
 	if found {
 		if kdcStatus.Stargate == nil {
 			kdcStatus.Stargate = stargate.Status.DeepCopy()
-			k8ssandra.Status.Datacenters[dcName] = kdcStatus
+			kc.Status.Datacenters[dcName] = kdcStatus
 		} else {
 			stargate.Status.DeepCopyInto(kdcStatus.Stargate)
 		}
 	} else {
-		k8ssandra.Status.Datacenters[dcName] = api.K8ssandraDatacenterStatus{
+		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
 			Stargate: stargate.Status.DeepCopy(),
 		}
 	}
 
-	return r.Status().Patch(ctx, k8ssandra, patch)
+	return r.Status().Patch(ctx, kc, patch)
 }
 
 // SetupWithManager sets up the controller with the Manager.

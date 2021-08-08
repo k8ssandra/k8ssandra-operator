@@ -35,20 +35,17 @@ type K8ssandraClusterSpec struct {
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
 type K8ssandraClusterStatus struct {
-	// Datacenters maps the CassandraDatacenter name to a K8ssandraDatacenterStatus. The
+	// Datacenters maps the CassandraDatacenter name to a K8ssandraStatus. The
 	// naming is a bit confusing but the mapping makes sense because we have a
 	// CassandraDatacenter and then define other components like Stargate and Reaper
 	// relative to it. I wanted to inline the field but when I do it won't serialize.
 	//
 	// TODO Figure out how to inline this field
-	Datacenters map[string]K8ssandraDatacenterStatus `json:"datacenters,omitempty"`
+	Datacenters map[string]K8ssandraStatus `json:"datacenters,omitempty"`
 }
 
-// K8ssandraDatacenterStatus defines the observed of a k8ssandra datacenter, not to be
-// confused with a CassandraDatacenter.
-//
-// TODO Is there a better name for this struct?
-type K8ssandraDatacenterStatus struct {
+// K8ssandraStatus defines the observed of a k8ssandra instance
+type K8ssandraStatus struct {
 	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
 	Stargate  *StargateStatus                      `json:"stargate,omitempty"`
 }
