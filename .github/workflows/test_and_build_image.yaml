@@ -2,7 +2,7 @@ name: Run unit/integration tests and build image
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches: [ main ]
 jobs:
