@@ -86,11 +86,10 @@ type StargateTemplate struct {
 type StargateSpec struct {
 	StargateTemplate `json:",inline"`
 
-	// DatacenterRef is the name of a CassandraDatacenter resource where Stargate should be
-	// deployed.
+	// DatacenterRef is the namespace-local reference of a CassandraDatacenter resource where
+	// Stargate should be deployed.
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinLength=1
-	DatacenterRef string `json:"datacenterRef"`
+	DatacenterRef corev1.LocalObjectReference `json:"datacenterRef"`
 }
 
 type ContainerImage struct {
@@ -182,7 +181,7 @@ type StargateCondition struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="DC",type=string,JSONPath=`.spec.datacenterRef`
+//+kubebuilder:printcolumn:name="DC",type=string,JSONPath=`.spec.datacenterRef.name`
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.progress`
 //+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.readyReplicasRatio`
 //+kubebuilder:printcolumn:name="Up-to-date",type=integer,JSONPath=`.status.updatedReplicas`

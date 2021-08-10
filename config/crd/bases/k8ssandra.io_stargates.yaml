@@ -658,10 +658,14 @@ spec:
                     type: string
                 type: object
               datacenterRef:
-                description: DatacenterRef is the name of a CassandraDatacenter resource
-                  where Stargate should be deployed.
-                minLength: 1
-                type: string
+                description: DatacenterRef is the namespace-local reference of a CassandraDatacenter
+                  resource where Stargate should be deployed.
+                properties:
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                type: object
               heapSize:
                 anyOf:
                 - type: integer

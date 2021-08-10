@@ -56,7 +56,7 @@ func testStargate(t *testing.T) {
 		},
 		Spec: api.StargateSpec{
 			StargateTemplate: api.StargateTemplate{Size: 1},
-			DatacenterRef:    "dc1",
+			DatacenterRef:    corev1.LocalObjectReference{Name: "dc1"},
 		},
 	}
 
