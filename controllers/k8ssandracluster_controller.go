@@ -224,7 +224,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						}
 					}
 
-					if !stargateutil.IsReady(actualStargate) {
+					if !stargateutil.IsReady(actualStargate.Status) {
 						logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
 						return ctrl.Result{RequeueAfter: defaultDelay}, nil
 					}

@@ -103,6 +103,8 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
+	controllers.InitConfig()
+
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)

@@ -505,6 +505,18 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
 
+	sg2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
+	}
+
+	t.Logf("check that stargate %s has not been created", sg2Key)
+	sg2 := &api.Stargate{}
+	err = f.Get(ctx, sg2Key, sg2)
+	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc2 is ready", sg2Key))
+
 	t.Log("update dc2 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
@@ -515,6 +527,9 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		})
 	})
 	require.NoError(err, "failed to update dc2 status to ready")
+
+	t.Log("check that stargate sg2 is created")
+	require.Eventually(f.StargateExists(ctx, sg2Key), timeout, interval)
 
 	// Commenting out the following check for now to due to
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/67
@@ -530,6 +545,22 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	//	return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
 	//})
 	//require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
+
+	t.Logf("update stargate sg2 status to ready")
+	err = f.PatchStagateStatus(ctx, sg2Key, func(sg *api.Stargate) {
+		now := metav1.Now()
+		sg.Status.Progress = api.StargateProgressRunning
+		sg.Status.AvailableReplicas = 1
+		sg.Status.Replicas = 1
+		sg.Status.ReadyReplicas = 1
+		sg.Status.UpdatedReplicas = 1
+		stargateutil.SetCondition(sg, api.StargateCondition{
+			Type:               api.StargateReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	})
+	require.NoError(err, "failed to patch stargate status")
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -552,7 +583,12 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
+			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc1Key.Name)
 			return false
+		}
+
+		if k8ssandraStatus.Stargate == nil || !stargateutil.IsReady(*k8ssandraStatus.Stargate) {
+			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc1Key.Name)
 		}
 
 		k8ssandraStatus, found = kc.Status.Datacenters[dc2Key.Name]
@@ -562,7 +598,17 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		}
 
 		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
-		return condition != nil && condition.Status == corev1.ConditionTrue
+		if condition == nil || condition.Status == corev1.ConditionFalse {
+			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc2Key.Name)
+			return false
+		}
+
+		if k8ssandraStatus.Stargate == nil || !stargateutil.IsReady(*k8ssandraStatus.Stargate) {
+			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc2Key.Name)
+			return false
+		}
+
+		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 }
 

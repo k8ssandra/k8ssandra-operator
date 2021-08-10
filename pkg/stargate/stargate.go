@@ -260,12 +260,12 @@ func getStargateContainerName(dc *cassdcapi.CassandraDatacenter) string {
 	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate-deployment"
 }
 
-func IsReady(sg *api.Stargate) bool {
-	if sg.Status.Progress != api.StargateProgressRunning {
+func IsReady(status api.StargateStatus) bool {
+	if status.Progress != api.StargateProgressRunning {
 		return false
 	}
 
-	for _, condition := range sg.Status.Conditions {
+	for _, condition := range status.Conditions {
 		if condition.Type == api.StargateReady && condition.Status == corev1.ConditionTrue {
 			return true
 		}
