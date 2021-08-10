@@ -130,8 +130,22 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	updateFn(dc)
 
 	remoteClient := f.remoteClients[key.K8sContext]
-
 	return remoteClient.Status().Patch(ctx, dc, patch)
+}
+
+func (f *Framework) PatchStagateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *api.Stargate)) error {
+	sg := &api.Stargate{}
+	err := f.Get(ctx, key, sg)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(sg)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+	return remoteClient.Status().Patch(ctx, sg, patch)
 }
 
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If

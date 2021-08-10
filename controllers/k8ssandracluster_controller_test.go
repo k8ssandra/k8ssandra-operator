@@ -5,15 +5,42 @@ import (
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
-	"time"
 )
+
+func testK8ssandraCluster(ctx context.Context, t *testing.T) {
+	testEnv := NewMultiClusterTestEnv()
+	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
+		err := (&K8ssandraClusterReconciler{
+			Client:        mgr.GetClient(),
+			Scheme:        scheme.Scheme,
+			ClientCache:   clientCache,
+			SeedsResolver: seedsResolver,
+		}).SetupWithManager(mgr, clusters)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("failed to start test environment: %s", err)
+	}
+
+	defer testEnv.Stop(t)
+
+	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
+	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
+	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
+}
 
 func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -21,7 +48,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	k8sCtx := "cluster-1"
 
-	cluster := &api.K8ssandraCluster{
+	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
@@ -43,7 +70,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		},
 	}
 
-	err := f.Client.Create(ctx, cluster)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	t.Log("check that the datacenter was created")
@@ -62,28 +89,28 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	k8ssandraKey := framework.ClusterKey{K8sContext: "cluster-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: "cluster-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err = f.Get(ctx, k8ssandraKey, k8ssandra)
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
 		if err != nil {
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
 
-		if len(k8ssandra.Status.Datacenters) == 0 {
+		if len(kc.Status.Datacenters) == 0 {
 			return false
 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		k8ssandraStatus, found := kc.Status.Datacenters[dcKey.Name]
 		if !found {
 			t.Logf("status for datacenter %s not found", dcKey)
 			return false
 		}
 
-		condition := findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return condition != nil
-	}, 20*time.Second, 1*time.Second, "timed out waiting for K8ssandraCluster status update")
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("update datacenter status to ready")
 	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
@@ -101,36 +128,37 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
+	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err = f.Get(ctx, k8ssandraKey, k8ssandra)
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
 		if err != nil {
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
 
-		if len(k8ssandra.Status.Datacenters) == 0 {
+		if len(kc.Status.Datacenters) == 0 {
 			return false
 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		k8ssandraStatus, found := kc.Status.Datacenters[dcKey.Name]
 		if !found {
 			t.Logf("status for datacenter %s not found", dcKey)
 			return false
 		}
 
-		condition := findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		if condition == nil || condition.Status == corev1.ConditionTrue {
 			return false
 		}
 
-		condition = findDatacenterCondition(kdcStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			return false
 		}
 
 		return true
-	}, 20*time.Second, 1*time.Second, "timed out waiting for K8ssandraCluster status update")
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 }
 
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -184,6 +212,47 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
+	t.Log("update datacenter status to scaling up")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+
+	t.Log("check that the K8ssandraCluster status is updated")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) == 0 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc1Key)
+			return false
+		}
+
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("check that dc2 has not been created yet")
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
+
 	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
 		if dc.Name == "dc1" {
 			return dc1PodIps, nil
@@ -206,11 +275,10 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to update dc1 status to ready")
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	t.Log("check that remote seeds are set on dc2")
-	dc2 := &cassdcapi.CassandraDatacenter{}
+	dc2 = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
@@ -241,6 +309,261 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	//	return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
 	//})
 	//require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
+
+	t.Log("check that the K8ssandraCluster status is updated")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) != 2 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc1Key)
+			return false
+		}
+
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		if condition == nil || condition.Status == corev1.ConditionFalse {
+			return false
+		}
+
+		k8ssandraStatus, found = kc.Status.Datacenters[dc2Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc2Key)
+			return false
+		}
+
+		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		return condition != nil && condition.Status == corev1.ConditionTrue
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+}
+
+func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	k8sCtx0 := "cluster-0"
+	k8sCtx1 := "cluster-1"
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.Cassandra{
+				Cluster: "test",
+				Datacenters: []api.CassandraDatacenterTemplateSpec{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext:    k8sCtx0,
+						Size:          3,
+						ServerVersion: "3.11.10",
+						Stargate: &api.StargateTemplate{
+							Size: 1,
+						},
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						K8sContext:    k8sCtx1,
+						Size:          3,
+						ServerVersion: "3.11.10",
+						Stargate: &api.StargateTemplate{
+							Size: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	dc1PodIps := []string{"10.10.100.1", "10.10.100.2", "10.10.100.3"}
+	dc2PodIps := []string{"10.11.100.1", "10.11.100.2", "10.11.100.3"}
+
+	allPodIps := make([]string, 0, 6)
+	allPodIps = append(allPodIps, dc1PodIps...)
+	allPodIps = append(allPodIps, dc2PodIps...)
+
+	t.Log("check that dc1 was created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("update datacenter status to scaling up")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+
+	t.Log("check that the K8ssandraCluster status is updated")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) == 0 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc1Key)
+			return false
+		}
+
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	sg1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
+	}
+
+	t.Logf("check that stargate %s has not been created", sg1Key)
+	sg1 := &api.Stargate{}
+	err = f.Get(ctx, sg1Key, sg1)
+	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc1 is ready", sg1Key))
+
+	t.Log("check that dc2 has not been created yet")
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
+
+	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
+		if dc.Name == "dc1" {
+			return dc1PodIps, nil
+		}
+		if dc.Name == "dc2" {
+			return dc2PodIps, nil
+		}
+		return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
+	}
+
+	t.Log("update dc1 status to ready")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to update dc1 status to ready")
+
+	t.Log("check that stargate sg1 is created")
+	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
+
+	t.Logf("update stargate sg1 status to ready")
+	err = f.PatchStagateStatus(ctx, sg1Key, func(sg *api.Stargate) {
+		now := metav1.Now()
+		sg.Status.Progress = api.StargateProgressRunning
+		sg.Status.AvailableReplicas = 1
+		sg.Status.Replicas = 1
+		sg.Status.ReadyReplicas = 1
+		sg.Status.UpdatedReplicas = 1
+		stargateutil.SetCondition(sg, api.StargateCondition{
+			Type:               api.StargateReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	})
+	require.NoError(err, "failed to patch stargate status")
+
+	t.Log("check that dc2 was created")
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
+
+	t.Log("check that remote seeds are set on dc2")
+	dc2 = &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.NoError(err, "failed to get dc2")
+
+	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
+
+	t.Log("update dc2 status to ready")
+	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to update dc2 status to ready")
+
+	// Commenting out the following check for now to due to
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/67
+	//
+	//t.Log("check that remote seeds are set on dc1")
+	//err = wait.Poll(interval, timeout, func() (bool, error) {
+	//	dc := &cassdcapi.CassandraDatacenter{}
+	//	if err = f.Get(ctx, dc1Key, dc); err != nil {
+	//		t.Logf("failed to get dc1: %s", err)
+	//		return false, err
+	//	}
+	//	t.Logf("additional seeds for dc1: %v", dc.Spec.AdditionalSeeds)
+	//	return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
+	//})
+	//require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
+
+	t.Log("check that the K8ssandraCluster status is updated")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) != 2 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc1Key)
+			return false
+		}
+
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		if condition == nil || condition.Status == corev1.ConditionFalse {
+			return false
+		}
+
+		k8ssandraStatus, found = kc.Status.Datacenters[dc2Key.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dc2Key)
+			return false
+		}
+
+		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		return condition != nil && condition.Status == corev1.ConditionTrue
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 }
 
 func equalsNoOrder(s1, s2 []string) bool {

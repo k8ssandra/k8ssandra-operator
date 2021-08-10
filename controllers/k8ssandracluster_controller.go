@@ -22,10 +22,8 @@ import (
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
-
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -69,7 +67,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		return ctrl.Result{RequeueAfter: defaultDelay}, err
 	}
 
 	kc = kc.DeepCopy()
@@ -127,7 +125,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 				if !cassandra.DatacenterReady(actualDc) {
 					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
-					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				}
 
 				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
@@ -158,7 +156,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
 						return ctrl.Result{}, err
 					}
-					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				} else {
 					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
@@ -200,7 +198,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 							logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
 							return ctrl.Result{}, err
 						} else {
-							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+							return ctrl.Result{RequeueAfter: defaultDelay}, nil
 						}
 					} else {
 						logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
@@ -219,7 +217,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						actualStargate.SetResourceVersion(resourceVersion)
 
 						if err = remoteClient.Update(ctx, actualStargate); err == nil {
-							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+							return ctrl.Result{RequeueAfter: defaultDelay}, nil
 						} else {
 							logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
 							return ctrl.Result{}, err
@@ -228,7 +226,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 					if !stargateutil.IsReady(actualStargate) {
 						logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
-						return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+						return ctrl.Result{RequeueAfter: defaultDelay}, nil
 					}
 					logger.Info("Stargate is ready", "Stargate", stargateKey)
 				}

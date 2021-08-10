@@ -273,3 +273,27 @@ func IsReady(sg *api.Stargate) bool {
 
 	return false
 }
+
+func SetCondition(sg *api.Stargate, condition api.StargateCondition) {
+	var conditions []api.StargateCondition
+	if sg.Status.Conditions == nil {
+		conditions = make([]api.StargateCondition, 0)
+	} else {
+		conditions = sg.Status.Conditions
+	}
+	updated := false
+
+	for i, c := range conditions {
+		if c.Type == condition.Type {
+			conditions[i] = condition
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		conditions = append(conditions, condition)
+	}
+
+	sg.Status.Conditions = conditions
+}
