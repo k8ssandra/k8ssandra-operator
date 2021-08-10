@@ -43,6 +43,7 @@ func testCassandraConfigMap(t *testing.T) {
 			Name:      "s1",
 		},
 		Spec: api.StargateSpec{
+			DatacenterRef: dc.Name,
 			StargateTemplate: api.StargateTemplate{
 				Size:               1,
 				HeapSize:           &heapSize,
