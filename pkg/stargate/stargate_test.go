@@ -17,7 +17,7 @@ const (
 	namespace = "default"
 )
 
-func TestNewDeploymennt(t *testing.T) {
+func TestNewDeployment(t *testing.T) {
 	t.Run("CassandraConfigMap", testCassandraConfigMap)
 }
 
