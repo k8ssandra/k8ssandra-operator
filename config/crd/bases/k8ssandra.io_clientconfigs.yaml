@@ -41,7 +41,9 @@ spec:
                   If not set, the ClientConfig.Name is used as context name
                 type: string
               kubeConfigSecret:
-                description: SecretName indicates the name of the
+                description: KubeConfigSecret should reference an existing secret;
+                  the actual configuration will be read from this secret's "kubeconfig"
+                  key.
                 properties:
                   name:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
