@@ -95,14 +95,14 @@ func (c *ClientCache) CreateRemoteClientsFromSecret(secretKey types.NamespacedNa
 		return err
 	}
 
-	for _, ctx := range apiConfig.Contexts {
-		clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, ctx.Cluster, &clientcmd.ConfigOverrides{}, nil)
+	for ctx, _ := range apiConfig.Contexts {
+		clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, ctx, &clientcmd.ConfigOverrides{}, nil)
 		restConfig, err := clientCmdCfg.ClientConfig()
 		if err != nil {
 			return err
 		}
 
-		if _, err := c.CreateClient(ctx.Cluster, restConfig); err != nil {
+		if _, err := c.CreateClient(ctx, restConfig); err != nil {
 			return err
 		}
 	}
