@@ -27,12 +27,12 @@ type ClientCache struct {
 	remoteClients map[string]client.Client
 }
 
-func New(localClient client.Client, noCacheclient client.Client, scheme *runtime.Scheme) *ClientCache {
+func New(localClient client.Client, noCacheClient client.Client, scheme *runtime.Scheme) *ClientCache {
 
 	// Call to create new RemoteClients here?
 	return &ClientCache{
 		localClient:   localClient,
-		noCacheClient: noCacheclient,
+		noCacheClient: noCacheClient,
 		scheme:        scheme,
 		remoteClients: make(map[string]client.Client),
 	}
