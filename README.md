@@ -16,6 +16,181 @@ K8ssandra 1.x is configured, packaged, and deployed via Helm charts. Those Helm 
 
 K8ssandra 2.x will be based on the this operator.
 
+# Installing the operator
+There are a couple of options for installing the operator - build from source or remote installs via kustomize.
+
+**Note: There are plans to add a Helm chart as well (TODO create and reference ticket here)**
+
+## Remote Install
+Kustomize supports building resources with remote URLs. See this [doc](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) for details.
+
+This section provides some examples that demonstrate how to configure the operator installation via Kustomize.
+
+You need to Kustomize 4.0.5 or later installed. See [here](https://kubectl.docs.kubernetes.io/installation/kustomize/) for installation options. 
+
+Recent versions of `kubectl` include Kustomize. It is executing using the `-k` option. I prefer to install Kustomize and use the `kustomize` binary as I have found in the past that the one embedded with `kubectl` can be several versions behind and behave differently  than what is described in the Kustomize docs.
+
+### Default Install
+First, create a kustomization directory that builds from the `main` branch:
+
+```yaml
+K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
+cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+resources:
+- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+EOF
+```
+
+Now install the operator:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```
+This installs the operator in the `default` namespace.
+
+If you just want to generate the maninfests then run:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME
+```
+
+Lastly, verify the installation. First check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+Next, verify that the following CRDs are installed:
+
+```
+kubectl get crds
+NAME                                          CREATED AT
+cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
+clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
+k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
+stargates.k8ssandra.io                        2021-08-11T15:07:27Z
+```
+
+### Install into different namespace
+First, create the namespace:
+
+```
+NAMESPACE=k8ssandra-operator
+kubectl create namespace $NAMESPACE
+```
+
+Next create a kustomization directory that builds from the `main` branch:
+
+```yaml
+K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
+cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+namespace: $NAMESPACE
+
+resources:
+- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+EOF
+```
+
+Note that the `namespace` property has been added. This property tells Kustomize to apply a transformation on all resources that specify a namespace.
+
+Now install the operator:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```
+This installs the operator in the `default` namespace.
+
+If you just want to generate the maninfests then run:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME
+```
+
+Lastly, verify the installation. First check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl -n $NAMESPACE get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+Next, verify that the following CRDs are installed:
+
+```
+kubectl get crds
+NAME                                          CREATED AT
+cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
+clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
+k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
+stargates.k8ssandra.io                        2021-08-11T15:07:27Z
+```
+
+### Install a different operator image
+The GitHub Actions for the project are configured to build and push a new operator image to Docker Hub whenever commits are pushed to `main`. 
+
+See [here](https://hub.docker.com/repository/docker/k8ssandra/k8ssandra-operator/tags?page=1&ordering=last_updated) on Docker Hub for a list of availabe tags.
+
+Next create a kustomization directory that builds from the `main` branch:
+
+```yaml
+K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
+cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+resources:
+- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+
+images:
+- name: k8ssandra/k8ssandra-operator
+  newTag: 6c5f13c8
+EOF
+```
+Note that the `images` property has been added. This property tells Kustomize to apply a transformation in the base resources to images whose name is `k8ssandra/k8ssandra-operator`. 
+
+Now install the operator:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```
+This installs the operator in the `default` namespace.
+
+If you just want to generate the maninfests then run:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME
+```
+Lastly, verify the installation. First check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+Verify that the correct image is installed:
+
+```
+kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+Verify that the following CRDs are installed:
+
+```
+kubectl get crds
+NAME                                          CREATED AT
+cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
+clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
+k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
+stargates.k8ssandra.io                        2021-08-11T15:07:27Z
+```
+
+## Install from source
+See the following section on contributing for details on building and installing from source.
+
+## Install with Helm
+TODO
+
+
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
 
@@ -45,6 +220,18 @@ Run `make manifests` to update CRDs.
 
 ## Building operator image
 `make docker-build`
+
+This will build `k8ssandra/k8ssandra-operator:latest`. You can build different image coordinates by setting the `IMG` var:
+
+`make IMG=jsanda/k8ssandra-operator:latest`
+
+## Install the opertor
+`make install` performs a default installation in the `default` namespace. This includes:
+
+* cass-operator
+* cass-operator CRDs
+* k8ssandra-operator
+* k8ssandra-operator CRDs
 
 ## Running unit and integration tests
 
