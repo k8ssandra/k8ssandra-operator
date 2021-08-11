@@ -85,24 +85,24 @@ func (c *ClientCache) CreateClient(contextName string, restConfig *rest.Config) 
 }
 
 // CreateRemoteClientsFromSecret is a convenience method for testing purposes
-func (c *ClientCache) CreateRemoteClientsFromSecret(namespacedName types.NamespacedName) error {
+func (c *ClientCache) CreateRemoteClientsFromSecret(secretKey types.NamespacedName) error {
 	if c.localClient == nil {
 		return errors.New("creating from secret requires local client to be set")
 	}
 
-	apiConfig, err := c.extractClientCmdFromSecret(namespacedName)
+	apiConfig, err := c.extractClientCmdApiConfigFromSecret(secretKey)
 	if err != nil {
 		return err
 	}
 
 	for _, ctx := range apiConfig.Contexts {
-		clientCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, ctx.Cluster, &clientcmd.ConfigOverrides{}, nil)
-		cfg, err := clientCfg.ClientConfig()
+		clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, ctx.Cluster, &clientcmd.ConfigOverrides{}, nil)
+		restConfig, err := clientCmdCfg.ClientConfig()
 		if err != nil {
 			return err
 		}
 
-		if _, err := c.CreateClient(ctx.Cluster, cfg); err != nil {
+		if _, err := c.CreateClient(ctx.Cluster, restConfig); err != nil {
 			return err
 		}
 	}
@@ -112,19 +112,20 @@ func (c *ClientCache) CreateRemoteClientsFromSecret(namespacedName types.Namespa
 
 // GetRestConfig takes the ClientConfig and parses the *rest.Config from it
 func (c *ClientCache) GetRestConfig(assistCfg *api.ClientConfig) (*rest.Config, error) {
-	apiConfig, err := c.extractClientCmdFromSecret(types.NamespacedName{Namespace: assistCfg.Namespace, Name: assistCfg.Spec.KubeConfigSecret.Name})
+	secretKey := types.NamespacedName{Namespace: assistCfg.Namespace, Name: assistCfg.Spec.KubeConfigSecret.Name}
+	apiConfig, err := c.extractClientCmdApiConfigFromSecret(secretKey)
 	if err != nil {
 		return nil, err
 	}
 
-	clientCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, assistCfg.Name, &clientcmd.ConfigOverrides{}, nil)
-	return clientCfg.ClientConfig()
+	clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, assistCfg.Name, &clientcmd.ConfigOverrides{}, nil)
+	return clientCmdCfg.ClientConfig()
 }
 
-func (c *ClientCache) extractClientCmdFromSecret(namespacedName types.NamespacedName) (*clientcmdapi.Config, error) {
+func (c *ClientCache) extractClientCmdApiConfigFromSecret(secretKey types.NamespacedName) (*clientcmdapi.Config, error) {
 	// Fetch the secret containing the details
 	secret := &corev1.Secret{}
-	err := c.noCacheClient.Get(context.Background(), namespacedName, secret)
+	err := c.noCacheClient.Get(context.Background(), secretKey, secret)
 	if err != nil {
 		return nil, err
 	}
