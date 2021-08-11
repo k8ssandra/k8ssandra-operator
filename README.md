@@ -100,7 +100,7 @@ Now install the operator:
 ```
 kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
 ```
-This installs the operator in the `default` namespace.
+This installs the operator in the specified namespace.
 
 If you just want to generate the maninfests then run:
 
@@ -223,7 +223,7 @@ Run `make manifests` to update CRDs.
 
 This will build `k8ssandra/k8ssandra-operator:latest`. You can build different image coordinates by setting the `IMG` var:
 
-`make IMG=jsanda/k8ssandra-operator:latest`
+`make IMG=jsanda/k8ssandra-operator:latest docker-build`
 
 ## Install the opertor
 `make install` performs a default installation in the `default` namespace. This includes:
