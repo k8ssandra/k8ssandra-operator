@@ -16,10 +16,14 @@ K8ssandra 1.x is configured, packaged, and deployed via Helm charts. Those Helm 
 
 K8ssandra 2.x will be based on the this operator.
 
+One of the primary features of this operator is multi-cluster support which will facilitate multi-region Cassandra clusters.
+
 # Installing the operator
 There are a couple of options for installing the operator - build from source or remote installs via kustomize.
 
-**Note: There are plans to add a Helm chart as well (TODO create and reference ticket here)**
+**Note:** There are plans to add a Helm chart as well (TODO create and reference ticket here)
+
+**Note:** This section focuses on a single cluster install. See the multi-cluster section below for details on how to configure the operator for a multi-cluster install.
 
 ## Remote Install
 Kustomize supports building resources with remote URLs. See this [doc](https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md) for details.
@@ -190,6 +194,70 @@ See the following section on contributing for details on building and installing
 ## Install with Helm
 TODO
 
+# Multi-cluster support
+The K8ssandra operator is being developed with multi-cluster support as a first class citizen.
+
+## Requirements
+It is required to have routable pod IPs between Kubernetes clusters; however this requirement may be relaxed in the future.
+
+If you are running in a cloud provider, you can get routable IPs by install the Kubernetes clusters in the same VPC.
+
+If you run multiple kind clusters locally, you will have routable pod IPs assuming that they run on the same Docker network which is normally the case. We leverage this for our multi-cluster e2e tests.
+
+## Architecture
+K8sandra Operator consists of a control plane and a data plane. Simply put the data plane deploys and manages pods. The control plane does not deploy or manage pods. The control plane should one be installed in only one cluster, i.e., the control plane cluster. The data plane can be installed on any number of clusters.
+
+**Note:** The control plane cluster can also function as a data plane cluster.
+
+**TODO:** Add architecture diagram
+
+## Connecting to remote clusters
+The control plane needs to establish client connections to remote cluster where the data plane runs. Credentials are provided via a [kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) file that is stored in a Secret. That is secret is then referenced via a `ClientConfig` custom resource.
+
+### Creating a ClientConfig
+First, we need to create a secret that the kubeconfig file. 
+
+Do not use $HOME/.kube/config as it may contain keys to cluster that you do not intend to expose. Instead generate a separate kubeconfig file for the cluster (or clusters) in which you plan to deploy K8ssandra Operator.
+
+#### Generate a kubeconfig file
+Many k8s distributions come with tools for generating a kubeconfig entry. 
+
+**kind**
+
+With kind you easily export the kubeconfig entry with the following command:
+
+```
+kind get kubeconfig --name <kind-cluster-name> > kubeconfig
+```
+**GKE**
+The `gcloud container clusters get-credentials` command will generate a kubeconfig entry. Suppose we have a cluster in the us-east1 region, and its name is k8ssandra. 
+
+First, point to a file other than the default:
+
+```
+export KUBECONFIG=/tmp/kubeconfig
+```
+Then generate the entry:
+
+```
+gcloud container clusters get-credentials --region us-east1 k8ssandra
+```
+
+**EKS**
+
+TODO
+
+**AKS**
+
+TODO
+
+#### Create the kubeconfig secret 
+
+```
+kubectl create secret generic gke-kubeconfig --from-file=/path/to/kubeconfig
+```
+
+**Note:** The property in the secret must be named `kubeconfig`, so if you are creating the secret with the `--from-file` option, then the file must also be named `kubeconfig`.
 
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
