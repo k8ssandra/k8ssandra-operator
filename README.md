@@ -163,6 +163,7 @@ If you just want to generate the maninfests then run:
 ```
 kustomize build $K8SSANDRA_OPERATOR_HOME
 ```
+
 Lastly, verify the installation. First check that there are two Deployments. The output should look similar to this:
 
 ```
@@ -230,6 +231,7 @@ With kind you easily export the kubeconfig entry with the following command:
 kind get kubeconfig --name <kind-cluster-name> > kubeconfig
 ```
 **GKE**
+
 The `gcloud container clusters get-credentials` command will generate a kubeconfig entry. Suppose we have a cluster in the us-east1 region, and its name is k8ssandra. 
 
 First, point to a file other than the default:
@@ -251,13 +253,90 @@ TODO
 
 TODO
 
-#### Create the kubeconfig secret 
+#### Create the kubeconfig Secret 
 
 ```
-kubectl create secret generic gke-kubeconfig --from-file=/path/to/kubeconfig
+kubectl create secret generic <secret-name> --from-file=/path/to/kubeconfig
 ```
-
 **Note:** The property in the secret must be named `kubeconfig`, so if you are creating the secret with the `--from-file` option, then the file must also be named `kubeconfig`.
+
+#### Create the ClientConfig
+Here is an example ClientConfig manifest:
+
+```
+apiVersion: k8ssandra.io/v1alpha1
+kind: ClientConfig
+metadata:
+  name: cluster-1
+spec:
+  contextName: cluster-1
+  kubeConfigSecret:
+    name: k8s-secret  
+```
+
+`contextName` specifies the name of the Kubernetes context for which client connection should be made.
+
+`kubeConfigSecret` is a reference to the kubeconfig secret.
+
+The ClientConfig object should be created in the control plane cluster in the same namespace in which the operator is running.
+
+#### Install the control plane
+Follow the previous instructions for installing the operator. It is configured to run the control plane by default.
+
+#### Install the data plane
+Create a kustomization directory:
+
+```
+K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
+cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+resources:
+- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+
+patchesJson6902:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/env/1/value
+      value: "false"
+  target:
+    group: apps
+    kind: Deployment
+    name: k8ssandra-operator
+    version: v1
+EOF
+```
+
+The operator looks for an environment variable named `K8SSANDRA_CONTROL_PLANE`. When set to `false` the control plane is disabled.
+
+Now install the operator:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```
+This installs the operator in the `default` namespace.
+
+Verify the installation. First check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
+
+```
+get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+```
+
+Lastly, verify that the following CRDs are installed:
+
+```
+kubectl get crds
+NAME                                          CREATED AT
+cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
+clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
+k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
+stargates.k8ssandra.io                        2021-08-11T15:07:27Z
 
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
