@@ -118,7 +118,12 @@ func (c *ClientCache) GetRestConfig(assistCfg *api.ClientConfig) (*rest.Config, 
 		return nil, err
 	}
 
-	clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(*apiConfig, assistCfg.Name, &clientcmd.ConfigOverrides{}, nil)
+	clientCmdCfg := clientcmd.NewNonInteractiveClientConfig(
+		*apiConfig,
+		assistCfg.GetContextName(),
+		&clientcmd.ConfigOverrides{},
+		nil,
+	)
 	return clientCmdCfg.ClientConfig()
 }
 
