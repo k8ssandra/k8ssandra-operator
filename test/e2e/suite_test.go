@@ -358,7 +358,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check that Stargate test-dc1-stargate is ready")
-	// Temporarily use a a one-off polling timeout because of a small bug in the
+	// Temporarily use a one-off polling timeout because of a small bug in the
 	// K8ssandraCluster	controller. It deploys dc2 right away after deploying Stargate
 	// for dc1. The simultaneous deployments slow things down.
 	timeout := 6 * time.Minute
