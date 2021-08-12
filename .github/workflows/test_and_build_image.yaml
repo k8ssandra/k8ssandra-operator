@@ -29,7 +29,7 @@ jobs:
       - name: Run unit and integration tests
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
-          make test
+          make envtest test
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
