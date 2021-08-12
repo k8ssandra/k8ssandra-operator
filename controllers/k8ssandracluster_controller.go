@@ -184,7 +184,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					},
 					Spec: api.StargateSpec{
 						StargateTemplate: *dcTemplate.Stargate,
-						DatacenterRef:    actualDc.Name,
+						DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
 					},
 				}
 				desiredStargateHash := utils.DeepHashString(desiredStargate)

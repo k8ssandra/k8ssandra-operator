@@ -89,7 +89,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Fetch the target CassandraDatacenter resource
 	actualDc := &cassdcapi.CassandraDatacenter{}
-	dcKey := client.ObjectKey{Namespace: req.Namespace, Name: stargate.Spec.DatacenterRef}
+	dcKey := client.ObjectKey{Namespace: req.Namespace, Name: stargate.Spec.DatacenterRef.Name}
 	logger.Info("Fetching CassandraDatacenter resource", "CassandraDatacenter", dcKey)
 	if err := r.Get(ctx, dcKey, actualDc); err != nil {
 		if errors.IsNotFound(err) {

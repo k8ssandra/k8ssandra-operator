@@ -3,7 +3,8 @@ kind: Stargate
 metadata:
   name: s1
 spec:
-  datacenterRef: dc1
+  datacenterRef:
+    name: dc1
   size: 1
   heapSize: 256Mi
   resources:
@@ -21,4 +22,3 @@ spec:
     timeoutSeconds: 10
   cassandraConfigMap:
     name: cassandra-config
-

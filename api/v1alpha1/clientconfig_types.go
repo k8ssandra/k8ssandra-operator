@@ -30,7 +30,8 @@ type ClientConfigSpec struct {
 	// +kubebuilder:validation:optional
 	ContextName string `json:"contextName,omitempty"`
 
-	// SecretName indicates the name of the
+	// KubeConfigSecret should reference an existing secret; the actual configuration will be read from
+	// this secret's "kubeconfig" key.
 	KubeConfigSecret corev1.LocalObjectReference `json:"kubeConfigSecret,omitempty"`
 }
 
