@@ -37,7 +37,7 @@ Recent versions of `kubectl` include Kustomize. It is executing using the `-k` o
 ### Default Install
 First, create a kustomization directory that builds from the `main` branch:
 
-```yaml
+```sh
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
 cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 resources:
@@ -87,7 +87,7 @@ kubectl create namespace $NAMESPACE
 
 Next create a kustomization directory that builds from the `main` branch:
 
-```yaml
+```sh
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
 cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 namespace: $NAMESPACE
@@ -213,10 +213,10 @@ K8sandra Operator consists of a control plane and a data plane. Simply put the d
 **TODO:** Add architecture diagram
 
 ## Connecting to remote clusters
-The control plane needs to establish client connections to remote cluster where the data plane runs. Credentials are provided via a [kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) file that is stored in a Sscret. That secret is then referenced via a `ClientConfig` custom resource.
+The control plane needs to establish client connections to remote cluster where the data plane runs. Credentials are provided via a [kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) file that is stored in a Secret. That secret is then referenced via a `ClientConfig` custom resource.
 
 ### Creating a ClientConfig
-First, we need to create a secret that the kubeconfig file. 
+First, we need to create a secret that holds the kubeconfig file. 
 
 Do not use `$HOME/.kube/config` as it may contain keys to cluster that you do not intend to expose. Instead generate separate kubeconfig files for the clusters in which you plan to deploy K8ssandra Operator.
 
@@ -230,6 +230,12 @@ Assuming you already have a kind cluster, you can easily export the kubeconfig e
 ```
 kind get kubeconfig --name <kind-cluster-name> > kubeconfig
 ```
+If you do not have any clusters then you will get an error message like this:
+
+```
+ERROR: could not locate any control plane nodes
+```
+
 **GKE**
 
 The `gcloud container clusters get-credentials` command will generate a kubeconfig entry. Suppose we have a cluster in the us-east1 region, and its name is k8ssandra. 
@@ -278,6 +284,8 @@ spec:
 
 `kubeConfigSecret` is a reference to the kubeconfig secret.
 
+**Note:** The operator needs to be installed before you can create a ClientConfig.
+
 The ClientConfig object should be created in the control plane cluster in the same namespace in which the operator is running.
 
 #### Install the control plane
@@ -286,7 +294,7 @@ Follow the previous instructions for installing the operator. It is configured t
 #### Install the data plane
 Create a kustomization directory:
 
-```
+```sh
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
 cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 resources:
@@ -324,8 +332,8 @@ k8ssandra-operator   1/1     1            1           2m
 ```
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
-```
-get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+```sh
+kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 Lastly, verify that the following CRDs are installed:
@@ -337,6 +345,7 @@ cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
 clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
 k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
 stargates.k8ssandra.io                        2021-08-11T15:07:27Z
+```
 
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
