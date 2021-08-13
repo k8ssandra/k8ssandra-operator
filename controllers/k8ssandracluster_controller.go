@@ -186,23 +186,23 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				Name:      kc.Name + "-" + actualDc.Name + "-stargate",
 			}
 
-				desiredStargate := &api.Stargate{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   stargateKey.Namespace,
-						Name:        stargateKey.Name,
-						Annotations: map[string]string{},
-						Labels: map[string]string{
-							api.PartOfLabel:           api.PartOfLabelValue,
-							api.K8ssandraClusterLabel: kcKey.Name,
-						},
+			desiredStargate := &api.Stargate{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:   stargateKey.Namespace,
+					Name:        stargateKey.Name,
+					Annotations: map[string]string{},
+					Labels: map[string]string{
+						api.PartOfLabel:           api.PartOfLabelValue,
+						api.K8ssandraClusterLabel: kcKey.Name,
 					},
-					Spec: api.StargateSpec{
-						StargateTemplate: *dcTemplate.Stargate,
-						DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
-					},
-				}
-				desiredStargateHash := utils.DeepHashString(desiredStargate)
-				desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
+				},
+				Spec: api.StargateSpec{
+					StargateTemplate: *dcTemplate.Stargate,
+					DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
+				},
+			}
+			desiredStargateHash := utils.DeepHashString(desiredStargate)
+			desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
 
 			actualStargate := &api.Stargate{}
 

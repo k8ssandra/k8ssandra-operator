@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
-	"os"
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
@@ -27,7 +26,6 @@ import (
 )
 
 const (
-	clustersToCreate = 2
 	timeout          = time.Second * 5
 	interval         = time.Millisecond * 500
 	clusterProtoName = "cluster-%d"
@@ -43,24 +41,14 @@ func TestControllers(t *testing.T) {
 	log := logrusr.NewLogger(logrus.New())
 	logf.SetLogger(log)
 
-	if err := os.Setenv(REQUEUE_DEFAULT_DELAY_ENV_VAR, "500ms"); err != nil {
-		t.Fatalf("failed to set value for %s env var: %s", REQUEUE_DEFAULT_DELAY_ENV_VAR, err)
-	}
-	if err := os.Setenv(REQUEUE_LONG_DELAY_ENV_VAR, "1s"); err != nil {
-		t.Fatalf("failed to set value for %s env var: %s", REQUEUE_LONG_DELAY_ENV_VAR, err)
-	}
-	InitConfig()
+	defaultDelay = time.Millisecond * 500
+	longDelay = time.Second
 
 	t.Run("K8ssandraCluster", func(t *testing.T) {
-		kcCtx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		testK8ssandraCluster(kcCtx, t)
+		testK8ssandraCluster(ctx, t)
 	})
-
 	t.Run("Stargate", func(t *testing.T) {
-		stargateCtx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		testStargate(stargateCtx, t)
+		testStargate(ctx, t)
 	})
 }
 
@@ -134,20 +122,14 @@ func (e *TestEnv) Stop(t *testing.T) {
 }
 
 type MultiClusterTestEnv struct {
-	// Clients is a mapping of cluster (or k8s context) names to Client objects. This map
-	// is used to create the ClientCache as well as to initialize the Framework object
-	// for each test.
+	// Clients is a mapping of cluster (or k8s context) names to Client objects. Note that
+	// these are no-cache clients  as they are intended for use by the tests.
 	Clients map[string]client.Client
 
 	// testEnvs is a list of the test environments that are created
 	testEnvs []*envtest.Environment
-}
 
-func NewMultiClusterTestEnv() *MultiClusterTestEnv {
-	return &MultiClusterTestEnv{
-		Clients:  make(map[string]client.Client, 0),
-		testEnvs: make([]*envtest.Environment, 0),
-	}
+	clustersToCreate int
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
@@ -158,12 +140,13 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		return err
 	}
 
+	e.clustersToCreate = 2
 	e.Clients = make(map[string]client.Client, 0)
 	e.testEnvs = make([]*envtest.Environment, 0)
-	cfgs := make([]*rest.Config, clustersToCreate)
-	clusters := make([]cluster.Cluster, 0, clustersToCreate)
+	cfgs := make([]*rest.Config, e.clustersToCreate)
+	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
 
-	for i := 0; i < clustersToCreate; i++ {
+	for i := 0; i < e.clustersToCreate; i++ {
 		clusterName := fmt.Sprintf(clusterProtoName, i)
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{

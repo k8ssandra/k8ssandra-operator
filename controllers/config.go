@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	REQUEUE_DEFAULT_DELAY_ENV_VAR = "REQUEUE_DEFAULT_DELAY"
-	REQUEUE_LONG_DELAY_ENV_VAR    = "REQUEUE_LONG_DELAY"
+	RequeueDefaultDelayEnvVar = "REQUEUE_DEFAULT_DELAY"
+	RequeueLongDelayEnvVar    = "REQUEUE_LONG_DELAY"
 )
 
 var (
@@ -16,27 +16,27 @@ var (
 	longDelay    time.Duration
 )
 
-// InitConfig is primarily a hook for integration tests. It provides a way use shorter
+// InitConfig is primarily a hook for integration tests. It provides a way to use shorter
 // requeue delays which allows the tests to run much faster. Note that this code will
 // likely be changed when we tackle
 // https://github.com/k8ssandra/k8ssandra-operator/issues/63.
 func InitConfig() {
 	var err error
-	val, found := os.LookupEnv(REQUEUE_DEFAULT_DELAY_ENV_VAR)
+	val, found := os.LookupEnv(RequeueDefaultDelayEnvVar)
 	if found {
 		defaultDelay, err = time.ParseDuration(val)
 		if err != nil {
-			log.Fatalf("failed to parse value for %s %s: %s", REQUEUE_DEFAULT_DELAY_ENV_VAR, val, err)
+			log.Fatalf("failed to parse value for %s %s: %s", RequeueDefaultDelayEnvVar, val, err)
 		}
 	} else {
 		defaultDelay = 15 * time.Second
 	}
 
-	val, found = os.LookupEnv(REQUEUE_LONG_DELAY_ENV_VAR)
+	val, found = os.LookupEnv(RequeueLongDelayEnvVar)
 	if found {
 		longDelay, err = time.ParseDuration(val)
 		if err != nil {
-			log.Fatalf("failed to parse value for %s %s: %s", REQUEUE_LONG_DELAY_ENV_VAR, val, err)
+			log.Fatalf("failed to parse value for %s %s: %s", RequeueLongDelayEnvVar, val, err)
 		}
 	} else {
 		longDelay = 1 * time.Minute

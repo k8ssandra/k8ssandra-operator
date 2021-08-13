@@ -21,7 +21,8 @@ import (
 )
 
 func testK8ssandraCluster(ctx context.Context, t *testing.T) {
-	testEnv := NewMultiClusterTestEnv()
+	ctx, cancel := context.WithCancel(ctx)
+	testEnv := &MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&K8ssandraClusterReconciler{
 			Client:        mgr.GetClient(),
@@ -36,6 +37,7 @@ func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
+	defer cancel()
 
 	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
 	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))

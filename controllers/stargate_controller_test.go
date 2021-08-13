@@ -17,6 +17,7 @@ import (
 )
 
 func testStargate(ctx context.Context, t *testing.T) {
+	ctx, cancel := context.WithCancel(ctx)
 	testEnv := &TestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager) error {
 		err := (&StargateReconciler{
@@ -30,6 +31,7 @@ func testStargate(ctx context.Context, t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
+	defer cancel()
 
 	t.Run("CreateStargate", func(t *testing.T) {
 		testCreate(t, testEnv.TestClient)
