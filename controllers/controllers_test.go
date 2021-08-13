@@ -69,6 +69,7 @@ func beforeSuite(t *testing.T) {
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "config", "crd", "bases"),
 				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+			ErrorIfCRDPathMissing:    true,
 		}
 
 		testEnvs[i] = testEnv

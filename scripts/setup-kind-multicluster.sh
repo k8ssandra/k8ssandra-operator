@@ -125,7 +125,7 @@ registry_port='5000'
 
 num_clusters=1
 cluster_names="kind"
-kind_node_version="v1.20.7"
+kind_node_version="v1.21.2"
 kind_worker_nodes=3
 
 while true; do
