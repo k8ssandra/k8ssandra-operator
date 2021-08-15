@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
+#
+# k8ssandra-operator should be installed in the remote clusters prior to running this. The
+# script fetches the k8ssandra-operator service account from the remote cluster and
+# extracts the token and CA cert which are then added to a kubeconfig file. The script then
+# creates a secret with the contents of the kubeconfig file. Lastly, the script creates a
+# ClientObject that references the secret.
+#
+# This script requires the following to be installed:
+#
+#    - kubectl
+#    - yq
+#
+# TODO Accept multiple values for the src-context option and generate a kubeconfig with
+#      entries for each
 
 set -e
-
-set -o xtrace
 
 OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,help -n 'create-client-config' -- "$@")
 
@@ -12,8 +24,8 @@ function help() {
     echo
     echo "Syntax: create-client-config.sh [options]"
     echo "Options:"
-    echo "src-context     The context for the source cluster that contains the service account."
-    echo "src-kubeconfig   The kubeconfig for the source cluster that contains the service account."
+    echo "src-context     The context for the source cluster that contains the service account. This or the src-kubeconfig option must be set."
+    echo "src-kubeconfig   The kubeconfig for the source cluster that contains the service account. This or the src-context option must be set."
     echo "dest-context    The context for the cluster where the ClientConfig will be created."
     echo "dest-kubeconfig  The kubeconfig for the cluster where the ClientConfig will be created."
     echo "namespace       The namespace in which the service account exists and where the ClientConfig will be created."
@@ -66,6 +78,8 @@ fi
 
 if [ -z "$output_dir" ]; then
   output_dir=$(mktemp -d)
+else
+  mkdir -p $output_dir
 fi
 
 if [ ! -z "$namespace"]; then
