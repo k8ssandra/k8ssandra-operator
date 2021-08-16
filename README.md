@@ -236,6 +236,10 @@ If you do not have any clusters then you will get an error message like this:
 ERROR: could not locate any control plane nodes
 ```
 
+<!-- 
+The following sections on cloud providers needs to be updated or replaced after https://github.com/k8ssandra/k8ssandra-operator/pull/84 is merged.
+-->
+
 **GKE**
 
 The `gcloud container clusters get-credentials` command will generate a kubeconfig entry. Suppose we have a cluster in the us-east1 region, and its name is k8ssandra. 
