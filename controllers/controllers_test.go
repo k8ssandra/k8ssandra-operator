@@ -152,7 +152,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "config", "crd", "bases"),
 				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
-			ErrorIfCRDPathMissing:    true,
+			ErrorIfCRDPathMissing: true,
 		}
 
 		e.testEnvs = append(e.testEnvs, testEnv)

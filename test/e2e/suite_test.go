@@ -42,7 +42,7 @@ func TestOperator(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", createSingleDatacenterCluster))
-	t.Run("CreateStandAloneStargate", e2eTest(ctx, "stargate", createStargateAndDatacenter))
+	t.Run("createStargateAndDatacenter", e2eTest(ctx, "stargate", createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", createMultiDatacenterCluster))
 }
 
@@ -272,7 +272,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	withStargate := f.NewWithStargate(ctx, stargateKey)
 	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
-		return stargate.Status.ReadyReplicas == 1
+		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("check k8ssandra cluster status updated for Stargate")
@@ -298,12 +298,12 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		if kdcStatus.Stargate == nil {
 			return false
 		}
-		return stargateReady(kdcStatus.Stargate)
+		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 }
 
-// createStargateAndDatacenter creates a CassandraDatacenter and a Stargate node both of
-// which are deployed in the local cluster. Note that no K8ssandraCluster object is created.
+// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
+// nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
@@ -319,7 +319,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
 	withStargate := f.NewWithStargate(ctx, stargateKey)
 	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
-		return stargate.Status.ReadyReplicas == 1
+		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate s1 to become ready")
 }
 
@@ -365,7 +365,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	withStargate := f.NewWithStargate(ctx, stargateKey)
 	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
-		return stargate.Status.ReadyReplicas == 1
+		return stargate.Status.IsReady()
 	}), timeout, 10*time.Second, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("check that datacenter dc2 is ready")
@@ -403,7 +403,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	stargateKey = framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
 	withStargate = f.NewWithStargate(ctx, stargateKey)
 	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
-		return stargate.Status.ReadyReplicas == 1
+		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc2-stargate to become ready")
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
@@ -429,12 +429,12 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		if kdcStatus.Stargate == nil {
 			return false
 		}
-		return stargateReady(kdcStatus.Stargate)
+		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
-	pod := "test-dc1-default-sts-0"
+	pod := "test-dc1-rack1-sts-0"
 	count := 6
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.interval, polling.nodetoolStatus.interval)
 
@@ -442,7 +442,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	opts.Context = "kind-k8ssandra-1"
-	pod = "test-dc2-default-sts-0"
+	pod = "test-dc2-rack1-sts-0"
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
@@ -459,18 +459,4 @@ func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *c
 func cassandraDatacenterReady(status *cassdcapi.CassandraDatacenterStatus) bool {
 	return status.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue &&
 		status.CassandraOperatorProgress == cassdcapi.ProgressReady
-}
-
-func stargateReady(status *api.StargateStatus) bool {
-	if status.Progress != api.StargateProgressRunning {
-		return false
-	}
-
-	for _, condition := range status.Conditions {
-		if condition.Type == api.StargateReady && condition.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
 }

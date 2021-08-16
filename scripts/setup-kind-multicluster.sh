@@ -47,7 +47,17 @@ containerdConfigPatches:
     endpoint = ["http://${registry_name}:${registry_port}"]
 nodes:
 - role: control-plane
-$(for ((i=0; i<$num_workers; i++)); do echo "- role: worker"; done)
+$(for ((i=1; i<=$num_workers; i++)); do
+cat << EOF2
+- role: worker
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "topology.kubernetes.io/zone=rack$i"
+EOF2
+done)
 EOF
 
   docker network connect "kind" "$registry_name" || true
@@ -151,4 +161,3 @@ create_in_cluster_kubeconfig
 #deploy_cass_operator
 
 #create_k8s_contexts_secret
-

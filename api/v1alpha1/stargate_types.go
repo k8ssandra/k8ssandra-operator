@@ -28,13 +28,6 @@ import (
 // StargateTemplate defines a template for deploying Stargate.
 type StargateTemplate struct {
 
-	// Size is the number of Stargate instances to deploy. This value may be scaled independently of
-	// Cassandra cluster nodes. Each instance handles API and coordination tasks for inbound
-	// queries.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default=1
-	Size int32 `json:"size"`
-
 	// StargateContainerImage is the image characteristics to use for Stargate containers. Leave nil
 	// to use a default image.
 	// +optional
@@ -65,26 +58,97 @@ type StargateTemplate struct {
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
-	// Affinity is the affinity to apply to the Stargate pods. See
-	// https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-	// for background.
+	// NodeSelector is an optional map of label keys and values to restrict the scheduling of Stargate nodes to workers
+	// with matching labels.
+	// Leave nil to let the controller reuse the same node selectors used for data pods in this datacenter, if any.
+	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
 	// +optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Tolerations are tolerations to apply to the Stargate pods. See
-	//# https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ for background.
+	// Tolerations are tolerations to apply to the Stargate pods.
+	// Leave nil to let the controller reuse the same tolerations used for data pods in this datacenter, if any.
+	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
-	// CassandraConfigMap is a reference to a ConfigMap that holds Cassandra configuration.
+	// Affinity is the affinity to apply to all the Stargate pods.
+	// Leave nil to let the controller reuse the same affinity rules used for data pods in this datacenter, if any.
+	// See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// AllowStargateOnDataNodes allows Stargate pods to be scheduled on a worker node already hosting data pods for this
+	// datacenter. The default is false, which means that Stargate pods will be scheduled on separate worker nodes.
+	// +optional
+	// +kubebuilder:default=false
+	AllowStargateOnDataNodes bool `json:"allowStargateOnDataNodes,omitempty"`
+
+	// CassandraConfigMapRef is a reference to a ConfigMap that holds Cassandra configuration.
 	// The map should have a key named cassandra_yaml.
 	// +optional
-	CassandraConfigMap *corev1.LocalObjectReference `json:"cassandraConfigMap,omitempty"`
+	CassandraConfigMapRef *corev1.LocalObjectReference `json:"cassandraConfigMap,omitempty"`
+}
+
+// StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.
+// These rules will be merged with rules defined at datacenter level in a StargateDatacenterTemplate; dc-level rules
+// have precedence over cluster-level ones.
+type StargateClusterTemplate struct {
+	StargateTemplate `json:",inline"`
+
+	// Size is the number of Stargate instances to deploy in each datacenter. They will be spread evenly across racks.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default=1
+	Size int32 `json:"size"`
+}
+
+// StargateDatacenterTemplate defines rules to apply to all Stargate pods in a given datacenter.
+// These rules will be merged with rules defined at rack level in a StargateRackTemplate; rack-level rules
+// have precedence over datacenter-level ones.
+type StargateDatacenterTemplate struct {
+	StargateClusterTemplate `json:",inline"`
+
+	// Racks allow customizing Stargate characteristics for specific racks in the datacenter.
+	// +optional
+	Racks []StargateRackTemplate `json:"racks,omitempty"`
+}
+
+// MergeWith merges this StargateDatacenterTemplate with the given StargateClusterTemplate.
+func (in *StargateDatacenterTemplate) MergeWith(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
+	if in == nil && clusterTemplate == nil {
+		return nil
+	} else if in == nil {
+		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
+	} else {
+		return in
+	}
+}
+
+// StargateRackTemplate defines custom rules for Stargate pods in a given rack.
+// These rules will be merged with rules defined at datacenter level in a StargateDatacenterTemplate; rack-level rules
+// have precedence over datacenter-level ones.
+type StargateRackTemplate struct {
+	StargateTemplate `json:",inline"`
+
+	// Name is the rack name. It must correspond to an existing rack name in the CassandraDatacenter resource where
+	// Stargate is being deployed, otherwise it will be ignored.
+	// +kubebuilder:validation:MinLength=2
+	Name string `json:"name"`
+}
+
+// MergeWith merges this StargateRackTemplate the given StargateDatacenterTemplate.
+func (in *StargateRackTemplate) MergeWith(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
+	if in == nil && dcTemplate == nil {
+		return nil
+	} else if in == nil {
+		return &dcTemplate.StargateTemplate
+	} else {
+		return &in.StargateTemplate
+	}
 }
 
 // StargateSpec defines the desired state of a Stargate resource.
 type StargateSpec struct {
-	StargateTemplate `json:",inline"`
+	StargateDatacenterTemplate `json:",inline"`
 
 	// DatacenterRef is the namespace-local reference of a CassandraDatacenter resource where
 	// Stargate should be deployed.
@@ -129,10 +193,10 @@ type StargateStatus struct {
 	// +optional
 	Conditions []StargateCondition `json:"conditions,omitempty"`
 
-	// DeploymentRef is the name of the Deployment object that was created for this Stargate
+	// DeploymentRefs is the names of the Deployment objects that were created for this Stargate
 	// object.
 	// +optional
-	DeploymentRef *string `json:"deploymentRef,omitempty"`
+	DeploymentRefs []string `json:"deploymentRefs,omitempty"`
 
 	// ServiceRef is the name of the Service object that was created for this Stargate
 	// object.
@@ -179,14 +243,14 @@ type StargateCondition struct {
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="DC",type=string,JSONPath=`.spec.datacenterRef.name`
-//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.progress`
-//+kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.readyReplicasRatio`
-//+kubebuilder:printcolumn:name="Up-to-date",type=integer,JSONPath=`.status.updatedReplicas`
-//+kubebuilder:printcolumn:name="Available",type=integer,JSONPath=`.status.availableReplicas`
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="DC",type=string,JSONPath=`.spec.datacenterRef.name`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.progress`
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.readyReplicasRatio`
+// +kubebuilder:printcolumn:name="Up-to-date",type=integer,JSONPath=`.status.updatedReplicas`
+// +kubebuilder:printcolumn:name="Available",type=integer,JSONPath=`.status.availableReplicas`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Stargate is the Schema for the stargates API
 type Stargate struct {
@@ -202,7 +266,52 @@ type Stargate struct {
 	Status StargateStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+func (in *StargateStatus) IsReady() bool {
+	if in == nil {
+		return false
+	}
+	if in.Progress != StargateProgressRunning {
+		return false
+	}
+	for _, condition := range in.Conditions {
+		if condition.Type == StargateReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func (in *StargateStatus) GetConditionStatus(conditionType StargateConditionType) corev1.ConditionStatus {
+	if in != nil {
+		for _, condition := range in.Conditions {
+			if condition.Type == conditionType {
+				return condition.Status
+			}
+		}
+	}
+	return corev1.ConditionUnknown
+}
+
+func (in *StargateStatus) SetCondition(condition StargateCondition) {
+	for i, c := range in.Conditions {
+		if c.Type == condition.Type {
+			in.Conditions[i] = condition
+			return
+		}
+	}
+	in.Conditions = append(in.Conditions, condition)
+}
+
+func (in *Stargate) GetRackTemplate(name string) *StargateRackTemplate {
+	for _, rack := range in.Spec.Racks {
+		if rack.Name == name {
+			return &rack
+		}
+	}
+	return nil
+}
+
+// +kubebuilder:object:root=true
 
 // StargateList contains a list of Stargate
 type StargateList struct {

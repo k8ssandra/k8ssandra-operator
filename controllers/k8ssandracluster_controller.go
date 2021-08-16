@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -53,12 +52,12 @@ type K8ssandraClusterReconciler struct {
 	SeedsResolver cassandra.RemoteSeedsResolver
 }
 
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
-//+kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -162,11 +161,11 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			// Temporarily do not update seeds on existing dcs. SEE
 			// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
-			//logger.Info("Updating seeds", "Seeds", seeds)
-			//if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
+			// logger.Info("Updating seeds", "Seeds", seeds)
+			// if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
 			//	logger.Error(err, "Failed to update seeds")
 			//	return ctrl.Result{}, err
-			//}
+			// }
 		} else {
 			if errors.IsNotFound(err) {
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
@@ -180,7 +179,9 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			}
 		}
 
-		if dcTemplate.Stargate != nil {
+		stargateTemplate := dcTemplate.Stargate.MergeWith(kc.Spec.Stargate)
+
+		if stargateTemplate != nil {
 
 			stargateKey := types.NamespacedName{
 				Namespace: actualDc.Namespace,
@@ -193,13 +194,16 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 					Name:        stargateKey.Name,
 					Annotations: map[string]string{},
 					Labels: map[string]string{
+						api.NameLabel:             api.NameLabelValue,
 						api.PartOfLabel:           api.PartOfLabelValue,
+						api.ComponentLabel:        api.ComponentLabelValueStargate,
+						api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
 						api.K8ssandraClusterLabel: kcKey.Name,
 					},
 				},
 				Spec: api.StargateSpec{
-					StargateTemplate: *dcTemplate.Stargate,
-					DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
+					StargateDatacenterTemplate: *stargateTemplate,
+					DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
 				},
 			}
 			desiredStargateHash := utils.DeepHashString(desiredStargate)
@@ -241,7 +245,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 					}
 				}
 
-				if !stargateutil.IsReady(actualStargate.Status) {
+				if !actualStargate.Status.IsReady() {
 					logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
 					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				}
@@ -270,7 +274,10 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
+				api.NameLabel:             api.NameLabelValue,
 				api.PartOfLabel:           api.PartOfLabelValue,
+				api.ComponentLabel:        api.ComponentLabelValueCassandra,
+				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
 				api.K8ssandraClusterLabel: k8ssandraKey.Name,
 			},
 		},
@@ -345,7 +352,7 @@ func addSeedEndpoints(seeds []string, endpoints ...string) []string {
 	updatedSeeds = append(updatedSeeds, seeds...)
 
 	for _, endpoint := range endpoints {
-		if !contains(updatedSeeds, endpoint) {
+		if !utils.SliceContains(updatedSeeds, endpoint) {
 			updatedSeeds = append(updatedSeeds, endpoint)
 		}
 	}
@@ -355,15 +362,6 @@ func addSeedEndpoints(seeds []string, endpoints ...string) []string {
 	sort.Strings(updatedSeeds)
 
 	return updatedSeeds
-}
-
-func contains(slice []string, s string) bool {
-	for _, elem := range slice {
-		if elem == s {
-			return true
-		}
-	}
-	return false
 }
 
 func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []string, remoteClient client.Client) error {

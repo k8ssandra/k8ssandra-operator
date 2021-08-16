@@ -31,6 +31,11 @@ type K8ssandraClusterSpec struct {
 	K8sContextsSecret string `json:"k8sContextsSecret,omitempty"`
 
 	Cassandra *Cassandra `json:"cassandra,omitempty"`
+
+	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
+	// +optional
+	Stargate *StargateClusterTemplate `json:"stargate,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -91,6 +96,8 @@ type CassandraDatacenterTemplateSpec struct {
 
 	ServerImage string `json:"serverImage,omitempty"`
 
+	// Size is the number of data replicas to deploy in this datacenter.
+	// This number does not include Stargate instances.
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
@@ -106,10 +113,10 @@ type CassandraDatacenterTemplateSpec struct {
 
 	StorageConfig cassdcapi.StorageConfig `json:"storageConfig"`
 
-	// Stargate defines the desired deployment characteristics for Stargate. Leave nil to skip
+	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 	// deploying Stargate in this datacenter.
 	// +optional
-	Stargate *StargateTemplate `json:"stargate,omitempty"`
+	Stargate *StargateDatacenterTemplate `json:"stargate,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
