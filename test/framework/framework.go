@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -79,6 +80,21 @@ func NewFramework(client client.Client, controlPlanContext string, remoteClients
 	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
 }
 
+// Get fetches the object specified by key from the cluster specified by key. An error is
+// returned is ClusterKey.K8sContext is not set or if there is no corresponding client.
+func (f *Framework) Get(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+
+	return remoteClient.Get(ctx, key.NamespacedName, obj)
+}
+
 func (f *Framework) CreateNamespace(name string) error {
 	for k8sContext, remoteClient := range f.remoteClients {
 		namespace := &corev1.Namespace{
@@ -97,6 +113,25 @@ func (f *Framework) CreateNamespace(name string) error {
 
 func (f *Framework) k8sContextNotFound(k8sContext string) error {
 	return fmt.Errorf("context %s not found", k8sContext)
+}
+
+// PatchDatacenterStatus fetches the datacenter specified by key, applies changes via
+// updateFn, and then performs a patch operation. key.K8sContext must be set and must
+// have a corresponding client.
+func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, updateFn func(dc *cassdcapi.CassandraDatacenter)) error {
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, key, dc)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(dc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(dc)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+
+	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
@@ -163,7 +198,11 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
-			f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
+			if !errors.IsNotFound(err) {
+				// We won't log the error if its not found because that is expected and it helps cut
+				// down on the verbosity of the test output.
+				f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
+			}
 			return false
 		}
 	}
@@ -172,6 +211,38 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func() bool {
 	withDc := f.NewWithDatacenter(ctx, key)
 	return withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return true
+	})
+}
+
+// NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
+func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *api.Stargate) bool) func() bool {
+	return func(condition func(*api.Stargate) bool) func() bool {
+		return f.withStargate(ctx, key, condition)
+	}
+}
+
+// withStargate Fetches the stargate specified by key and then calls condition.
+func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*api.Stargate) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
+			return false
+		}
+		stargate := &api.Stargate{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
+			return condition(stargate)
+		} else {
+			f.logger.Error(err, "failed to get Stargate", "key", key)
+			return false
+		}
+	}
+}
+
+func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
+	withStargate := f.NewWithStargate(ctx, key)
+	return withStargate(func(dc *api.Stargate) bool {
 		return true
 	})
 }

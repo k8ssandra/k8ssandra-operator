@@ -1,20 +1,24 @@
-# permissions for end users to view k8ssandraclusters.
+# permissions for end users to edit stargates.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: k8ssandracluster-viewer-role
+  name: stargate-editor-role
 rules:
 - apiGroups:
   - k8ssandra.io
   resources:
-  - k8ssandraclusters
+  - stargates
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - k8ssandra.io
   resources:
-  - k8ssandraclusters/status
+  - stargates/status
   verbs:
   - get

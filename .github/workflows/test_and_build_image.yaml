@@ -2,9 +2,9 @@ name: Run unit/integration tests and build image
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 jobs:
   unit_integration_tests:
     name: Run unit/integration tests
@@ -26,10 +26,10 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Run unit and tests
+      - name: Run unit and integration tests
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
-          make test
+          make envtest test
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest

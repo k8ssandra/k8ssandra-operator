@@ -3,24 +3,29 @@ package framework
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"text/template"
+	"time"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/errors"
+	k8serrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"text/template"
-	"time"
 )
 
 const (
@@ -29,6 +34,8 @@ const (
 
 type E2eFramework struct {
 	*Framework
+
+	nodeToolStatusUN *regexp.Regexp
 }
 
 func NewE2eFramework() (*E2eFramework, error) {
@@ -84,13 +91,26 @@ func NewE2eFramework() (*E2eFramework, error) {
 
 	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
 
-	return &E2eFramework{Framework: f}, nil
+	re := regexp.MustCompile("UN\\s\\s")
+
+	return &E2eFramework{Framework: f, nodeToolStatusUN: re}, nil
 }
 
-func (f *E2eFramework) getRemoteClusterContexts() []string {
+// getClusterContexts returns all contexts, including both control plane and data plane.
+func (f *E2eFramework) getClusterContexts() []string {
 	contexts := make([]string, 0, len(f.remoteClients))
 	for ctx, _ := range f.remoteClients {
 		contexts = append(contexts, ctx)
+	}
+	return contexts
+}
+
+func (f *E2eFramework) getDataPlaneContexts() []string {
+	contexts := make([]string, 0, len(f.remoteClients))
+	for ctx, _ := range f.remoteClients {
+		if ctx != f.ControlPlaneContext {
+			contexts = append(contexts, ctx)
+		}
 	}
 	return contexts
 }
@@ -147,12 +167,35 @@ func generateK8ssandraOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- ../../../config/default
+- ../../../../config/default
 namespace: {{ .Namespace }}
 `
 	k := Kustomization{Namespace: namespace}
 
-	return generateKustomizationFile("k8ssandra-operator", k, tmpl)
+	err := generateKustomizationFile("k8ssandra-operator/control-plane", k, tmpl)
+	if err != nil {
+		return err
+	}
+
+	tmpl = `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../../../config/default
+namespace: {{ .Namespace }}
+
+patchesJson6902:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: k8ssandra-operator
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/1/value
+        value: "false"
+`
+	return generateKustomizationFile("k8ssandra-operator/data-plane", k, tmpl)
 }
 
 // generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
@@ -177,7 +220,6 @@ func generateKustomizationFile(name string, k Kustomization, tmpl string) error 
 
 	return parsed.Execute(file, k)
 }
-
 
 func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...string) error {
 	kdir, err := filepath.Abs(dir)
@@ -218,16 +260,43 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	return nil
 }
 
+func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
+
+	for _, k8sContext := range f.getClusterContexts() {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeployK8ssandraOperator Deploys k8ssandra-operator in the control plane cluster. Note
-// that the control plane cluster can also be one of the remote clusters.
+// that the control plane cluster can also be one of the data plane clusters. It then
+// deploys the operator in the data plane clusters with the K8ssandraCluster controller
+// disabled.
 func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 	if err := generateK8ssandraOperatorKustomization(namespace); err != nil {
 		return err
 	}
 
-	dir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
+	baseDir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
+	controlPlane := filepath.Join(baseDir, "control-plane")
+	dataPlane := filepath.Join(baseDir, "data-plane")
 
-	return f.kustomizeAndApply(dir, namespace)
+	err := f.kustomizeAndApply(controlPlane, namespace, f.ControlPlaneContext)
+	if err != nil {
+		return nil
+	}
+
+	dataPlaneContexts := f.getDataPlaneContexts()
+	if len(dataPlaneContexts) > 0 {
+		return f.kustomizeAndApply(dataPlane, namespace, dataPlaneContexts...)
+	}
+
+	return nil
 }
 
 // DeployCassOperator deploys cass-operator in all remote clusters.
@@ -238,7 +307,7 @@ func (f *E2eFramework) DeployCassOperator(namespace string) error {
 
 	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
 
-	return f.kustomizeAndApply(dir, namespace, f.getRemoteClusterContexts()...)
+	return f.kustomizeAndApply(dir, namespace, f.getClusterContexts()...)
 }
 
 // DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.
@@ -250,6 +319,42 @@ func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 	dir := filepath.Join("..", "..", "build", "test-config", "k8s-contexts")
 
 	return f.kustomizeAndApply(dir, namespace, f.ControlPlaneContext)
+}
+
+func (f *E2eFramework) DeployK8sClientConfigs(namespace string) error {
+	// Read from disk whatever the thing deployed..
+	kubeConfigFile := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
+
+	b, err := ioutil.ReadFile(kubeConfigFile)
+	if err != nil {
+		return err
+	}
+
+	apiConfig, err := clientcmd.Load(b)
+	if err != nil {
+		return err
+	}
+	for _, ctx := range apiConfig.Contexts {
+		// Deploy Secrets from here
+		cCfg := api.ClientConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ctx.Cluster,
+				Namespace: namespace,
+			},
+			Spec: api.ClientConfigSpec{
+				ContextName: ctx.Cluster,
+				KubeConfigSecret: corev1.LocalObjectReference{
+					Name: "k8s-contexts",
+				},
+			},
+		}
+		err = f.Client.Create(context.Background(), &cCfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DeleteNamespace Deletes the namespace from all remote clusters and blocks until they
@@ -295,7 +400,7 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 // ready in the control plane cluster.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := ClusterKey{
-		K8sContext: f.ControlPlaneContext,
+		K8sContext:     f.ControlPlaneContext,
 		NamespacedName: types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"},
 	}
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
@@ -314,7 +419,8 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	f.logger.Info("dumping cluster info")
 
 	now := time.Now()
-	baseDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", test, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
+	testDir := strings.ReplaceAll(test, "/", "_")
+	baseDir := fmt.Sprintf("../../build/test/%s/%d-%d-%d-%d-%d", testDir, now.Year(), now.Month(), now.Day(), now.Hour(), now.Second())
 	errs := make([]error, 0)
 
 	for ctx, _ := range f.remoteClients {
@@ -331,7 +437,7 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	}
 
 	if len(errs) > 0 {
-		return errors.NewAggregate(errs)
+		return k8serrors.NewAggregate(errs)
 	}
 	return nil
 }
@@ -340,30 +446,64 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 // This function blocks until all pods from all CassandraDatacenters have terminated.
 func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all CassandraDatacenters", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&cassdcapi.CassandraDatacenter{},
+		timeout,
+		interval,
+		client.HasLabels{cassdcapi.ClusterLabel},
+	)
+}
 
+// DeleteStargates deletes all Stargates in namespace in all remote clusters.
+// This function blocks until all pods from all Stargates have terminated.
+func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all Stargates", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&api.Stargate{},
+		timeout,
+		interval,
+		client.HasLabels{api.StargateLabel},
+	)
+}
+
+func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all k8ssandra-operator pods", "Namespace", namespace)
+	if err := f.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{"control-plane": "k8ssandra-operator"}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *E2eFramework) deleteAllResources(
+	namespace string,
+	resource client.Object,
+	timeout, interval time.Duration,
+	podListOptions ...client.ListOption,
+) error {
 	for _, remoteClient := range f.remoteClients {
-		ctx := context.TODO()
-		dc := &cassdcapi.CassandraDatacenter{}
-
-		if err := remoteClient.DeleteAllOf(ctx, dc, client.InNamespace(namespace)); err != nil {
-			return err
+		if err := remoteClient.DeleteAllOf(context.TODO(), resource, client.InNamespace(namespace)); err != nil {
+			// If the CRD wasn't deployed at all to this cluster, keep going
+			if _, ok := err.(*meta.NoKindMatchError); !ok {
+				return err
+			}
 		}
 	}
-
-	// Should there be a separate wait.Poll call per cluster?
+	// Check that all pods created by resources are terminated
+	// FIXME Should there be a separate wait.Poll call per cluster?
 	return wait.Poll(interval, timeout, func() (bool, error) {
+		podListOptions = append(podListOptions, client.InNamespace(namespace))
 		for k8sContext, remoteClient := range f.remoteClients {
 			list := &corev1.PodList{}
-			if err := remoteClient.List(context.TODO(), list, client.InNamespace(namespace), client.HasLabels{cassdcapi.ClusterLabel}); err != nil {
-				f.logger.Error(err, "failed to list datacenter pods", "Context", k8sContext)
+			if err := remoteClient.List(context.TODO(), list, podListOptions...); err != nil {
+				f.logger.Error(err, "failed to list pods", "Context", k8sContext)
 				return false, err
 			}
-
 			if len(list.Items) > 0 {
 				return false, nil
 			}
 		}
-
 		return true, nil
 	})
 }
@@ -382,4 +522,30 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 	options := kubectl.Options{Namespace: namespace}
 
 	return kubectl.Delete(options, buf)
+}
+
+// GetNodeToolStatusUN Executes nodetool status against the Cassandra pod and returns a
+// count of the matching lines reporting a status of Up/Normal.
+func (f *E2eFramework) GetNodeToolStatusUN(opts kubectl.Options, pod string) (int, error) {
+	output, err := kubectl.Exec(opts, pod, "nodetool", "status")
+	if err != nil {
+		return -1, err
+	}
+
+	matches := f.nodeToolStatusUN.FindAllString(output, -1)
+
+	return len(matches), nil
+}
+
+// WaitForNodeToolStatusUN polls until nodetool status reports UN for count nodes.
+func (f *E2eFramework) WaitForNodeToolStatusUN(opts kubectl.Options, pod string, count int, timeout, interval time.Duration) error {
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		actual, err := f.GetNodeToolStatusUN(opts, pod)
+		if err != nil {
+			f.logger.Error(err, "failed to execute nodetool status for %s: %s", pod, err)
+			return false, err
+		}
+		return actual == count, nil
+	})
+
 }

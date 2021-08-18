@@ -1,0 +1,24 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: Stargate
+metadata:
+  name: s1
+spec:
+  datacenterRef:
+    name: dc1
+  size: 1
+  heapSize: 256Mi
+  resources:
+    limits:
+      memory: "512Mi"
+  livenessProbe:
+    failureThreshold: 5
+    httpGet:
+      path: /checker/liveness
+      port: health
+      scheme: HTTP
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 10
+  cassandraConfigMap:
+    name: cassandra-config

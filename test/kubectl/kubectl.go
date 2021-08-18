@@ -17,7 +17,7 @@ func Apply(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {
@@ -53,7 +53,7 @@ func Delete(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {
@@ -103,6 +103,36 @@ func WaitForCondition(condition string, args ...string) error {
 	return err
 }
 
+// Exec executes a command against a Cassandra pod and the cassandra container in
+// particular. This does not currently handle pipes.
+func Exec(opts Options, pod string, args ...string) (string, error) {
+	cmd := exec.Command("kubectl")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "exec", "-i", pod, "-c", "cassandra", "--")
+	cmd.Args = append(cmd.Args, args...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	fmt.Println(cmd)
+
+	err := cmd.Run()
+	if err != nil {
+		return stderr.String(), err
+	}
+
+	return stdout.String(), nil
+}
+
 type ClusterInfoOptions struct {
 	Options
 
@@ -113,7 +143,7 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 	cmd := exec.Command("kubectl", "cluster-info", "dump")
 
 	if len(opts.Context) > 0 {
-		cmd.Args = append(cmd.Args,"--context", opts.Context)
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
 
 	if len(opts.Namespace) > 0 {

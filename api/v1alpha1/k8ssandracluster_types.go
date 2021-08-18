@@ -18,7 +18,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	cassdcv1beta1 "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,8 +35,19 @@ type K8ssandraClusterSpec struct {
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
 type K8ssandraClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Datacenters maps the CassandraDatacenter name to a K8ssandraStatus. The
+	// naming is a bit confusing but the mapping makes sense because we have a
+	// CassandraDatacenter and then define other components like Stargate and Reaper
+	// relative to it. I wanted to inline the field but when I do it won't serialize.
+	//
+	// TODO Figure out how to inline this field
+	Datacenters map[string]K8ssandraStatus `json:"datacenters,omitempty"`
+}
+
+// K8ssandraStatus defines the observed of a k8ssandra instance
+type K8ssandraStatus struct {
+	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
+	Stargate  *StargateStatus                      `json:"stargate,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -78,6 +89,8 @@ type CassandraDatacenterTemplateSpec struct {
 	// unnecessary though. Some belong at the cluster level. I have created
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/9 to sort it out.
 
+	ServerImage string `json:"serverImage,omitempty"`
+
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
@@ -89,9 +102,14 @@ type CassandraDatacenterTemplateSpec struct {
 	// Kubernetes resource requests and limits, per pod
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	Racks []cassdcv1beta1.Rack `json:"racks,omitempty"`
+	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
-	StorageConfig cassdcv1beta1.StorageConfig `json:"storageConfig"`
+	StorageConfig cassdcapi.StorageConfig `json:"storageConfig"`
+
+	// Stargate defines the desired deployment characteristics for Stargate. Leave nil to skip
+	// deploying Stargate in this datacenter.
+	// +optional
+	Stargate *StargateTemplate `json:"stargate,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
