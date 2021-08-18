@@ -77,3 +77,7 @@ Check out the full K8ssandra docs at [k8ssandra.io](https://k8ssandra.io/).
 Start or join a forum discussion at [forum.k8ssandra.io](https://forum.k8ssandra.io/).
 
 Join us on Discord [here](https://discord.gg/YewpWTYP0).
+
+## Dependencies
+
+For information on the packaged dependencies of K8ssandra Operator and their licenses, check out our [open source report](https://app.fossa.com/reports/10e82f74-97fd-4b5b-8580-e71239757c1e).
