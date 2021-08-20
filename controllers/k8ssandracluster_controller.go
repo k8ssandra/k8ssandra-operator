@@ -181,12 +181,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 		stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 
-		if stargateTemplate != nil {
+		stargateKey := types.NamespacedName{
+			Namespace: actualDc.Namespace,
+			Name:      kc.Name + "-" + actualDc.Name + "-stargate",
+		}
+		actualStargate := &api.Stargate{}
 
-			stargateKey := types.NamespacedName{
-				Namespace: actualDc.Namespace,
-				Name:      kc.Name + "-" + actualDc.Name + "-stargate",
-			}
+		if stargateTemplate != nil {
 
 			desiredStargate := &api.Stargate{
 				ObjectMeta: metav1.ObjectMeta{
@@ -208,8 +209,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			}
 			desiredStargateHash := utils.DeepHashString(desiredStargate)
 			desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
-
-			actualStargate := &api.Stargate{}
 
 			if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 				if errors.IsNotFound(err) {
@@ -250,6 +249,29 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				}
 				logger.Info("Stargate is ready", "Stargate", stargateKey)
+			}
+		} else {
+			// Test if Stargate was removed
+			if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+				if errors.IsNotFound(err) {
+					// OK
+				} else {
+					logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
+					return ctrl.Result{}, err
+				}
+			} else {
+				if actualStargate.Labels[api.CreatedByLabel] == api.CreatedByLabelValueK8ssandraClusterController &&
+					actualStargate.Labels[api.K8ssandraClusterLabel] == kcKey.Name {
+					if err := remoteClient.Delete(ctx, actualStargate); err != nil {
+						logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
+						return ctrl.Result{}, err
+					} else {
+						r.removeStargateStatus(kc, dcTemplate.Meta.Name)
+						logger.Info("Stargate deleted", "Stargate", stargateKey)
+					}
+				} else {
+					logger.Info("Not deleting Stargate since it wasn't created by this controller", "Stargate", stargateKey)
+				}
 			}
 		}
 	}
@@ -434,7 +456,19 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 		}
 	}
 
+	if kc.Status.Datacenters[dcName].Stargate.Progress == "" {
+		kc.Status.Datacenters[dcName].Stargate.Progress = api.StargateProgressPending
+	}
 	return nil
+}
+
+func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
+	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
+		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
+			Stargate:  nil,
+			Cassandra: kdcStatus.Cassandra.DeepCopy(),
+		}
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
