@@ -25,6 +25,7 @@ import (
 	"math"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sort"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -348,6 +349,10 @@ func addSeedEndpoints(seeds []string, endpoints ...string) []string {
 			updatedSeeds = append(updatedSeeds, endpoint)
 		}
 	}
+
+	// We must sort the results here to ensure consistent ordering. See
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/80 for details.
+	sort.Strings(updatedSeeds)
 
 	return updatedSeeds
 }
