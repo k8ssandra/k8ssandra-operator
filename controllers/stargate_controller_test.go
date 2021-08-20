@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -11,12 +10,36 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 )
 
-func testStargate(t *testing.T) {
+func testStargate(ctx context.Context, t *testing.T) {
+	ctx, cancel := context.WithCancel(ctx)
+	testEnv := &TestEnv{}
+	err := testEnv.Start(ctx, t, func(mgr manager.Manager) error {
+		err := (&StargateReconciler{
+			Client: mgr.GetClient(),
+			Scheme: scheme.Scheme,
+		}).SetupWithManager(mgr)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("failed to start test environment: %s", err)
+	}
+
+	defer testEnv.Stop(t)
+	defer cancel()
+
+	t.Run("CreateStargate", func(t *testing.T) {
+		testCreate(t, testEnv.TestClient)
+	})
+}
+
+func testCreate(t *testing.T, testClient client.Client) {
 	req := require.New(t)
-	testClient := testClients[fmt.Sprintf(clusterProtoName, 0)]
 
 	namespace := "default"
 	ctx := context.Background()

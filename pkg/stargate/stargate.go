@@ -260,16 +260,40 @@ func getStargateContainerName(dc *cassdcapi.CassandraDatacenter) string {
 	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate-deployment"
 }
 
-func IsReady(sg *api.Stargate) bool {
-	if sg.Status.Progress != api.StargateProgressRunning {
+func IsReady(status api.StargateStatus) bool {
+	if status.Progress != api.StargateProgressRunning {
 		return false
 	}
 
-	for _, condition := range sg.Status.Conditions {
+	for _, condition := range status.Conditions {
 		if condition.Type == api.StargateReady && condition.Status == corev1.ConditionTrue {
 			return true
 		}
 	}
 
 	return false
+}
+
+func SetCondition(sg *api.Stargate, condition api.StargateCondition) {
+	var conditions []api.StargateCondition
+	if sg.Status.Conditions == nil {
+		conditions = make([]api.StargateCondition, 0)
+	} else {
+		conditions = sg.Status.Conditions
+	}
+	updated := false
+
+	for i, c := range conditions {
+		if c.Type == condition.Type {
+			conditions[i] = condition
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		conditions = append(conditions, condition)
+	}
+
+	sg.Status.Conditions = conditions
 }

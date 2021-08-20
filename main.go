@@ -103,6 +103,8 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
+	controllers.InitConfig()
+
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
@@ -124,12 +126,6 @@ func main() {
 				os.Exit(1)
 			}
 
-			_, err = clientCache.CreateClient(cCfg.GetContextName(), cfg)
-			if err != nil {
-				setupLog.Error(err, "unable to create cluster connection")
-				os.Exit(1)
-			}
-
 			// Add cluster to the manager
 			c, err := cluster.New(cfg, func(o *cluster.Options) {
 				o.Scheme = scheme
@@ -139,6 +135,8 @@ func main() {
 				setupLog.Error(err, "unable to create manager cluster connection")
 				os.Exit(1)
 			}
+
+			clientCache.AddClient(cCfg.GetContextName(), c.GetClient())
 
 			err = mgr.Add(c)
 			if err != nil {

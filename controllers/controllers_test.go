@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	"time"
 
@@ -13,8 +14,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -27,100 +26,30 @@ import (
 )
 
 const (
-	clustersToCreate = 2
-	timeout          = time.Second * 30
-	interval         = time.Second * 1
+	timeout          = time.Second * 5
+	interval         = time.Millisecond * 500
 	clusterProtoName = "cluster-%d"
 )
 
 var (
-	testClients   = make(map[string]client.Client, clustersToCreate)
-	testEnvs      = make([]*envtest.Environment, clustersToCreate)
 	seedsResolver = &fakeSeedsResolver{}
 )
 
 func TestControllers(t *testing.T) {
-	defer afterSuite(t)
-	beforeSuite(t)
-
-	ctx := context.Background()
-
-	t.Run("CreateSingleDcCluster", controllerTest(ctx, createSingleDcCluster))
-	t.Run("CreateMultiDcCluster", controllerTest(ctx, createMultiDcCluster))
-	t.Run("TestStargate", testStargate)
-}
-
-func beforeSuite(t *testing.T) {
-	require := require.New(t)
+	ctx := ctrl.SetupSignalHandler()
 
 	log := logrusr.NewLogger(logrus.New())
 	logf.SetLogger(log)
 
-	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
-	metrics.DefaultBindAddress = "0"
+	defaultDelay = time.Millisecond * 500
+	longDelay = time.Second
 
-	require.NoError(registerApis(), "failed to register apis with scheme")
-
-	cfgs := make([]*rest.Config, clustersToCreate)
-
-	for i := 0; i < clustersToCreate; i++ {
-		clusterName := fmt.Sprintf(clusterProtoName, i)
-		testEnv := &envtest.Environment{
-			CRDDirectoryPaths: []string{
-				filepath.Join("..", "config", "crd", "bases"),
-				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
-			ErrorIfCRDPathMissing:    true,
-		}
-
-		testEnvs[i] = testEnv
-
-		cfg, err := testEnv.Start()
-		require.NoError(err, "failed to start test environment")
-		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
-		require.NoError(err, "failed to create controller-runtime client")
-
-		testClients[clusterName] = testClient
-		cfgs[i] = cfg
-	}
-
-	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
-		Scheme: scheme.Scheme,
+	t.Run("K8ssandraCluster", func(t *testing.T) {
+		testK8ssandraCluster(ctx, t)
 	})
-	require.NoError(err, "failed to create controller-runtime manager")
-
-	clientCache := clientcache.New(k8sManager.GetClient(), testClients["cluster-0"], scheme.Scheme)
-	for ctxName, cli := range testClients {
-		clientCache.AddClient(ctxName, cli)
-	}
-
-	additionalClusters := make([]cluster.Cluster, 0, clustersToCreate-1)
-
-	// We start only one reconciler, for the clusters number 0
-	err = (&K8ssandraClusterReconciler{
-		Client:        k8sManager.GetClient(),
-		Scheme:        scheme.Scheme,
-		ClientCache:   clientCache,
-		SeedsResolver: seedsResolver,
-	}).SetupWithManager(k8sManager, additionalClusters)
-	require.NoError(err, "Failed to set up K8ssandraClusterReconciler with multicluster test")
-
-	err = (&StargateReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: scheme.Scheme,
-	}).SetupWithManager(k8sManager)
-	require.NoError(err, "Failed to set up StargateReconciler")
-
-	go func() {
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		assert.NoError(t, err, "failed to start manager")
-	}()
-}
-
-func afterSuite(t *testing.T) {
-	for _, testEnv := range testEnvs {
-		err := testEnv.Stop()
-		assert.NoError(t, err, "failed to stop test environment")
-	}
+	t.Run("Stargate", func(t *testing.T) {
+		testStargate(ctx, t)
+	})
 }
 
 func registerApis() error {
@@ -135,14 +64,170 @@ func registerApis() error {
 	return nil
 }
 
+type TestEnv struct {
+	*envtest.Environment
+
+	TestClient client.Client
+}
+
+func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager) error) error {
+	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
+	metrics.DefaultBindAddress = "0"
+
+	if err := registerApis(); err != nil {
+		return err
+	}
+
+	e.Environment = &envtest.Environment{
+		CRDDirectoryPaths: []string{
+			filepath.Join("..", "config", "crd", "bases"),
+			filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+	}
+
+	cfg, err := e.Environment.Start()
+	if err != nil {
+		return err
+	}
+
+	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = initReconcilers(k8sManager)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		err = k8sManager.Start(ctx)
+		if err != nil {
+			t.Errorf("failed to start manager: %s", err)
+		}
+	}()
+
+	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	return err
+}
+
+func (e *TestEnv) Stop(t *testing.T) {
+	if e.Environment != nil {
+		err := e.Environment.Stop()
+		if err != nil {
+			t.Errorf("failed to stop test environment: %s", err)
+		}
+	}
+}
+
+type MultiClusterTestEnv struct {
+	// Clients is a mapping of cluster (or k8s context) names to Client objects. Note that
+	// these are no-cache clients  as they are intended for use by the tests.
+	Clients map[string]client.Client
+
+	// testEnvs is a list of the test environments that are created
+	testEnvs []*envtest.Environment
+
+	clustersToCreate int
+}
+
+func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
+	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
+	metrics.DefaultBindAddress = "0"
+
+	if err := registerApis(); err != nil {
+		return err
+	}
+
+	e.clustersToCreate = 2
+	e.Clients = make(map[string]client.Client, 0)
+	e.testEnvs = make([]*envtest.Environment, 0)
+	cfgs := make([]*rest.Config, e.clustersToCreate)
+	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
+
+	for i := 0; i < e.clustersToCreate; i++ {
+		clusterName := fmt.Sprintf(clusterProtoName, i)
+		testEnv := &envtest.Environment{
+			CRDDirectoryPaths: []string{
+				filepath.Join("..", "config", "crd", "bases"),
+				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+			ErrorIfCRDPathMissing:    true,
+		}
+
+		e.testEnvs = append(e.testEnvs, testEnv)
+
+		cfg, err := testEnv.Start()
+		if err != nil {
+			return err
+		}
+
+		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		if err != nil {
+			return err
+		}
+
+		e.Clients[clusterName] = testClient
+		cfgs[i] = cfg
+
+		c, err := cluster.New(cfg, func(o *cluster.Options) {
+			o.Scheme = scheme.Scheme
+		})
+		if err != nil {
+			return err
+		}
+		clusters = append(clusters, c)
+	}
+
+	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
+		Scheme: scheme.Scheme,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	for _, c := range clusters {
+		if err = k8sManager.Add(c); err != nil {
+			return err
+		}
+	}
+
+	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients["cluster-0"], scheme.Scheme)
+	for ctxName, cli := range e.Clients {
+		clientCache.AddClient(ctxName, cli)
+	}
+
+	if err = initReconcilers(k8sManager, clientCache, clusters); err != nil {
+		return err
+	}
+
+	go func() {
+		err = k8sManager.Start(ctx)
+		if err != nil {
+			t.Errorf("failed to start manager: %s", err)
+		}
+	}()
+
+	return nil
+}
+
+func (e *MultiClusterTestEnv) Stop(t *testing.T) {
+	for _, testEnv := range e.testEnvs {
+		if err := testEnv.Stop(); err != nil {
+			t.Errorf("failed to stop test environment: %s", err)
+		}
+	}
+}
+
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
-func controllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
+func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 	namespace := rand.String(9)
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		controlPlaneCluster := testClients[primaryCluster]
-		f := framework.NewFramework(controlPlaneCluster, primaryCluster, testClients)
+		controlPlaneCluster := e.Clients[primaryCluster]
+		f := framework.NewFramework(controlPlaneCluster, primaryCluster, e.Clients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)

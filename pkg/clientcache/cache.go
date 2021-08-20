@@ -51,23 +51,22 @@ func (c *ClientCache) GetRemoteClient(k8sContextName string) (client.Client, err
 }
 
 // GetLocalClient returns the current cluster's client used for operator's local communication
-func (c *ClientCache) GetLocalClient() (client.Client, error) {
-	return c.localClient, nil
+func (c *ClientCache) GetLocalClient() client.Client {
+	return c.localClient
 }
 
 // GetRemoteClients returns all the remote clients
-func (c *ClientCache) GetRemoteClients() (map[string]client.Client, error) {
-	return c.remoteClients, nil
+func (c *ClientCache) GetRemoteClients() map[string]client.Client {
+	return c.remoteClients
 }
 
 // AddClient adds a new remoteClient with the name k8sContextName
-func (c *ClientCache) AddClient(k8sContextName string, cli client.Client) error {
+func (c *ClientCache) AddClient(k8sContextName string, cli client.Client) {
 	c.remoteClients[k8sContextName] = cli
-	return nil
 }
 
-// CreateClient creates a remoteClient and stores it in the cache. If already stored, returns the existing client
-func (c *ClientCache) CreateClient(contextName string, restConfig *rest.Config) (client.Client, error) {
+// createClient creates a remoteClient and stores it in the cache. If already stored, returns the existing client
+func (c *ClientCache) createClient(contextName string, restConfig *rest.Config) (client.Client, error) {
 	if cli, found := c.remoteClients[contextName]; found {
 		// We already have created that client
 		return cli, nil
@@ -102,7 +101,7 @@ func (c *ClientCache) CreateRemoteClientsFromSecret(secretKey types.NamespacedNa
 			return err
 		}
 
-		if _, err := c.CreateClient(ctx, restConfig); err != nil {
+		if _, err := c.createClient(ctx, restConfig); err != nil {
 			return err
 		}
 	}

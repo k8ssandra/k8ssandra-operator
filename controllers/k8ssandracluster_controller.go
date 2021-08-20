@@ -19,13 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"math"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
-
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sort"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -69,173 +69,187 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		return ctrl.Result{RequeueAfter: defaultDelay}, err
 	}
 
 	kc = kc.DeepCopy()
+	patch := client.MergeFromWithOptions(kc.DeepCopy())
+	result, err := r.reconcile(ctx, kc, logger)
+	if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
+		logger.Error(patchErr, "failed to update k8ssandracluster status", "K8ssandraCluster", req.NamespacedName)
+	} else {
+		logger.Info("updated k8ssandracluster status", "K8ssandraCluster", req.NamespacedName)
+	}
+	return result, err
+}
 
-	if kc.Spec.Cassandra != nil {
-		var seeds []string
-		systemDistributedRF := getSystemDistributedRF(kc)
-		dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (ctrl.Result, error) {
+	if kc.Spec.Cassandra == nil {
+		// TODO handle the scenario of Cassandra being set to nil after having a non-nil value
+		return ctrl.Result{}, nil
+	}
 
-		for _, dc := range kc.Spec.Cassandra.Datacenters {
-			dcNames = append(dcNames, dc.Meta.Name)
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	var seeds []string
+	systemDistributedRF := getSystemDistributedRF(kc)
+	dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		dcNames = append(dcNames, dc.Meta.Name)
+	}
+
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+		if err != nil {
+			logger.Error(err, "Failed to create new CassandraDatacenter")
+			return ctrl.Result{}, err
+		}
+		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+
+		desiredDcHash := utils.DeepHashString(desiredDc)
+		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
+
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		if err != nil {
+			logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", dcKey)
+			return ctrl.Result{}, err
 		}
 
-		for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-			desiredDc, err := newDatacenter(req.NamespacedName, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
-			if err != nil {
-				logger.Error(err, "Failed to create new CassandraDatacenter")
-				return ctrl.Result{}, err
-			}
-			dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+		if remoteClient == nil {
+			logger.Info("remoteClient cannot be nil")
+			return ctrl.Result{}, fmt.Errorf("remoteClient cannot be nil")
+		}
 
-			desiredDcHash := utils.DeepHashString(desiredDc)
-			desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
+		actualDc := &cassdcapi.CassandraDatacenter{}
 
-			remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-			if err != nil {
-				logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", dcKey)
+		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
+			if err = r.setStatusForDatacenter(kc, actualDc); err != nil {
+				logger.Error(err, "Failed to update status for datacenter", "CassandraDatacenter", dcKey)
 				return ctrl.Result{}, err
 			}
 
-			if remoteClient == nil {
-				logger.Info("remoteClient cannot be nil")
-				return ctrl.Result{}, fmt.Errorf("remoteClient cannot be nil")
+			if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+				logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
+				actualDc = actualDc.DeepCopy()
+				resourceVersion := actualDc.GetResourceVersion()
+				desiredDc.DeepCopyInto(actualDc)
+				actualDc.SetResourceVersion(resourceVersion)
+				if err = remoteClient.Update(ctx, actualDc); err != nil {
+					logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
+					return ctrl.Result{}, err
+				}
 			}
 
-			actualDc := &cassdcapi.CassandraDatacenter{}
+			if !cassandra.DatacenterReady(actualDc) {
+				logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
+				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+			}
 
-			if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-				if err = r.setStatusForDatacenter(ctx, kc, actualDc); err != nil {
-					logger.Error(err, "Failed to update status for datacenter", "CassandraDatacenter", dcKey)
+			logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
+
+			endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
+			if err != nil {
+				logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
+				return ctrl.Result{}, err
+			}
+
+			// The following code will update the AdditionalSeeds property for the
+			// datacenters. We will wind up having endpoints from every DC listed in
+			// the AdditionalSeeds property. We really want to exclude the seeds from
+			// the current DC. It is not a major concern right now as this is a short-term
+			// solution for handling seed addresses.
+			seeds = addSeedEndpoints(seeds, endpoints...)
+
+			// Temporarily do not update seeds on existing dcs. SEE
+			// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
+			//logger.Info("Updating seeds", "Seeds", seeds)
+			//if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
+			//	logger.Error(err, "Failed to update seeds")
+			//	return ctrl.Result{}, err
+			//}
+		} else {
+			if errors.IsNotFound(err) {
+				if err = remoteClient.Create(ctx, desiredDc); err != nil {
+					logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
 					return ctrl.Result{}, err
 				}
-
-				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-					logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
-					actualDc = actualDc.DeepCopy()
-					resourceVersion := actualDc.GetResourceVersion()
-					desiredDc.DeepCopyInto(actualDc)
-					actualDc.SetResourceVersion(resourceVersion)
-					if err = remoteClient.Update(ctx, actualDc); err != nil {
-						logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
-						return ctrl.Result{}, err
-					}
-				}
-
-				if !cassandra.DatacenterReady(actualDc) {
-					logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
-					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-				}
-
-				logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
-
-				endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
-				if err != nil {
-					logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
-					return ctrl.Result{}, err
-				}
-
-				// The following code will update the AdditionalSeeds property for the
-				// datacenters. We will wind up having endpoints from every DC listed in
-				// the AdditionalSeeds property. We really want to exclude the seeds from
-				// the current DC. It is not a major concern right now as this is a short-term
-				// solution for handling seed addresses.
-				seeds = addSeedEndpoints(seeds, endpoints...)
-
-				// Temporarily do not update seeds on existing dcs. SEE
-				// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
-				//logger.Info("Updating seeds", "Seeds", seeds)
-				//if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
-				//	logger.Error(err, "Failed to update seeds")
-				//	return ctrl.Result{}, err
-				//}
+				return ctrl.Result{RequeueAfter: defaultDelay}, nil
 			} else {
-				if errors.IsNotFound(err) {
-					if err = remoteClient.Create(ctx, desiredDc); err != nil {
-						logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
-						return ctrl.Result{}, err
-					}
-					return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-				} else {
-					logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", dcKey)
-					return ctrl.Result{}, err
-				}
+				logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", dcKey)
+				return ctrl.Result{}, err
+			}
+		}
+
+		if dcTemplate.Stargate != nil {
+
+			stargateKey := types.NamespacedName{
+				Namespace: actualDc.Namespace,
+				Name:      kc.Name + "-" + actualDc.Name + "-stargate",
 			}
 
-			if dcTemplate.Stargate != nil {
-
-				stargateKey := types.NamespacedName{
-					Namespace: actualDc.Namespace,
-					Name:      kc.Name + "-" + actualDc.Name + "-stargate",
-				}
-
-				desiredStargate := &api.Stargate{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:   stargateKey.Namespace,
-						Name:        stargateKey.Name,
-						Annotations: map[string]string{},
-						Labels: map[string]string{
-							api.PartOfLabel:           api.PartOfLabelValue,
-							api.K8ssandraClusterLabel: req.Name,
-						},
+			desiredStargate := &api.Stargate{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:   stargateKey.Namespace,
+					Name:        stargateKey.Name,
+					Annotations: map[string]string{},
+					Labels: map[string]string{
+						api.PartOfLabel:           api.PartOfLabelValue,
+						api.K8ssandraClusterLabel: kcKey.Name,
 					},
-					Spec: api.StargateSpec{
-						StargateTemplate: *dcTemplate.Stargate,
-						DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
-					},
-				}
-				desiredStargateHash := utils.DeepHashString(desiredStargate)
-				desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
+				},
+				Spec: api.StargateSpec{
+					StargateTemplate: *dcTemplate.Stargate,
+					DatacenterRef:    corev1.LocalObjectReference{Name: actualDc.Name},
+				},
+			}
+			desiredStargateHash := utils.DeepHashString(desiredStargate)
+			desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
 
-				actualStargate := &api.Stargate{}
+			actualStargate := &api.Stargate{}
 
-				if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
-					if errors.IsNotFound(err) {
-						logger.Info("Creating Stargate resource", "Stargate", stargateKey)
+			if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+				if errors.IsNotFound(err) {
+					logger.Info("Creating Stargate resource", "Stargate", stargateKey)
 
-						if err := remoteClient.Create(ctx, desiredStargate); err != nil {
-							logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
-							return ctrl.Result{}, err
-						} else {
-							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-						}
-					} else {
-						logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
+					if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+						logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
 						return ctrl.Result{}, err
+					} else {
+						return ctrl.Result{RequeueAfter: defaultDelay}, nil
 					}
 				} else {
-					if err = r.setStatusForStargate(ctx, kc, actualStargate, dcTemplate.Meta.Name); err != nil {
-						logger.Error(err, "Failed to update status for stargate", "Stargate", stargateKey)
+					logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
+					return ctrl.Result{}, err
+				}
+			} else {
+				if err = r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name); err != nil {
+					logger.Error(err, "Failed to update status for stargate", "Stargate", stargateKey)
+					return ctrl.Result{}, err
+				}
+
+				if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
+					logger.Info("Updating Stargate resource", "Stargate", stargateKey)
+					resourceVersion := actualStargate.GetResourceVersion()
+					desiredStargate.DeepCopyInto(actualStargate)
+					actualStargate.SetResourceVersion(resourceVersion)
+
+					if err = remoteClient.Update(ctx, actualStargate); err == nil {
+						return ctrl.Result{RequeueAfter: defaultDelay}, nil
+					} else {
+						logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
 						return ctrl.Result{}, err
 					}
-
-					if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
-						logger.Info("Updating Stargate resource", "Stargate", stargateKey)
-						resourceVersion := actualStargate.GetResourceVersion()
-						desiredStargate.DeepCopyInto(actualStargate)
-						actualStargate.SetResourceVersion(resourceVersion)
-
-						if err = remoteClient.Update(ctx, actualStargate); err == nil {
-							return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-						} else {
-							logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
-							return ctrl.Result{}, err
-						}
-					}
-
-					if !stargateutil.IsReady(actualStargate) {
-						logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
-						return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
-					}
-					logger.Info("Stargate is ready", "Stargate", stargateKey)
 				}
+
+				if !stargateutil.IsReady(actualStargate.Status) {
+					logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
+					return ctrl.Result{RequeueAfter: defaultDelay}, nil
+				}
+				logger.Info("Stargate is ready", "Stargate", stargateKey)
 			}
 		}
 	}
-	logger.Info("Finished reconciling the k8ssandracluster")
+	logger.Info("Finished reconciling the k8ssandracluster", "K8ssandraCluster", kcKey)
 	return ctrl.Result{}, nil
 }
 
@@ -336,6 +350,10 @@ func addSeedEndpoints(seeds []string, endpoints ...string) []string {
 		}
 	}
 
+	// We must sort the results here to ensure consistent ordering. See
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/80 for details.
+	sort.Strings(updatedSeeds)
+
 	return updatedSeeds
 }
 
@@ -380,8 +398,7 @@ func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, kcKey type
 	return types.NamespacedName{Namespace: dcTemplate.Meta.Namespace, Name: dcTemplate.Meta.Name}
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
@@ -396,11 +413,10 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(ctx context.Context,
 		}
 	}
 
-	return r.Status().Patch(ctx, kc, patch)
+	return nil
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, kc *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
@@ -420,7 +436,7 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(ctx context.Context, k
 		}
 	}
 
-	return r.Status().Patch(ctx, kc, patch)
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

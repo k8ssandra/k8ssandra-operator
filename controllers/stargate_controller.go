@@ -26,14 +26,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"time"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 )
@@ -101,7 +99,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{}, err
 				}
 			}
-			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+			return ctrl.Result{RequeueAfter: defaultDelay}, nil
 		} else {
 			logger.Error(err, "Failed to fetch CassandraDatacenter", "CassandraDatacenter", dcKey)
 			return ctrl.Result{}, err
@@ -119,7 +117,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 		logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
-		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: defaultDelay}, nil
 	}
 
 	// Compute the desired deployment
@@ -157,7 +155,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				}
 			} else {
 				logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
-				return ctrl.Result{RequeueAfter: time.Minute}, nil
+				return ctrl.Result{RequeueAfter: longDelay}, nil
 			}
 		} else {
 			logger.Error(err, "Failed to fetch Stargate Deployment", "Deployment", deploymentKey)
@@ -181,7 +179,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		} else {
 			logger.Info("Stargate Deployment updated successfully", "Deployment", deploymentKey)
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
+			return ctrl.Result{RequeueAfter: longDelay}, nil
 		}
 	}
 
@@ -213,7 +211,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 		logger.Info("Waiting for deployment to be rolled out", "Deployment", deploymentKey)
-		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: defaultDelay}, nil
 	}
 
 	// Compute the desired service
@@ -241,7 +239,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				}
 			} else {
 				logger.Info("Stargate Service created successfully", "Service", serviceKey)
-				return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+				return ctrl.Result{RequeueAfter: defaultDelay}, nil
 			}
 		} else {
 			logger.Error(err, "Failed to fetch Stargate Service", "Service", serviceKey)
@@ -265,7 +263,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		} else {
 			logger.Info("Stargate Service updated successfully", "Service", serviceKey)
-			return ctrl.Result{RequeueAfter: time.Minute}, nil
+			return ctrl.Result{RequeueAfter: longDelay}, nil
 		}
 	}
 
