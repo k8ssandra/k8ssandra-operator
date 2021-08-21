@@ -40,6 +40,9 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 			},
 		},
 	}
+	if klusterName, found := stargate.Labels[api.K8ssandraClusterLabel]; found {
+		service.Labels[api.K8ssandraClusterLabel] = klusterName
+	}
 	service.Annotations[api.ResourceHashAnnotation] = utils.DeepHashString(service)
 	return service
 }
