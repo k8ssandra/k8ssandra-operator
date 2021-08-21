@@ -4,7 +4,7 @@
 # script fetches the k8ssandra-operator service account from the remote cluster and
 # extracts the token and CA cert which are then added to a kubeconfig file. The script then
 # creates a secret with the contents of the kubeconfig file. Lastly, the script creates a
-# ClientObject that references the secret.
+# ClientConfig object that references the secret.
 #
 # This script requires the following to be installed:
 #
@@ -82,7 +82,7 @@ else
   mkdir -p $output_dir
 fi
 
-if [ ! -z "$namespace"]; then
+if [ ! -z "$namespace" ]; then
   namespace_opt="-n $namespace"
 fi
 
