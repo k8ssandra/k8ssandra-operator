@@ -105,6 +105,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					// Create it
 					copiedSecret := sec.DeepCopy()
 					copiedSecret.ResourceVersion = ""
+					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					if err := remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", targetCtx)
 						return ctrl.Result{}, err

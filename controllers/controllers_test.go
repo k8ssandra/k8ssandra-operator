@@ -35,7 +35,6 @@ const (
 )
 
 var (
-	// testClients    = make(map[string]client.Client, clustersToCreate)
 	seedsResolver  = &fakeSeedsResolver{}
 	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
