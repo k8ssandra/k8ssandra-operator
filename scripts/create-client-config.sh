@@ -21,16 +21,25 @@ OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeco
 eval set -- "$OPTS"
 
 function help() {
-    echo
-    echo "Syntax: create-client-config.sh [options]"
-    echo "Options:"
-    echo "src-context     The context for the source cluster that contains the service account. This or the src-kubeconfig option must be set."
-    echo "src-kubeconfig   The kubeconfig for the source cluster that contains the service account. This or the src-context option must be set."
-    echo "dest-context    The context for the cluster where the ClientConfig will be created."
-    echo "dest-kubeconfig  The kubeconfig for the cluster where the ClientConfig will be created."
-    echo "namespace       The namespace in which the service account exists and where the ClientConfig will be created."
-    echo "serviceaccount  The name of the service account from which the ClientConfig will be created. Defaults to k8ssandra-operator."
-    echo "output-dir      The directory where generated artifacts are written. If not specified a temp directory is created."
+cat << EOF
+Syntax: create-client-config.sh [options]
+Options:
+  --src-context <ctx>      The context for the source cluster that contains the service account.
+                           This or the src-kubeconfig option must be set.
+  --src-kubeconfig <cfg>   The kubeconfig for the source cluster that contains the service account.
+                           This or the src-context option must be set.
+  --dest-context <ctx>     The context for the cluster where the ClientConfig will be created.
+                           Defaults to the current context of the kubeconfig used.
+  --dest-kubeconfig <cfg>  The kubeconfig for the cluster where the ClientConfig will be created.
+                           Defaults to $HOME/.kube/config.
+  --namespace <ns>         The namespace in which the service account exists and
+                           where the ClientConfig will be created.
+  --serviceaccount <name>  The name of the service account from which the ClientConfig will be created.
+                           Defaults to k8ssandra-operator.
+  --output-dir <path>      The directory where generated artifacts are written.
+                           If not specified a temp directory is created.
+  --help                   Displays this help message.
+EOF
 }
 
 src_context=""
@@ -64,6 +73,8 @@ fi
 src_context_opt=""
 src_kubeconfig_opt=""
 namespace_opt=""
+dest_context_opt=""
+dest_kubeconfig_opt=""
 
 if [ -z "$src_context" ]; then
   src_context=$(kubectl $src_kubeconfig config current-context)
@@ -84,6 +95,14 @@ fi
 
 if [ ! -z "$namespace" ]; then
   namespace_opt="-n $namespace"
+fi
+
+if [ ! -z "$dest_kubeconfig" ]; then
+  dest_context_opt="--kubeconfig=$dest_kubeconfig"
+fi
+
+if [ ! -z "$dest_context" ]; then
+  dest_context_opt="--context=$dest_context"
 fi
 
 sa_secret=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get serviceaccount $service_account -o jsonpath='{.secrets[0].name}')
@@ -119,7 +138,7 @@ EOF
 output_secret="$src_context-config"
 echo "Creating secret $output_secret"
 
-kubectl $namespace_opt create secret generic $output_secret --from-file="$output_kubeconfig"
+kubectl $dest_kubeconfig_opt $dest_context_opt $namespace_opt create secret generic $output_secret --from-file="$output_kubeconfig"
 
 clientconfig_name="$src_context"
 clientconfig_path="${output_dir}/${clientconfig_name}.yaml"
@@ -135,4 +154,4 @@ spec:
     name: $output_secret
 EOF
 
-kubectl $namespace_opt apply -f $clientconfig_path
+kubectl $dest_kubeconfig_opt $dest_context_opt $namespace_opt apply -f $clientconfig_path
