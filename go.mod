@@ -5,11 +5,16 @@ go 1.16
 require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/bombsimon/logrusr v1.1.0
+	github.com/datastax/go-cassandra-native-protocol v0.0.0-20210829124742-a80a54434112
 	github.com/go-logr/logr v0.4.0
+	github.com/go-sql-driver/mysql v1.5.0 // indirect
+	github.com/gruntwork-io/terratest v0.37.7
 	github.com/k8ssandra/cass-operator v1.7.1
 	github.com/pkg/errors v0.9.1
+	github.com/rs/zerolog v1.20.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
+	gopkg.in/resty.v1 v1.12.0
 	k8s.io/api v0.21.2
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v12.0.0+incompatible

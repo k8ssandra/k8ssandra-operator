@@ -71,10 +71,10 @@ func NewE2eFramework() (*E2eFramework, error) {
 		}
 
 		// TODO Add a flag or option to allow the user to specify the control plane cluster
-		//if len(ControlPlaneContext) == 0 {
+		// if len(ControlPlaneContext) == 0 {
 		//	ControlPlaneContext = name
 		//	controlPlaneClient = remoteClient
-		//}
+		// }
 		remoteClients[name] = remoteClient
 	}
 
@@ -369,8 +369,8 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 	}
 
 	for k8sContext, remoteClient := range f.remoteClients {
-		f.logger.WithValues("deleting namespace", "Namespace", name, "Context", k8sContext)
-		if err := remoteClient.Delete(context.Background(), namespace.DeepCopy()); err != nil {
+		f.logger.Info("deleting namespace", "Namespace", name, "Context", k8sContext)
+		if err := remoteClient.Delete(context.Background(), namespace.DeepCopy()); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}

@@ -4,6 +4,16 @@ networking:
   apiServerPort: 45451
 nodes:
   - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      - containerPort: 30942
+        hostPort: 30942
+        protocol: TCP
+      - containerPort: 30090
+        hostPort: 30090
+        protocol: TCP
   - role: worker
     kubeadmConfigPatches:
       - |
