@@ -126,8 +126,8 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	}, timeout, interval)
 
 	t.Log("check that the owner reference is set on the Stargate deployment")
-	require.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
-	require.Equal(t, stargate.UID, deployment.OwnerReferences[0].UID)
+	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
+	assert.Equal(t, stargate.UID, deployment.OwnerReferences[0].UID)
 
 	deployment.Status.Replicas = 1
 	deployment.Status.ReadyReplicas = 1
@@ -150,18 +150,18 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	}, timeout, interval)
 
 	t.Log("check Stargate status")
-	require.EqualValues(t, 1, stargate.Status.Replicas, "expected to find 1 replica for Stargate")
-	require.EqualValues(t, 1, stargate.Status.ReadyReplicas, "expected to find 1 ready replica for Stargate")
-	require.EqualValues(t, 1, stargate.Status.AvailableReplicas, "expected to find 1 available replica for Stargate")
-	require.EqualValues(t, 1, stargate.Status.UpdatedReplicas, "expected to find 1 updated replica for Stargate")
-	require.Equal(t, "1/1", *stargate.Status.ReadyReplicasRatio)
-	require.Len(t, stargate.Status.DeploymentRefs, 1)
-	require.NotNil(t, stargate.Status.ServiceRef)
+	assert.EqualValues(t, 1, stargate.Status.Replicas, "expected to find 1 replica for Stargate")
+	assert.EqualValues(t, 1, stargate.Status.ReadyReplicas, "expected to find 1 ready replica for Stargate")
+	assert.EqualValues(t, 1, stargate.Status.AvailableReplicas, "expected to find 1 available replica for Stargate")
+	assert.EqualValues(t, 1, stargate.Status.UpdatedReplicas, "expected to find 1 updated replica for Stargate")
+	assert.Equal(t, "1/1", *stargate.Status.ReadyReplicasRatio)
+	assert.Len(t, stargate.Status.DeploymentRefs, 1)
+	assert.NotNil(t, stargate.Status.ServiceRef)
 
 	t.Log("check Stargate condition")
-	require.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
-	require.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
-	require.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
+	assert.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
+	assert.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
+	assert.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
 }
 
 func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
@@ -277,7 +277,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 		return err == nil
 	}, timeout, interval)
 
-	require.Len(t, deploymentList.Items, 3)
+	assert.Len(t, deploymentList.Items, 3)
 
 	deployment1 := deploymentList.Items[0]
 	assert.Equal(t, "cluster1-dc2-rack1-stargate-deployment", deployment1.Name)
@@ -335,16 +335,16 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	}, timeout, interval)
 
 	t.Log("check Stargate status")
-	require.EqualValues(t, 3, stargate.Status.Replicas, "expected to find 3 replicas for Stargate")
-	require.EqualValues(t, 3, stargate.Status.ReadyReplicas, "expected to find 3 ready replicas for Stargate")
-	require.EqualValues(t, 3, stargate.Status.AvailableReplicas, "expected to find 3 available replicas for Stargate")
-	require.EqualValues(t, 3, stargate.Status.UpdatedReplicas, "expected to find 3 updated replicas for Stargate")
-	require.Equal(t, "3/3", *stargate.Status.ReadyReplicasRatio)
-	require.Len(t, stargate.Status.DeploymentRefs, 3)
-	require.NotNil(t, stargate.Status.ServiceRef)
+	assert.EqualValues(t, 3, stargate.Status.Replicas, "expected to find 3 replicas for Stargate")
+	assert.EqualValues(t, 3, stargate.Status.ReadyReplicas, "expected to find 3 ready replicas for Stargate")
+	assert.EqualValues(t, 3, stargate.Status.AvailableReplicas, "expected to find 3 available replicas for Stargate")
+	assert.EqualValues(t, 3, stargate.Status.UpdatedReplicas, "expected to find 3 updated replicas for Stargate")
+	assert.Equal(t, "3/3", *stargate.Status.ReadyReplicasRatio)
+	assert.Len(t, stargate.Status.DeploymentRefs, 3)
+	assert.NotNil(t, stargate.Status.ServiceRef)
 
 	t.Log("check Stargate condition")
-	require.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
-	require.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
-	require.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
+	assert.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
+	assert.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
+	assert.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
 }
