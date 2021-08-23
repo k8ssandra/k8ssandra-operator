@@ -36,12 +36,12 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 )
 
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/finalizers,verbs=update
-//+kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apps,namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // StargateReconciler reconciles a Stargate object
 type StargateReconciler struct {
@@ -120,88 +120,139 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{RequeueAfter: defaultDelay}, nil
 	}
 
-	// Compute the desired deployment
-	desiredDeployment := stargateutil.NewDeployment(stargate, actualDc)
+	racks := len(actualDc.GetRacks())
+	if int(stargate.Spec.Size) < racks {
+		logger.Info(
+			fmt.Sprintf(
+				"Stargate size (%v) is lesser than the number of racks (%v): some racks won't have any Stargate pod",
+				stargate.Spec.Size,
+				racks,
+			),
+			"Stargate", req.NamespacedName)
+	} else if int(stargate.Spec.Size)%racks != 0 {
+		logger.Info(
+			fmt.Sprintf(
+				"Stargate size (%v) cannot be evenly distributed across %v racks: some racks will have more Stargate pods than others",
+				stargate.Spec.Size,
+				racks,
+			),
+			"Stargate", req.NamespacedName)
+	}
+
+	// Compute the desired deployments
+	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc)
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {
 		stargate.Status.Progress = api.StargateProgressDeploying
-		stargate.Status.DeploymentRef = &desiredDeployment.Name
+		stargate.Status.DeploymentRefs = make([]string, 0)
+		for _, deployment := range desiredDeployments {
+			stargate.Status.DeploymentRefs = append(stargate.Status.DeploymentRefs, deployment.Name)
+		}
 		if err := r.Status().Update(ctx, stargate); err != nil {
 			logger.Error(err, "Failed to update Stargate status", "Stargate", req.NamespacedName)
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Check if a deployment already exists, if not create a new one
-	deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: desiredDeployment.Name}
-	actualDeployment := &appsv1.Deployment{}
-	logger.Info("Fetching Stargate Deployment", "Deployment", deploymentKey)
-	if err := r.Get(ctx, deploymentKey, actualDeployment); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Stargate Deployment not found, creating a new one", "Deployment", deploymentKey)
-			// Set Stargate instance as the owner and controller
-			if err := ctrl.SetControllerReference(stargate, desiredDeployment, r.Scheme); err != nil {
-				logger.Error(err, "Failed to set controller reference on new Stargate Deployment", "Deployment", deploymentKey)
+	var replicas int32 = 0
+	var readyReplicas int32 = 0
+	var updatedReplicas int32 = 0
+	var availableReplicas int32 = 0
+
+	actualDeployments := &appsv1.DeploymentList{}
+	if err := r.List(
+		ctx,
+		actualDeployments,
+		client.InNamespace(req.Namespace),
+		client.MatchingLabels{api.StargateLabel: stargate.Name},
+	); err != nil {
+		logger.Error(err, "Failed to list Stargate Deployments", "Stargate", req.NamespacedName)
+		return ctrl.Result{}, err
+	}
+
+	for _, actualDeployment := range actualDeployments.Items {
+		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: actualDeployment.Name}
+		if desiredDeployment, found := desiredDeployments[actualDeployment.Name]; !found {
+			// Deployment exists but is not desired anymore: delete it
+			logger.Info("Deleting Stargate Deployment", "Deployment", deploymentKey)
+			if err := r.Delete(ctx, &actualDeployment); err != nil {
+				logger.Error(err, "Failed to delete Stargate Deployment", "Deployment", deploymentKey)
 				return ctrl.Result{}, err
-			} else if err := r.Create(ctx, desiredDeployment); err != nil {
-				if errors.IsAlreadyExists(err) {
-					// the read from the local cache didn't catch that the resource was created
-					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{Requeue: true}, nil
-				} else {
-					logger.Error(err, "Failed to create new Stargate Deployment", "Deployment", deploymentKey)
-					return ctrl.Result{}, err
-				}
 			} else {
-				logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
+				logger.Info("Stargate Deployment deleted successfully", "Deployment", deploymentKey)
 				return ctrl.Result{RequeueAfter: longDelay}, nil
 			}
 		} else {
-			logger.Error(err, "Failed to fetch Stargate Deployment", "Deployment", deploymentKey)
-			return ctrl.Result{}, err
+			// Deployment already exists: check if it needs to be updated
+			desiredDeploymentHash := desiredDeployment.Annotations[api.ResourceHashAnnotation]
+			if actualDeploymentHash, found := actualDeployment.Annotations[api.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
+				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
+				resourceVersion := actualDeployment.GetResourceVersion()
+				desiredDeployment.DeepCopyInto(&actualDeployment)
+				actualDeployment.SetResourceVersion(resourceVersion)
+				// Set Stargate instance as the owner and controller
+				if err := ctrl.SetControllerReference(stargate, &actualDeployment, r.Scheme); err != nil {
+					logger.Error(err, "Failed to set controller reference on updated Stargate Deployment", "Deployment", deploymentKey)
+					return ctrl.Result{}, err
+				} else if err := r.Update(ctx, &actualDeployment); err != nil {
+					logger.Error(err, "Failed to update Stargate Deployment", "Deployment", deploymentKey)
+					return ctrl.Result{}, err
+				} else {
+					logger.Info("Stargate Deployment updated successfully", "Deployment", deploymentKey)
+					return ctrl.Result{RequeueAfter: longDelay}, nil
+				}
+			}
+			delete(desiredDeployments, actualDeployment.Name)
+			replicas += actualDeployment.Status.Replicas
+			readyReplicas += actualDeployment.Status.ReadyReplicas
+			updatedReplicas += actualDeployment.Status.UpdatedReplicas
+			availableReplicas += actualDeployment.Status.AvailableReplicas
 		}
 	}
 
-	// Check if the deployment needs to be updated
-	desiredDeploymentHash := desiredDeployment.Annotations[api.ResourceHashAnnotation]
-	if actualDeploymentHash, found := actualDeployment.Annotations[api.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
-		logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
-		resourceVersion := actualDeployment.GetResourceVersion()
-		desiredDeployment.DeepCopyInto(actualDeployment)
-		actualDeployment.SetResourceVersion(resourceVersion)
+	for _, desiredDeployment := range desiredDeployments {
+		// Deployment does not exist yet: create a new one
+		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: desiredDeployment.Name}
+		logger.Info("Stargate Deployment not found, creating a new one", "Deployment", deploymentKey)
 		// Set Stargate instance as the owner and controller
-		if err := ctrl.SetControllerReference(stargate, actualDeployment, r.Scheme); err != nil {
-			logger.Error(err, "Failed to set controller reference on updated Stargate Deployment", "Deployment", deploymentKey)
+		if err := ctrl.SetControllerReference(stargate, &desiredDeployment, r.Scheme); err != nil {
+			logger.Error(err, "Failed to set controller reference on new Stargate Deployment", "Deployment", deploymentKey)
 			return ctrl.Result{}, err
-		} else if err := r.Update(ctx, actualDeployment); err != nil {
-			logger.Error(err, "Failed to update Stargate Deployment", "Deployment", deploymentKey)
-			return ctrl.Result{}, err
+		} else if err := r.Create(ctx, &desiredDeployment); err != nil {
+			if errors.IsAlreadyExists(err) {
+				// the read from the local cache didn't catch that the resource was created
+				// already; simply requeue until the cache is up-to-date
+				return ctrl.Result{Requeue: true}, nil
+			} else {
+				logger.Error(err, "Failed to create new Stargate Deployment", "Deployment", deploymentKey)
+				return ctrl.Result{}, err
+			}
 		} else {
-			logger.Info("Stargate Deployment updated successfully", "Deployment", deploymentKey)
+			logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
 			return ctrl.Result{RequeueAfter: longDelay}, nil
 		}
 	}
 
 	// Update status to reflect deployment status
-	if stargate.Status.Replicas != actualDeployment.Status.Replicas ||
-		stargate.Status.ReadyReplicas != actualDeployment.Status.ReadyReplicas ||
-		stargate.Status.UpdatedReplicas != actualDeployment.Status.UpdatedReplicas ||
-		stargate.Status.AvailableReplicas != actualDeployment.Status.AvailableReplicas {
-		ratio := fmt.Sprintf("%v/%v", actualDeployment.Status.ReadyReplicas, stargate.Spec.Size)
+	if stargate.Status.Replicas != replicas ||
+		stargate.Status.ReadyReplicas != readyReplicas ||
+		stargate.Status.UpdatedReplicas != updatedReplicas ||
+		stargate.Status.AvailableReplicas != availableReplicas {
+		ratio := fmt.Sprintf("%v/%v", readyReplicas, stargate.Spec.Size)
 		stargate.Status.ReadyReplicasRatio = &ratio
-		stargate.Status.Replicas = actualDeployment.Status.Replicas
-		stargate.Status.ReadyReplicas = actualDeployment.Status.ReadyReplicas
-		stargate.Status.UpdatedReplicas = actualDeployment.Status.UpdatedReplicas
-		stargate.Status.AvailableReplicas = actualDeployment.Status.AvailableReplicas
+		stargate.Status.Replicas = replicas
+		stargate.Status.ReadyReplicas = readyReplicas
+		stargate.Status.UpdatedReplicas = updatedReplicas
+		stargate.Status.AvailableReplicas = availableReplicas
 		if err := r.Status().Update(ctx, stargate); err != nil {
 			logger.Error(err, "Failed to update Stargate status", "Stargate", req.NamespacedName)
 			return ctrl.Result{}, err
 		}
 	}
 
-	// Wait until the deployment is rolled out
-	if actualDeployment.Status.ReadyReplicas != stargate.Spec.Size {
+	// Wait until all deployments are rolled out
+	if readyReplicas != stargate.Spec.Size {
 		// Transition status back to "Deploying" if it was "Running"
 		if stargate.Status.Progress != api.StargateProgressDeploying {
 			stargate.Status.Progress = api.StargateProgressDeploying
@@ -210,7 +261,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			}
 		}
-		logger.Info("Waiting for deployment to be rolled out", "Deployment", deploymentKey)
+		logger.Info("Waiting for deployments to be rolled out", "Stargate", req.NamespacedName)
 		return ctrl.Result{RequeueAfter: defaultDelay}, nil
 	}
 
@@ -226,7 +277,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Info("Stargate Service not found, creating a new one", "Service", serviceKey)
 			// Set Stargate instance as the owner and controller
 			if err := ctrl.SetControllerReference(stargate, desiredService, r.Scheme); err != nil {
-				logger.Error(err, "Failed to set controller reference on new Stargate Service", "Deployment", deploymentKey)
+				logger.Error(err, "Failed to set controller reference on new Stargate Service", "Service", serviceKey)
 				return ctrl.Result{}, err
 			} else if err := r.Create(ctx, desiredService); err != nil {
 				if errors.IsAlreadyExists(err) {
@@ -256,7 +307,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		actualService.SetResourceVersion(resourceVersion)
 		// Set Stargate instance as the owner and controller
 		if err := ctrl.SetControllerReference(stargate, actualService, r.Scheme); err != nil {
-			logger.Error(err, "Failed to set controller reference on updated Stargate Service", "Deployment", deploymentKey)
+			logger.Error(err, "Failed to set controller reference on updated Stargate Service", "Service", serviceKey)
 			return ctrl.Result{}, err
 		} else if err := r.Update(ctx, actualService); err != nil {
 			logger.Error(err, "Failed to update Stargate Service", "Service", serviceKey)
@@ -272,11 +323,11 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		stargate.Status.Progress = api.StargateProgressRunning
 		stargate.Status.ServiceRef = &actualService.Name
 		now := metav1.Now()
-		stargate.Status.Conditions = []api.StargateCondition{{
+		stargate.Status.SetCondition(api.StargateCondition{
 			Type:               api.StargateReady,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
-		}}
+		})
 		if err := r.Status().Update(ctx, stargate); err != nil {
 			logger.Error(err, "Failed to update Stargate status", "Stargate", req.NamespacedName)
 			return ctrl.Result{}, err

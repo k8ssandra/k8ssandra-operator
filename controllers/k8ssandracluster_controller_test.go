@@ -6,7 +6,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
-	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -370,8 +369,10 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext:    k8sCtx0,
 						Size:          3,
 						ServerVersion: "3.11.10",
-						Stargate: &api.StargateTemplate{
-							Size: 1,
+						Stargate: &api.StargateDatacenterTemplate{
+							StargateClusterTemplate: api.StargateClusterTemplate{
+								Size: 1,
+							},
 						},
 					},
 					{
@@ -381,8 +382,10 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext:    k8sCtx1,
 						Size:          3,
 						ServerVersion: "3.11.10",
-						Stargate: &api.StargateTemplate{
-							Size: 1,
+						Stargate: &api.StargateDatacenterTemplate{
+							StargateClusterTemplate: api.StargateClusterTemplate{
+								Size: 1,
+							},
 						},
 					},
 				},
@@ -489,7 +492,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		sg.Status.Replicas = 1
 		sg.Status.ReadyReplicas = 1
 		sg.Status.UpdatedReplicas = 1
-		stargateutil.SetCondition(sg, api.StargateCondition{
+		sg.Status.SetCondition(api.StargateCondition{
 			Type:               api.StargateReady,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
@@ -556,7 +559,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		sg.Status.Replicas = 1
 		sg.Status.ReadyReplicas = 1
 		sg.Status.UpdatedReplicas = 1
-		stargateutil.SetCondition(sg, api.StargateCondition{
+		sg.Status.SetCondition(api.StargateCondition{
 			Type:               api.StargateReady,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
@@ -589,7 +592,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
-		if k8ssandraStatus.Stargate == nil || !stargateutil.IsReady(*k8ssandraStatus.Stargate) {
+		if k8ssandraStatus.Stargate == nil || !k8ssandraStatus.Stargate.IsReady() {
 			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc1Key.Name)
 		}
 
@@ -605,27 +608,13 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
-		if k8ssandraStatus.Stargate == nil || !stargateutil.IsReady(*k8ssandraStatus.Stargate) {
+		if k8ssandraStatus.Stargate == nil || !k8ssandraStatus.Stargate.IsReady() {
 			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc2Key.Name)
 			return false
 		}
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
-}
-
-func equalsNoOrder(s1, s2 []string) bool {
-	if len(s1) != len(s2) {
-		return false
-	}
-
-	for _, s := range s1 {
-		if !contains(s2, s) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {

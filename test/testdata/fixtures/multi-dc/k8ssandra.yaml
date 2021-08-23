@@ -12,6 +12,16 @@ spec:
         k8sContext: kind-k8ssandra-0
         serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack2
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack3
         serverVersion: "3.11.10"
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -46,6 +56,7 @@ spec:
              memory: 800Mi
         stargate:
           size: 1
+          allowStargateOnDataNodes: true
           heapSize: 384Mi
           resources:
             limits:
@@ -53,13 +64,9 @@ spec:
           cassandraConfigMap:
             name: cassandra-config
           livenessProbe:
-            failureThreshold: 5
-            httpGet:
-              path: /checker/liveness
-              port: health
-              scheme: HTTP
             initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 10
             successThreshold: 1
             timeoutSeconds: 10
       - metadata:
@@ -67,6 +74,16 @@ spec:
         k8sContext: kind-k8ssandra-1
         serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
         size: 3
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack2
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": rack3
         serverVersion: "3.11.10"
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -101,6 +118,7 @@ spec:
             memory: 800Mi
         stargate:
           size: 1
+          allowStargateOnDataNodes: true
           heapSize: 384Mi
           cassandraConfigMap:
             name: cassandra-config
@@ -108,12 +126,8 @@ spec:
             limits:
               memory: 512Mi
           livenessProbe:
-            failureThreshold: 5
-            httpGet:
-              path: /checker/liveness
-              port: health
-              scheme: HTTP
             initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 10
             successThreshold: 1
             timeoutSeconds: 10
