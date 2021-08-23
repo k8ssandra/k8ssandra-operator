@@ -112,8 +112,10 @@ type StargateDatacenterTemplate struct {
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
 }
 
-// MergeWith merges this StargateDatacenterTemplate with the given StargateClusterTemplate.
-func (in *StargateDatacenterTemplate) MergeWith(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
+// Coalesce compares this StargateDatacenterTemplate with the given StargateClusterTemplate and returns the first
+// non-nil StargateDatacenterTemplate it finds.
+// TODO revisit the merging strategy and/or find a better name for this method
+func (in *StargateDatacenterTemplate) Coalesce(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
 	if in == nil && clusterTemplate == nil {
 		return nil
 	} else if in == nil {
@@ -135,8 +137,10 @@ type StargateRackTemplate struct {
 	Name string `json:"name"`
 }
 
-// MergeWith merges this StargateRackTemplate the given StargateDatacenterTemplate.
-func (in *StargateRackTemplate) MergeWith(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
+// Coalesce compares this StargateRackTemplate with the given StargateDatacenterTemplate and returns the first non-nil
+// StargateTemplate it finds.
+// TODO revisit the merging strategy and/or find a better name for this method
+func (in *StargateRackTemplate) Coalesce(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
 	if in == nil && dcTemplate == nil {
 		return nil
 	} else if in == nil {

@@ -179,7 +179,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			}
 		}
 
-		stargateTemplate := dcTemplate.Stargate.MergeWith(kc.Spec.Stargate)
+		stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 
 		if stargateTemplate != nil {
 

@@ -23,11 +23,11 @@ func TestStargateStatus(t *testing.T) {
 }
 
 func TestStargateDatacenterTemplate(t *testing.T) {
-	t.Run("MergeWith", testStargateDatacenterTemplateMergeWith)
+	t.Run("Coalesce", testStargateDatacenterTemplateCoalesce)
 }
 
 func TestStargateRackTemplate(t *testing.T) {
-	t.Run("MergeWith", testStargateRackTemplateMergeWith)
+	t.Run("Coalesce", testStargateRackTemplateCoalesce)
 }
 
 func testStargateGetRackTemplate(t *testing.T) {
@@ -157,12 +157,12 @@ func testStargateSetCondition(t *testing.T) {
 	})
 }
 
-func testStargateDatacenterTemplateMergeWith(t *testing.T) {
+func testStargateDatacenterTemplateCoalesce(t *testing.T) {
 
 	t.Run("Nil dc with nil cluster", func(t *testing.T) {
 		var clusterTemplate *StargateClusterTemplate = nil
 		var dcTemplate *StargateDatacenterTemplate = nil
-		actual := dcTemplate.MergeWith(clusterTemplate)
+		actual := dcTemplate.Coalesce(clusterTemplate)
 		assert.Nil(t, actual)
 	})
 
@@ -170,7 +170,7 @@ func testStargateDatacenterTemplateMergeWith(t *testing.T) {
 		clusterTemplate := &StargateClusterTemplate{Size: 10}
 		var dcTemplate *StargateDatacenterTemplate = nil
 		expected := &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
-		actual := dcTemplate.MergeWith(clusterTemplate)
+		actual := dcTemplate.Coalesce(clusterTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, expected, actual)
 	})
@@ -180,7 +180,7 @@ func testStargateDatacenterTemplateMergeWith(t *testing.T) {
 		dcTemplate := &StargateDatacenterTemplate{
 			StargateClusterTemplate: StargateClusterTemplate{Size: 10},
 		}
-		actual := dcTemplate.MergeWith(clusterTemplate)
+		actual := dcTemplate.Coalesce(clusterTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, dcTemplate, actual)
 	})
@@ -190,18 +190,18 @@ func testStargateDatacenterTemplateMergeWith(t *testing.T) {
 		dcTemplate := &StargateDatacenterTemplate{
 			StargateClusterTemplate: StargateClusterTemplate{Size: 20},
 		}
-		actual := dcTemplate.MergeWith(clusterTemplate)
+		actual := dcTemplate.Coalesce(clusterTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, dcTemplate, actual)
 	})
 }
 
-func testStargateRackTemplateMergeWith(t *testing.T) {
+func testStargateRackTemplateCoalesce(t *testing.T) {
 
 	t.Run("Nil rack with nil dc", func(t *testing.T) {
 		var dcTemplate *StargateDatacenterTemplate = nil
 		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.MergeWith(dcTemplate)
+		actual := rackTemplate.Coalesce(dcTemplate)
 		assert.Nil(t, actual)
 	})
 
@@ -212,7 +212,7 @@ func testStargateRackTemplateMergeWith(t *testing.T) {
 			},
 		}
 		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.MergeWith(dcTemplate)
+		actual := rackTemplate.Coalesce(dcTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, &dcTemplate.StargateTemplate, actual)
 	})
@@ -222,7 +222,7 @@ func testStargateRackTemplateMergeWith(t *testing.T) {
 		rackTemplate := &StargateRackTemplate{
 			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
 		}
-		actual := rackTemplate.MergeWith(dcTemplate)
+		actual := rackTemplate.Coalesce(dcTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
 	})
@@ -236,7 +236,7 @@ func testStargateRackTemplateMergeWith(t *testing.T) {
 		rackTemplate := &StargateRackTemplate{
 			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
 		}
-		actual := rackTemplate.MergeWith(dcTemplate)
+		actual := rackTemplate.Coalesce(dcTemplate)
 		assert.NotNil(t, actual)
 		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
 	})

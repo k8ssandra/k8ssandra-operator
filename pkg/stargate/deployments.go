@@ -40,7 +40,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			break
 		}
 
-		template := stargate.GetRackTemplate(rack.Name).MergeWith(&stargate.Spec.StargateDatacenterTemplate)
+		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
 
 		deploymentName := computeDeploymentName(dc, &rack)
 		image := computeImage(template, clusterVersion)
