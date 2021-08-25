@@ -28,10 +28,15 @@ type ReplicatedSecretSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Which secrets are replicated
+	// Selector defines which secrets are replicated. If left empty, all the secrets are replicated
+	// +optional
 	Selector metav1.LabelSelector `json:"selector,omitempty"`
-	// TargetContexts indicates the target clusters which the secret is replicated to
+	// TargetContexts indicates the target clusters to which the secrets are replicated to. If empty, no clusters are targeted
+	// +optional
 	TargetContexts []string `json:"targetContexts,omitempty"`
+
+	// TODO Add TargetContexts list vs. TargetContextSelector? Just like label selector (to allow replicating to all clusters)
+
 }
 
 // ReplicatedSecretStatus defines the observed state of ReplicatedSecret

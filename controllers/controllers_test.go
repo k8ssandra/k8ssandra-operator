@@ -48,12 +48,12 @@ func TestControllers(t *testing.T) {
 	defaultDelay = time.Millisecond * 500
 	longDelay = time.Second
 
-	t.Run("K8ssandraCluster", func(t *testing.T) {
-		testK8ssandraCluster(ctx, t)
-	})
-	t.Run("Stargate", func(t *testing.T) {
-		testStargate(ctx, t)
-	})
+	// t.Run("K8ssandraCluster", func(t *testing.T) {
+	// 	testK8ssandraCluster(ctx, t)
+	// })
+	// t.Run("Stargate", func(t *testing.T) {
+	// 	testStargate(ctx, t)
+	// })
 
 	t.Run("SecretController", func(t *testing.T) {
 		testSecretController(ctx, t)

@@ -83,7 +83,9 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	}, 3, interval)
 
 	t.Log("modify the secret in the main cluster")
-	toModifySecret := generatedSecrets[0].DeepCopy()
+	toModifySecret := &corev1.Secret{}
+	err = f.Client.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: namespace}, toModifySecret)
+	require.NoError(err, "failed to fetch modified secret from the main cluster")
 	toModifySecret.Data["newKey"] = []byte("my-new-value")
 	err = f.Client.Update(ctx, toModifySecret)
 	require.NoError(err, "failed to modify secret in the main cluster")
@@ -234,6 +236,7 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 					if s.Name == ts.Name {
 						found = true
 						if !reflect.DeepEqual(s.Data, ts.Data) {
+							t.Logf("Differ: %v vs %v", s.Data, ts.Data)
 							return false
 						}
 						break
