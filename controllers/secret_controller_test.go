@@ -180,10 +180,14 @@ func generateReplicatedSecret(namespace string) *api.ReplicatedSecret {
 			Name:      "fetch-secrets",
 		},
 		Spec: api.ReplicatedSecretSpec{
-			Selector: metav1.LabelSelector{
+			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"secret-controller": "test"},
 			},
-			TargetContexts: []string{"cluster-1"},
+			ReplicationTargets: []api.ReplicationTarget{
+				{
+					K8sContextName: "cluster-1",
+				},
+			},
 		},
 	}
 }
