@@ -20,6 +20,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"math"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sort"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -85,25 +91,26 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ssandraCluster, kcLogger logr.Logger) (ctrl.Result, error) {
 	if kc.Spec.Cassandra == nil {
-		// TODO handle the scenario of Cassandra being set to nil after having a non-nil value
+		// TODO handle the scenario of CassandraClusterTemplate being set to nil after having a non-nil value
 		return ctrl.Result{}, nil
 	}
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	var seeds []string
-	systemDistributedRF := getSystemDistributedRF(kc)
+	//systemDistributedRF := getSystemDistributedRF(kc)
 	dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
 
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
 		dcNames = append(dcNames, dc.Meta.Name)
 	}
 
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+	systemReplication := cassandra.ComputeSystemReplication(kc)
 
-		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
-
+	for _, template := range kc.Spec.Cassandra.Datacenters {
+		dcTemplate := cassandra.Coalesce(kc.Spec.Cassandra, template.DeepCopy())
+		cassandra.ApplySystemReplication(dcTemplate, systemReplication)
+		desiredDc, err := cassandra.NewDatacenter(kcKey, dcTemplate, seeds)
+		//desiredDc, err := cassandra.NewDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcTemplate, seeds)
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return ctrl.Result{}, err
@@ -112,7 +119,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		desiredDcHash := utils.DeepHashString(desiredDc)
 		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
 
-		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		remoteClient, err := r.ClientCache.GetRemoteClient(template.K8sContext)
 		if err != nil {
 			logger.Error(err, "Failed to get remote client for datacenter")
 			return ctrl.Result{}, err
@@ -288,46 +295,25 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return ctrl.Result{}, nil
 }
 
-func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []string, template api.CassandraDatacenterTemplateSpec, additionalSeeds []string, systemDistributedRF int) (*cassdcapi.CassandraDatacenter, error) {
-	namespace := template.Meta.Namespace
-	if len(namespace) == 0 {
-		namespace = k8ssandraKey.Namespace
-	}
+func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
+	podList := &corev1.PodList{}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
 
-	config, err := cassandra.GetMergedConfig(template.Config, dcNames, systemDistributedRF, template.ServerVersion)
+	err := remoteClient.List(ctx, podList, labels)
 	if err != nil {
 		return nil, err
 	}
 
-	return &cassdcapi.CassandraDatacenter{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   namespace,
-			Name:        template.Meta.Name,
-			Annotations: map[string]string{},
-			Labels: map[string]string{
-				api.NameLabel:             api.NameLabelValue,
-				api.PartOfLabel:           api.PartOfLabelValue,
-				api.ComponentLabel:        api.ComponentLabelValueCassandra,
-				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterLabel: k8ssandraKey.Name,
-			},
-		},
-		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:     cluster,
-			ServerImage:     template.ServerImage,
-			Size:            template.Size,
-			ServerType:      "cassandra",
-			ServerVersion:   template.ServerVersion,
-			Resources:       template.Resources,
-			Config:          config,
-			Racks:           template.Racks,
-			StorageConfig:   template.StorageConfig,
-			AdditionalSeeds: additionalSeeds,
-			Networking: &cassdcapi.NetworkingConfig{
-				HostNetwork: true,
-			},
-		},
-	}, nil
+	endpoints := make([]string, 0, 3)
+
+	for _, pod := range podList.Items {
+		endpoints = append(endpoints, pod.Status.PodIP)
+		if len(endpoints) > 2 {
+			break
+		}
+	}
+
+	return endpoints, nil
 }
 
 func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *api.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *api.Stargate {
@@ -350,16 +336,6 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 		},
 	}
 	return desiredStargate
-}
-
-func getSystemDistributedRF(kc *api.K8ssandraCluster) int {
-	size := 1.0
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		size = math.Min(size, float64(dc.Size))
-	}
-	replicationFactor := math.Min(size, 3.0)
-
-	return int(replicationFactor)
 }
 
 func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, kc *api.K8ssandraCluster, seeds []string, start, end int) error {
@@ -421,7 +397,7 @@ func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Contex
 	return dc, remoteClient, err
 }
 
-func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplateSpec, kcKey types.NamespacedName) types.NamespacedName {
+func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplate, kcKey types.NamespacedName) types.NamespacedName {
 	if len(dcTemplate.Meta.Namespace) == 0 {
 		return types.NamespacedName{Namespace: kcKey.Namespace, Name: dcTemplate.Meta.Name}
 	}

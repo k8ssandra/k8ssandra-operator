@@ -20,6 +20,10 @@ import (
 	"testing"
 )
 
+var (
+	defaultStorageClass = "default"
+)
+
 func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv := &MultiClusterTestEnv{}
@@ -57,9 +61,9 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			Name:      "test",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.Cassandra{
+			Cassandra: &api.CassandraClusterTemplate{
 				Cluster: "test",
-				Datacenters: []api.CassandraDatacenterTemplateSpec{
+				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
@@ -67,6 +71,11 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 						K8sContext:    k8sCtx,
 						Size:          1,
 						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
 					},
 				},
 			},
@@ -177,9 +186,9 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			Name:      "test",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.Cassandra{
+			Cassandra: &api.CassandraClusterTemplate{
 				Cluster: "test",
-				Datacenters: []api.CassandraDatacenterTemplateSpec{
+				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
@@ -187,6 +196,11 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						K8sContext:    k8sCtx0,
 						Size:          3,
 						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -195,6 +209,11 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						K8sContext:    k8sCtx1,
 						Size:          3,
 						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
 					},
 				},
 			},
@@ -361,9 +380,9 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			Name:      "test",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.Cassandra{
+			Cassandra: &api.CassandraClusterTemplate{
 				Cluster: "test",
-				Datacenters: []api.CassandraDatacenterTemplateSpec{
+				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
@@ -371,6 +390,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext:    k8sCtx0,
 						Size:          3,
 						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
 						Stargate: &api.StargateDatacenterTemplate{
 							StargateClusterTemplate: api.StargateClusterTemplate{
 								Size: 1,
@@ -384,6 +408,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext:    k8sCtx1,
 						Size:          3,
 						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
 						Stargate: &api.StargateDatacenterTemplate{
 							StargateClusterTemplate: api.StargateClusterTemplate{
 								Size: 1,

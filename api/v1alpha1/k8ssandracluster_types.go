@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +30,7 @@ import (
 type K8ssandraClusterSpec struct {
 	K8sContextsSecret string `json:"k8sContextsSecret,omitempty"`
 
-	Cassandra *Cassandra `json:"cassandra,omitempty"`
+	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
 
 	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
 	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
@@ -76,15 +76,27 @@ type K8ssandraClusterList struct {
 	Items           []K8ssandraCluster `json:"items"`
 }
 
-type Cassandra struct {
+type CassandraClusterTemplate struct {
 	Cluster string `json:"cluster,omitempty"`
 
-	Datacenters []CassandraDatacenterTemplateSpec `json:"datacenters,omitempty"`
+	ServerImage string `json:"serverImage,omitempty"`
+
+	ServerVersion string `json:"serverVersion"`
+
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	CassandraConfig *CassandraConfig `json:"config,omitempty"`
+
+	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
+
+	Racks []cassdcapi.Rack `json:"racks,omitempty"`
+
+	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
 
-type CassandraDatacenterTemplateSpec struct {
+type CassandraDatacenterTemplate struct {
 	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
 
 	K8sContext string `json:"k8sContext,omitempty"`
@@ -101,17 +113,16 @@ type CassandraDatacenterTemplateSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
-	ServerVersion string `json:"serverVersion"`
+	ServerVersion string `json:"serverVersion,omitempty"`
 
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Config json.RawMessage `json:"config,omitempty"`
+	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 
 	// Kubernetes resource requests and limits, per pod
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
-	StorageConfig cassdcapi.StorageConfig `json:"storageConfig"`
+	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
 	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 	// deploying Stargate in this datacenter.
@@ -127,6 +138,27 @@ type EmbeddedObjectMeta struct {
 	Labels map[string]string `json:"labels,omitempty"`
 
 	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+// TODO Implement Stringer interface. It will helpful for debugging and testing.
+type CassandraConfig struct {
+	CassandraYaml *CassandraYaml `json:"cassandraYaml,omitempty"`
+
+	JvmOptions *JvmOptions `json:"jvmOptions,omitempty"`
+}
+
+type CassandraYaml struct {
+	ConcurrentReads *int `json:"concurrent_reads,omitempty"`
+
+	ConcurrentWrites *int `json:"concurrent_writes,omitempty"`
+}
+
+type JvmOptions struct {
+	HeapSize *resource.Quantity `json:"heapSize,omitempty"`
+
+	HeapNewGenSize *resource.Quantity `json:"heapNewGenSize,omitempty"`
+
+	AdditionalOptions []string `json:"additionalOptions,omitempty"`
 }
 
 func init() {
