@@ -2,7 +2,9 @@ package cassandra
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"math"
 	"time"
 )
 
@@ -24,4 +26,18 @@ func DatacenterStopped(dc *cassdcapi.CassandraDatacenter) bool {
 
 func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 	return dc.GetConditionStatus(cassdcapi.DatacenterStopped) == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressUpdating
+}
+
+func ComputeSystemReplication(kluster *api.K8ssandraCluster) SystemReplication {
+	rf := 3.0
+	for _, dc := range kluster.Spec.Cassandra.Datacenters {
+		rf = math.Min(rf, float64(dc.Size))
+	}
+
+	dcNames := make([]string, 0, len(kluster.Spec.Cassandra.Datacenters))
+	for _, dc := range kluster.Spec.Cassandra.Datacenters {
+		dcNames = append(dcNames, dc.Meta.Name)
+	}
+
+	return SystemReplication{Datacenters: dcNames, ReplicationFactor: int(rf)}
 }

@@ -2,52 +2,88 @@ package cassandra
 
 import (
 	"encoding/json"
-	"github.com/Jeffail/gabs"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"strconv"
 	"strings"
 )
 
+const (
+	systemReplicationDcNames = "-Dcassandra.system_distributed_replication_dc_names"
+	systemReplicationFactor  = "-Dcassandra.system_distributed_replication_per_dc"
+)
+
 type NodeConfig map[string]interface{}
 
-func getOperatorSuppliedConfig(dcs []string, replicationFactor int, cassandraVersion string) NodeConfig {
-	jvmOpts := "jvm-server-options"
-	if strings.HasPrefix(cassandraVersion, "3.") {
-		jvmOpts = "jvm-options"
+// ApplySystemReplication adds system properties to configure replication of system
+// keyspaces.
+func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplication) {
+	config := dcConfig.CassandraConfig
+	if config == nil {
+		config = &api.CassandraConfig{
+			JvmOptions: &api.JvmOptions{},
+		}
+	} else if config.JvmOptions == nil {
+		config.JvmOptions = &api.JvmOptions{}
 	}
-	return NodeConfig{
-		jvmOpts: NodeConfig{
-			"additional-jvm-opts": []string{
-				"-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(dcs, ","),
-				"-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replicationFactor),
-			},
-		},
+
+	jvmOpts := config.JvmOptions
+	additionalOpts := jvmOpts.AdditionalOptions
+	if additionalOpts == nil {
+		additionalOpts = make([]string, 0, 2)
 	}
+
+	dcNames := "-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(replication.Datacenters, ",")
+	replicationFactor := "-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replication.ReplicationFactor)
+	additionalOpts = append(additionalOpts, dcNames, replicationFactor)
+
+	jvmOpts.AdditionalOptions = additionalOpts
+	config.JvmOptions = jvmOpts
+	dcConfig.CassandraConfig = config
 }
 
-func GetMergedConfig(config []byte, dcs []string, replicationFactor int, cassandraVersion string) ([]byte, error) {
-	operatorValues := getOperatorSuppliedConfig(dcs, replicationFactor, cassandraVersion)
-	operatorBytes, err := json.Marshal(operatorValues)
-	if err != nil {
-		return nil, err
-	}
-
-	operatorParsedConfig, err := gabs.ParseJSON(operatorBytes)
-	if err != nil {
-		return nil, err
-	}
+// CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string.
+func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]byte, error) {
+	rawConfig := NodeConfig{}
+	cassandraYaml := NodeConfig{}
+	jvmOpts := NodeConfig{}
 
 	if config == nil {
-		return operatorParsedConfig.Bytes(), nil
+		return nil, nil
 	}
 
-	parsedConfig, err := gabs.ParseJSON(config)
+	if config.CassandraYaml != nil {
+		if config.CassandraYaml.ConcurrentReads != nil {
+			cassandraYaml["concurrent_reads"] = config.CassandraYaml.ConcurrentReads
+		}
+
+		if config.CassandraYaml.ConcurrentWrites != nil {
+			cassandraYaml["concurrent_writes"] = config.CassandraYaml.ConcurrentWrites
+		}
+
+		rawConfig["cassandra-yaml"] = cassandraYaml
+	}
+
+	if config.JvmOptions != nil {
+		if config.JvmOptions.HeapSize != nil {
+			jvmOpts["initial_heap_size"] = config.JvmOptions.HeapSize.Value()
+			jvmOpts["max_heap_size"] = config.JvmOptions.HeapSize.Value()
+		}
+
+		if len(config.JvmOptions.AdditionalOptions) > 0 {
+			jvmOpts["additional-jvm-opts"] = config.JvmOptions.AdditionalOptions
+		}
+
+		if strings.HasPrefix(cassandraVersion, "3.") {
+			rawConfig["jvm-options"] = jvmOpts
+		} else {
+			rawConfig["jvm-server-options"] = jvmOpts
+		}
+	}
+
+	jsonConfig, err := json.Marshal(rawConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = operatorParsedConfig.Merge(parsedConfig); err != nil {
-		return nil, err
-	}
-
-	return operatorParsedConfig.Bytes(), nil
+	return jsonConfig, nil
 }
