@@ -47,6 +47,9 @@ type K8ssandraClusterStatus struct {
 	//
 	// TODO Figure out how to inline this field
 	Datacenters map[string]K8ssandraStatus `json:"datacenters,omitempty"`
+
+	// +optional
+	Conditions []K8ssandraClusterCondition `json:"conditions,omitempty"`
 }
 
 // K8ssandraStatus defines the observed of a k8ssandra instance
@@ -55,8 +58,61 @@ type K8ssandraStatus struct {
 	Stargate  *StargateStatus                      `json:"stargate,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+type K8ssandraClusterConditionType string
+
+const (
+	K8ssandraClusterStargateAuthKeyspaceCreated K8ssandraClusterConditionType = "StargateAuthKeyspaceCreated"
+)
+
+type K8ssandraClusterCondition struct {
+	Type   K8ssandraClusterConditionType `json:"type"`
+	Status corev1.ConditionStatus        `json:"status"`
+
+	// LastTransitionTime is the last time the condition transited from one status to another.
+	// +optional
+	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+func (in *K8ssandraClusterStatus) IsStargateAuthKeyspaceCreated() bool {
+	return in.GetConditionStatus(K8ssandraClusterStargateAuthKeyspaceCreated) == corev1.ConditionTrue
+}
+
+func (in *K8ssandraClusterStatus) SetStargateAuthKeyspaceCreated() {
+	in.SetConditionStatus(K8ssandraClusterStargateAuthKeyspaceCreated, corev1.ConditionTrue)
+}
+
+func (in *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {
+	if in != nil {
+		for _, condition := range in.Conditions {
+			if condition.Type == conditionType {
+				return condition.Status
+			}
+		}
+	}
+	return corev1.ConditionUnknown
+}
+
+func (in *K8ssandraClusterStatus) SetConditionStatus(conditionType K8ssandraClusterConditionType, status corev1.ConditionStatus) {
+	now := metav1.Now()
+	in.SetCondition(K8ssandraClusterCondition{
+		Type:               conditionType,
+		Status:             status,
+		LastTransitionTime: &now,
+	})
+}
+
+func (in *K8ssandraClusterStatus) SetCondition(condition K8ssandraClusterCondition) {
+	for i, c := range in.Conditions {
+		if c.Type == condition.Type {
+			in.Conditions[i] = condition
+			return
+		}
+	}
+	in.Conditions = append(in.Conditions, condition)
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // K8ssandraCluster is the Schema for the k8ssandraclusters API
 type K8ssandraCluster struct {
@@ -67,7 +123,7 @@ type K8ssandraCluster struct {
 	Status K8ssandraClusterStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // K8ssandraClusterList contains a list of K8ssandraCluster
 type K8ssandraClusterList struct {

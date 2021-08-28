@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"path/filepath"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ const (
 
 var (
 	seedsResolver  = &fakeSeedsResolver{}
+	managementApi  = &fakeManagementApi{}
 	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
 
@@ -255,4 +257,11 @@ type fakeSeedsResolver struct {
 
 func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
 	return r.callback(dc)
+}
+
+type fakeManagementApi struct {
+}
+
+func (r *fakeManagementApi) CreateKeyspace(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, keyspaceName string, replicationConfig map[string]int, logger logr.Logger) error {
+	return nil
 }

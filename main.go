@@ -154,6 +154,7 @@ func main() {
 			Scheme:        mgr.GetScheme(),
 			ClientCache:   clientCache,
 			SeedsResolver: cassandra.NewRemoteSeedsResolver(),
+			ManagementApi: cassandra.NewManagementApiFacade(),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
