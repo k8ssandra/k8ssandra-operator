@@ -133,9 +133,11 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		cassandra.ApplySystemReplication(dcConfig, systemReplication)
-		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig, seeds)
+		dcConfig.AdditionalSeeds = seeds
+		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)		
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return ctrl.Result{}, err
