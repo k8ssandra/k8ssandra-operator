@@ -60,6 +60,58 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 			cassandraYaml["concurrent_writes"] = config.CassandraYaml.ConcurrentWrites
 		}
 
+		if config.CassandraYaml.AutoSnapshot != nil {
+			cassandraYaml["auto_snapshot"] = config.CassandraYaml.AutoSnapshot
+		}
+
+		if config.CassandraYaml.MemtableFlushWriters != nil {
+			cassandraYaml["memtable_flush_writers"] = config.CassandraYaml.MemtableFlushWriters
+		}
+
+		if config.CassandraYaml.CommitLogSegmentSizeMb != nil {
+			cassandraYaml["commitlog_segment_size_in_mb"] = config.CassandraYaml.CommitLogSegmentSizeMb
+		}
+
+		if config.CassandraYaml.ConcurrentCompactors != nil {
+			cassandraYaml["concurrent_compactors"] = config.CassandraYaml.ConcurrentCompactors
+		}
+
+		if config.CassandraYaml.CompactionThroughputMbPerSec != nil {
+			cassandraYaml["compaction_throughput_mb_per_sec"] = config.CassandraYaml.CompactionThroughputMbPerSec
+		}
+
+		if config.CassandraYaml.SstablePreemptiveOpenIntervalMb != nil {
+			cassandraYaml["sstable_preemptive_open_interval_in_mb"] = config.CassandraYaml.SstablePreemptiveOpenIntervalMb
+		}
+
+		if config.CassandraYaml.KeyCacheSizeMb != nil {
+			cassandraYaml["key_cache_size_in_mb"] = config.CassandraYaml.KeyCacheSizeMb
+		}
+
+		if config.CassandraYaml.ThriftPreparedStatementCacheSizeMb != nil {
+			cassandraYaml["thrift_prepared_statements_cache_size_mb"] = config.CassandraYaml.ThriftPreparedStatementCacheSizeMb
+		}
+
+		if config.CassandraYaml.PreparedStatementsCacheSizeMb != nil {
+			cassandraYaml["prepared_statements_cache_size_mb"] = config.CassandraYaml.PreparedStatementsCacheSizeMb
+		}
+
+		if config.CassandraYaml.StartRpc != nil {
+			cassandraYaml["start_rpc"] = config.CassandraYaml.StartRpc
+		}
+
+		if config.CassandraYaml.SlowQueryLogTimeoutMs != nil {
+			cassandraYaml["slow_query_log_timeout_in_ms"] = config.CassandraYaml.SlowQueryLogTimeoutMs
+		}
+
+		if config.CassandraYaml.CounterCacheSizeMb != nil {
+			cassandraYaml["counter_cache_size_in_mb"] = config.CassandraYaml.CounterCacheSizeMb
+		}
+
+		if config.CassandraYaml.ConcurrentCounterWrites != nil {
+			cassandraYaml["concurrent_counter_writes"] = config.CassandraYaml.ConcurrentCounterWrites
+		}
+
 		rawConfig["cassandra-yaml"] = cassandraYaml
 	}
 

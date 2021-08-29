@@ -151,6 +151,32 @@ type CassandraYaml struct {
 	ConcurrentReads *int `json:"concurrent_reads,omitempty"`
 
 	ConcurrentWrites *int `json:"concurrent_writes,omitempty"`
+
+	ConcurrentCounterWrites *int `json:"concurrent_counter_writes,omitempty"`
+
+	AutoSnapshot *bool `json:"auto_snapshot,omitempty"`
+
+	MemtableFlushWriters *int `json:"memtable_flush_writers,omitempty"`
+
+	CommitLogSegmentSizeMb *int `json:"commitlog_segment_size_in_mb,omitempty"`
+
+	ConcurrentCompactors *int `json:"concurrent_compactors,omitempty"`
+
+	CompactionThroughputMbPerSec *int `json:"compaction_throughput_mb_per_sec,omitempty"`
+
+	SstablePreemptiveOpenIntervalMb *int `json:"sstable_preemptive_open_interval_in_mb,omitempty"`
+
+	KeyCacheSizeMb *int `json:"key_cache_size_in_mb,omitempty"`
+
+	ThriftPreparedStatementCacheSizeMb *int `json:"thrift_prepared_statements_cache_size_mb,omitempty"`
+
+	PreparedStatementsCacheSizeMb *int `json:"prepared_statements_cache_size_mb,omitempty"`
+
+	StartRpc *bool `json:"start_rpc,omitempty"`
+
+	SlowQueryLogTimeoutMs *int `json:"slow_query_log_timeout_in_ms,omitempty"`
+
+	CounterCacheSizeMb *int `json:"counter_cache_size_in_mb,omitempty"`
 }
 
 type JvmOptions struct {

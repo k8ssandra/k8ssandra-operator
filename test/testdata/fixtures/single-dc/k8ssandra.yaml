@@ -21,7 +21,7 @@ spec:
               requests:
                 storage: 5Gi
         config:
-          jvm-options:
+          jvmOptions:
             initial_heap_size: "512m"
             max_heap_size: "512m"
         stargate:
