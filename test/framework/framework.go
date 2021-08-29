@@ -115,6 +115,20 @@ func (f *Framework) k8sContextNotFound(k8sContext string) error {
 	return fmt.Errorf("context %s not found", k8sContext)
 }
 
+// SetDatacenterStatusReady fetches the CassandraDatacenter specified by key and persists
+// a status update to make the CassandraDatacenter ready.
+func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey) error {
+	now := metav1.Now()
+	return f.PatchDatacenterStatus(ctx, key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+	})
+}
+
 // PatchDatacenterStatus fetches the datacenter specified by key, applies changes via
 // updateFn, and then performs a patch operation. key.K8sContext must be set and must
 // have a corresponding client.
