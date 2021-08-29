@@ -1192,8 +1192,8 @@ spec:
                               type: boolean
                             cassandraConfigMapRef:
                               description: CassandraConfigMapRef is a reference to
-                                a ConfigMap that holds CassandraClusterTemplate configuration.
-                                The map should have a key named cassandra_yaml.
+                                a ConfigMap that holds Cassandra configuration. The
+                                map should have a key named cassandra_yaml.
                               properties:
                                 name:
                                   description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -2514,9 +2514,8 @@ spec:
                                     type: boolean
                                   cassandraConfigMapRef:
                                     description: CassandraConfigMapRef is a reference
-                                      to a ConfigMap that holds CassandraClusterTemplate
-                                      configuration. The map should have a key named
-                                      cassandra_yaml.
+                                      to a ConfigMap that holds Cassandra configuration.
+                                      The map should have a key named cassandra_yaml.
                                     properties:
                                       name:
                                         description: 'Name of the referent. More info:
@@ -4741,8 +4740,8 @@ spec:
                     type: boolean
                   cassandraConfigMapRef:
                     description: CassandraConfigMapRef is a reference to a ConfigMap
-                      that holds CassandraClusterTemplate configuration. The map should
-                      have a key named cassandra_yaml.
+                      that holds Cassandra configuration. The map should have a key
+                      named cassandra_yaml.
                     properties:
                       name:
                         description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names

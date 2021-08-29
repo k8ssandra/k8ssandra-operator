@@ -99,7 +99,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	var seeds []string
-	//systemDistributedRF := getSystemDistributedRF(kc)
 	dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
 
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
@@ -128,13 +127,15 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
-	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		dcTemplate := cassandra.Coalesce(kc.Spec.Cassandra, template.DeepCopy())
-		cassandra.ApplySystemReplication(dcTemplate, systemReplication)
-		desiredDc, err := cassandra.NewDatacenter(kcKey, dcTemplate, seeds)
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
+		// its fields are pointers, and without the copy we could end of with shared
+		// references that would lead to unexpected and incorrect values.
+		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		cassandra.ApplySystemReplication(dcConfig, systemReplication)
+		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig, seeds)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
-
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)		
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return ctrl.Result{}, err
@@ -143,7 +144,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		desiredDcHash := utils.DeepHashString(desiredDc)
 		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
 
-		remoteClient, err := r.ClientCache.GetRemoteClient(template.K8sContext)
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
 			logger.Error(err, "Failed to get remote client for datacenter")
 			return ctrl.Result{}, err
