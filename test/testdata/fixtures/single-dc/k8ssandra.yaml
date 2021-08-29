@@ -22,7 +22,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: "512m"
+            heapSize: "488Mi"
         stargate:
           size: 1
           heapSize: 256Mi
