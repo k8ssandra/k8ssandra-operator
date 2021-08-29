@@ -46,9 +46,35 @@ spec:
                     properties:
                       cassandraYaml:
                         properties:
+                          auto_snapshot:
+                            type: boolean
+                          commitlog_segment_size_in_mb:
+                            type: integer
+                          compaction_throughput_mb_per_sec:
+                            type: integer
+                          concurrent_compactors:
+                            type: integer
+                          concurrent_counter_writes:
+                            type: integer
                           concurrent_reads:
                             type: integer
                           concurrent_writes:
+                            type: integer
+                          counter_cache_size_in_mb:
+                            type: integer
+                          key_cache_size_in_mb:
+                            type: integer
+                          memtable_flush_writers:
+                            type: integer
+                          prepared_statements_cache_size_mb:
+                            type: integer
+                          slow_query_log_timeout_in_ms:
+                            type: integer
+                          sstable_preemptive_open_interval_in_mb:
+                            type: integer
+                          start_rpc:
+                            type: boolean
+                          thrift_prepared_statements_cache_size_mb:
                             type: integer
                         type: object
                       jvmOptions:
@@ -80,9 +106,35 @@ spec:
                           properties:
                             cassandraYaml:
                               properties:
+                                auto_snapshot:
+                                  type: boolean
+                                commitlog_segment_size_in_mb:
+                                  type: integer
+                                compaction_throughput_mb_per_sec:
+                                  type: integer
+                                concurrent_compactors:
+                                  type: integer
+                                concurrent_counter_writes:
+                                  type: integer
                                 concurrent_reads:
                                   type: integer
                                 concurrent_writes:
+                                  type: integer
+                                counter_cache_size_in_mb:
+                                  type: integer
+                                key_cache_size_in_mb:
+                                  type: integer
+                                memtable_flush_writers:
+                                  type: integer
+                                prepared_statements_cache_size_mb:
+                                  type: integer
+                                slow_query_log_timeout_in_ms:
+                                  type: integer
+                                sstable_preemptive_open_interval_in_mb:
+                                  type: integer
+                                start_rpc:
+                                  type: boolean
+                                thrift_prepared_statements_cache_size_mb:
                                   type: integer
                               type: object
                             jvmOptions:
