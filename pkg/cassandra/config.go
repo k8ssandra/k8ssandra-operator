@@ -88,16 +88,8 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 			cassandraYaml["key_cache_size_in_mb"] = config.CassandraYaml.KeyCacheSizeMb
 		}
 
-		if config.CassandraYaml.ThriftPreparedStatementCacheSizeMb != nil {
-			cassandraYaml["thrift_prepared_statements_cache_size_mb"] = config.CassandraYaml.ThriftPreparedStatementCacheSizeMb
-		}
-
 		if config.CassandraYaml.PreparedStatementsCacheSizeMb != nil {
 			cassandraYaml["prepared_statements_cache_size_mb"] = config.CassandraYaml.PreparedStatementsCacheSizeMb
-		}
-
-		if config.CassandraYaml.StartRpc != nil {
-			cassandraYaml["start_rpc"] = config.CassandraYaml.StartRpc
 		}
 
 		if config.CassandraYaml.SlowQueryLogTimeoutMs != nil {
@@ -110,6 +102,16 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 
 		if config.CassandraYaml.ConcurrentCounterWrites != nil {
 			cassandraYaml["concurrent_counter_writes"] = config.CassandraYaml.ConcurrentCounterWrites
+		}
+
+		if strings.HasPrefix(cassandraVersion,"3.") {
+			if config.CassandraYaml.StartRpc != nil {
+				cassandraYaml["start_rpc"] = config.CassandraYaml.StartRpc
+			}
+
+			if config.CassandraYaml.ThriftPreparedStatementCacheSizeMb != nil {
+				cassandraYaml["thrift_prepared_statements_cache_size_mb"] = config.CassandraYaml.ThriftPreparedStatementCacheSizeMb
+			}
 		}
 
 		rawConfig["cassandra-yaml"] = cassandraYaml
