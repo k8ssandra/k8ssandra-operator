@@ -63,7 +63,7 @@ func TestApplySystemReplication(t *testing.T) {
 			},
 		},
 		{
-			name: "multi-dc with no jvm options",
+			name:     "multi-dc with no jvm options",
 			dcConfig: &DatacenterConfig{},
 			replication: SystemReplication{
 				Datacenters:       []string{"dc1", "dc2", "dc3"},
@@ -159,7 +159,7 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "concurrent_reads and concurrent_writes with system replication",
+			name: "concurrent_reads and concurrent_writes with system replication",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
