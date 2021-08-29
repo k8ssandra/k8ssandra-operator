@@ -132,8 +132,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					ConcurrentReads:  intPtr(8),
-					ConcurrentWrites: intPtr(16),
+					ConcurrentReads:         intPtr(8),
+					ConcurrentWrites:        intPtr(16),
 					ConcurrentCounterWrites: intPtr(4),
 				},
 			},
@@ -161,7 +161,7 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:  "concurrent_reads and concurrent_writes with system replication",
+			name:             "concurrent_reads and concurrent_writes with system replication",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
@@ -189,12 +189,12 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "auto_snapshot, memtable_flush_writers, commitlog_segment_size_in_mb",
+			name:             "auto_snapshot, memtable_flush_writers, commitlog_segment_size_in_mb",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					AutoSnapshot: boolPtr(true),
-					MemtableFlushWriters: intPtr(10),
+					AutoSnapshot:           boolPtr(true),
+					MemtableFlushWriters:   intPtr(10),
 					CommitLogSegmentSizeMb: intPtr(8192),
 				},
 			},
@@ -207,12 +207,12 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "concurrent_compactors, compaction_throughput_mb_per_sec, sstable_preemptive_open_interval_in_mb",
+			name:             "concurrent_compactors, compaction_throughput_mb_per_sec, sstable_preemptive_open_interval_in_mb",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					ConcurrentCompactors: intPtr(4),
-					CompactionThroughputMbPerSec: intPtr(64),
+					ConcurrentCompactors:            intPtr(4),
+					CompactionThroughputMbPerSec:    intPtr(64),
 					SstablePreemptiveOpenIntervalMb: intPtr(0),
 				},
 			},
@@ -225,14 +225,14 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "key_cache_size_in_mb, counter_cache_size_in_mb, prepared_statements_cache_size_mb, slow_query_log_timeout_in_ms",
+			name:             "key_cache_size_in_mb, counter_cache_size_in_mb, prepared_statements_cache_size_mb, slow_query_log_timeout_in_ms",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					KeyCacheSizeMb: intPtr(100),
-					CounterCacheSizeMb: intPtr(50),
+					KeyCacheSizeMb:                intPtr(100),
+					CounterCacheSizeMb:            intPtr(50),
 					PreparedStatementsCacheSizeMb: intPtr(180),
-					SlowQueryLogTimeoutMs: intPtr(500),
+					SlowQueryLogTimeoutMs:         intPtr(500),
 				},
 			},
 			want: `{
@@ -245,11 +245,11 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "[3.11.10] start_rpc, thrift_prepared_statements_cache_size_mb",
+			name:             "[3.11.10] start_rpc, thrift_prepared_statements_cache_size_mb",
 			cassandraVersion: "3.11.10",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					StartRpc: boolPtr(false),
+					StartRpc:                           boolPtr(false),
 					ThriftPreparedStatementCacheSizeMb: intPtr(1),
 				},
 			},
@@ -261,11 +261,11 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "[4.0] start_rpc, thrift_prepared_statements_cache_size_mb",
+			name:             "[4.0] start_rpc, thrift_prepared_statements_cache_size_mb",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
-					StartRpc: boolPtr(false),
+					StartRpc:                           boolPtr(false),
 					ThriftPreparedStatementCacheSizeMb: intPtr(1),
 				},
 			},
