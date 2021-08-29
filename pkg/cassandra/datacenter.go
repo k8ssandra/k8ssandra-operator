@@ -36,9 +36,10 @@ type DatacenterConfig struct {
 	StorageConfig     *cassdcapi.StorageConfig
 	Racks             []cassdcapi.Rack
 	CassandraConfig   *api.CassandraConfig
+	AdditionalSeeds   []string
 }
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, additionalSeeds []string) (*cassdcapi.CassandraDatacenter, error) {
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace
@@ -71,7 +72,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, 
 			Config:          rawConfig,
 			Racks:           template.Racks,
 			StorageConfig:   *template.StorageConfig,
-			AdditionalSeeds: additionalSeeds,
+			AdditionalSeeds: template.AdditionalSeeds,
+			// TODO The Networking field should be exposed in DatacenterConfig
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
 			},
