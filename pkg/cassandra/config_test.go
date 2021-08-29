@@ -159,7 +159,7 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name: "concurrent_reads and concurrent_writes with system replication",
+			name:             "concurrent_reads and concurrent_writes with system replication",
 			cassandraVersion: "4.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
