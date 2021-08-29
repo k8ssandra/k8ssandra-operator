@@ -104,7 +104,7 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 			cassandraYaml["concurrent_counter_writes"] = config.CassandraYaml.ConcurrentCounterWrites
 		}
 
-		if strings.HasPrefix(cassandraVersion,"3.") {
+		if strings.HasPrefix(cassandraVersion, "3.") {
 			if config.CassandraYaml.StartRpc != nil {
 				cassandraYaml["start_rpc"] = config.CassandraYaml.StartRpc
 			}

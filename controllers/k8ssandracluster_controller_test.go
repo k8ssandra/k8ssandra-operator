@@ -53,6 +53,7 @@ func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
 	t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
+	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 }
 
@@ -391,6 +392,139 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
 	expectedConfig, err := parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[0].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	require.NoError(err, "failed to parse CassandraConfig")
+	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("update dc1 status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
+	require.NoError(err, "failed to set dc1 status ready")
+
+	t.Log("check that dc2 was created")
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
+
+	t.Log("verify configuration of dc2")
+	dc2 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.NoError(err, "failed to get dc2")
+
+	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
+	assert.Equal(*kluster.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(dc2Size, dc2.Spec.Size)
+
+	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
+	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
+
+	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	require.NoError(err, "failed to parse CassandraConfig")
+	assert.Equal(expectedConfig, actualConfig)
+}
+
+// applyClusterTemplateAndDatacenterTemplateConfigs specifies settings in the cluster
+// template and verifies that they are applied to dc1. It specifies dc template settings
+// for dc2 and verifies that they are applied.
+func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	k8sCtx0 := "cluster-0"
+	k8sCtx1 := "cluster-1"
+
+	clusterName := "cluster-configs"
+	serverVersion := "4.0.0"
+	dc1Size := int32(12)
+	dc2Size := int32(30)
+
+	kluster := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Cluster:       clusterName,
+				ServerVersion: serverVersion,
+				StorageConfig: &cassdcapi.StorageConfig{
+					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &defaultStorageClass,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: *parseResource("500Gi"),
+							},
+						},
+					},
+				},
+				CassandraConfig: &api.CassandraConfig{
+					CassandraYaml: &api.CassandraYaml{
+						ConcurrentReads:  intPtr(4),
+						ConcurrentWrites: intPtr(4),
+					},
+					JvmOptions: &api.JvmOptions{
+						HeapSize: parseResource("1024Mi"),
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext:    k8sCtx0,
+						Size:          dc1Size,
+						ServerVersion: serverVersion,
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						K8sContext: k8sCtx1,
+						Size:       dc2Size,
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceStorage: *parseResource("2Ti"),
+									},
+								},
+							},
+						},
+						CassandraConfig: &api.CassandraConfig{
+							CassandraYaml: &api.CassandraYaml{
+								ConcurrentReads:  intPtr(4),
+								ConcurrentWrites: intPtr(12),
+							},
+							JvmOptions: &api.JvmOptions{
+								HeapSize: parseResource("2048Mi"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kluster)
+	require.NoError(err, "failed to create K8sandraCluster")
+
+	t.Log("check that dc1 was created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("verify configuration of dc1")
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(err, "failed to get dc1")
+
+	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
+	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(dc1Size, dc1.Spec.Size)
+
+	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
+	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
+
+	expectedConfig, err := parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
