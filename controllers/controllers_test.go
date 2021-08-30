@@ -3,11 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 
 	"github.com/bombsimon/logrusr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
@@ -28,11 +30,13 @@ import (
 const (
 	timeout          = time.Second * 5
 	interval         = time.Millisecond * 500
+	clustersToCreate = 3
 	clusterProtoName = "cluster-%d"
 )
 
 var (
-	seedsResolver = &fakeSeedsResolver{}
+	seedsResolver  = &fakeSeedsResolver{}
+	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
 
 func TestControllers(t *testing.T) {
@@ -44,11 +48,15 @@ func TestControllers(t *testing.T) {
 	defaultDelay = time.Millisecond * 500
 	longDelay = time.Second
 
-	t.Run("K8ssandraCluster", func(t *testing.T) {
-		testK8ssandraCluster(ctx, t)
-	})
-	t.Run("Stargate", func(t *testing.T) {
-		testStargate(ctx, t)
+	// t.Run("K8ssandraCluster", func(t *testing.T) {
+	// 	testK8ssandraCluster(ctx, t)
+	// })
+	// t.Run("Stargate", func(t *testing.T) {
+	// 	testStargate(ctx, t)
+	// })
+
+	t.Run("SecretController", func(t *testing.T) {
+		testSecretController(ctx, t)
 	})
 }
 
@@ -140,8 +148,8 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		return err
 	}
 
-	e.clustersToCreate = 2
-	e.Clients = make(map[string]client.Client, 0)
+	e.clustersToCreate = clustersToCreate
+	e.Clients = make(map[string]client.Client)
 	e.testEnvs = make([]*envtest.Environment, 0)
 	cfgs := make([]*rest.Config, e.clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
@@ -193,7 +201,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		}
 	}
 
-	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients["cluster-0"], scheme.Scheme)
+	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients[controlCluster], scheme.Scheme)
 	for ctxName, cli := range e.Clients {
 		clientCache.AddClient(ctxName, cli)
 	}

@@ -97,7 +97,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet ## Run tests.
+test: manifests generate fmt vet envtest ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./api/... ./pkg/... ./controllers/... -run="$(TEST)" -coverprofile cover.out

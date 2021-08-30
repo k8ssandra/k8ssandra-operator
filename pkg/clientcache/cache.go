@@ -126,6 +126,10 @@ func (c *ClientCache) GetRestConfig(assistCfg *api.ClientConfig) (*rest.Config, 
 	return clientCmdCfg.ClientConfig()
 }
 
+func (c *ClientCache) GetLocalNonCacheClient() client.Client {
+	return c.noCacheClient
+}
+
 func (c *ClientCache) extractClientCmdApiConfigFromSecret(secretKey types.NamespacedName) (*clientcmdapi.Config, error) {
 	// Fetch the secret containing the details
 	secret := &corev1.Secret{}

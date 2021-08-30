@@ -36,8 +36,10 @@ rules:
   resources:
   - secrets
   verbs:
+  - create
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - ""
@@ -77,6 +79,23 @@ rules:
   verbs:
   - get
   - patch
+  - update
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - replicatedsecrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - k8ssandra.io
+  resources:
+  - replicatedsecrets/finalizers
+  verbs:
   - update
 - apiGroups:
   - k8ssandra.io

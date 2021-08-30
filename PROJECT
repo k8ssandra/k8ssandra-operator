@@ -21,12 +21,21 @@ resources:
   controller: true
   domain: k8ssandra.io
   kind: Stargate
+  version: ""
 - api:
     crdVersion: v1
     namespaced: true
   domain: k8ssandra.io
   group: k8ssandra.io
   kind: ClientConfig
+  path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: k8ssandra.io
+  group: k8ssandra.io
+  kind: ReplicatedSecret
   path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
   version: v1alpha1
 version: "3"
