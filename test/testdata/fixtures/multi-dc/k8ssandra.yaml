@@ -50,7 +50,7 @@ spec:
           resources:
             limits:
               memory: 512Mi
-          cassandraConfigMap:
+          cassandraConfigMapRef:
             name: cassandra-config
           livenessProbe:
             initialDelaySeconds: 60
@@ -98,7 +98,7 @@ spec:
         stargate:
           size: 1
           heapSize: 384Mi
-          cassandraConfigMap:
+          cassandraConfigMapRef:
             name: cassandra-config
           resources:
             limits:
