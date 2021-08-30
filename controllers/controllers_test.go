@@ -149,7 +149,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	}
 
 	e.clustersToCreate = clustersToCreate
-	e.Clients = make(map[string]client.Client, 0)
+	e.Clients = make(map[string]client.Client)
 	e.testEnvs = make([]*envtest.Environment, 0)
 	cfgs := make([]*rest.Config, e.clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)

@@ -2,14 +2,15 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 	"testing"
+	"time"
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,17 +42,22 @@ func testSecretController(ctx context.Context, t *testing.T) {
 	// Secret controller tests
 	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
 	t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
+	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
+
 }
 
 // copySecretsFromClusterToCluster Tests:
 // 	* Copy secret to another cluster (not existing one)
 // 	* Modify the secret in main cluster - see that it is updated to slave cluster also
 // 	* Modify the secret in the slave cluster - see that it is replaced by the main cluster data
+//	* Verify the status has been updated
 func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
+	// assert := assert.New(t)
 	var empty struct{}
 
-	err := f.Client.Create(ctx, generateReplicatedSecret(namespace))
+	rsec := generateReplicatedSecret(namespace)
+	err := f.Client.Create(ctx, rsec)
 	require.NoError(err, "failed to create replicated secret to main cluster")
 
 	generatedSecrets := generateSecrets(namespace)
@@ -60,18 +66,20 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		require.NoError(err, "failed to create secret to main cluster")
 	}
 
+	startTime := time.Now()
+
 	t.Log("check that the secrets were copied to other cluster(s)")
 	require.Eventually(func() bool {
 		return verifySecretsMatch(t, ctx, f.Client, []string{targetCopyToCluster}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
-		})
+		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")
 	require.Never(func() bool {
 		return verifySecretsMatch(t, ctx, f.Client, []string{targetCopyToCluster}, map[string]struct{}{
 			generatedSecrets[1].Name: empty,
-		})
+		}, generatedSecrets[0].Namespace)
 	}, 3, interval)
 
 	t.Log("check that nothing was copied to cluster not match by replicated secret")
@@ -79,7 +87,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		return verifySecretsMatch(t, ctx, f.Client, []string{targetNoCopyCluster}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 			generatedSecrets[1].Name: empty,
-		})
+		}, generatedSecrets[0].Namespace)
 	}, 3, interval)
 
 	t.Log("modify the secret in the main cluster")
@@ -94,18 +102,19 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	require.Eventually(func() bool {
 		return verifySecretsMatch(t, ctx, f.Client, []string{targetCopyToCluster}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
-		})
+		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
 
 	t.Log("modify the secret in target cluster")
 	modifierClient := testEnv.Clients[targetCopyToCluster]
 	targetSecrets := &corev1.SecretList{}
-	err = modifierClient.List(ctx, targetSecrets)
+	err = modifierClient.List(ctx, targetSecrets, client.InNamespace(generatedSecrets[0].Namespace))
 	require.NoError(err)
 	for _, targetSecret := range targetSecrets.Items {
 		if targetSecret.Name == generatedSecrets[0].Name {
 			phantomSecret := targetSecret.DeepCopy()
 			phantomSecret.Data["be-gone-key"] = []byte("my-phantom-value")
+			targetSecret.GetAnnotations()[api.ResourceHashAnnotation] = "XXXXXX"
 			err = modifierClient.Update(ctx, phantomSecret)
 			require.NoError(err)
 			break
@@ -116,7 +125,89 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	require.Eventually(func() bool {
 		return verifySecretsMatch(t, ctx, f.Client, []string{targetCopyToCluster}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
-		})
+		}, generatedSecrets[0].Namespace)
+	}, timeout, interval)
+
+	t.Log("check status is set to complete")
+	// Get updated status
+	require.Eventually(func() bool {
+		updatedRSec := &api.ReplicatedSecret{}
+		err = f.Client.Get(context.TODO(), types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}, updatedRSec)
+		if err != nil {
+			return false
+		}
+		// require.NoError(err)
+
+		// We only copy to a single target cluster
+		if len(updatedRSec.Status.Conditions) != 1 {
+			return false
+		}
+		for _, cond := range updatedRSec.Status.Conditions {
+			if !(cond.LastTransitionTime.After(startTime) &&
+				cond.Cluster != "" &&
+				cond.Type == api.ReplicationDone &&
+				cond.Status == corev1.ConditionTrue) {
+				return false
+			}
+		}
+		return true
+	}, timeout, interval)
+
+	t.Log("delete the replicated secret")
+	err = f.Client.Delete(ctx, rsec)
+	require.NoError(err, "failed to delete replicated secret from main cluster")
+
+	t.Log("verify the replicated secrets are gone from the remote cluster")
+	remoteClient := testEnv.Clients[targetCopyToCluster]
+	require.Eventually(func() bool {
+		remoteSecret := &corev1.Secret{}
+		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret)
+		if err != nil {
+			return errors.IsNotFound(err)
+		}
+		return false
+	}, timeout, interval)
+}
+
+// verifySecretIsDeleted checks that the finalizer functionality works
+// 	* Create secret and ReplicatedSecret
+//	* Verify it is copied to another cluster
+//  * Delete ReplicatedSecret from main cluster
+//  * Verify the secrets are deleted from the remote cluster (but not local)
+func verifySecretIsDeleted(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	var empty struct{}
+
+	rsec := generateReplicatedSecret(namespace)
+	err := f.Client.Create(ctx, rsec)
+	require.NoError(err, "failed to create replicated secret to main cluster")
+
+	generatedSecrets := generateSecrets(namespace)
+	for _, s := range generatedSecrets {
+		err := f.Client.Create(ctx, s)
+		require.NoError(err, "failed to create secret to main cluster")
+	}
+
+	t.Log("check that the secret was copied to other cluster(s)")
+	require.Eventually(func() bool {
+		return verifySecretsMatch(t, ctx, f.Client, []string{targetCopyToCluster}, map[string]struct{}{
+			generatedSecrets[0].Name: empty,
+		}, generatedSecrets[0].Namespace)
+	}, timeout, interval)
+
+	t.Log("delete the replicated secret")
+	err = f.Client.Delete(ctx, rsec)
+	require.NoError(err, "failed to delete replicated secret from main cluster")
+
+	t.Log("verify the replicated secrets are gone from the remote cluster")
+	remoteClient := testEnv.Clients[targetCopyToCluster]
+	require.Eventually(func() bool {
+		remoteSecret := &corev1.Secret{}
+		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret)
+		if err != nil {
+			return errors.IsNotFound(err)
+		}
+		return false
 	}, timeout, interval)
 }
 
@@ -216,9 +307,9 @@ func verifySecretCopied(t *testing.T, ctx context.Context, origCluster string, o
 }
 
 // verifySecretsMatch checks that the same secret is copied to other clusters
-func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}) bool {
+func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}, namespace string) bool {
 	secretList := &corev1.SecretList{}
-	err := localClient.List(ctx, secretList)
+	err := localClient.List(ctx, secretList, client.InNamespace(namespace))
 	if err != nil {
 		return false
 	}
@@ -227,20 +318,19 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 		testClient := testEnv.Clients[remoteCluster]
 
 		targetSecretList := &corev1.SecretList{}
-		err := testClient.List(ctx, targetSecretList)
+		err := testClient.List(ctx, targetSecretList, client.InNamespace(namespace))
 		if err != nil {
 			return false
 		}
 
 		for _, s := range secretList.Items {
-			if _, toCheck := secrets[s.Name]; toCheck {
+			if _, exists := secrets[s.Name]; exists {
 				// Find the corresponding item from targetSecretList - or fail if it's not there
 				found := false
 				for _, ts := range targetSecretList.Items {
 					if s.Name == ts.Name {
 						found = true
-						if !reflect.DeepEqual(s.Data, ts.Data) {
-							t.Logf("Differ: %v vs %v", s.Data, ts.Data)
+						if s.GetAnnotations()[api.ResourceHashAnnotation] != ts.GetAnnotations()[api.ResourceHashAnnotation] {
 							return false
 						}
 						break
