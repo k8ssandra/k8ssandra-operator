@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
@@ -615,6 +616,35 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("remove both stargates from kc spec")
+	err = f.Get(ctx, kcKey, kc)
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Cassandra.Datacenters[0].Stargate = nil
+	kc.Spec.Cassandra.Datacenters[1].Stargate = nil
+	err = f.Client.Patch(ctx, kc, patch)
+	require.NoError(err, "failed to update K8ssandraCluster")
+
+	t.Log("check that stargate sg1 is deleted")
+	require.Eventually(func() bool {
+		err = f.Get(ctx, sg1Key, &api.Stargate{})
+		return errors.IsNotFound(err)
+	}, timeout, interval)
+
+	t.Log("check that stargate sg2 is deleted")
+	require.Eventually(func() bool {
+		err = f.Get(ctx, sg2Key, &api.Stargate{})
+		return errors.IsNotFound(err)
+	}, timeout, interval)
+
+	t.Log("check that kc status is updated")
+	require.Eventually(func() bool {
+		err = f.Get(ctx, kcKey, kc)
+		require.NoError(err, "failed to get K8ssandraCluster")
+		return kc.Status.Datacenters[dc1Key.Name].Stargate == nil &&
+			kc.Status.Datacenters[dc2Key.Name].Stargate == nil
+	}, timeout, interval)
+
 }
 
 func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
