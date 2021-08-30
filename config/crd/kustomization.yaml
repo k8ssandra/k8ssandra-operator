@@ -5,7 +5,7 @@ resources:
 - bases/k8ssandra.io_k8ssandraclusters.yaml
 - bases/k8ssandra.io_stargates.yaml
 - bases/k8ssandra.io_clientconfigs.yaml
-- bases/k8ssandra.io.k8ssandra.io_replicatedsecrets.yaml
+- bases/k8ssandra.io_replicatedsecrets.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
