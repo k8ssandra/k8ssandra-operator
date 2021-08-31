@@ -4,8 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"testing"
 )
+
+var logOutput = false
+
+func LogOutput(enabled bool) {
+	logOutput = enabled
+}
 
 func Build(dir string) (*bytes.Buffer, error) {
 	cmd := exec.Command("kustomize", "build")
@@ -15,10 +20,14 @@ func Build(dir string) (*bytes.Buffer, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	fmt.Println(cmd.String())
+
 	err := cmd.Run()
 
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+	}
 
 	return &stdout, err
 }
@@ -30,38 +39,49 @@ func SetNamespace(dir, namespace string) error {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
+	fmt.Println(cmd.String())
+
 	err := cmd.Run()
 
-	fmt.Println(out.String())
-	//t.Log(out.String())
+	if logOutput {
+		fmt.Println(out.String())
+	}
 
 	return err
 }
 
-func AddResource(t *testing.T, path string) error {
+func AddResource(path string) error {
 	cmd := exec.Command("kustomize", "edit", "add", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
+	fmt.Println(cmd.String())
+
 	err := cmd.Run()
 
-	t.Log(out.String())
+	if logOutput {
+		fmt.Println(out.String())
+	}
 
 	return err
 }
 
-func RemoveResource(t *testing.T, path string) error {
+func RemoveResource(path string) error {
 	cmd := exec.Command("kustomize", "edit", "remove", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
+	fmt.Println(cmd.String())
+
 	err := cmd.Run()
 
-	t.Log(out.String())
+	if logOutput {
+		fmt.Println(out.String())
+	}
 
 	return err
 }
