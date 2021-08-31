@@ -85,6 +85,46 @@ func Delete(opts Options, arg interface{}) error {
 	return err
 }
 
+func DeleteByName(opts Options, kind, name string) error {
+	cmd := exec.Command("kubectl")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+	cmd.Args = append(cmd.Args, "delete", kind, name)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	fmt.Println(cmd)
+	err := cmd.Run()
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
+	return err
+}
+
+func DeleteAllOf(opts Options, kind string) error {
+	cmd := exec.Command("kubectl")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	} else {
+		return errors.New("Namespace is required for delete --all")
+	}
+	cmd.Args = append(cmd.Args, "delete", kind, "--all")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	fmt.Println(cmd)
+	err := cmd.Run()
+	fmt.Println(stdout.String())
+	fmt.Println(stderr.String())
+	return err
+}
+
 func WaitForCondition(condition string, args ...string) error {
 	kargs := []string{"wait", "--for", "condition=" + condition}
 	kargs = append(kargs, args...)

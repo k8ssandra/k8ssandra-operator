@@ -3,8 +3,12 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
@@ -69,6 +73,9 @@ func beforeSuite(t *testing.T) {
 
 	// TODO this needs to go away since we are create a Framework instance per test now
 	framework.Init(t)
+
+	// Used by the go-cassandra-native-protocol library
+	configureZeroLog()
 }
 
 // A TestFixture specifies the name of a subdirectory under the test/testdata/fixtures
@@ -168,6 +175,11 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
+	if err := f.DeployTraefik(t, namespace); err != nil {
+		t.Logf("failed to deploy Traefik")
+		return err
+	}
+
 	fixtureDir, err := filepath.Abs(fixtureDir)
 	if err != nil {
 		return err
@@ -208,6 +220,10 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 	}
 
 	if err := f.DeleteK8ssandraClusters(namespace); err != nil {
+		return err
+	}
+
+	if err := f.UndeployTraefik(t, namespace); err != nil {
 		return err
 	}
 
@@ -300,6 +316,68 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		}
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+
+	t.Log("check that if Stargate is deleted directly it gets re-created")
+	stargate := &api.Stargate{}
+	err = f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
+	require.NoError(err, "failed to get Stargate in namespace %s", namespace)
+	err = f.Client.Delete(ctx, stargate)
+	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
+	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
+		return stargate.Status.IsReady()
+	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
+
+	t.Log("delete Stargate in k8ssandracluster CRD")
+	err = f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
+	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
+	err = f.Client.Patch(ctx, k8ssandra, patch)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+
+	t.Log("check Stargate deleted")
+	require.Eventually(func() bool {
+		stargate := &api.Stargate{}
+		err := f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
+		if err == nil || !errors.IsNotFound(err) {
+			return false
+		}
+		k8ssandra := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra); err != nil {
+			return false
+		} else if kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]; !found {
+			return false
+		} else {
+			return kdcStatus.Stargate == nil
+		}
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+
+	t.Log("re-create Stargate in k8ssandracluster resource")
+	err = f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
+	err = f.Client.Patch(ctx, k8ssandra, patch)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+
+	t.Log("check that Stargate test-dc1-stargate is ready")
+	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
+		return stargate.Status.IsReady()
+	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
+
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+
+	t.Log("retrieve database credentials from kind-k8ssandra-0")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
+
+	replication := map[string]int{"dc1": 1}
+	t.Log("test Stargate REST API in context kind-k8ssandra-0")
+	testStargateRestApis(t, 0, username, password, replication)
+	t.Log("test Stargate native API in context kind-k8ssandra-0")
+	testStargateNativeApi(t, ctx, 0, username, password, replication)
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
@@ -321,6 +399,19 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	require.Eventually(withStargate(func(stargate *api.Stargate) bool {
 		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate s1 to become ready")
+
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+
+	t.Log("retrieve database credentials from kind-k8ssandra-0")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
+
+	replication := map[string]int{"dc1": 3}
+	t.Log("test Stargate REST API in context kind-k8ssandra-0")
+	testStargateRestApis(t, 0, username, password, replication)
+	t.Log("test Stargate native API in context kind-k8ssandra-0")
+	testStargateNativeApi(t, ctx, 0, username, password, replication)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -434,18 +525,43 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
-	pod := "test-dc1-rack1-sts-0"
-	count := 6
+	pod := "test-dc1-default-sts-0"
+	count := 2
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.interval, polling.nodetoolStatus.interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	opts.Context = "kind-k8ssandra-1"
-	pod = "test-dc2-rack1-sts-0"
+	pod = "test-dc2-default-sts-0"
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-1")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service")
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-1", namespace)
+
+	// FIXME credentials from kind-k8ssandra-1 are being used in kind-k8ssandra-0
+	t.Log("retrieve database credentials from kind-k8ssandra-1")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-1", namespace, "test")
+
+	replication := map[string]int{"dc1": 1, "dc2": 1}
+
+	t.Log("test Stargate native API in context kind-k8ssandra-0")
+	testStargateNativeApi(t, ctx, 0, username, password, replication)
+	t.Log("test Stargate native API in context kind-k8ssandra-1")
+	testStargateNativeApi(t, ctx, 1, username, password, replication)
+
+	// FIXME data_endpoint_auth keyspace needs fixing
+	// t.Log("test Stargate REST API in context kind-k8ssandra-0")
+	// testStargateRestApis(t, 0, username, password, replication)
+	// t.Log("test Stargate REST API in context kind-k8ssandra-1")
+	// testStargateRestApis(t, 1, username, password, replication)
 }
 
 func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *cassdcapi.CassandraDatacenterStatus {
@@ -459,4 +575,12 @@ func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *c
 func cassandraDatacenterReady(status *cassdcapi.CassandraDatacenterStatus) bool {
 	return status.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue &&
 		status.CassandraOperatorProgress == cassdcapi.ProgressReady
+}
+
+func configureZeroLog() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:        os.Stderr,
+		TimeFormat: zerolog.TimeFormatUnix,
+	})
 }

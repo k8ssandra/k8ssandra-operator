@@ -31,6 +31,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 	racks := dc.GetRacks()
 	replicasByRack := cassdcapi.SplitRacks(int(stargate.Spec.Size), len(racks))
+	dnsPolicy := computeDNSPolicy(dc)
 
 	var deployments = make(map[string]appsv1.Deployment)
 	for i, rack := range racks {
@@ -84,6 +85,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
+							api.NameLabel:               api.NameLabelValue,
+							api.PartOfLabel:             api.PartOfLabelValue,
+							api.ComponentLabel:          api.ComponentLabelValueStargate,
+							api.CreatedByLabel:          api.CreatedByLabelValueStargateController,
 							api.StargateLabel:           stargate.Name,
 							api.StargateDeploymentLabel: deploymentName,
 						},
@@ -92,6 +97,9 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 					Spec: corev1.PodSpec{
 
 						ServiceAccountName: serviceAccountName,
+
+						HostNetwork: dc.IsHostNetworkEnabled(),
+						DNSPolicy:   dnsPolicy,
 
 						Containers: []corev1.Container{{
 
@@ -115,6 +123,14 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 							Resources: resources,
 
 							Env: []corev1.EnvVar{
+								{
+									Name: "LISTEN",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
+									},
+								},
 								{Name: "JAVA_OPTS", Value: jvmOptions},
 								{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
 								{Name: "CLUSTER_VERSION", Value: clusterVersion},
@@ -140,11 +156,19 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		}
 		if klusterName, found := stargate.Labels[api.K8ssandraClusterLabel]; found {
 			deployment.Labels[api.K8ssandraClusterLabel] = klusterName
+			deployment.Spec.Template.ObjectMeta.Labels[api.K8ssandraClusterLabel] = klusterName
 		}
 		deployment.Annotations[api.ResourceHashAnnotation] = utils.DeepHashString(deployment)
 		deployments[deploymentName] = deployment
 	}
 	return deployments
+}
+
+func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
+	if dc.IsHostNetworkEnabled() {
+		return corev1.DNSClusterFirstWithHostNet
+	}
+	return corev1.DNSClusterFirst
 }
 
 func computeDeploymentName(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) string {

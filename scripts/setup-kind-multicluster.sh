@@ -34,9 +34,10 @@ function create_registry() {
 }
 
 function create_cluster() {
-  cluster_name=$1
-  num_workers=$2
-  node_version=$3
+  cluster_id=$1
+  cluster_name=$2
+  num_workers=$3
+  node_version=$4
 
 cat <<EOF | kind create cluster --name $cluster_name --image kindest/node:$node_version --config=-
 kind: Cluster
@@ -47,6 +48,16 @@ containerdConfigPatches:
     endpoint = ["http://${registry_name}:${registry_port}"]
 nodes:
 - role: control-plane
+  extraPortMappings:
+  - containerPort: 30080
+    hostPort: 3${cluster_id}080
+    protocol: TCP
+  - containerPort: 30942
+    hostPort: 3${cluster_id}942
+    protocol: TCP
+  - containerPort: 30090
+    hostPort: 3${cluster_id}090
+    protocol: TCP
 $(for ((i=1; i<=$num_workers; i++)); do
 cat << EOF2
 - role: worker
@@ -68,7 +79,7 @@ function create_clusters() {
 
   for ((i=0; i<$num_clusters; i++))
   do
-    create_cluster "k8ssandra-$i" $kind_worker_nodes $kind_node_version
+    create_cluster $i "k8ssandra-$i" $kind_worker_nodes $kind_node_version
   done
   echo
 }

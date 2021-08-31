@@ -884,12 +884,16 @@ spec:
                 type: object
               allowStargateOnDataNodes:
                 default: false
-                description: AllowStargateOnDataNodes allows Stargate pods to be scheduled
-                  on a worker node already hosting data pods for this datacenter.
+                description: 'AllowStargateOnDataNodes allows Stargate pods to be
+                  scheduled on a worker node already hosting data pods for this datacenter.
                   The default is false, which means that Stargate pods will be scheduled
-                  on separate worker nodes.
+                  on separate worker nodes. Note: if the datacenter pods have HostNetwork:true,
+                  then the Stargate pods will inherit of it, in which case it is possible
+                  that Stargate nodes won''t be allowed to sit on data nodes even
+                  if this property is set to true, because of port conflicts on the
+                  same IP address.'
                 type: boolean
-              cassandraConfigMap:
+              cassandraConfigMapRef:
                 description: CassandraConfigMapRef is a reference to a ConfigMap that
                   holds Cassandra configuration. The map should have a key named cassandra_yaml.
                 properties:
@@ -1943,12 +1947,17 @@ spec:
                       type: object
                     allowStargateOnDataNodes:
                       default: false
-                      description: AllowStargateOnDataNodes allows Stargate pods to
-                        be scheduled on a worker node already hosting data pods for
-                        this datacenter. The default is false, which means that Stargate
-                        pods will be scheduled on separate worker nodes.
+                      description: 'AllowStargateOnDataNodes allows Stargate pods
+                        to be scheduled on a worker node already hosting data pods
+                        for this datacenter. The default is false, which means that
+                        Stargate pods will be scheduled on separate worker nodes.
+                        Note: if the datacenter pods have HostNetwork:true, then the
+                        Stargate pods will inherit of it, in which case it is possible
+                        that Stargate nodes won''t be allowed to sit on data nodes
+                        even if this property is set to true, because of port conflicts
+                        on the same IP address.'
                       type: boolean
-                    cassandraConfigMap:
+                    cassandraConfigMapRef:
                       description: CassandraConfigMapRef is a reference to a ConfigMap
                         that holds Cassandra configuration. The map should have a
                         key named cassandra_yaml.

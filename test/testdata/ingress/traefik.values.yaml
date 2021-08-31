@@ -1,0 +1,44 @@
+# https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+ports:
+  # Note on ports:
+  #
+  # There is a double port indirection:
+  # outside world -> 3x080 -> kind docker container / worker node -> 30080 -> pod (container inside container)
+  #
+  # The port to use from the outside world depends on the context's zero-based index; e.g.
+  # kind-k8ssandra-0 = index 0 = 30080
+  # kind-k8ssandra-1 = index 1 = 31080
+  # etc.
+  #
+  # The first port mapping is defined when creating the Kind cluster, see setup-kind-multicluster.sh, and depends on the
+  # context index; this Helm file takes care of the second port mapping (from worker node to pod), which is invariable
+  # since it is context-specific.
+  #
+  # Stargate REST APIs will be accessible from outside at:
+  # kind-k8ssandra-0 = http://stargate.127.0.0.1.nip.io:30080
+  # kind-k8ssandra-1 = http://stargate.127.0.0.1.nip.io:31080
+  # etc.
+  #
+  # Stargate CQL native protocol will be accessible from outside, without TLS, at:
+  # kind-k8ssandra-0 = stargate.127.0.0.1.nip.io:30942
+  # kind-k8ssandra-1 = stargate.127.0.0.1.nip.io:31942
+  # etc.
+  #
+  # Traefik dashboard will be accessible from outside at:
+  # kind-k8ssandra-0 = http://localhost:30090/dashboard/
+  # kind-k8ssandra-1 = http://localhost:31090/dashboard/
+  # etc.
+  traefik:
+    expose: true
+    port: 30090
+    nodePort: 30090
+  stargate-http:
+    expose: true
+    port: 30080
+    nodePort: 30080
+  stargate-native:
+    expose: true
+    port: 30942
+    nodePort: 30942
+service:
+  type: NodePort

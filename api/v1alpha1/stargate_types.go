@@ -79,6 +79,9 @@ type StargateTemplate struct {
 
 	// AllowStargateOnDataNodes allows Stargate pods to be scheduled on a worker node already hosting data pods for this
 	// datacenter. The default is false, which means that Stargate pods will be scheduled on separate worker nodes.
+	// Note: if the datacenter pods have HostNetwork:true, then the Stargate pods will inherit of it, in which case it
+	// is possible that Stargate nodes won't be allowed to sit on data nodes even if this property is set to true,
+	// because of port conflicts on the same IP address.
 	// +optional
 	// +kubebuilder:default=false
 	AllowStargateOnDataNodes bool `json:"allowStargateOnDataNodes,omitempty"`
@@ -86,7 +89,7 @@ type StargateTemplate struct {
 	// CassandraConfigMapRef is a reference to a ConfigMap that holds Cassandra configuration.
 	// The map should have a key named cassandra_yaml.
 	// +optional
-	CassandraConfigMapRef *corev1.LocalObjectReference `json:"cassandraConfigMap,omitempty"`
+	CassandraConfigMapRef *corev1.LocalObjectReference `json:"cassandraConfigMapRef,omitempty"`
 }
 
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.

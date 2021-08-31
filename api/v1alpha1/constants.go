@@ -30,5 +30,5 @@ const (
 	// controller. The label value is the Deployment name.
 	StargateDeploymentLabel = "k8ssandra.io/stargate-deployment"
 
-	DefaultStargateVersion = "1.0.30"
+	DefaultStargateVersion = "1.0.31"
 )

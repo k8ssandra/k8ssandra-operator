@@ -32,6 +32,8 @@ spec:
       memory: 768Mi
   serverType: cassandra
   serverVersion: 3.11.10
+  networking:
+    hostNetwork: false
   size: 3
   racks:
     - name: rack1
