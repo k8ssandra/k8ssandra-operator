@@ -129,6 +129,16 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
+	if err := f.DeployCertManager(); err != nil {
+		t.Log("failed to deploy cert-manager")
+		return err
+	}
+
+	if err := f.WaitForCertManagerToBeReady("cert-manager", polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+		t.Log("failed waiting for cert-manager to be ready")
+		return err
+	}
+
 	if err := f.DeployCassOperator(namespace); err != nil {
 		t.Log("failed to deploy cass-operator")
 		return err

@@ -299,6 +299,19 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 	return nil
 }
 
+func (f *E2eFramework) DeployCertManager() error {
+	dir := filepath.Join("..", "..", "config", "cert-manager", "cert-manager-1.3.1.yaml")
+
+	for _, ctx := range f.getClusterContexts() {
+		options := kubectl.Options{Context: ctx}
+		if err := kubectl.Apply(options, dir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeployCassOperator deploys cass-operator in all remote clusters.
 func (f *E2eFramework) DeployCassOperator(namespace string) error {
 	if err := generateCassOperatorKustomization(namespace); err != nil {
@@ -406,10 +419,29 @@ func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeo
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
+func (f *E2eFramework) WaitForCertManagerToBeReady(namespace string, timeout, interval time.Duration) error {
+	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cert-manager"}}
+	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
+		return nil
+	}
+
+	key.NamespacedName.Name = "cert-manager-cainjector"
+	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
+		return err
+	}
+
+	key.NamespacedName.Name = "cert-manager-webhook"
+	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in all
 // clusters.
 func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
-	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cass-operator"}}
+	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cass-operator-controller-manager"}}
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
