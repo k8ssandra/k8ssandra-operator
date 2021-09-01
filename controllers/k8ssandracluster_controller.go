@@ -211,15 +211,14 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 
 	if stargateTemplate != nil {
 
-		if !kc.Status.IsStargateAuthKeyspaceCreated() {
-			logger.Info("Creating keyspace data_endpoint_auth...")
-			if err := r.createStargateAuthKeyspace(ctx, kc, actualDc, remoteClient, logger); err != nil {
-				logger.Error(err, "Failed to create keyspace data_endpoint_auth")
-				return ctrl.Result{RequeueAfter: longDelay}, err
-			} else {
-				logger.Info("Keyspace data_endpoint_auth successfully created")
-				kc.Status.SetStargateAuthKeyspaceCreated()
-			}
+		// TODO create a endpoint in the Management API to list existing keyspaces and test whether the keyspace
+		// already exists.
+		logger.Info("Ensuring that keyspace data_endpoint_auth exists...")
+		if err := r.ensureStargateAuthKeyspaceExists(ctx, kc, actualDc, remoteClient, logger); err != nil {
+			logger.Error(err, "Failed to create keyspace data_endpoint_auth")
+			return ctrl.Result{RequeueAfter: longDelay}, err
+		} else {
+			logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
 		}
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
@@ -473,7 +472,7 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) createStargateAuthKeyspace(
+func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
@@ -485,7 +484,7 @@ func (r *K8ssandraClusterReconciler) createStargateAuthKeyspace(
 		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
 		replication[dcTemplate.Meta.Name] = replicationFactor
 	}
-	return r.ManagementApi.CreateKeyspace(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger)
+	return r.ManagementApi.CreateKeyspaceIfNotExists(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger)
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

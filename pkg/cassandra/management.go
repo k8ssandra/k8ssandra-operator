@@ -11,8 +11,13 @@ import (
 	"strconv"
 )
 
+// ManagementApiFacade is a component mirroring methods available on httphelper.NodeMgmtClient. This component exists
+// mostly to allow tests to provide mocks for the Management API client.
 type ManagementApiFacade interface {
-	CreateKeyspace(
+
+	// CreateKeyspaceIfNotExists calls the management API "/ops/keyspace/create" endpoint to create a new keyspace if it
+	// does not exist yet. Calling this method on an existing keyspace is a no-op.
+	CreateKeyspaceIfNotExists(
 		ctx context.Context,
 		dc *cassdcapi.CassandraDatacenter,
 		remoteClient client.Client,
@@ -29,7 +34,7 @@ func NewManagementApiFacade() ManagementApiFacade {
 	return &defaultManagementApiFacade{}
 }
 
-func (r *defaultManagementApiFacade) CreateKeyspace(
+func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 	ctx context.Context,
 	dc *cassdcapi.CassandraDatacenter,
 	remoteClient client.Client,
