@@ -64,6 +64,8 @@ KIND_CLUSTER ?= kind
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+TEST_ARGS=
+
 all: build
 
 ##@ General
@@ -122,13 +124,13 @@ kind-load-image:
 	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
 
 PHONY: e2e-test
-e2e-test: cert-manager
+e2e-test:
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
-	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)"
+	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
 else
 	@echo Running e2e tests
-	go test -v -timeout 3600s ./test/e2e/...
+	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
 endif
 
 ##@ Deployment

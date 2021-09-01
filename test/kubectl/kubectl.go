@@ -13,6 +13,12 @@ type Options struct {
 	Context   string
 }
 
+var logOutput = false
+
+func LogOutput(enabled bool) {
+	logOutput = enabled
+}
+
 func Apply(opts Options, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
@@ -26,10 +32,6 @@ func Apply(opts Options, arg interface{}) error {
 
 	cmd.Args = append(cmd.Args, "apply", "-f")
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
 	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf
 		cmd.Args = append(cmd.Args, "-")
@@ -41,10 +43,11 @@ func Apply(opts Options, arg interface{}) error {
 
 	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
@@ -62,10 +65,6 @@ func Delete(opts Options, arg interface{}) error {
 
 	cmd.Args = append(cmd.Args, "delete", "-f")
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
 	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf
 		cmd.Args = append(cmd.Args, "-")
@@ -77,10 +76,11 @@ func Delete(opts Options, arg interface{}) error {
 
 	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
@@ -97,13 +97,11 @@ func DeleteByName(opts Options, kind, name string, ignoreNotFound bool) error {
 	if ignoreNotFound {
 		cmd.Args = append(cmd.Args, "--ignore-not-found")
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 	fmt.Println(cmd)
-	err := cmd.Run()
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	output, err := cmd.CombinedOutput()
+	if logOutput {
+		fmt.Println(string(output))
+	}
 	return err
 }
 
@@ -118,13 +116,11 @@ func DeleteAllOf(opts Options, kind string) error {
 		return errors.New("Namespace is required for delete --all")
 	}
 	cmd.Args = append(cmd.Args, "delete", kind, "--all")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 	fmt.Println(cmd)
-	err := cmd.Run()
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	output, err := cmd.CombinedOutput()
+	if logOutput {
+		fmt.Println(string(output))
+	}
 	return err
 }
 
@@ -134,14 +130,11 @@ func WaitForCondition(condition string, args ...string) error {
 
 	cmd := exec.Command("kubectl", kargs...)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	output, err := cmd.CombinedOutput()
 
-	err := cmd.Run()
-
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
@@ -202,14 +195,11 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 
 	cmd.Args = append(cmd.Args, "--output-directory", dir)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	output, err := cmd.CombinedOutput()
 
-	err = cmd.Run()
-
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }

@@ -2,7 +2,9 @@ package e2e
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +40,9 @@ var (
 		k8ssandraClusterStatus  pollingConfig
 		stargateReady           pollingConfig
 	}
+
+	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
+	logKubectlOutput = flag.Bool("logKubectlOutput", false, "")
 )
 
 func TestOperator(t *testing.T) {
@@ -58,6 +63,9 @@ func beforeSuite(t *testing.T) {
 	} else {
 		nodetoolStatusTimeout = 1 * time.Minute
 	}
+
+	kustomize.LogOutput(*logKustomizeOutput)
+	kubectl.LogOutput(*logKubectlOutput)
 
 	cfgFile, err := filepath.Abs("../../build/kubeconfig")
 	if err != nil {

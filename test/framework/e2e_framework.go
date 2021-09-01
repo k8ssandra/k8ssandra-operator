@@ -245,6 +245,8 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	}
 
 	for _, ctx := range contexts {
+		f.logger.Info("kustomize build | kubectl apply", "Dir", dir, "Namespace", namespace, "Context", ctx)
+
 		buf, err := kustomize.Build(kdir)
 		if err != nil {
 			f.logger.Error(err, "kustomize build failed", "dir", kdir)
@@ -265,6 +267,7 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 
 	for _, k8sContext := range f.getClusterContexts() {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Cassandra ConfigMap", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}
@@ -304,6 +307,7 @@ func (f *E2eFramework) DeployCertManager() error {
 
 	for _, ctx := range f.getClusterContexts() {
 		options := kubectl.Options{Context: ctx}
+		f.logger.Info("Deploy cert-manager", "Context", ctx)
 		if err := kubectl.Apply(options, dir); err != nil {
 			return err
 		}
@@ -545,6 +549,8 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 	if err != nil {
 		return err
 	}
+
+	f.logger.Info("Undeploy k8ssandra-operator", "Namespace", namespace)
 
 	buf, err := kustomize.Build(dir)
 	if err != nil {
