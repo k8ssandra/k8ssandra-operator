@@ -24,6 +24,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -203,7 +204,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
-		Name:      kc.Name + "-" + actualDc.Name + "-stargate",
+		Name:      stargate.ResourceName(kc, actualDc),
 	}
 	actualStargate := &api.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)

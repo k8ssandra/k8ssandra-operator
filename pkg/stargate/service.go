@@ -11,7 +11,7 @@ import (
 // NewService creates a Service object for the given Stargate and CassandraDatacenter
 // resources.
 func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *corev1.Service {
-	serviceName := dc.Spec.ClusterName + "-" + dc.Name + "-stargate-service"
+	serviceName := ServiceName(dc)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,

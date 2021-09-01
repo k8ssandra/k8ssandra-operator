@@ -43,7 +43,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
 
-		deploymentName := computeDeploymentName(dc, &rack)
+		deploymentName := DeploymentName(dc, &rack)
 		image := computeImage(template, clusterVersion)
 		pullPolicy := computePullPolicy(template)
 		resources := computeResourceRequirements(template)
@@ -169,10 +169,6 @@ func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
 		return corev1.DNSClusterFirstWithHostNet
 	}
 	return corev1.DNSClusterFirst
-}
-
-func computeDeploymentName(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) string {
-	return dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate-deployment"
 }
 
 func computeSeedServiceUrl(dc *cassdcapi.CassandraDatacenter) string {
