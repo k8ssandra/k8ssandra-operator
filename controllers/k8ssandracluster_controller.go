@@ -212,6 +212,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	if stargateTemplate != nil {
 
 		if !kc.Status.IsStargateAuthKeyspaceCreated() {
+			logger.Info("Creating keyspace data_endpoint_auth...")
 			if err := r.createStargateAuthKeyspace(ctx, kc, actualDc, remoteClient, logger); err != nil {
 				logger.Error(err, "Failed to create keyspace data_endpoint_auth")
 				return ctrl.Result{RequeueAfter: longDelay}, err
