@@ -245,6 +245,22 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
+			name:             "file_cache_size_in_mb, row_cache_size_in_mb",
+			cassandraVersion: "4.0",
+			config: &api.CassandraConfig{
+				CassandraYaml: &api.CassandraYaml{
+					FileCacheSizeMb: intPtr(500),
+					RowCacheSizeMb:  intPtr(100),
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "file_cache_size_in_mb": 500,
+                "row_cache_size_in_mb": 100
+              }
+            }`,
+		},
+		{
 			name:             "[3.11.10] start_rpc, thrift_prepared_statements_cache_size_mb",
 			cassandraVersion: "3.11.10",
 			config: &api.CassandraConfig{
@@ -274,6 +290,22 @@ func TestCreateJsonConfig(t *testing.T) {
               }
             }`,
 		},
+		//{
+		//	name: "auth",
+		//	cassandraVersion: "4.0",
+		//	config: &api.CassandraConfig{
+		//		CassandraYaml: &api.CassandraYaml{
+		//			Authenticator: "FakeAuthenticator",
+		//			Authorizer: "FakeAuthorizer",
+		//		},
+		//	},
+		//	want: `{
+		//      "cassandra-yaml": {
+		//        "authenticator": "FakeAuthenticator",
+		//        "authorizer": "FakeAuthorizer"
+		//      }
+		//    }`,
+		//},
 	}
 
 	for _, tc := range tests {

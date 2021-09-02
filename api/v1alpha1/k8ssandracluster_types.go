@@ -162,12 +162,36 @@ type EmbeddedObjectMeta struct {
 
 // TODO Implement Stringer interface. It will helpful for debugging and testing.
 type CassandraConfig struct {
+	Auth *Auth `json:"auth,omitempty"`
+
 	CassandraYaml *CassandraYaml `json:"cassandraYaml,omitempty"`
 
 	JvmOptions *JvmOptions `json:"jvmOptions,omitempty"`
 }
 
+type Auth struct {
+	Enabled bool `json:"enabled,omitempty"`
+
+	CacheValidityPeriodMillis *int64 `json:"cacheValidityPeriodMillis,omitempty"`
+
+	CacheUpdateIntervalMillis *int64 `json:"cacheUpdateIntervalMillis,omitempty"`
+
+	SuperUserSecretName string `json:"SuperUserSecretName,omitempty"`
+}
+
 type CassandraYaml struct {
+	//Authenticator string `json:"authenticator,omitempty"`
+	//
+	//Authorizer string `json:"authorizer,omitempty"`
+	//
+	//RoleManager string `json:"role_manager,omitempty"`
+	//
+	//RoleValidityMillis *int64 `json:"roles_validity_in_ms,omitempty"`
+	//
+	//RoleUpdateIntervalMillis *int64 `json:"roles_update_interval_in_ms,omitempty"`
+	//
+	//PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
+
 	ConcurrentReads *int `json:"concurrent_reads,omitempty"`
 
 	ConcurrentWrites *int `json:"concurrent_writes,omitempty"`
@@ -197,6 +221,10 @@ type CassandraYaml struct {
 	SlowQueryLogTimeoutMs *int `json:"slow_query_log_timeout_in_ms,omitempty"`
 
 	CounterCacheSizeMb *int `json:"counter_cache_size_in_mb,omitempty"`
+
+	FileCacheSizeMb *int `json:"file_cache_size_in_mb,omitempty"`
+
+	RowCacheSizeMb *int `json:"row_cache_size_in_mb,omitempty"`
 }
 
 type JvmOptions struct {

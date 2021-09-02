@@ -52,6 +52,18 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 	}
 
 	if config.CassandraYaml != nil {
+		//if len(config.CassandraYaml.Authenticator) > 0 {
+		//	cassandraYaml["authenticator"] = config.CassandraYaml.Authenticator
+		//}
+		//
+		//if len(config.CassandraYaml.Authorizer) > 0 {
+		//	cassandraYaml["authorizer"] = config.CassandraYaml.Authorizer
+		//}
+		//
+		//if len(config.CassandraYaml.RoleManager) > 0 {
+		//
+		//}
+
 		if config.CassandraYaml.ConcurrentReads != nil {
 			cassandraYaml["concurrent_reads"] = config.CassandraYaml.ConcurrentReads
 		}
@@ -86,6 +98,14 @@ func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]b
 
 		if config.CassandraYaml.KeyCacheSizeMb != nil {
 			cassandraYaml["key_cache_size_in_mb"] = config.CassandraYaml.KeyCacheSizeMb
+		}
+
+		if config.CassandraYaml.FileCacheSizeMb != nil {
+			cassandraYaml["file_cache_size_in_mb"] = config.CassandraYaml.FileCacheSizeMb
+		}
+
+		if config.CassandraYaml.RowCacheSizeMb != nil {
+			cassandraYaml["row_cache_size_in_mb"] = config.CassandraYaml.RowCacheSizeMb
 		}
 
 		if config.CassandraYaml.PreparedStatementsCacheSizeMb != nil {
