@@ -22,8 +22,8 @@ package v1alpha1
 
 import (
 	"github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -318,7 +318,7 @@ func (in *ContainerImage) DeepCopyInto(out *ContainerImage) {
 	}
 	if in.PullPolicy != nil {
 		in, out := &in.PullPolicy, &out.PullPolicy
-		*out = new(corev1.PullPolicy)
+		*out = new(v1.PullPolicy)
 		**out = **in
 	}
 }
@@ -587,7 +587,7 @@ func (in *ReplicatedSecretSpec) DeepCopyInto(out *ReplicatedSecretSpec) {
 	*out = *in
 	if in.Selector != nil {
 		in, out := &in.Selector, &out.Selector
-		*out = new(v1.LabelSelector)
+		*out = new(metav1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ReplicationTargets != nil {
@@ -865,7 +865,7 @@ func (in *StargateTemplate) DeepCopyInto(out *StargateTemplate) {
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
-		*out = new(corev1.ResourceRequirements)
+		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.HeapSize != nil {
@@ -875,12 +875,12 @@ func (in *StargateTemplate) DeepCopyInto(out *StargateTemplate) {
 	}
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe
-		*out = new(corev1.Probe)
+		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.ReadinessProbe != nil {
 		in, out := &in.ReadinessProbe, &out.ReadinessProbe
-		*out = new(corev1.Probe)
+		*out = new(v1.Probe)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.NodeSelector != nil {
@@ -892,19 +892,19 @@ func (in *StargateTemplate) DeepCopyInto(out *StargateTemplate) {
 	}
 	if in.Tolerations != nil {
 		in, out := &in.Tolerations, &out.Tolerations
-		*out = make([]corev1.Toleration, len(*in))
+		*out = make([]v1.Toleration, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
-		*out = new(corev1.Affinity)
+		*out = new(v1.Affinity)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.CassandraConfigMapRef != nil {
 		in, out := &in.CassandraConfigMapRef, &out.CassandraConfigMapRef
-		*out = new(corev1.LocalObjectReference)
+		*out = new(v1.LocalObjectReference)
 		**out = **in
 	}
 }

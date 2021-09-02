@@ -31,23 +31,18 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sort"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -113,6 +108,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		dcConfig.AdditionalSeeds = seeds
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
+
+		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return ctrl.Result{}, err
@@ -204,7 +203,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 func (r *K8ssandraClusterReconciler) reconcileStargate(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dcTemplate api.CassandraDatacenterTemplateSpec,
+	dcTemplate api.CassandraDatacenterTemplate,
 	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 	remoteClient client.Client,
