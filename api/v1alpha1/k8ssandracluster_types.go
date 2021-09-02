@@ -55,8 +55,8 @@ type K8ssandraStatus struct {
 	Stargate  *StargateStatus                      `json:"stargate,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // K8ssandraCluster is the Schema for the k8ssandraclusters API
 type K8ssandraCluster struct {
@@ -67,7 +67,25 @@ type K8ssandraCluster struct {
 	Status K8ssandraClusterStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// HasStargates returns true if at least one Stargate resource will be created as part of the creation
+// of this K8ssandraCluster object.
+func (in *K8ssandraCluster) HasStargates() bool {
+	if in == nil {
+		return false
+	} else if in.Spec.Stargate != nil {
+		return true
+	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
+		return false
+	}
+	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
+		if dcTemplate.Stargate != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// +kubebuilder:object:root=true
 
 // K8ssandraClusterList contains a list of K8ssandraCluster
 type K8ssandraClusterList struct {
