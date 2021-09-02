@@ -32,7 +32,7 @@ This section provides some examples that demonstrate how to configure the operat
 
 You need to Kustomize 4.0.5 or later installed. See [here](https://kubectl.docs.kubernetes.io/installation/kustomize/) for installation options. 
 
-Recent versions of `kubectl` include Kustomize. It is executing using the `-k` option. I prefer to install Kustomize and use the `kustomize` binary as I have found in the past that the one embedded with `kubectl` can be several versions behind and behave differently  than what is described in the Kustomize docs.
+Recent versions of `kubectl` include Kustomize. It is executed using the `-k` option. I prefer to install Kustomize and use the `kustomize` binary as I have found in the past that the one embedded with `kubectl` can be several versions behind and behave differently  than what is described in the Kustomize docs.
 
 ### Default Install
 First, create a kustomization directory that builds from the `main` branch:
@@ -187,6 +187,7 @@ cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
 clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
 k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
 stargates.k8ssandra.io                        2021-08-11T15:07:27Z
+replicatedsecrets.k8ssandra.io                2021-08-11T15:07:27Z
 ```
 
 ## Install from source
@@ -206,7 +207,8 @@ If you are running in a cloud provider, you can get routable IPs by installing t
 If you run multiple kind clusters locally, you will have routable pod IPs assuming that they run on the same Docker network which is normally the case. We leverage this for our multi-cluster e2e tests.
 
 ## Architecture
-K8sandra Operator consists of a control plane and a data plane. Simply put the data plane deploys and manages pods. The control plane does not deploy or manage pods. The control plane should be installed in only one cluster, i.e., the control plane cluster. The data plane can be installed on any number of clusters.
+K8sandra Operator consists of a control plane and a data plane.
+The control plane creates and manages that exist only in the api server. The data plane deploys and manages pods. The control plane does not deploy or manage pods. The control plane should be installed in only one cluster, i.e., the control plane cluster. The data plane can be installed on any number of clusters.
 
 **Note:** The control plane cluster can also function as a data plane cluster.
 
@@ -215,87 +217,14 @@ K8sandra Operator consists of a control plane and a data plane. Simply put the d
 ## Connecting to remote clusters
 The control plane needs to establish client connections to remote cluster where the data plane runs. Credentials are provided via a [kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) file that is stored in a Secret. That secret is then referenced via a `ClientConfig` custom resource.
 
-### Creating a ClientConfig
-First, we need to create a secret that holds the kubeconfig file. 
+A kubeconfig entry for a cluster hosted by a cloud provider with include an auth token for authenticated with the cloud provider. That token expires. If you use one of these kubeconfigs be aware that the operator will not be able to access the remote cluster once that token expires. For this reason it is recommended that you use the [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) script for configuring a connection to the remote cluster. This script is discussed in more detail in a later section.
 
-Do not use `$HOME/.kube/config` as it may contain keys to cluster that you do not intend to expose. Instead generate separate kubeconfig files for the clusters in which you plan to deploy K8ssandra Operator.
+## Installation
+This section goes through the steps necessary for installing the data plane and then the control plane.
 
-#### Generate a kubeconfig file
-Many k8s distributions come with tools for generating a kubeconfig entry. 
+### Install the data plane
+We set up the data plane first in order to create the `ClientConfig` objects needed to bootstrap the control plane.
 
-**kind**
-
-Assuming you already have a kind cluster, you can easily export the kubeconfig entry with the following command:
-
-```
-kind get kubeconfig --name <kind-cluster-name> > kubeconfig
-```
-If you do not have any clusters then you will get an error message like this:
-
-```
-ERROR: could not locate any control plane nodes
-```
-
-<!-- 
-The following sections on cloud providers needs to be updated or replaced after https://github.com/k8ssandra/k8ssandra-operator/pull/84 is merged.
--->
-
-**GKE**
-
-The `gcloud container clusters get-credentials` command will generate a kubeconfig entry. Suppose we have a cluster in the us-east1 region, and its name is k8ssandra. 
-
-First, point to a kubeconfig file that is not the default:
-
-```
-export KUBECONFIG=/tmp/kubeconfig
-```
-Then generate the entry:
-
-```
-gcloud container clusters get-credentials --region us-east1 k8ssandra
-```
-
-**EKS**
-
-TODO
-
-**AKS**
-
-TODO
-
-#### Create the kubeconfig Secret 
-
-```
-kubectl create secret generic <secret-name> --from-file=/path/to/kubeconfig
-```
-**Note:** The property in the secret must be named `kubeconfig`, so if you are creating the secret with the `--from-file` option, then the file must also be named `kubeconfig`.
-
-#### Create the ClientConfig
-Here is an example ClientConfig manifest:
-
-```
-apiVersion: k8ssandra.io/v1alpha1
-kind: ClientConfig
-metadata:
-  name: cluster-1
-spec:
-  contextName: cluster-1
-  kubeConfigSecret:
-    name: k8s-secret  
-```
-
-`contextName` specifies the name of the Kubernetes context for which client connection should be made.
-
-`kubeConfigSecret` is a reference to the kubeconfig secret.
-
-**Note:** The operator needs to be installed before you can create a ClientConfig.
-
-The ClientConfig object should be created in the control plane cluster in the same namespace in which the operator is running.
-
-#### Install the control plane
-Follow the previous instructions for installing the operator. It is configured to run the control plane by default.
-
-#### Install the data plane
 Create a kustomization directory:
 
 ```sh
@@ -350,6 +279,31 @@ clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
 k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
 stargates.k8ssandra.io                        2021-08-11T15:07:27Z
 ```
+
+### Create a ClientConfig
+Now we need to create a `ClientConfig` for the remote cluster. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
+
+Here is a summary of what the script does:
+
+* Get the k8ssandra-operator service account from the remote cluster
+* Extract the service account token
+* Extract the CA cert
+* Create a kubeonfig using the token and cert
+* Create a secret for the kubeconfig
+* Create a ClientConfig that references the secret
+
+Let's say we have two GKE clusters with contexts named `gke-1` and `gke-2`. Assumed we have followed the steps for installing the data plane in `gke-2`. Now we want to create a ClientConfig. The command to do so would look like this:
+
+```
+create-clientconfig.sh --src-context gke-2 --dest-context gke-1
+```
+The script stores all of the artifacts that it generates in a directory which can be specified with the `--output-dir` option. If not specified, a temp directory is created.
+
+You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
+
+### Install the control plane
+Follow the previous instructions for installing the operator. It is configured to run the control plane by default.
+
 
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
