@@ -11,78 +11,95 @@ import (
 	"strconv"
 )
 
-// ManagementApiFacade is a component mirroring methods available on httphelper.NodeMgmtClient. This component exists
+// ManagementApiFactory creates request-scoped instances of ManagementApiFacade. This component exists
 // mostly to allow tests to provide mocks for the Management API client.
+type ManagementApiFactory interface {
+
+	// NewManagementApiFacade returns a new ManagementApiFacade that will connect to the Management API of nodes in
+	// the given datacenter. The k8sClient is used to fetch pods in that datacenter.
+	NewManagementApiFacade(
+		ctx context.Context,
+		dc *cassdcapi.CassandraDatacenter,
+		k8sClient client.Client,
+		logger logr.Logger,
+	) (ManagementApiFacade, error)
+}
+
+func NewManagementApiFactory() ManagementApiFactory {
+	return &defaultManagementApiFactory{}
+}
+
+type defaultManagementApiFactory struct {
+}
+
+func (d defaultManagementApiFactory) NewManagementApiFacade(
+	ctx context.Context,
+	dc *cassdcapi.CassandraDatacenter,
+	k8sClient client.Client,
+	logger logr.Logger,
+) (ManagementApiFacade, error) {
+	if httpClient, err := httphelper.BuildManagementApiHttpClient(dc, k8sClient, ctx); err != nil {
+		return nil, err
+	} else if protocol, err := httphelper.GetManagementApiProtocol(dc); err != nil {
+		return nil, err
+	} else {
+		nodeMgmtClient := &httphelper.NodeMgmtClient{
+			Client:   httpClient,
+			Log:      logger,
+			Protocol: protocol,
+		}
+		return &defaultManagementApiFacade{
+			ctx:            ctx,
+			dc:             dc,
+			nodeMgmtClient: nodeMgmtClient,
+			k8sClient:      k8sClient,
+			logger:         logger,
+		}, nil
+	}
+}
+
+// ManagementApiFacade is a component mirroring methods available on httphelper.NodeMgmtClient.
 type ManagementApiFacade interface {
 
 	// CreateKeyspaceIfNotExists calls the management API "/ops/keyspace/create" endpoint to create a new keyspace if it
 	// does not exist yet. Calling this method on an existing keyspace is a no-op.
 	CreateKeyspaceIfNotExists(
-		ctx context.Context,
-		dc *cassdcapi.CassandraDatacenter,
-		remoteClient client.Client,
 		keyspaceName string,
 		replication map[string]int,
-		logger logr.Logger,
 	) error
 }
 
 type defaultManagementApiFacade struct {
-}
-
-func NewManagementApiFacade() ManagementApiFacade {
-	return &defaultManagementApiFacade{}
+	ctx            context.Context
+	dc             *cassdcapi.CassandraDatacenter
+	nodeMgmtClient *httphelper.NodeMgmtClient
+	k8sClient      client.Client
+	logger         logr.Logger
 }
 
 func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
-	ctx context.Context,
-	dc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
 	keyspaceName string,
 	replication map[string]int,
-	logger logr.Logger,
 ) error {
-	if managementApiClient, err := r.createManagementApiClient(ctx, dc, remoteClient, logger); err != nil {
-		logger.Error(err, "Failed to create management-api client")
-		return err
-	} else if pods, err := r.fetchDatacenterPods(ctx, dc, remoteClient); err != nil {
-		logger.Error(err, "Failed to fetch datacenter pods")
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
 		return err
 	} else {
 		for _, pod := range pods {
-			if err := managementApiClient.CreateKeyspace(&pod, keyspaceName, r.createReplicationConfig(replication)); err != nil {
-				logger.Error(err, fmt.Sprintf("Failed to CALL create keyspace %s on pod %v", keyspaceName, pod.Name))
+			if err := r.nodeMgmtClient.CreateKeyspace(&pod, keyspaceName, r.createReplicationConfig(replication)); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL create keyspace %s on pod %v", keyspaceName, pod.Name))
 			} else {
 				return nil
 			}
 		}
-		return fmt.Errorf("CALL create keyspace %s failed on all datacenter %v pods", keyspaceName, dc.Name)
+		return fmt.Errorf("CALL create keyspace %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
 	}
 }
 
-func (r *defaultManagementApiFacade) createManagementApiClient(
-	ctx context.Context,
-	dc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
-	logger logr.Logger,
-) (*httphelper.NodeMgmtClient, error) {
-	if httpClient, err := httphelper.BuildManagementApiHttpClient(dc, remoteClient, ctx); err != nil {
-		return nil, err
-	} else if protocol, err := httphelper.GetManagementApiProtocol(dc); err != nil {
-		return nil, err
-	} else {
-		return &httphelper.NodeMgmtClient{
-			Client:   httpClient,
-			Log:      logger,
-			Protocol: protocol,
-		}, nil
-	}
-}
-
-func (r *defaultManagementApiFacade) fetchDatacenterPods(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]corev1.Pod, error) {
+func (r *defaultManagementApiFacade) fetchDatacenterPods() ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
-	if err := remoteClient.List(ctx, podList, labels); err != nil {
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: r.dc.Name}
+	if err := r.k8sClient.List(r.ctx, podList, labels); err != nil {
 		return nil, err
 	} else {
 		pods := r.filterPods(podList.Items, func(pod corev1.Pod) bool {
@@ -90,7 +107,7 @@ func (r *defaultManagementApiFacade) fetchDatacenterPods(ctx context.Context, dc
 			return status != nil && status.Ready
 		})
 		if len(pods) == 0 {
-			err = fmt.Errorf("no pods in READY state found in datacenter %v", dc.Name)
+			err = fmt.Errorf("no pods in READY state found in datacenter %v", r.dc.Name)
 			return nil, err
 		}
 		return pods, nil

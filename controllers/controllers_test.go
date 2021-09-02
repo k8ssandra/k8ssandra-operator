@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"path/filepath"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ const (
 
 var (
 	seedsResolver  = &fakeSeedsResolver{}
-	managementApi  = &fakeManagementApi{}
+	managementApi  = &fakeManagementApiFactory{}
 	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
 
@@ -258,9 +259,16 @@ func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdc
 	return r.callback(dc)
 }
 
+type fakeManagementApiFactory struct {
+}
+
+func (f fakeManagementApiFactory) NewManagementApiFacade(ctx context.Context, dc *cassdcapi.CassandraDatacenter, k8sClient client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+	return &fakeManagementApi{}, nil
+}
+
 type fakeManagementApi struct {
 }
 
-func (r *fakeManagementApi) CreateKeyspaceIfNotExists(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, keyspaceName string, replicationConfig map[string]int, logger logr.Logger) error {
+func (r *fakeManagementApi) CreateKeyspaceIfNotExists(keyspaceName string, replication map[string]int) error {
 	return nil
 }

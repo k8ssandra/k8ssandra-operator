@@ -50,7 +50,7 @@ type K8ssandraClusterReconciler struct {
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
 	SeedsResolver cassandra.RemoteSeedsResolver
-	ManagementApi cassandra.ManagementApiFacade
+	ManagementApi cassandra.ManagementApiFactory
 }
 
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -483,13 +483,15 @@ func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
 		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
 		replication[dcTemplate.Meta.Name] = replicationFactor
 	}
-	if err := r.ManagementApi.CreateKeyspaceIfNotExists(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger); err != nil {
+	if managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger); err != nil {
+		return err
+	} else if err := managementApi.CreateKeyspaceIfNotExists("data_endpoint_auth", replication); err != nil {
 		logger.Error(err, "Failed to create keyspace data_endpoint_auth")
 		return err
 	} else {
 		logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
+		return nil
 	}
-	return nil
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
