@@ -44,6 +44,19 @@ spec:
                     description: TODO Implement Stringer interface. It will helpful
                       for debugging and testing.
                     properties:
+                      auth:
+                        properties:
+                          SuperUserSecretName:
+                            type: string
+                          cacheUpdateIntervalMillis:
+                            format: int64
+                            type: integer
+                          cacheValidityPeriodMillis:
+                            format: int64
+                            type: integer
+                          enabled:
+                            type: boolean
+                        type: object
                       cassandraYaml:
                         properties:
                           auto_snapshot:
@@ -62,11 +75,15 @@ spec:
                             type: integer
                           counter_cache_size_in_mb:
                             type: integer
+                          file_cache_size_in_mb:
+                            type: integer
                           key_cache_size_in_mb:
                             type: integer
                           memtable_flush_writers:
                             type: integer
                           prepared_statements_cache_size_mb:
+                            type: integer
+                          row_cache_size_in_mb:
                             type: integer
                           slow_query_log_timeout_in_ms:
                             type: integer
@@ -104,6 +121,19 @@ spec:
                           description: TODO Implement Stringer interface. It will
                             helpful for debugging and testing.
                           properties:
+                            auth:
+                              properties:
+                                SuperUserSecretName:
+                                  type: string
+                                cacheUpdateIntervalMillis:
+                                  format: int64
+                                  type: integer
+                                cacheValidityPeriodMillis:
+                                  format: int64
+                                  type: integer
+                                enabled:
+                                  type: boolean
+                              type: object
                             cassandraYaml:
                               properties:
                                 auto_snapshot:
@@ -122,11 +152,15 @@ spec:
                                   type: integer
                                 counter_cache_size_in_mb:
                                   type: integer
+                                file_cache_size_in_mb:
+                                  type: integer
                                 key_cache_size_in_mb:
                                   type: integer
                                 memtable_flush_writers:
                                   type: integer
                                 prepared_statements_cache_size_mb:
+                                  type: integer
+                                row_cache_size_in_mb:
                                   type: integer
                                 slow_query_log_timeout_in_ms:
                                   type: integer
