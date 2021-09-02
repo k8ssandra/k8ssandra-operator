@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
+	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
+	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -39,11 +41,11 @@ func Init(t *testing.T) {
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
 
-	//cfg, err := ctrl.GetConfig()
-	//require.NoError(t, err, "failed to get *rest.Config")
+	// cfg, err := ctrl.GetConfig()
+	// require.NoError(t, err, "failed to get *rest.Config")
 	//
-	//Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	//require.NoError(t, err, "failed to create controller-runtime client")
+	// Client, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	// require.NoError(t, err, "failed to create controller-runtime client")
 }
 
 // Framework provides methods for use in both integration and e2e tests.
@@ -75,6 +77,7 @@ func (k ClusterKey) String() string {
 func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
+	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
 
 	// TODO ControlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
 	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
@@ -259,4 +262,13 @@ func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() b
 	return withStargate(func(dc *api.Stargate) bool {
 		return true
 	})
+}
+
+type terratestLoggerBridge struct {
+	logger logr.Logger
+}
+
+func (c *terratestLoggerBridge) Logf(t terratesttesting.TestingT, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	c.logger.Info(msg)
 }
