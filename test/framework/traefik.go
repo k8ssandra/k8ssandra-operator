@@ -30,8 +30,8 @@ func (f *E2eFramework) DeployTraefik(t testing.TestingT, namespace string) error
 	valuesFile := filepath.Join("..", "testdata", "ingress", "traefik.values.yaml")
 	for k8sContext := range f.remoteClients {
 		// Delete potential leftovers that could make the release installation fail
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik")
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik")
+		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik", true)
+		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik", true)
 		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace)}
 		out, err := helm.RunHelmCommandAndGetOutputE(t, options, "install", "traefik", "traefik/traefik", "--version", "v10.3.2", "-f", valuesFile)
 		if err != nil {
