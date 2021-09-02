@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	"path/filepath"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ const (
 
 var (
 	seedsResolver  = &fakeSeedsResolver{}
+	managementApi  = &fakeManagementApi{}
 	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
 
@@ -48,13 +50,12 @@ func TestControllers(t *testing.T) {
 	defaultDelay = time.Millisecond * 500
 	longDelay = time.Second
 
-	// t.Run("K8ssandraCluster", func(t *testing.T) {
-	// 	testK8ssandraCluster(ctx, t)
-	// })
-	// t.Run("Stargate", func(t *testing.T) {
-	// 	testStargate(ctx, t)
-	// })
-
+	t.Run("K8ssandraCluster", func(t *testing.T) {
+		testK8ssandraCluster(ctx, t)
+	})
+	t.Run("Stargate", func(t *testing.T) {
+		testStargate(ctx, t)
+	})
 	t.Run("SecretController", func(t *testing.T) {
 		testSecretController(ctx, t)
 	})
@@ -255,4 +256,11 @@ type fakeSeedsResolver struct {
 
 func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
 	return r.callback(dc)
+}
+
+type fakeManagementApi struct {
+}
+
+func (r *fakeManagementApi) CreateKeyspaceIfNotExists(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, keyspaceName string, replicationConfig map[string]int, logger logr.Logger) error {
+	return nil
 }

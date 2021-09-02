@@ -20,28 +20,28 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	"math"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sort"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sort"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -50,6 +50,7 @@ type K8ssandraClusterReconciler struct {
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
 	SeedsResolver cassandra.RemoteSeedsResolver
+	ManagementApi cassandra.ManagementApiFacade
 }
 
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -60,7 +61,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("K8ssandraCluster", req.NamespacedName)
 
 	kc := &api.K8ssandraCluster{}
 	err := r.Get(ctx, req.NamespacedName, kc)
@@ -75,14 +76,14 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	result, err := r.reconcile(ctx, kc, logger)
 	if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
-		logger.Error(patchErr, "failed to update k8ssandracluster status", "K8ssandraCluster", req.NamespacedName)
+		logger.Error(patchErr, "failed to update k8ssandracluster status")
 	} else {
-		logger.Info("updated k8ssandracluster status", "K8ssandraCluster", req.NamespacedName)
+		logger.Info("updated k8ssandracluster status")
 	}
 	return result, err
 }
 
-func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (ctrl.Result, error) {
+func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ssandraCluster, kcLogger logr.Logger) (ctrl.Result, error) {
 	if kc.Spec.Cassandra == nil {
 		// TODO handle the scenario of Cassandra being set to nil after having a non-nil value
 		return ctrl.Result{}, nil
@@ -99,18 +100,21 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+
+		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return ctrl.Result{}, err
 		}
-		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 
 		desiredDcHash := utils.DeepHashString(desiredDc)
 		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
-			logger.Error(err, "Failed to get remote client for datacenter", "CassandraDatacenter", dcKey)
+			logger.Error(err, "Failed to get remote client for datacenter")
 			return ctrl.Result{}, err
 		}
 
@@ -123,32 +127,32 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			if err = r.setStatusForDatacenter(kc, actualDc); err != nil {
-				logger.Error(err, "Failed to update status for datacenter", "CassandraDatacenter", dcKey)
+				logger.Error(err, "Failed to update status for datacenter")
 				return ctrl.Result{}, err
 			}
 
 			if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-				logger.Info("Updating datacenter", "CassandraDatacenter", dcKey)
+				logger.Info("Updating datacenter")
 				actualDc = actualDc.DeepCopy()
 				resourceVersion := actualDc.GetResourceVersion()
 				desiredDc.DeepCopyInto(actualDc)
 				actualDc.SetResourceVersion(resourceVersion)
 				if err = remoteClient.Update(ctx, actualDc); err != nil {
-					logger.Error(err, "Failed to update datacenter", "CassandraDatacenter", dcKey)
+					logger.Error(err, "Failed to update datacenter")
 					return ctrl.Result{}, err
 				}
 			}
 
 			if !cassandra.DatacenterReady(actualDc) {
-				logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
+				logger.Info("Waiting for datacenter to become ready")
 				return ctrl.Result{RequeueAfter: defaultDelay}, nil
 			}
 
-			logger.Info("The datacenter is ready", "CassandraDatacenter", dcKey)
+			logger.Info("The datacenter is ready")
 
 			endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
 			if err != nil {
-				logger.Error(err, "Failed to resolve seed endpoints", "CassandraDatacenter", dcKey)
+				logger.Error(err, "Failed to resolve seed endpoints")
 				return ctrl.Result{}, err
 			}
 
@@ -169,113 +173,118 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		} else {
 			if errors.IsNotFound(err) {
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
-					logger.Error(err, "Failed to create datacenter", "CassandraDatacenter", dcKey)
+					logger.Error(err, "Failed to create datacenter")
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{RequeueAfter: defaultDelay}, nil
 			} else {
-				logger.Error(err, "Failed to get datacenter", "CassandraDatacenter", dcKey)
+				logger.Error(err, "Failed to get datacenter")
 				return ctrl.Result{}, err
 			}
 		}
 
-		stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
-
-		stargateKey := types.NamespacedName{
-			Namespace: actualDc.Namespace,
-			Name:      kc.Name + "-" + actualDc.Name + "-stargate",
+		result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient)
+		if !result.IsZero() || err != nil {
+			return result, err
 		}
-		actualStargate := &api.Stargate{}
+	}
+	kcLogger.Info("Finished reconciling the k8ssandracluster")
+	return ctrl.Result{}, nil
+}
 
-		if stargateTemplate != nil {
+func (r *K8ssandraClusterReconciler) reconcileStargate(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcTemplate api.CassandraDatacenterTemplateSpec,
+	actualDc *cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+	remoteClient client.Client,
+) (ctrl.Result, error) {
 
-			desiredStargate := &api.Stargate{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   stargateKey.Namespace,
-					Name:        stargateKey.Name,
-					Annotations: map[string]string{},
-					Labels: map[string]string{
-						api.NameLabel:             api.NameLabelValue,
-						api.PartOfLabel:           api.PartOfLabelValue,
-						api.ComponentLabel:        api.ComponentLabelValueStargate,
-						api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-						api.K8ssandraClusterLabel: kcKey.Name,
-					},
-				},
-				Spec: api.StargateSpec{
-					StargateDatacenterTemplate: *stargateTemplate,
-					DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
-				},
-			}
-			desiredStargateHash := utils.DeepHashString(desiredStargate)
-			desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
+	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
+	stargateKey := types.NamespacedName{
+		Namespace: actualDc.Namespace,
+		Name:      stargate.ResourceName(kc, actualDc),
+	}
+	actualStargate := &api.Stargate{}
+	logger = logger.WithValues("Stargate", stargateKey)
 
-			if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
-				if errors.IsNotFound(err) {
-					logger.Info("Creating Stargate resource", "Stargate", stargateKey)
+	if stargateTemplate != nil {
 
-					if err := remoteClient.Create(ctx, desiredStargate); err != nil {
-						logger.Error(err, "Failed to create Stargate resource", "Stargate", stargateKey)
-						return ctrl.Result{}, err
-					} else {
-						return ctrl.Result{RequeueAfter: defaultDelay}, nil
-					}
+		// TODO create a endpoint in the Management API to list existing keyspaces and test whether the keyspace
+		// already exists.
+		logger.Info("Ensuring that keyspace data_endpoint_auth exists...")
+		if err := r.ensureStargateAuthKeyspaceExists(ctx, kc, actualDc, remoteClient, logger); err != nil {
+			logger.Error(err, "Failed to create keyspace data_endpoint_auth")
+			return ctrl.Result{RequeueAfter: longDelay}, err
+		} else {
+			logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
+		}
+
+		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
+		desiredStargateHash := utils.DeepHashString(desiredStargate)
+		desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
+
+		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+			if errors.IsNotFound(err) {
+				logger.Info("Creating Stargate resource")
+				if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+					logger.Error(err, "Failed to create Stargate resource")
+					return ctrl.Result{}, err
 				} else {
-					logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
-					return ctrl.Result{}, err
-				}
-			} else {
-				if err = r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name); err != nil {
-					logger.Error(err, "Failed to update status for stargate", "Stargate", stargateKey)
-					return ctrl.Result{}, err
-				}
-
-				if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
-					logger.Info("Updating Stargate resource", "Stargate", stargateKey)
-					resourceVersion := actualStargate.GetResourceVersion()
-					desiredStargate.DeepCopyInto(actualStargate)
-					actualStargate.SetResourceVersion(resourceVersion)
-
-					if err = remoteClient.Update(ctx, actualStargate); err == nil {
-						return ctrl.Result{RequeueAfter: defaultDelay}, nil
-					} else {
-						logger.Error(err, "Failed to update Stargate resource", "Stargate", stargateKey)
-						return ctrl.Result{}, err
-					}
-				}
-
-				if !actualStargate.Status.IsReady() {
-					logger.Info("Waiting for Stargate to become ready", "Stargate", stargateKey)
 					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				}
-				logger.Info("Stargate is ready", "Stargate", stargateKey)
+			} else {
+				logger.Error(err, "Failed to get Stargate resource")
+				return ctrl.Result{}, err
 			}
 		} else {
-			// Test if Stargate was removed
-			if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
-				if errors.IsNotFound(err) {
-					// OK
+			if err = r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name); err != nil {
+				logger.Error(err, "Failed to update status for stargate")
+				return ctrl.Result{}, err
+			}
+			if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
+				logger.Info("Updating Stargate resource")
+				resourceVersion := actualStargate.GetResourceVersion()
+				desiredStargate.DeepCopyInto(actualStargate)
+				actualStargate.SetResourceVersion(resourceVersion)
+				if err = remoteClient.Update(ctx, actualStargate); err == nil {
+					return ctrl.Result{RequeueAfter: defaultDelay}, nil
 				} else {
-					logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
+					logger.Error(err, "Failed to update Stargate resource")
 					return ctrl.Result{}, err
 				}
+			}
+			if !actualStargate.Status.IsReady() {
+				logger.Info("Waiting for Stargate to become ready")
+				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+			}
+			logger.Info("Stargate is ready")
+		}
+	} else {
+		// Test if Stargate was removed
+		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+			if errors.IsNotFound(err) {
+				// OK
 			} else {
-				if actualStargate.Labels[api.CreatedByLabel] == api.CreatedByLabelValueK8ssandraClusterController &&
-					actualStargate.Labels[api.K8ssandraClusterLabel] == kcKey.Name {
-					if err := remoteClient.Delete(ctx, actualStargate); err != nil {
-						logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
-						return ctrl.Result{}, err
-					} else {
-						r.removeStargateStatus(kc, dcTemplate.Meta.Name)
-						logger.Info("Stargate deleted", "Stargate", stargateKey)
-					}
+				logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
+				return ctrl.Result{}, err
+			}
+		} else {
+			if actualStargate.Labels[api.CreatedByLabel] == api.CreatedByLabelValueK8ssandraClusterController &&
+				actualStargate.Labels[api.K8ssandraClusterLabel] == kc.Name {
+				if err := remoteClient.Delete(ctx, actualStargate); err != nil {
+					logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
+					return ctrl.Result{}, err
 				} else {
-					logger.Info("Not deleting Stargate since it wasn't created by this controller", "Stargate", stargateKey)
+					r.removeStargateStatus(kc, dcTemplate.Meta.Name)
+					logger.Info("Stargate deleted", "Stargate", stargateKey)
 				}
+			} else {
+				logger.Info("Not deleting Stargate since it wasn't created by this controller", "Stargate", stargateKey)
 			}
 		}
 	}
-	logger.Info("Finished reconciling the k8ssandracluster", "K8ssandraCluster", kcKey)
 	return ctrl.Result{}, nil
 }
 
@@ -321,6 +330,28 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 	}, nil
 }
 
+func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *api.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *api.Stargate {
+	desiredStargate := &api.Stargate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   stargateKey.Namespace,
+			Name:        stargateKey.Name,
+			Annotations: map[string]string{},
+			Labels: map[string]string{
+				api.NameLabel:             api.NameLabelValue,
+				api.PartOfLabel:           api.PartOfLabelValue,
+				api.ComponentLabel:        api.ComponentLabelValueStargate,
+				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterLabel: kc.Name,
+			},
+		},
+		Spec: api.StargateSpec{
+			StargateDatacenterTemplate: *stargateTemplate,
+			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
+		},
+	}
+	return desiredStargate
+}
+
 func getSystemDistributedRF(kc *api.K8ssandraCluster) int {
 	size := 1.0
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
@@ -329,27 +360,6 @@ func getSystemDistributedRF(kc *api.K8ssandraCluster) int {
 	replicationFactor := math.Min(size, 3.0)
 
 	return int(replicationFactor)
-}
-
-func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
-
-	err := remoteClient.List(ctx, podList, labels)
-	if err != nil {
-		return nil, err
-	}
-
-	endpoints := make([]string, 0, 3)
-
-	for _, pod := range podList.Items {
-		endpoints = append(endpoints, pod.Status.PodIP)
-		if len(endpoints) > 2 {
-			break
-		}
-	}
-
-	return endpoints, nil
 }
 
 func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, kc *api.K8ssandraCluster, seeds []string, start, end int) error {
@@ -460,6 +470,21 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 		kc.Status.Datacenters[dcName].Stargate.Progress = api.StargateProgressPending
 	}
 	return nil
+}
+
+func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger,
+) error {
+	replication := make(map[string]int, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
+		replication[dcTemplate.Meta.Name] = replicationFactor
+	}
+	return r.ManagementApi.CreateKeyspaceIfNotExists(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger)
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

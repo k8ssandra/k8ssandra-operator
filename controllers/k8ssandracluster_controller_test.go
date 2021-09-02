@@ -29,6 +29,7 @@ func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 			Scheme:        scheme.Scheme,
 			ClientCache:   clientCache,
 			SeedsResolver: seedsResolver,
+			ManagementApi: managementApi,
 		}).SetupWithManager(mgr, clusters)
 		return err
 	})
@@ -46,7 +47,7 @@ func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 
 func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	//assert := assert.New(t)
+	// assert := assert.New(t)
 
 	k8sCtx := "cluster-1"
 
@@ -300,8 +301,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	// Commenting out the following check for now to due to
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/67
 	//
-	//t.Log("check that remote seeds are set on dc1")
-	//err = wait.Poll(interval, timeout, func() (bool, error) {
+	// t.Log("check that remote seeds are set on dc1")
+	// err = wait.Poll(interval, timeout, func() (bool, error) {
 	//	dc := &cassdcapi.CassandraDatacenter{}
 	//	if err = f.Get(ctx, dc1Key, dc); err != nil {
 	//		t.Logf("failed to get dc1: %s", err)
@@ -309,8 +310,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	//	}
 	//	t.Logf("additional seeds for dc1: %v", dc.Spec.AdditionalSeeds)
 	//	return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
-	//})
-	//require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
+	// })
+	// require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -540,8 +541,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	// Commenting out the following check for now to due to
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/67
 	//
-	//t.Log("check that remote seeds are set on dc1")
-	//err = wait.Poll(interval, timeout, func() (bool, error) {
+	// t.Log("check that remote seeds are set on dc1")
+	// err = wait.Poll(interval, timeout, func() (bool, error) {
 	//	dc := &cassdcapi.CassandraDatacenter{}
 	//	if err = f.Get(ctx, dc1Key, dc); err != nil {
 	//		t.Logf("failed to get dc1: %s", err)
@@ -549,8 +550,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	//	}
 	//	t.Logf("additional seeds for dc1: %v", dc.Spec.AdditionalSeeds)
 	//	return equalsNoOrder(allPodIps, dc.Spec.AdditionalSeeds), nil
-	//})
-	//require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
+	// })
+	// require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
 
 	t.Logf("update stargate sg2 status to ready")
 	err = f.PatchStagateStatus(ctx, sg2Key, func(sg *api.Stargate) {
