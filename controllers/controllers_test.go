@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"

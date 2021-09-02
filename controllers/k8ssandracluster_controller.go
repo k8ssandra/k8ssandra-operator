@@ -418,24 +418,13 @@ func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
 		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
 		replication[dcTemplate.Meta.Name] = replicationFactor
 	}
-<<<<<<< 272c361c2b0d4ce677728aaca895b7e486f62f1d
-	if managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger); err != nil {
-		return err
-	} else if err := managementApi.CreateKeyspaceIfNotExists("data_endpoint_auth", replication); err != nil {
-=======
 	if err := r.ManagementApi.CreateKeyspaceIfNotExists(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger); err != nil {
->>>>>>> Only check for Stargate auth keyspace once per cluster
 		logger.Error(err, "Failed to create keyspace data_endpoint_auth")
 		return err
 	} else {
 		logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
-<<<<<<< 272c361c2b0d4ce677728aaca895b7e486f62f1d
-		return nil
-	}
-=======
 	}
 	return nil
->>>>>>> Only check for Stargate auth keyspace once per cluster
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
