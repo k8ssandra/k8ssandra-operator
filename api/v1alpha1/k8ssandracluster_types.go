@@ -77,16 +77,34 @@ type K8ssandraClusterList struct {
 }
 
 type CassandraClusterTemplate struct {
+	// Cluster is the name of the cluster. This corresponds to cluster_name in
+	// cassandra.yaml.
+	// +kubebuilder:validation:MinLength=2
 	Cluster string `json:"cluster,omitempty"`
 
+	// ServerImage is the image for the cassandra container. Note that this should be a
+	// management-api image. If left empty the operator will choose a default image based
+	// on ServerVersion.
 	ServerImage string `json:"serverImage,omitempty"`
 
+	// ServerVersion is the Cassandra version.
+	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
 	ServerVersion string `json:"serverVersion"`
 
+	// Resources is the cpu and memory resources for the cassandra container.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
+	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
+	// container.
+	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
+
+	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
+	// jvm-options for 3.11.x or jvm-server-options for 4.x.
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 
+	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
+	// includes everything under /var/lib/cassandra, namely the commit log and data
+	// directories.
 	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
@@ -101,27 +119,33 @@ type CassandraDatacenterTemplate struct {
 
 	K8sContext string `json:"k8sContext,omitempty"`
 
-	// TODO Determine which fields from CassandraDatacenterSpec should be copied here.
-	// This is only a subset set of the fields. More fields do need to be copied. Some are
-	// unnecessary though. Some belong at the cluster level. I have created
-	// https://github.com/k8ssandra/k8ssandra-operator/issues/9 to sort it out.
-
 	ServerImage string `json:"serverImage,omitempty"`
 
-	// Size is the number of data replicas to deploy in this datacenter.
+	// Size is the number Cassandra pods to deploy in this datacenter.
 	// This number does not include Stargate instances.
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
+	// ServerVersion is the Cassandra version.
+	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
 
+	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
+	// jvm-options for 3.11.x or jvm-server-options for 4.x.
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 
-	// Kubernetes resource requests and limits, per pod
+	// Resources is the cpu and memory resources for the cassandra container.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
+	// container.
+	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
 
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
+	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
+	// includes everything under /var/lib/cassandra, namely the commit log and data
+	// directories.
 	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
 	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
