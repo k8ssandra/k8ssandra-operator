@@ -42,7 +42,7 @@ const (
 type SecretSyncController struct {
 	ClientCache *clientcache.ClientCache
 	// TODO We need a better structure for empty selectors (match whole kind)
-	selectorMutex sync.Mutex
+	selectorMutex sync.RWMutex
 	selectors     map[types.NamespacedName]labels.Selector
 }
 
@@ -81,8 +81,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				secretsToDelete := make([]*corev1.Secret, 0, len(secrets))
 
-				s.selectorMutex.Lock()
-				defer s.selectorMutex.Unlock()
+				s.selectorMutex.RLock()
 
 			SecretsToCheck:
 				for _, sec := range secrets {
@@ -108,6 +107,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					secretsToDelete = append(secretsToDelete, &sec)
 				}
 
+				s.selectorMutex.RUnlock()
+
 				for _, target := range rsec.Spec.ReplicationTargets {
 					// Only replicate to clusters that are in the ReplicatedSecret's context
 					remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
@@ -124,7 +125,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 				}
 			}
+			s.selectorMutex.Lock()
 			delete(s.selectors, req.NamespacedName)
+			s.selectorMutex.Unlock()
 			controllerutil.RemoveFinalizer(rsec, replicatedResourceFinalizer)
 			err := localClient.Update(ctx, rsec)
 			if err != nil {
@@ -331,13 +334,13 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	// We should only reconcile objects that match the rules
 	toMatchingReplicates := func(secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
-		s.selectorMutex.Lock()
+		s.selectorMutex.RLock()
 		for k, v := range s.selectors {
 			if secret.GetNamespace() == k.Namespace && v.Matches(labels.Set(secret.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: k})
 			}
 		}
-		s.selectorMutex.Unlock()
+		s.selectorMutex.RUnlock()
 		return requests
 	}
 
