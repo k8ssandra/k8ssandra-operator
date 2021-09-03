@@ -75,7 +75,13 @@ spec:
       limits:
         memory: 512M
     livenessProbe:
-      initialDelaySeconds: 60
+      initialDelaySeconds: 90
+      periodSeconds: 10
+      failureThreshold: 10
+      successThreshold: 1
+      timeoutSeconds: 10
+    readinessProbe:
+      initialDelaySeconds: 90
       periodSeconds: 10
       failureThreshold: 10
       successThreshold: 1
