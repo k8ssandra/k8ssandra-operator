@@ -7,6 +7,7 @@ import (
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -45,6 +46,8 @@ func testSecretController(ctx context.Context, t *testing.T) {
 	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
 	t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
 	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
+
+	t.Run("ManagedReplicatedSecret", testEnv.ControllerTest(ctx, managedReplicatedSecret))
 
 }
 
@@ -440,4 +443,44 @@ func TestRequiresUpdate(t *testing.T) {
 
 	syncSecrets(orig, dest)
 	assert.False(requiresUpdate(orig, dest))
+}
+
+func managedReplicatedSecret(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	leaderID := "dcabfccc.k8ssandra.io"
+
+	targetCtxs := make([]string, 0, len(testEnv.Clients))
+
+	for k, _ := range testEnv.Clients {
+		targetCtxs = append(targetCtxs, k)
+	}
+
+	err := secret.VerifyReplicatedSecret(f.Client, leaderID, namespace, targetCtxs)
+	require.NoError(err)
+
+	replSecret := &api.ReplicatedSecret{}
+	replSecretKey := types.NamespacedName{Name: leaderID, Namespace: namespace}
+	err = f.Client.Get(context.Background(), replSecretKey, replSecret)
+	require.NoError(err)
+
+	// Verify data in it
+
+	val, exists := replSecret.Labels[api.ManagedByLabel]
+	assert.True(exists)
+	assert.Equal(api.NameLabelValue, val)
+
+	assert.Equal(len(testEnv.Clients), len(replSecret.Spec.ReplicationTargets))
+
+	// Create superuserSecret and verify it is correctly replicated also
+	err = secret.VerifySuperuserSecret(f.Client, "test-superuser", namespace)
+	require.NoError(err)
+
+	var empty struct{}
+	require.Eventually(func() bool {
+		return verifySecretsMatch(t, ctx, f.Client, targetCtxs, map[string]struct{}{
+			"test-superuser": empty,
+		}, namespace)
+	}, timeout, interval)
 }

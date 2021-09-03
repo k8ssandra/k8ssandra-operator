@@ -19,6 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math"
+	"sort"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -31,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sort"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -309,16 +310,17 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:     cluster,
-			ServerImage:     template.ServerImage,
-			Size:            template.Size,
-			ServerType:      "cassandra",
-			ServerVersion:   template.ServerVersion,
-			Resources:       template.Resources,
-			Config:          config,
-			Racks:           template.Racks,
-			StorageConfig:   template.StorageConfig,
-			AdditionalSeeds: additionalSeeds,
+			ClusterName:         cluster,
+			ServerImage:         template.ServerImage,
+			Size:                template.Size,
+			ServerType:          "cassandra",
+			ServerVersion:       template.ServerVersion,
+			Resources:           template.Resources,
+			Config:              config,
+			Racks:               template.Racks,
+			StorageConfig:       template.StorageConfig,
+			SuperuserSecretName: "super-secret", // TODO Add here a custom-name
+			AdditionalSeeds:     additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
 			},

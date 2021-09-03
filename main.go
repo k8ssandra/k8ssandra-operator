@@ -24,6 +24,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -81,7 +82,7 @@ func main() {
 		setupLog.Info("watch namespace configured", "namespace", watchNamespace)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
@@ -89,7 +90,9 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "dcabfccc.k8ssandra.io",
 		Namespace:              watchNamespace,
-	})
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to create manager")
 		os.Exit(1)
@@ -117,6 +120,7 @@ func main() {
 		}
 
 		additionalClusters := make([]cluster.Cluster, 0, len(cConfigs.Items))
+		contextNames := make([]string, 0, len(cConfigs.Items))
 
 		for _, cCfg := range cConfigs.Items {
 			// Create clients and add them to the client cache
@@ -145,6 +149,7 @@ func main() {
 			}
 
 			additionalClusters = append(additionalClusters, c)
+			contextNames = append(contextNames, cCfg.GetContextName())
 		}
 
 		// Create the reconciler and start it
@@ -167,6 +172,8 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)
 		}
+		// Part of initial configuration check, but only done on the control-plane
+		secret.VerifyReplicatedSecret(uncachedClient, options.LeaderElectionID, watchNamespace, contextNames)
 	}
 
 	if err = (&controllers.StargateReconciler{
