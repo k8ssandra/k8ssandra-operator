@@ -39,10 +39,14 @@ spec:
               cassandra:
                 properties:
                   cluster:
+                    description: Cluster is the name of the cluster. This corresponds
+                      to cluster_name in cassandra.yaml.
+                    minLength: 2
                     type: string
                   config:
-                    description: TODO Implement Stringer interface. It will helpful
-                      for debugging and testing.
+                    description: CassandraConfig is configuration settings that are
+                      applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
+                      for 4.x.
                     properties:
                       auth:
                         properties:
@@ -118,8 +122,9 @@ spec:
                     items:
                       properties:
                         config:
-                          description: TODO Implement Stringer interface. It will
-                            helpful for debugging and testing.
+                          description: CassandraConfig is configuration settings that
+                            are applied to cassandra.yaml and jvm-options for 3.11.x
+                            or jvm-server-options for 4.x.
                           properties:
                             auth:
                               properties:
@@ -231,8 +236,8 @@ spec:
                             type: object
                           type: array
                         resources:
-                          description: Kubernetes resource requests and limits, per
-                            pod
+                          description: Resources is the cpu and memory resources for
+                            the cassandra container.
                           properties:
                             limits:
                               additionalProperties:
@@ -261,9 +266,11 @@ spec:
                         serverImage:
                           type: string
                         serverVersion:
+                          description: ServerVersion is the Cassandra version.
+                          pattern: (3\.11\.\d+)|(4\.0\.\d+)
                           type: string
                         size:
-                          description: Size is the number of data replicas to deploy
+                          description: Size is the number Cassandra pods to deploy
                             in this datacenter. This number does not include Stargate
                             instances.
                           format: int32
@@ -3298,6 +3305,9 @@ spec:
                           - size
                           type: object
                         storageConfig:
+                          description: StorageConfig is the persistent storage requirements
+                            for each Cassandra pod. This includes everything under
+                            /var/lib/cassandra, namely the commit log and data directories.
                           properties:
                             additionalVolumes:
                               items:
@@ -3597,6 +3607,34 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        systemLoggerResources:
+                          description: SystemLoggerResources is the cpu and memory
+                            resources for the server-system-logger container.
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of
+                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount
+                                of compute resources required. If Requests is omitted
+                                for a container, it defaults to Limits if that is
+                                explicitly specified, otherwise to an implementation-defined
+                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              type: object
+                          type: object
                       required:
                       - size
                       type: object
@@ -3625,8 +3663,8 @@ spec:
                       type: object
                     type: array
                   resources:
-                    description: ResourceRequirements describes the compute resource
-                      requirements.
+                    description: Resources is the cpu and memory resources for the
+                      cassandra container.
                     properties:
                       limits:
                         additionalProperties:
@@ -3652,10 +3690,18 @@ spec:
                         type: object
                     type: object
                   serverImage:
+                    description: ServerImage is the image for the cassandra container.
+                      Note that this should be a management-api image. If left empty
+                      the operator will choose a default image based on ServerVersion.
                     type: string
                   serverVersion:
+                    description: ServerVersion is the Cassandra version.
+                    pattern: (3\.11\.\d+)|(4\.0\.\d+)
                     type: string
                   storageConfig:
+                    description: StorageConfig is the persistent storage requirements
+                      for each Cassandra pod. This includes everything under /var/lib/cassandra,
+                      namely the commit log and data directories.
                     properties:
                       additionalVolumes:
                         items:
@@ -3936,8 +3982,33 @@ spec:
                             type: string
                         type: object
                     type: object
-                required:
-                - serverVersion
+                  systemLoggerResources:
+                    description: SystemLoggerResources is the cpu and memory resources
+                      for the server-system-logger container.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
                 type: object
               k8sContextsSecret:
                 type: string

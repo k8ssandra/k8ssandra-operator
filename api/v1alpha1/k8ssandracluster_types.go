@@ -89,7 +89,7 @@ type CassandraClusterTemplate struct {
 
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
-	ServerVersion string `json:"serverVersion"`
+	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// Resources is the cpu and memory resources for the cassandra container.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
