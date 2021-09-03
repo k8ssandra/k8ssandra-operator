@@ -68,12 +68,12 @@ spec:
                   operator: In
                   values:
                     - rack4
-    heapSize: 384Mi
+    heapSize: 400M
     cassandraConfigMapRef:
       name: cassandra-config
     resources:
       limits:
-        memory: 512M
+        memory: 600M
     livenessProbe:
       initialDelaySeconds: 150
       periodSeconds: 10
