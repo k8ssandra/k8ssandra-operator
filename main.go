@@ -158,6 +158,13 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}
+
+		if err = (&controllers.SecretSyncController{
+			ClientCache: clientCache,
+		}).SetupWithManager(mgr, additionalClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&controllers.StargateReconciler{
