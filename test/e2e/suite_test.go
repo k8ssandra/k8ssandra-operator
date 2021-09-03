@@ -108,7 +108,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, deployTraefik bool, test 
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f, deployTraefik)
-		//defer afterTest(t, namespace, f)
+		defer afterTest(t, namespace, f, deployTraefik)
 
 		if err == nil {
 			test(t, ctx, namespace, f)
@@ -231,11 +231,11 @@ func applyPollingDefaults() {
 	polling.stargateReady.interval = 5 * time.Second
 }
 
-func afterTest(t *testing.T, namespace string, f *framework.E2eFramework) {
-	assert.NoError(t, cleanUp(t, namespace, f), "after test cleanup failed")
+func afterTest(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) {
+	assert.NoError(t, cleanUp(t, namespace, f, deployTraefik), "after test cleanup failed")
 }
 
-func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
+func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) error {
 	if err := f.DumpClusterInfo(t.Name(), namespace); err != nil {
 		t.Logf("failed to dump cluster info: %v", err)
 	}
@@ -244,8 +244,10 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 		return err
 	}
 
-	if err := f.UndeployTraefik(t, namespace); err != nil {
-		return err
+	if deployTraefik {
+		if err := f.UndeployTraefik(t, namespace); err != nil {
+			return err
+		}
 	}
 
 	timeout := 3 * time.Minute
