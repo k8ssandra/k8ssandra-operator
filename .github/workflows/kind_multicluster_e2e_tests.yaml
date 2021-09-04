@@ -58,7 +58,7 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
       - name: Increase limits
-        run: ulimit -Sn 500000
+        run: ulimit -Hn
       - uses: actions/checkout@v2
         if: github.event_name == 'pull_request'
         with:
