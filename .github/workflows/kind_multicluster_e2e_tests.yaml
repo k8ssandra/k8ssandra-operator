@@ -60,7 +60,7 @@ jobs:
       - name: Increase limits
         run: |
           ulimit -Hn
-          sudo ulimit -n 100000
+          sysctl -w fs.file-max=500000
       - uses: actions/checkout@v2
         if: github.event_name == 'pull_request'
         with:
