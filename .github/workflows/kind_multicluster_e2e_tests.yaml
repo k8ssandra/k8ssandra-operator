@@ -60,7 +60,7 @@ jobs:
       - name: Increase limits
         run: |
           ulimit -Hn
-          ulimit -n 100000
+          sudo ulimit -n 100000
       - uses: actions/checkout@v2
         if: github.event_name == 'pull_request'
         with:
