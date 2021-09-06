@@ -8,7 +8,7 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/testing"
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,21 +17,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	testing2 "testing"
+	"testing"
 	"time"
 )
 
-func (f *E2eFramework) DeployTraefik(t testing.TestingT, namespace string) error {
-	if _, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "repo", "add", "traefik", "https://helm.traefik.io/traefik"); err != nil {
+func (f *E2eFramework) DeployTraefik(t *testing.T, namespace string) error {
+	if _, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "add", "traefik", "https://helm.traefik.io/traefik"); err != nil {
 		return err
-	} else if _, err = helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "repo", "update"); err != nil {
+	} else if _, err = helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "update"); err != nil {
 		return err
 	}
 	valuesFile := filepath.Join("..", "testdata", "ingress", "traefik.values.yaml")
 	for k8sContext := range f.remoteClients {
 		// Delete potential leftovers that could make the release installation fail
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik")
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik")
+		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik", true)
+		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik", true)
 		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace)}
 		out, err := helm.RunHelmCommandAndGetOutputE(t, options, "install", "traefik", "traefik/traefik", "--version", "v10.3.2", "-f", valuesFile)
 		if err != nil {
@@ -43,9 +43,9 @@ func (f *E2eFramework) DeployTraefik(t testing.TestingT, namespace string) error
 	return nil
 }
 
-func (f *E2eFramework) UndeployTraefik(t testing.TestingT, namespace string) error {
+func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
 	for k8sContext := range f.remoteClients {
-		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace)}
+		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace), Logger: logger.Discard}
 		if _, err := helm.RunHelmCommandAndGetOutputE(t, options, "uninstall", "traefik"); err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (f *E2eFramework) UndeployTraefik(t testing.TestingT, namespace string) err
 	return nil
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing2.T, k8sContext string, k8sContextIdx int, namespace, stargateServiceName string) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, stargateServiceName string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
 	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
 	dest := filepath.Join(dir, "stargate-ingress.yaml")
@@ -94,7 +94,7 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing2.T, k8sContext string,
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 
-func (f *E2eFramework) UndeployStargateIngresses(t *testing2.T, k8sContext, namespace string) {
+func (f *E2eFramework) UndeployStargateIngresses(t *testing.T, k8sContext, namespace string) {
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	err := kubectl.DeleteAllOf(options, "IngressRoute")
 	assert.NoError(t, err)

@@ -85,7 +85,7 @@ func Delete(opts Options, arg interface{}) error {
 	return err
 }
 
-func DeleteByName(opts Options, kind, name string) error {
+func DeleteByName(opts Options, kind, name string, ignoreNotFound bool) error {
 	cmd := exec.Command("kubectl")
 	if len(opts.Context) > 0 {
 		cmd.Args = append(cmd.Args, "--context", opts.Context)
@@ -94,6 +94,9 @@ func DeleteByName(opts Options, kind, name string) error {
 		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
 	}
 	cmd.Args = append(cmd.Args, "delete", kind, name)
+	if ignoreNotFound {
+		cmd.Args = append(cmd.Args, "--ignore-not-found")
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
