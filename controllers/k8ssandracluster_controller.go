@@ -124,7 +124,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
