@@ -3,9 +3,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
 )
 
 func testK8ssandraCluster(ctx context.Context, t *testing.T) {
@@ -214,6 +216,18 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("check that superuserSecret was created")
+	superuserSecretKey := types.NamespacedName{Name: secret.DefaultSuperuserSecretName(cluster.Spec.Cassandra.Cluster), Namespace: namespace}
+	require.Eventually(func() bool {
+		sec := &corev1.Secret{}
+		err = f.Client.Get(ctx, superuserSecretKey, sec)
+		if err != nil {
+			return false
+		}
+
+		return sec.Data != nil && len(sec.Data) == 2
+	}, timeout, interval, "Failed to find superuserSecret")
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {

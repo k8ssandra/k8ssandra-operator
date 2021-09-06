@@ -27,6 +27,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -100,6 +101,11 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	}
 
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		// If left empty, cass-operator would create this. We want our created secret instead
+		if dcTemplate.SuperuserSecretName == "" {
+			dcTemplate.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
+		}
+
 		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
@@ -134,6 +140,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
 				logger.Info("Updating datacenter")
+
+				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
+					err = fmt.Errorf("tried to update superuserSecretName")
+					logger.Error(err, "Failed to update datacenter, superuserSecretName is immutable")
+					return ctrl.Result{}, err
+				}
+
 				actualDc = actualDc.DeepCopy()
 				resourceVersion := actualDc.GetResourceVersion()
 				desiredDc.DeepCopyInto(actualDc)
@@ -173,6 +186,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			// }
 		} else {
 			if errors.IsNotFound(err) {
+				logger.Info("Creating superuserSecret", "SecretName", desiredDc.Spec.SuperuserSecretName)
+				// This could be the first Datacenter to be created. Verify superUserSecret is created also
+				if err = secret.VerifySuperuserSecret(r.Client, desiredDc.Spec.SuperuserSecretName, kc.GetNamespace()); err != nil {
+					logger.Error(err, "Failed to verify existence of superuserSecret")
+					return ctrl.Result{}, err
+				}
+
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
 					logger.Error(err, "Failed to create datacenter")
 					return ctrl.Result{}, err
@@ -319,7 +339,7 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 			Config:              config,
 			Racks:               template.Racks,
 			StorageConfig:       template.StorageConfig,
-			SuperuserSecretName: "super-secret", // TODO Add here a custom-name
+			SuperuserSecretName: template.SuperuserSecretName,
 			AdditionalSeeds:     additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,

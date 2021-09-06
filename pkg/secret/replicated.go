@@ -2,6 +2,10 @@ package secret
 
 import (
 	"context"
+	"crypto/rand"
+	"fmt"
+	"math/big"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,20 +16,64 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 )
 
-func CreateSuperuserSecret(clusterName, namespace string) *corev1.Secret {
-	// TODO Add the ReplicatedSecret to Kustomize, with only matching label used
+const (
+	passwordCharacters = "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+	usernameCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+)
 
-	/*
-		Generate superUserName
-		Generate superUserPassword
-		Insert
-	*/
-
-	sec := &corev1.Secret{
-		ObjectMeta: getManagedObjectMeta(clusterName, namespace),
+func generateRandomString(charset string, length int) ([]byte, error) {
+	maxInt := big.NewInt(int64(len(charset)))
+	result := make([]byte, length)
+	for i := 0; i < length; i++ {
+		n, err := rand.Int(rand.Reader, maxInt)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = charset[n.Int64()]
 	}
 
-	return sec
+	return result, nil
+}
+
+// DefaultSuperuserSecretName follows the convention from k8ssandra Helm charts
+func DefaultSuperuserSecretName(clusterName string) string {
+	cleanedClusterName := strings.ReplaceAll(strings.ReplaceAll(clusterName, "_", ""), "-", "")
+	secretName := fmt.Sprintf("%s-superuser", cleanedClusterName)
+
+	return secretName
+}
+
+// VerifySuperuserSecret creates the superUserSecret with propert annotations
+func VerifySuperuserSecret(c client.Client, secretName, namespace string) error {
+	if secretName == "" {
+		return fmt.Errorf("secretName is required")
+	}
+	currentSec := &corev1.Secret{}
+	err := c.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: namespace}, currentSec)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			password, err := generateRandomString(passwordCharacters, 20)
+			if err != nil {
+				return err
+			}
+
+			sec := &corev1.Secret{
+				ObjectMeta: getManagedObjectMeta(secretName, namespace),
+				Type:       "Opaque",
+				// Immutable feature is only available from 1.21 and up (beta in 1.19 and up)
+				// Immutable:  true,
+				Data: map[string][]byte{
+					"username": []byte(secretName),
+					"password": password,
+				},
+			}
+
+			return c.Create(context.Background(), sec)
+		}
+	}
+
+	// It exists or was created, we won't modify it anymore
+	return nil
 }
 
 // VerifyReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
@@ -42,7 +90,9 @@ func VerifyReplicatedSecret(c client.Client, leaderID, namespace string, targetC
 	}
 
 	// It exists, override whatever was in it
+	currentResourceVersion := repSec.ResourceVersion
 	targetRepSec.DeepCopyInto(repSec)
+	repSec.ResourceVersion = currentResourceVersion
 	return c.Update(context.Background(), repSec)
 }
 
