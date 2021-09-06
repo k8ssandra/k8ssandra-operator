@@ -60,7 +60,7 @@ jobs:
       - name: Increase limits
         run: |
           ulimit -Hn
-          echo fs.inotify.max_user_watches=500000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          echo fs.file-max=500000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
       - uses: actions/checkout@v2
         if: github.event_name == 'pull_request'
         with:
