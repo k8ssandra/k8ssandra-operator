@@ -187,7 +187,7 @@ type EmbeddedObjectMeta struct {
 
 // TODO Implement Stringer interface. It will helpful for debugging and testing.
 type CassandraConfig struct {
-	Auth *Auth `json:"auth,omitempty"`
+	//Auth *Auth `json:"auth,omitempty"`
 
 	CassandraYaml *CassandraYaml `json:"cassandraYaml,omitempty"`
 

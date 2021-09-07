@@ -12,7 +12,76 @@ const (
 	systemReplicationFactor  = "-Dcassandra.system_distributed_replication_per_dc"
 )
 
-type NodeConfig map[string]interface{}
+// config is an internal type that is intended to be marshaled into JSON that is a valid
+// value for CassandraDatacenter.Spec.Config.
+type config struct {
+	cassandraVersion string
+
+	*api.CassandraYaml
+
+	JvmOptions *jvmOptions
+}
+
+// jvmOptions is an internal type that is intended to be marshaled into JSON that is valid
+// for the jvm options portion of the value supplied to CassandraDatacenter.Spec.Config.
+type jvmOptions struct {
+	InitialHeapSize   *int64   `json:"initial_heap_size,omitempty"`
+	MaxHeapSize       *int64   `json:"max_heap_size,omitempty"`
+	HeapNewGenSize    *int64   `json:"heap_size_young_generation,omitempty"`
+	AdditionalOptions []string `json:"additional-jvm-opts,omitempty"`
+}
+
+func isCassandra4(version string) bool {
+	return strings.HasPrefix(version, "4.0")
+}
+
+func (c config) MarshalJSON() ([]byte, error) {
+	config := make(map[string]interface{}, 0)
+
+	if c.CassandraYaml != nil {
+		if isCassandra4(c.cassandraVersion) {
+			c.StartRpc = nil
+			c.ThriftPreparedStatementCacheSizeMb = nil
+		}
+		config["cassandra-yaml"] = c.CassandraYaml
+	}
+
+	if c.JvmOptions != nil {
+		if strings.HasPrefix(c.cassandraVersion, "3.11") {
+			config["jvm-options"] = c.JvmOptions
+		} else {
+			config["jvm-server-options"] = c.JvmOptions
+		}
+	}
+
+	return json.Marshal(&config)
+}
+
+func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) config {
+	config := config{cassandraVersion: cassandraVersion}
+
+	if apiConfig.CassandraYaml != nil {
+		config.CassandraYaml = apiConfig.CassandraYaml
+	}
+
+	if apiConfig.JvmOptions != nil {
+		config.JvmOptions = &jvmOptions{}
+		if apiConfig.JvmOptions.HeapSize != nil {
+			heapSize := apiConfig.JvmOptions.HeapSize.Value()
+			config.JvmOptions.InitialHeapSize = &heapSize
+			config.JvmOptions.MaxHeapSize = &heapSize
+		}
+
+		if apiConfig.JvmOptions.HeapNewGenSize != nil {
+			newGenSize := apiConfig.JvmOptions.HeapNewGenSize.Value()
+			config.JvmOptions.HeapNewGenSize = &newGenSize
+		}
+
+		config.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
+	}
+
+	return config
+}
 
 // ApplySystemReplication adds system properties to configure replication of system
 // keyspaces.
@@ -43,121 +112,6 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 
 // CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string.
 func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]byte, error) {
-	rawConfig := NodeConfig{}
-	cassandraYaml := NodeConfig{}
-	jvmOpts := NodeConfig{}
-
-	if config == nil {
-		return nil, nil
-	}
-
-	if config.CassandraYaml != nil {
-		//if len(config.CassandraYaml.Authenticator) > 0 {
-		//	cassandraYaml["authenticator"] = config.CassandraYaml.Authenticator
-		//}
-		//
-		//if len(config.CassandraYaml.Authorizer) > 0 {
-		//	cassandraYaml["authorizer"] = config.CassandraYaml.Authorizer
-		//}
-		//
-		//if len(config.CassandraYaml.RoleManager) > 0 {
-		//
-		//}
-
-		if config.CassandraYaml.ConcurrentReads != nil {
-			cassandraYaml["concurrent_reads"] = config.CassandraYaml.ConcurrentReads
-		}
-
-		if config.CassandraYaml.ConcurrentWrites != nil {
-			cassandraYaml["concurrent_writes"] = config.CassandraYaml.ConcurrentWrites
-		}
-
-		if config.CassandraYaml.AutoSnapshot != nil {
-			cassandraYaml["auto_snapshot"] = config.CassandraYaml.AutoSnapshot
-		}
-
-		if config.CassandraYaml.MemtableFlushWriters != nil {
-			cassandraYaml["memtable_flush_writers"] = config.CassandraYaml.MemtableFlushWriters
-		}
-
-		if config.CassandraYaml.CommitLogSegmentSizeMb != nil {
-			cassandraYaml["commitlog_segment_size_in_mb"] = config.CassandraYaml.CommitLogSegmentSizeMb
-		}
-
-		if config.CassandraYaml.ConcurrentCompactors != nil {
-			cassandraYaml["concurrent_compactors"] = config.CassandraYaml.ConcurrentCompactors
-		}
-
-		if config.CassandraYaml.CompactionThroughputMbPerSec != nil {
-			cassandraYaml["compaction_throughput_mb_per_sec"] = config.CassandraYaml.CompactionThroughputMbPerSec
-		}
-
-		if config.CassandraYaml.SstablePreemptiveOpenIntervalMb != nil {
-			cassandraYaml["sstable_preemptive_open_interval_in_mb"] = config.CassandraYaml.SstablePreemptiveOpenIntervalMb
-		}
-
-		if config.CassandraYaml.KeyCacheSizeMb != nil {
-			cassandraYaml["key_cache_size_in_mb"] = config.CassandraYaml.KeyCacheSizeMb
-		}
-
-		if config.CassandraYaml.FileCacheSizeMb != nil {
-			cassandraYaml["file_cache_size_in_mb"] = config.CassandraYaml.FileCacheSizeMb
-		}
-
-		if config.CassandraYaml.RowCacheSizeMb != nil {
-			cassandraYaml["row_cache_size_in_mb"] = config.CassandraYaml.RowCacheSizeMb
-		}
-
-		if config.CassandraYaml.PreparedStatementsCacheSizeMb != nil {
-			cassandraYaml["prepared_statements_cache_size_mb"] = config.CassandraYaml.PreparedStatementsCacheSizeMb
-		}
-
-		if config.CassandraYaml.SlowQueryLogTimeoutMs != nil {
-			cassandraYaml["slow_query_log_timeout_in_ms"] = config.CassandraYaml.SlowQueryLogTimeoutMs
-		}
-
-		if config.CassandraYaml.CounterCacheSizeMb != nil {
-			cassandraYaml["counter_cache_size_in_mb"] = config.CassandraYaml.CounterCacheSizeMb
-		}
-
-		if config.CassandraYaml.ConcurrentCounterWrites != nil {
-			cassandraYaml["concurrent_counter_writes"] = config.CassandraYaml.ConcurrentCounterWrites
-		}
-
-		if strings.HasPrefix(cassandraVersion, "3.") {
-			if config.CassandraYaml.StartRpc != nil {
-				cassandraYaml["start_rpc"] = config.CassandraYaml.StartRpc
-			}
-
-			if config.CassandraYaml.ThriftPreparedStatementCacheSizeMb != nil {
-				cassandraYaml["thrift_prepared_statements_cache_size_mb"] = config.CassandraYaml.ThriftPreparedStatementCacheSizeMb
-			}
-		}
-
-		rawConfig["cassandra-yaml"] = cassandraYaml
-	}
-
-	if config.JvmOptions != nil {
-		if config.JvmOptions.HeapSize != nil {
-			jvmOpts["initial_heap_size"] = config.JvmOptions.HeapSize.Value()
-			jvmOpts["max_heap_size"] = config.JvmOptions.HeapSize.Value()
-		}
-
-		if len(config.JvmOptions.AdditionalOptions) > 0 {
-			jvmOpts["additional-jvm-opts"] = config.JvmOptions.AdditionalOptions
-		}
-
-		if strings.HasPrefix(cassandraVersion, "3.") {
-			rawConfig["jvm-options"] = jvmOpts
-		} else {
-			rawConfig["jvm-server-options"] = jvmOpts
-		}
-	}
-
-	jsonConfig, err := json.Marshal(rawConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return jsonConfig, nil
+	cfg := newConfig(config, cassandraVersion)
+	return json.Marshal(cfg)
 }

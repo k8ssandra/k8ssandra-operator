@@ -1,12 +1,10 @@
 package cassandra
 
 import (
-	"encoding/json"
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"reflect"
-	"strconv"
 	"testing"
 )
 
@@ -345,9 +343,4 @@ func boolPtr(b bool) *bool {
 func parseResource(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
-}
-
-func resourceQuantityToNumber(q resource.Quantity) json.Number {
-	val := q.Value()
-	return json.Number(strconv.FormatInt(val, 10))
 }

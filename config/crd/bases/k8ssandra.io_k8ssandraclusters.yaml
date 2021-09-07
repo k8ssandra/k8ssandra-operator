@@ -48,19 +48,6 @@ spec:
                       applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
                       for 4.x.
                     properties:
-                      auth:
-                        properties:
-                          SuperUserSecretName:
-                            type: string
-                          cacheUpdateIntervalMillis:
-                            format: int64
-                            type: integer
-                          cacheValidityPeriodMillis:
-                            format: int64
-                            type: integer
-                          enabled:
-                            type: boolean
-                        type: object
                       cassandraYaml:
                         properties:
                           auto_snapshot:
@@ -126,19 +113,6 @@ spec:
                             are applied to cassandra.yaml and jvm-options for 3.11.x
                             or jvm-server-options for 4.x.
                           properties:
-                            auth:
-                              properties:
-                                SuperUserSecretName:
-                                  type: string
-                                cacheUpdateIntervalMillis:
-                                  format: int64
-                                  type: integer
-                                cacheValidityPeriodMillis:
-                                  format: int64
-                                  type: integer
-                                enabled:
-                                  type: boolean
-                              type: object
                             cassandraYaml:
                               properties:
                                 auto_snapshot:
