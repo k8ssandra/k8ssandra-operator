@@ -51,6 +51,8 @@ func TestOperator(t *testing.T) {
 
 	ctx := context.Background()
 
+	applyPollingDefaults()
+
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", true, createSingleDatacenterCluster))
 	t.Run("createStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
@@ -132,8 +134,6 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
 // required by both operators.
 func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFramework, deployTraefik bool) error {
-	applyPollingDefaults()
-
 	if err := f.CreateNamespace(namespace); err != nil {
 		t.Log("failed to create namespace")
 		return err
@@ -486,8 +486,8 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-rack1-sts-0"
-	count := 2
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.interval, polling.nodetoolStatus.interval)
+	count := 6
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 

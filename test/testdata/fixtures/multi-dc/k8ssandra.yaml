@@ -44,10 +44,10 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: "448M"
+        heapSize: "512M"
     resources:
       limits:
-        memory: 800M
+        memory: 1024M
     datacenters:
       - metadata:
           name: dc1

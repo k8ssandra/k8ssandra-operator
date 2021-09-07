@@ -596,6 +596,7 @@ func (f *E2eFramework) WaitForNodeToolStatusUN(opts kubectl.Options, pod string,
 			f.logger.Error(err, "failed to execute nodetool status for %s: %s", pod, err)
 			return false, err
 		}
+		f.logger.Info("nodetool status output", "Count", actual)
 		return actual == count, nil
 	})
 
