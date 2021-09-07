@@ -23,9 +23,6 @@ spec:
       - name: rack2
         nodeAffinityLabels:
           "topology.kubernetes.io/zone": rack2
-      - name: rack3
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack3
     config:
       cassandraYaml:
         auto_snapshot: false
@@ -52,9 +49,31 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 3
+        size: 2
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
-        size: 3
-
+        size: 2
+  stargate:
+    size: 1
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: topology.kubernetes.io/zone
+                  operator: In
+                  values:
+                    - rack4
+    heapSize: 384Mi
+    cassandraConfigMapRef:
+      name: cassandra-config
+    resources:
+      limits:
+        memory: 512M
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 10
+      successThreshold: 1
+      timeoutSeconds: 10

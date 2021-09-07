@@ -28,8 +28,9 @@ import (
 
 // K8ssandraClusterSpec defines the desired state of K8ssandraCluster
 type K8ssandraClusterSpec struct {
-	K8sContextsSecret string `json:"k8sContextsSecret,omitempty"`
-
+	// Cassandra is a specification of the Cassandra cluster. This includes everything from
+	// the number of datacenters, the k8s cluster where each DC should be deployed, node
+	// affinity (via racks), individual C* node settings, JVM settings, and more.
 	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
 
 	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
@@ -106,6 +107,7 @@ type CassandraClusterTemplate struct {
 	// ServerImage is the image for the cassandra container. Note that this should be a
 	// management-api image. If left empty the operator will choose a default image based
 	// on ServerVersion.
+	// +optional
 	ServerImage string `json:"serverImage,omitempty"`
 
 	// ServerVersion is the Cassandra version.
@@ -113,6 +115,7 @@ type CassandraClusterTemplate struct {
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// Resources is the cpu and memory resources for the cassandra container.
+	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
@@ -121,15 +124,20 @@ type CassandraClusterTemplate struct {
 
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
 	// jvm-options for 3.11.x or jvm-server-options for 4.x.
+	// +optional
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 
 	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
 	// includes everything under /var/lib/cassandra, namely the commit log and data
 	// directories.
+	// +optional
 	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
+	// Racks is a list of named racks. Note that racks are used to create node affinity. //
+	// +optional
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
+	// Datacenters a list of the DCs in the cluster.
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 }
 
@@ -176,6 +184,7 @@ type CassandraDatacenterTemplate struct {
 }
 
 type EmbeddedObjectMeta struct {
+	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
 	Name string `json:"name,omitempty"`
