@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -35,6 +36,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -102,6 +104,17 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "dcabfccc.k8ssandra.io",
 		Namespace:              watchNamespace,
+	}
+
+	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
+	if strings.Contains(watchNamespace, ",") {
+		setupLog.Info("manager set up with multiple namespaces", "namespaces", watchNamespace)
+		// configure cluster-scoped with MultiNamespacedCacheBuilder
+		options.Namespace = ""
+		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+	} else {
+		setupLog.Info("watch namespace configured", "namespace", watchNamespace)
+		options.Namespace = watchNamespace
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
