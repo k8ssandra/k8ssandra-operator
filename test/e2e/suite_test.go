@@ -594,8 +594,8 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-rack1-sts-0"
-	count := 2
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.interval, polling.nodetoolStatus.interval)
+	count := 4
+	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 

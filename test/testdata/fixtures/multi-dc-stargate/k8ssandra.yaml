@@ -41,10 +41,10 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: "448M"
+        heapSize: "512M"
     resources:
       limits:
-        memory: 800M
+        memory: 1024M
     datacenters:
       - metadata:
           name: dc1
@@ -65,12 +65,12 @@ spec:
                   operator: In
                   values:
                     - rack4
-    heapSize: 384Mi
+    heapSize: 512Mi
     cassandraConfigMapRef:
       name: cassandra-config
     resources:
       limits:
-        memory: 512M
+        memory: 1024M
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10
