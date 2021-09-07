@@ -64,7 +64,7 @@ spec:
                 - key: topology.kubernetes.io/zone
                   operator: In
                   values:
-                    - rack4
+                    - rack3
     heapSize: 512Mi
     cassandraConfigMapRef:
       name: cassandra-config
