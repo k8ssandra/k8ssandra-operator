@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
+	"os"
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"path/filepath"
@@ -51,12 +53,17 @@ func TestControllers(t *testing.T) {
 	defaultDelay = time.Millisecond * 500
 	longDelay = time.Second
 
+	if err := prepareCRDs(); err != nil {
+		t.Fatalf("failed to prepare CRDs: %s", err)
+	}
+
 	t.Run("K8ssandraCluster", func(t *testing.T) {
 		testK8ssandraCluster(ctx, t)
 	})
 	t.Run("Stargate", func(t *testing.T) {
 		testStargate(ctx, t)
 	})
+
 	t.Run("SecretController", func(t *testing.T) {
 		testSecretController(ctx, t)
 	})
@@ -90,8 +97,8 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 
 	e.Environment = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+			filepath.Join("..", "build", "crd", "k8ssandra-operator"),
+			filepath.Join("..", "build", "crd", "cass-operator")},
 	}
 
 	cfg, err := e.Environment.Start()
@@ -156,12 +163,16 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	cfgs := make([]*rest.Config, e.clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
 
+	if err := prepareCRDs(); err != nil {
+		t.Fatalf("failed to prepare CRDs: %s", err)
+	}
+
 	for i := 0; i < e.clustersToCreate; i++ {
 		clusterName := fmt.Sprintf(clusterProtoName, i)
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
-				filepath.Join("..", "config", "crd", "bases"),
-				filepath.Join("..", "config", "cass-operator", "crd", "bases")},
+				filepath.Join("..", "build", "crd", "k8ssandra-operator"),
+				filepath.Join("..", "build", "crd", "cass-operator")},
 			ErrorIfCRDPathMissing: true,
 		}
 
@@ -271,4 +282,37 @@ type fakeManagementApi struct {
 
 func (r *fakeManagementApi) CreateKeyspaceIfNotExists(keyspaceName string, replication map[string]int) error {
 	return nil
+}
+
+// prepareCRDs runs kustomize build over the k8ssandra-operator and cass-operator CRDs and
+// writes them to the build/crd directory. This only needs to be call once for the whole
+// test suite.
+func prepareCRDs() error {
+	k8ssadraOperatorTargetDir := filepath.Join("..", "build", "crd", "k8ssandra-operator")
+	if err := os.MkdirAll(k8ssadraOperatorTargetDir, 0755); err != nil {
+		return err
+	}
+
+	cassOperatorTargetDir := filepath.Join("..", "build", "crd", "cass-operator")
+	if err := os.MkdirAll(cassOperatorTargetDir, 0755); err != nil {
+		return err
+	}
+
+	k8ssadraOperatorSrcDir := filepath.Join("..", "config", "crd")
+	buf, err := kustomize.Build(k8ssadraOperatorSrcDir)
+	if err != nil {
+		return err
+	}
+	k8ssandraOperatorCrdPath := filepath.Join(k8ssadraOperatorTargetDir, "crd.yaml")
+	if err = os.WriteFile(k8ssandraOperatorCrdPath, buf.Bytes(), 0644); err != nil {
+		return err
+	}
+
+	cassOperatorSrcDir := filepath.Join("..", "config", "cass-operator-crd")
+	buf, err = kustomize.Build(cassOperatorSrcDir)
+	if err != nil {
+		return err
+	}
+	cassOperatorCrdPath := filepath.Join(cassOperatorTargetDir, "crd.yaml")
+	return os.WriteFile(cassOperatorCrdPath, buf.Bytes(), 0644)
 }

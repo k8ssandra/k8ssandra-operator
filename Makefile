@@ -64,6 +64,8 @@ KIND_CLUSTER ?= kind
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+TEST_ARGS=
+
 all: build
 
 ##@ General
@@ -125,10 +127,10 @@ PHONY: e2e-test
 e2e-test:
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
-	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)"
+	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
 else
 	@echo Running e2e tests
-	go test -v -timeout 3600s ./test/e2e/...
+	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
 endif
 
 ##@ Deployment
@@ -146,6 +148,8 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+cert-manager: ## Install cert-manager to the cluster
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

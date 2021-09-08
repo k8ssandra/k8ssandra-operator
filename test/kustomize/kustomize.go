@@ -4,64 +4,71 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"testing"
 )
+
+var logOutput = false
+
+func LogOutput(enabled bool) {
+	logOutput = enabled
+}
 
 func Build(dir string) (*bytes.Buffer, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = dir
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
+	buffer := bytes.NewBuffer(output)
 
-	fmt.Println(stdout.String())
-	fmt.Println(stderr.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
-	return &stdout, err
+	return buffer, err
 }
 
 func SetNamespace(dir, namespace string) error {
 	cmd := exec.Command("kustomize", "edit", "set", "namespace", namespace)
 	cmd.Dir = dir
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 
-	fmt.Println(out.String())
-	//t.Log(out.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
 
-func AddResource(t *testing.T, path string) error {
+func AddResource(path string) error {
 	cmd := exec.Command("kustomize", "edit", "add", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 
-	t.Log(out.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
 
-func RemoveResource(t *testing.T, path string) error {
+func RemoveResource(path string) error {
 	cmd := exec.Command("kustomize", "edit", "remove", "resource", path)
 	cmd.Dir = "../testdata/k8ssandra-operator"
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	fmt.Println(cmd)
 
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 
-	t.Log(out.String())
+	if logOutput {
+		fmt.Println(string(output))
+	}
 
 	return err
 }
