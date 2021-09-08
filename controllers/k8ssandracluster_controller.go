@@ -104,7 +104,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kc.Spec.Cassandra.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
 	}
 
+	contextNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		contextNames = append(contextNames, dcTemplate.K8sContext)
 		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
 
 		desiredDc.Spec.SuperuserSecretName = kc.Spec.Cassandra.SuperuserSecretName
@@ -190,7 +193,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			if errors.IsNotFound(err) {
 				logger.Info("Creating superuserSecret", "SecretName", desiredDc.Spec.SuperuserSecretName)
 				// This could be the first Datacenter to be created. Verify superUserSecret is created also
-				if err = secret.VerifySuperuserSecret(ctx, r.Client, desiredDc.Spec.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
+				if err = secret.ReconcileSuperuserSecret(ctx, r.Client, desiredDc.Spec.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
 					logger.Error(err, "Failed to verify existence of superuserSecret")
 					return ctrl.Result{}, err
 				}
@@ -217,6 +220,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			return result, err
 		}
 	}
+
+	// Reconcile the ReplicatedSecret also
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, contextNames); err != nil {
+		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
+		return ctrl.Result{}, err
+	}
+
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 	return ctrl.Result{}, nil
 }

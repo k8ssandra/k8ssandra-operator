@@ -24,7 +24,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -172,8 +171,6 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)
 		}
-		// Part of initial configuration check, but only done on the control-plane
-		secret.VerifyReplicatedSecret(ctx, uncachedClient, options.LeaderElectionID, watchNamespace, contextNames)
 	}
 
 	if err = (&controllers.StargateReconciler{

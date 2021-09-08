@@ -42,7 +42,7 @@ var (
 	}
 
 	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
-	logKubectlOutput = flag.Bool("logKubectlOutput", false, "")
+	logKubectlOutput   = flag.Bool("logKubectlOutput", false, "")
 )
 
 func TestOperator(t *testing.T) {

@@ -449,19 +449,17 @@ func managedReplicatedSecret(t *testing.T, ctx context.Context, f *framework.Fra
 	require := require.New(t)
 	assert := assert.New(t)
 
-	leaderID := "dcabfccc.k8ssandra.io"
-
 	targetCtxs := make([]string, 0, len(testEnv.Clients))
 
 	for k, _ := range testEnv.Clients {
 		targetCtxs = append(targetCtxs, k)
 	}
 
-	err := secret.VerifyReplicatedSecret(f.Client, leaderID, namespace, targetCtxs)
+	err := secret.ReconcileReplicatedSecret(ctx, f.Client, "test", namespace, targetCtxs)
 	require.NoError(err)
 
 	replSecret := &api.ReplicatedSecret{}
-	replSecretKey := types.NamespacedName{Name: leaderID, Namespace: namespace}
+	replSecretKey := types.NamespacedName{Name: "test", Namespace: namespace}
 	err = f.Client.Get(context.Background(), replSecretKey, replSecret)
 	require.NoError(err)
 
@@ -470,11 +468,14 @@ func managedReplicatedSecret(t *testing.T, ctx context.Context, f *framework.Fra
 	val, exists := replSecret.Labels[api.ManagedByLabel]
 	assert.True(exists)
 	assert.Equal(api.NameLabelValue, val)
+	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
+	assert.True(exists)
+	assert.Equal("test", val)
 
 	assert.Equal(len(testEnv.Clients), len(replSecret.Spec.ReplicationTargets))
 
 	// Create superuserSecret and verify it is correctly replicated also
-	err = secret.VerifySuperuserSecret(f.Client, "test-superuser", namespace)
+	err = secret.ReconcileSuperuserSecret(ctx, f.Client, "test-superuser", "test", namespace)
 	require.NoError(err)
 
 	var empty struct{}

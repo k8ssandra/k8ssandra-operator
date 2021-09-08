@@ -62,7 +62,6 @@ func TestControllers(t *testing.T) {
 	t.Run("Stargate", func(t *testing.T) {
 		testStargate(ctx, t)
 	})
-
 	t.Run("SecretController", func(t *testing.T) {
 		testSecretController(ctx, t)
 	})

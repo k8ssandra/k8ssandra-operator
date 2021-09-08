@@ -43,8 +43,8 @@ func DefaultSuperuserSecretName(clusterName string) string {
 	return secretName
 }
 
-// VerifySuperuserSecret creates the superUserSecret with propert annotations
-func VerifySuperuserSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
+// ReconcileSuperuserSecret creates the superUserSecret with propert annotations
+func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
@@ -58,7 +58,7 @@ func VerifySuperuserSecret(ctx context.Context, c client.Client, secretName, clu
 			}
 
 			sec := &corev1.Secret{
-				ObjectMeta: getManagedObjectMeta(secretName, namespace),
+				ObjectMeta: getManagedObjectMeta(secretName, namespace, clusterName),
 				Type:       "Opaque",
 				// Immutable feature is only available from 1.21 and up (beta in 1.19 and up)
 				// Immutable:  true,
@@ -68,8 +68,6 @@ func VerifySuperuserSecret(ctx context.Context, c client.Client, secretName, clu
 				},
 			}
 
-			sec.Labels[api.K8ssandraClusterLabel] = clusterName
-
 			return c.Create(ctx, sec)
 		}
 	}
@@ -78,12 +76,12 @@ func VerifySuperuserSecret(ctx context.Context, c client.Client, secretName, clu
 	return nil
 }
 
-// VerifyReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
-func VerifyReplicatedSecret(ctx context.Context, c client.Client, leaderID, namespace string, targetContexts []string) error {
+// ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
+func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) error {
 	// We use leaderID to ensure that this leader instance of k8ssandra-operator is using the correct ReplicatedSecret (it can be shared between different k8ssandra-operators)
-	targetRepSec := generateReplicatedSecret(leaderID, namespace, targetContexts)
+	targetRepSec := generateReplicatedSecret(clusterName, namespace, targetContexts)
 	repSec := &api.ReplicatedSecret{}
-	err := c.Get(ctx, types.NamespacedName{Name: leaderID, Namespace: namespace}, repSec)
+	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return c.Create(ctx, targetRepSec)
@@ -97,7 +95,7 @@ func VerifyReplicatedSecret(ctx context.Context, c client.Client, leaderID, name
 	return c.Update(ctx, repSec)
 }
 
-func generateReplicatedSecret(name, namespace string, targetContexts []string) *api.ReplicatedSecret {
+func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *api.ReplicatedSecret {
 
 	replicationTargets := make([]api.ReplicationTarget, 0, len(targetContexts))
 	for _, ctx := range targetContexts {
@@ -107,22 +105,26 @@ func generateReplicatedSecret(name, namespace string, targetContexts []string) *
 	}
 
 	return &api.ReplicatedSecret{
-		ObjectMeta: getManagedObjectMeta(name, namespace),
+		ObjectMeta: getManagedObjectMeta(clusterName, namespace, clusterName),
 		Spec: api.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{api.ManagedByLabel: api.NameLabelValue},
+				MatchLabels: map[string]string{
+					api.ManagedByLabel:        api.NameLabelValue,
+					api.K8ssandraClusterLabel: clusterName,
+				},
 			},
 			ReplicationTargets: replicationTargets,
 		},
 	}
 }
 
-func getManagedObjectMeta(name, namespace string) metav1.ObjectMeta {
+func getManagedObjectMeta(name, namespace, clusterName string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      name,
 		Namespace: namespace,
 		Labels: map[string]string{
-			api.ManagedByLabel: api.NameLabelValue,
+			api.ManagedByLabel:        api.NameLabelValue,
+			api.K8ssandraClusterLabel: clusterName,
 		},
 	}
 }

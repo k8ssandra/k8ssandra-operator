@@ -3456,10 +3456,6 @@ spec:
                                   type: string
                               type: object
                           type: object
-                        superUserSecret:
-                          description: SuperuserSecretName allows to override the
-                            default super user secret
-                          type: string
                       required:
                       - serverVersion
                       - size
