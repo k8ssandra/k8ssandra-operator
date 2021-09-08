@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"sync"
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -42,7 +42,9 @@ const (
 type SecretSyncController struct {
 	ClientCache *clientcache.ClientCache
 	// TODO We need a better structure for empty selectors (match whole kind)
-	selectors map[types.NamespacedName]labels.Selector
+	WatchNamespaces []string
+	selectorMutex   sync.RWMutex
+	selectors       map[types.NamespacedName]labels.Selector
 }
 
 func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -80,6 +82,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				secretsToDelete := make([]*corev1.Secret, 0, len(secrets))
 
+				s.selectorMutex.RLock()
+
 			SecretsToCheck:
 				for _, sec := range secrets {
 					for k, v := range s.selectors {
@@ -104,6 +108,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					secretsToDelete = append(secretsToDelete, &sec)
 				}
 
+				s.selectorMutex.RUnlock()
+
 				for _, target := range rsec.Spec.ReplicationTargets {
 					// Only replicate to clusters that are in the ReplicatedSecret's context
 					remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
@@ -120,7 +126,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 				}
 			}
+			s.selectorMutex.Lock()
 			delete(s.selectors, req.NamespacedName)
+			s.selectorMutex.Unlock()
 			controllerutil.RemoveFinalizer(rsec, replicatedResourceFinalizer)
 			err := localClient.Update(ctx, rsec)
 			if err != nil {
@@ -147,7 +155,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Update the selector in cache always (comparing is pointless)
+	s.selectorMutex.Lock()
 	s.selectors[req.NamespacedName] = selector
+	s.selectorMutex.Unlock()
 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
 	secrets, err := s.fetchAllMatchingSecrets(req.Namespace, selector)
@@ -246,20 +256,22 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func requiresUpdate(source, dest client.Object) bool {
-	if source.GetGeneration() != 0 {
-		// Compare using generation
-		return source.GetGeneration() > dest.GetGeneration()
-	} else {
-		if srcHash, found := source.GetAnnotations()[api.ResourceHashAnnotation]; found {
-			destHash := dest.GetAnnotations()[api.ResourceHashAnnotation]
-			return srcHash != destHash
+	if srcHash, found := source.GetAnnotations()[api.ResourceHashAnnotation]; found {
+		// Get dest hash value
+		destHash, destFound := dest.GetAnnotations()[api.ResourceHashAnnotation]
+		if !destFound {
+			return true
 		}
-		// Verify data wasn't manually updated without hash changes..
-		if sourceSec, valid := source.(*corev1.Secret); valid {
-			if destSec, valid := dest.(*corev1.Secret); valid {
-				return !reflect.DeepEqual(sourceSec.Data, destSec.Data)
+
+		if destSec, valid := dest.(*corev1.Secret); valid {
+			hash := utils.DeepHashString(destSec.Data)
+			if destHash != hash {
+				// Destination data did not match destination hash
+				return true
 			}
 		}
+
+		return srcHash != destHash
 	}
 	return false
 }
@@ -323,11 +335,13 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	// We should only reconcile objects that match the rules
 	toMatchingReplicates := func(secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
+		s.selectorMutex.RLock()
 		for k, v := range s.selectors {
 			if secret.GetNamespace() == k.Namespace && v.Matches(labels.Set(secret.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: k})
 			}
 		}
+		s.selectorMutex.RUnlock()
 		return requests
 	}
 
@@ -348,23 +362,30 @@ func (s *SecretSyncController) initializeCache() error {
 	s.selectors = make(map[types.NamespacedName]labels.Selector)
 	localClient := s.ClientCache.GetLocalNonCacheClient()
 
-	replicatedSecrets := api.ReplicatedSecretList{}
-	// TODO This should probably have WATCH_NAMESPACE support?
-	err := localClient.List(context.Background(), &replicatedSecrets)
-	if err != nil {
-		return err
-	}
-
-	for _, rsec := range replicatedSecrets.Items {
-		namespacedName := types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}
-		// Add the new matcher rules also to our cache if not found
-		selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+	for _, namespace := range s.WatchNamespaces {
+		var err error
+		replicatedSecrets := api.ReplicatedSecretList{}
+		opts := make([]client.ListOption, 0, 1)
+		if namespace != "" {
+			opts = append(opts, client.InNamespace(namespace))
+		}
+		err = localClient.List(context.Background(), &replicatedSecrets, opts...)
 		if err != nil {
 			return err
 		}
 
-		s.selectors[namespacedName] = selector
-	}
+		for _, rsec := range replicatedSecrets.Items {
+			namespacedName := types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}
+			// Add the new matcher rules also to our cache if not found
+			selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+			if err != nil {
+				return err
+			}
 
+			s.selectorMutex.Lock()
+			s.selectors[namespacedName] = selector
+			s.selectorMutex.Unlock()
+		}
+	}
 	return nil
 }

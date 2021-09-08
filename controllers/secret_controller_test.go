@@ -7,7 +7,9 @@ import (
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -344,4 +346,98 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 	}
 
 	return true
+}
+
+// TestSyncSecrets verifies that the original properties from source secret are always maintained in the target secret
+func TestSyncSecrets(t *testing.T) {
+	assert := assert.New(t)
+
+	dest := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "a",
+			Namespace: "b",
+		},
+	}
+
+	orig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "a",
+			Namespace: "b",
+			Labels: map[string]string{
+				"label1": "value1",
+			},
+			Annotations: map[string]string{
+				api.ResourceHashAnnotation: "12345678",
+			},
+		},
+		Data: map[string][]byte{
+			"first-key": []byte("firstVal"),
+		},
+	}
+
+	syncSecrets(orig, dest)
+
+	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
+	assert.Equal(orig.GetLabels(), dest.GetLabels())
+
+	assert.Equal(orig.Data, dest.Data)
+
+	dest.GetLabels()[OrphanResourceAnnotation] = "true"
+
+	dest.GetAnnotations()[api.ResourceHashAnnotation] = "9876555"
+
+	syncSecrets(orig, dest)
+
+	// Verify additional orphan annotation was not removed
+	assert.Contains(dest.GetLabels(), OrphanResourceAnnotation)
+
+	// Verify original labels and their values are set
+	for k, v := range orig.GetLabels() {
+		assert.Equal(v, dest.GetLabels()[k])
+	}
+
+	// Verify original annotations and their values are set (modified hash annotation is overwritten)
+	for k, v := range orig.GetAnnotations() {
+		assert.Equal(v, dest.GetAnnotations()[k])
+	}
+}
+
+func TestRequiresUpdate(t *testing.T) {
+	assert := assert.New(t)
+
+	dest := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "a",
+			Namespace: "b",
+		},
+	}
+
+	orig := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "a",
+			Namespace: "b",
+			Annotations: map[string]string{
+				api.ResourceHashAnnotation: "",
+			},
+		},
+		Data: map[string][]byte{
+			"first-key": []byte("firstVal"),
+		},
+	}
+
+	orig.GetAnnotations()[api.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
+
+	// Secrets don't match
+	assert.True(requiresUpdate(orig, dest))
+
+	syncSecrets(orig, dest)
+
+	assert.False(requiresUpdate(orig, dest))
+
+	// Modify target data without fixing the hash annotation, this should cause update requirement
+	dest.Data["secondKey"] = []byte("thisValWillBeGone")
+	assert.True(requiresUpdate(orig, dest))
+
+	syncSecrets(orig, dest)
+	assert.False(requiresUpdate(orig, dest))
 }
