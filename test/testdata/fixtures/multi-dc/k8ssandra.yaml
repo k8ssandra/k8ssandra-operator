@@ -3,7 +3,6 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
-  k8sContextsSecret: k8s-contexts
   cassandra:
     cluster: test
     serverVersion: "3.11.10"
