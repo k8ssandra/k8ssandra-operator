@@ -173,7 +173,7 @@ func main() {
 			os.Exit(1)
 		}
 		// Part of initial configuration check, but only done on the control-plane
-		secret.VerifyReplicatedSecret(uncachedClient, options.LeaderElectionID, watchNamespace, contextNames)
+		secret.VerifyReplicatedSecret(ctx, uncachedClient, options.LeaderElectionID, watchNamespace, contextNames)
 	}
 
 	if err = (&controllers.StargateReconciler{

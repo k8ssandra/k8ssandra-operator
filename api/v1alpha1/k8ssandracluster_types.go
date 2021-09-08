@@ -125,9 +125,6 @@ type CassandraDatacenterTemplateSpec struct {
 
 	ServerVersion string `json:"serverVersion"`
 
-	// SuperuserSecretName allows to override the default super user secret
-	SuperuserSecretName string `json:"superUserSecret,omitempty"`
-
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Config json.RawMessage `json:"config,omitempty"`
 

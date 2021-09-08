@@ -100,13 +100,14 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		dcNames = append(dcNames, dc.Meta.Name)
 	}
 
-	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		// If left empty, cass-operator would create this. We want our created secret instead
-		if dcTemplate.SuperuserSecretName == "" {
-			dcTemplate.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
-		}
+	if kc.Spec.Cassandra.SuperuserSecretName == "" {
+		kc.Spec.Cassandra.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
+	}
 
+	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+
+		desiredDc.Spec.SuperuserSecretName = kc.Spec.Cassandra.SuperuserSecretName
 
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
@@ -142,9 +143,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
-					err = fmt.Errorf("tried to update superuserSecretName")
-					logger.Error(err, "Failed to update datacenter, superuserSecretName is immutable")
-					return ctrl.Result{}, err
+					// If actualDc is created with SuperuserSecretName, it can't be changed anymore. We should reject all changes coming from K8ssandraCluster
+					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
+					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
+					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
 				}
 
 				actualDc = actualDc.DeepCopy()
@@ -188,7 +190,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			if errors.IsNotFound(err) {
 				logger.Info("Creating superuserSecret", "SecretName", desiredDc.Spec.SuperuserSecretName)
 				// This could be the first Datacenter to be created. Verify superUserSecret is created also
-				if err = secret.VerifySuperuserSecret(r.Client, desiredDc.Spec.SuperuserSecretName, kc.GetNamespace()); err != nil {
+				if err = secret.VerifySuperuserSecret(ctx, r.Client, desiredDc.Spec.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
 					logger.Error(err, "Failed to verify existence of superuserSecret")
 					return ctrl.Result{}, err
 				}
@@ -330,17 +332,16 @@ func newDatacenter(k8ssandraKey types.NamespacedName, cluster string, dcNames []
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:         cluster,
-			ServerImage:         template.ServerImage,
-			Size:                template.Size,
-			ServerType:          "cassandra",
-			ServerVersion:       template.ServerVersion,
-			Resources:           template.Resources,
-			Config:              config,
-			Racks:               template.Racks,
-			StorageConfig:       template.StorageConfig,
-			SuperuserSecretName: template.SuperuserSecretName,
-			AdditionalSeeds:     additionalSeeds,
+			ClusterName:     cluster,
+			ServerImage:     template.ServerImage,
+			Size:            template.Size,
+			ServerType:      "cassandra",
+			ServerVersion:   template.ServerVersion,
+			Resources:       template.Resources,
+			Config:          config,
+			Racks:           template.Racks,
+			StorageConfig:   template.StorageConfig,
+			AdditionalSeeds: additionalSeeds,
 			Networking: &cassdcapi.NetworkingConfig{
 				HostNetwork: true,
 			},

@@ -44,12 +44,12 @@ func DefaultSuperuserSecretName(clusterName string) string {
 }
 
 // VerifySuperuserSecret creates the superUserSecret with propert annotations
-func VerifySuperuserSecret(c client.Client, secretName, namespace string) error {
+func VerifySuperuserSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
 	currentSec := &corev1.Secret{}
-	err := c.Get(context.Background(), types.NamespacedName{Name: secretName, Namespace: namespace}, currentSec)
+	err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, currentSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			password, err := generateRandomString(passwordCharacters, 20)
@@ -68,7 +68,9 @@ func VerifySuperuserSecret(c client.Client, secretName, namespace string) error 
 				},
 			}
 
-			return c.Create(context.Background(), sec)
+			sec.Labels[api.K8ssandraClusterLabel] = clusterName
+
+			return c.Create(ctx, sec)
 		}
 	}
 
@@ -77,15 +79,14 @@ func VerifySuperuserSecret(c client.Client, secretName, namespace string) error 
 }
 
 // VerifyReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
-func VerifyReplicatedSecret(c client.Client, leaderID, namespace string, targetContexts []string) error {
+func VerifyReplicatedSecret(ctx context.Context, c client.Client, leaderID, namespace string, targetContexts []string) error {
 	// We use leaderID to ensure that this leader instance of k8ssandra-operator is using the correct ReplicatedSecret (it can be shared between different k8ssandra-operators)
-
 	targetRepSec := generateReplicatedSecret(leaderID, namespace, targetContexts)
 	repSec := &api.ReplicatedSecret{}
-	err := c.Get(context.Background(), types.NamespacedName{Name: leaderID, Namespace: namespace}, repSec)
+	err := c.Get(ctx, types.NamespacedName{Name: leaderID, Namespace: namespace}, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return c.Create(context.Background(), targetRepSec)
+			return c.Create(ctx, targetRepSec)
 		}
 	}
 
@@ -93,7 +94,7 @@ func VerifyReplicatedSecret(c client.Client, leaderID, namespace string, targetC
 	currentResourceVersion := repSec.ResourceVersion
 	targetRepSec.DeepCopyInto(repSec)
 	repSec.ResourceVersion = currentResourceVersion
-	return c.Update(context.Background(), repSec)
+	return c.Update(ctx, repSec)
 }
 
 func generateReplicatedSecret(name, namespace string, targetContexts []string) *api.ReplicatedSecret {
