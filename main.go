@@ -160,7 +160,8 @@ func main() {
 		}
 
 		if err = (&controllers.SecretSyncController{
-			ClientCache: clientCache,
+			ClientCache:     clientCache,
+			WatchNamespaces: []string{watchNamespace},
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)

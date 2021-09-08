@@ -42,8 +42,9 @@ const (
 type SecretSyncController struct {
 	ClientCache *clientcache.ClientCache
 	// TODO We need a better structure for empty selectors (match whole kind)
-	selectorMutex sync.RWMutex
-	selectors     map[types.NamespacedName]labels.Selector
+	WatchNamespaces []string
+	selectorMutex   sync.RWMutex
+	selectors       map[types.NamespacedName]labels.Selector
 }
 
 func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -361,24 +362,30 @@ func (s *SecretSyncController) initializeCache() error {
 	s.selectors = make(map[types.NamespacedName]labels.Selector)
 	localClient := s.ClientCache.GetLocalNonCacheClient()
 
-	replicatedSecrets := api.ReplicatedSecretList{}
-	err := localClient.List(context.Background(), &replicatedSecrets)
-	if err != nil {
-		return err
-	}
-
-	for _, rsec := range replicatedSecrets.Items {
-		namespacedName := types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}
-		// Add the new matcher rules also to our cache if not found
-		selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+	for _, namespace := range s.WatchNamespaces {
+		var err error
+		replicatedSecrets := api.ReplicatedSecretList{}
+		opts := make([]client.ListOption, 0, 1)
+		if namespace != "" {
+			opts = append(opts, client.InNamespace(namespace))
+		}
+		err = localClient.List(context.Background(), &replicatedSecrets, opts...)
 		if err != nil {
 			return err
 		}
 
-		s.selectorMutex.Lock()
-		s.selectors[namespacedName] = selector
-		s.selectorMutex.Unlock()
-	}
+		for _, rsec := range replicatedSecrets.Items {
+			namespacedName := types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}
+			// Add the new matcher rules also to our cache if not found
+			selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+			if err != nil {
+				return err
+			}
 
+			s.selectorMutex.Lock()
+			s.selectors[namespacedName] = selector
+			s.selectorMutex.Unlock()
+		}
+	}
 	return nil
 }
