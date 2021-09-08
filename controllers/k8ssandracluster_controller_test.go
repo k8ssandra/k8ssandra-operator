@@ -338,6 +338,11 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 								},
 							},
 						},
+						Networking: &cassdcapi.NetworkingConfig{
+							NodePort: &cassdcapi.NodePortConfig{
+								Native: 9142,
+							},
+						},
 						CassandraConfig: &api.CassandraConfig{
 							CassandraYaml: &api.CassandraYaml{
 								ConcurrentReads:  intPtr(4),
@@ -362,6 +367,11 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 										corev1.ResourceStorage: *parseResource("2Ti"),
 									},
 								},
+							},
+						},
+						Networking: &cassdcapi.NetworkingConfig{
+							NodePort: &cassdcapi.NodePortConfig{
+								Native: 9242,
 							},
 						},
 						CassandraConfig: &api.CassandraConfig{
@@ -394,6 +404,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.Datacenters[0].StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kluster.Spec.Cassandra.Datacenters[0].Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
@@ -419,6 +430,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kluster.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
@@ -463,6 +475,9 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						},
 					},
 				},
+				Networking: &cassdcapi.NetworkingConfig{
+					HostNetwork: true,
+				},
 				CassandraConfig: &api.CassandraConfig{
 					CassandraYaml: &api.CassandraYaml{
 						ConcurrentReads:  intPtr(4),
@@ -497,6 +512,9 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 								},
 							},
 						},
+						Networking: &cassdcapi.NetworkingConfig{
+							HostNetwork: false,
+						},
 						CassandraConfig: &api.CassandraConfig{
 							CassandraYaml: &api.CassandraYaml{
 								ConcurrentReads:  intPtr(4),
@@ -527,6 +545,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kluster.Spec.Cassandra.Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
@@ -552,6 +571,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kluster.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)

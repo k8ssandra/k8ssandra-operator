@@ -133,6 +133,10 @@ type CassandraClusterTemplate struct {
 	// +optional
 	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
+	// Networking enables host networking and configures a NodePort ports.
+	// +optional
+	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
+
 	// Racks is a list of named racks. Note that racks are used to create node affinity. //
 	// +optional
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
@@ -171,6 +175,10 @@ type CassandraDatacenterTemplate struct {
 	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
 
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
+
+	// Networking enables host networking and configures a NodePort ports.
+	// +optional
+	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
 
 	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
 	// includes everything under /var/lib/cassandra, namely the commit log and data

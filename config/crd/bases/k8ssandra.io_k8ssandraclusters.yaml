@@ -37,6 +37,10 @@ spec:
             description: K8ssandraClusterSpec defines the desired state of K8ssandraCluster
             properties:
               cassandra:
+                description: Cassandra is a specification of the Cassandra cluster.
+                  This includes everything from the number of datacenters, the k8s
+                  cluster where each DC should be deployed, node affinity (via racks),
+                  individual C* node settings, JVM settings, and more.
                 properties:
                   cluster:
                     description: Cluster is the name of the cluster. This corresponds
@@ -106,6 +110,7 @@ spec:
                         type: object
                     type: object
                   datacenters:
+                    description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
                         config:
@@ -186,6 +191,22 @@ spec:
                               type: string
                             namespace:
                               type: string
+                          type: object
+                        networking:
+                          properties:
+                            hostNetwork:
+                              type: boolean
+                            nodePort:
+                              properties:
+                                internode:
+                                  type: integer
+                                internodeSSL:
+                                  type: integer
+                                native:
+                                  type: integer
+                                nativeSSL:
+                                  type: integer
+                              type: object
                           type: object
                         racks:
                           items:
@@ -3614,7 +3635,25 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  networking:
+                    properties:
+                      hostNetwork:
+                        type: boolean
+                      nodePort:
+                        properties:
+                          internode:
+                            type: integer
+                          internodeSSL:
+                            type: integer
+                          native:
+                            type: integer
+                          nativeSSL:
+                            type: integer
+                        type: object
+                    type: object
                   racks:
+                    description: Racks is a list of named racks. Note that racks are
+                      used to create node affinity. //
                     items:
                       description: Rack ...
                       properties:
@@ -3984,8 +4023,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              k8sContextsSecret:
-                type: string
               stargate:
                 description: Stargate defines the desired deployment characteristics
                   for Stargate in this K8ssandraCluster. If this is non-nil, Stargate

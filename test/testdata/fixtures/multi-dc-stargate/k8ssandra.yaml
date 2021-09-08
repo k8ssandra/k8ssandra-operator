@@ -45,6 +45,8 @@ spec:
     resources:
       limits:
         memory: 1024M
+    networking:
+      hostNetwork: true
     datacenters:
       - metadata:
           name: dc1

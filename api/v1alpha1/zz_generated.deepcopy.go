@@ -75,6 +75,11 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		*out = new(v1beta1.StorageConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Networking != nil {
+		in, out := &in.Networking, &out.Networking
+		*out = new(v1beta1.NetworkingConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Racks != nil {
 		in, out := &in.Racks, &out.Racks
 		*out = make([]v1beta1.Rack, len(*in))
@@ -151,6 +156,11 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.Networking != nil {
+		in, out := &in.Networking, &out.Networking
+		*out = new(v1beta1.NetworkingConfig)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.StorageConfig != nil {
 		in, out := &in.StorageConfig, &out.StorageConfig

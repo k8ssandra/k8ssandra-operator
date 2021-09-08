@@ -145,6 +145,24 @@ func TestCoalesce(t *testing.T) {
 			},
 		},
 		{
+			name: "Override Networking",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				Networking: &cassdcapi.NetworkingConfig{
+					HostNetwork: false,
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				Networking: &cassdcapi.NetworkingConfig{
+					HostNetwork: true,
+				},
+			},
+			want: &DatacenterConfig{
+				Networking: &cassdcapi.NetworkingConfig{
+					HostNetwork: true,
+				},
+			},
+		},
+		{
 			name: "Override CassandraConfig",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				CassandraConfig: &api.CassandraConfig{

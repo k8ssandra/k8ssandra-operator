@@ -37,6 +37,7 @@ type DatacenterConfig struct {
 	Racks             []cassdcapi.Rack
 	CassandraConfig   *api.CassandraConfig
 	AdditionalSeeds   []string
+	Networking        *cassdcapi.NetworkingConfig
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -73,10 +74,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Racks:           template.Racks,
 			StorageConfig:   *template.StorageConfig,
 			AdditionalSeeds: template.AdditionalSeeds,
-			// TODO The Networking field should be exposed in DatacenterConfig
-			Networking: &cassdcapi.NetworkingConfig{
-				HostNetwork: true,
-			},
+			Networking:      template.Networking,
 		},
 	}
 
@@ -128,6 +126,12 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 		dcConfig.StorageConfig = clusterTemplate.StorageConfig
 	} else {
 		dcConfig.StorageConfig = dcTemplate.StorageConfig
+	}
+
+	if dcTemplate.Networking == nil {
+		dcConfig.Networking = clusterTemplate.Networking
+	} else {
+		dcConfig.Networking = dcTemplate.Networking
 	}
 
 	// TODO Do we want merge vs override?

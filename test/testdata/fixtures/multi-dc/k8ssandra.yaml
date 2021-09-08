@@ -45,6 +45,8 @@ spec:
         concurrent_counter_writes: 2
       jvmOptions:
         heapSize: "512M"
+    networking:
+      hostNetwork: true
     resources:
       limits:
         memory: 1024M
