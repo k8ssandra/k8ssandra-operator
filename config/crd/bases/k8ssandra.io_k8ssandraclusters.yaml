@@ -191,8 +191,12 @@ spec:
                               type: string
                             namespace:
                               type: string
+                          required:
+                          - name
                           type: object
                         networking:
+                          description: Networking enables host networking and configures
+                            a NodePort ports.
                           properties:
                             hostNetwork:
                               type: boolean
@@ -3636,6 +3640,8 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
                   networking:
+                    description: Networking enables host networking and configures
+                      a NodePort ports.
                     properties:
                       hostNetwork:
                         type: boolean

@@ -120,6 +120,7 @@ type CassandraClusterTemplate struct {
 
 	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
 	// container.
+	// +optional
 	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
 
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
@@ -142,6 +143,7 @@ type CassandraClusterTemplate struct {
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
 	// Datacenters a list of the DCs in the cluster.
+	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 }
 
@@ -161,6 +163,7 @@ type CassandraDatacenterTemplate struct {
 
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
+	// +optional
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
@@ -168,12 +171,15 @@ type CassandraDatacenterTemplate struct {
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 
 	// Resources is the cpu and memory resources for the cassandra container.
+	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
 	// container.
+	// +optional
 	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
 
+	// +optional
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
 	// Networking enables host networking and configures a NodePort ports.
@@ -183,6 +189,7 @@ type CassandraDatacenterTemplate struct {
 	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
 	// includes everything under /var/lib/cassandra, namely the commit log and data
 	// directories.
+	// +optional
 	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
 
 	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
@@ -195,30 +202,36 @@ type EmbeddedObjectMeta struct {
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 
+	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 
+	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // TODO Implement Stringer interface. It will helpful for debugging and testing.
 type CassandraConfig struct {
-	//Auth *Auth `json:"auth,omitempty"`
-
+	// +optional
 	CassandraYaml *CassandraYaml `json:"cassandraYaml,omitempty"`
 
+	// +optional
 	JvmOptions *JvmOptions `json:"jvmOptions,omitempty"`
 }
 
 type Auth struct {
+	// +optional
 	Enabled bool `json:"enabled,omitempty"`
 
+	// +optional
 	CacheValidityPeriodMillis *int64 `json:"cacheValidityPeriodMillis,omitempty"`
 
+	// +optional
 	CacheUpdateIntervalMillis *int64 `json:"cacheUpdateIntervalMillis,omitempty"`
 
-	SuperUserSecretName string `json:"SuperUserSecretName,omitempty"`
+	// +optional
+	SuperUserSecretName string `json:"superUserSecretName,omitempty"`
 }
 
 type CassandraYaml struct {
@@ -234,46 +247,66 @@ type CassandraYaml struct {
 	//
 	//PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
 
+	// +optional
 	ConcurrentReads *int `json:"concurrent_reads,omitempty"`
 
+	// +optional
 	ConcurrentWrites *int `json:"concurrent_writes,omitempty"`
 
+	// +optional
 	ConcurrentCounterWrites *int `json:"concurrent_counter_writes,omitempty"`
 
+	// +optional
 	AutoSnapshot *bool `json:"auto_snapshot,omitempty"`
 
+	// +optional
 	MemtableFlushWriters *int `json:"memtable_flush_writers,omitempty"`
 
+	// +optional
 	CommitLogSegmentSizeMb *int `json:"commitlog_segment_size_in_mb,omitempty"`
 
+	// +optional
 	ConcurrentCompactors *int `json:"concurrent_compactors,omitempty"`
 
+	// +optional
 	CompactionThroughputMbPerSec *int `json:"compaction_throughput_mb_per_sec,omitempty"`
 
+	// +optional
 	SstablePreemptiveOpenIntervalMb *int `json:"sstable_preemptive_open_interval_in_mb,omitempty"`
 
+	// +optional
 	KeyCacheSizeMb *int `json:"key_cache_size_in_mb,omitempty"`
 
+	// +optional
 	ThriftPreparedStatementCacheSizeMb *int `json:"thrift_prepared_statements_cache_size_mb,omitempty"`
 
+	// +optional
 	PreparedStatementsCacheSizeMb *int `json:"prepared_statements_cache_size_mb,omitempty"`
 
+	// +optional
 	StartRpc *bool `json:"start_rpc,omitempty"`
 
+	// +optional
 	SlowQueryLogTimeoutMs *int `json:"slow_query_log_timeout_in_ms,omitempty"`
 
+	// +optional
 	CounterCacheSizeMb *int `json:"counter_cache_size_in_mb,omitempty"`
 
+	// +optional
 	FileCacheSizeMb *int `json:"file_cache_size_in_mb,omitempty"`
 
+	// +optional
 	RowCacheSizeMb *int `json:"row_cache_size_in_mb,omitempty"`
 }
 
 type JvmOptions struct {
+	// +optional
 	HeapSize *resource.Quantity `json:"heapSize,omitempty"`
 
+	// +optional
 	HeapNewGenSize *resource.Quantity `json:"heapNewGenSize,omitempty"`
 
+	// +optional
 	AdditionalOptions []string `json:"additionalOptions,omitempty"`
 }
 
