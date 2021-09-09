@@ -343,7 +343,7 @@ This will build `k8ssandra/k8ssandra-operator:latest`. You can build different i
 
 `make IMG=jsanda/k8ssandra-operator:latest docker-build`
 
-## Install the opertor
+## Install the operator
 `make install` performs a default installation in the `default` namespace. This includes:
 
 * cass-operator
@@ -360,17 +360,45 @@ Integration tests use the `envtest` package from controller-runtime.  See this [
 **Note:** If you want to run integration tests from your IDE you need to set the `KUBEBUILDER_ASSETS` env var. It should point to `<project-root>/testbin/bin`.
 
 ## Running e2e tests
-End-to-end tests require a running Kubernetes cluster. kind is used for local development.
+End-to-end tests require kind clusters that are built with the `scripts/setup-kind-multicluster.sh` script. 
 
-`make e2e-tests` runs tests under `test/e2e`.
+**Note:** There are plans to add the ability to run the tests against other clusters. This is being tracked in https://github.com/k8ssandra/k8ssandra-operator/issues/112.
 
-Before running tests, build the operator image and then load into in to the kind cluster with `make kind-load-image`. This assumes a default cluster name of `kind`. If you cluster has a different name then do `make KIND_CLUSTER=<cluster-name> kind-load-image`.
+### Create the kind clusters
+The multi-cluster tests require two clusters.
 
-Multi-cluster support is one of the primary areas of focus right now. You can use the `scripts/setup-kind-multicluster.sh` script to configure a multi-cluster environment.
+```
+./scripts/setup-kind-multicluster.sh --clusters 2
+```
 
-To set up two kind clusters for multi-cluster tests run the following:
+### Build operator image
 
-`scripts/setup-kind-multicluster.sh --clusters 2`
+Before running tests, build the operator image:
+
+```
+make docker-build
+```
+
+### Load the operator image into the clusters
+Load the operator image with `make kind-load-image`:
+
+```
+make KIND_CLUSTER=k8ssandra-0 kind-load-image
+```
+
+```
+make KIND_CLUSTER=k8ssandra-1 kind-load-image
+```
+
+### Run the tests
+
+`make e2e-tests` runs the tests under `test/e2e`.
+
+If you want to run a single test, set the `E2E_TEST` variable as follows:
+
+```
+make E2E_TEST=TestOperator/SingleDatacenterCluster e2e-test
+```
 
 ### Resource Requirements
 Multi-cluster tests will be more resource intensive than other tests. The Docker VM on my MacBook Pro is configured with 6 CPUs and  10 GB of memory for these tests. Your mileage may vary on other operating systems/setups. 
