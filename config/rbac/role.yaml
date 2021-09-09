@@ -5,7 +5,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: k8ssandra-operator
-  namespace: k8ssandra
+  namespace: k8ssandra-operator
 rules:
 - apiGroups:
   - apps

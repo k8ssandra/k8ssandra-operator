@@ -1,0 +1,2 @@
+resources:
+- github.com/k8ssandra/cass-operator/config/cluster?ref=v1.8.0-rc.1
