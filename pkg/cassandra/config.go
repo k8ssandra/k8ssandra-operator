@@ -44,11 +44,6 @@ func (c config) MarshalJSON() ([]byte, error) {
 	config := make(map[string]interface{})
 
 	if c.CassandraYaml != nil {
-		if isCassandra4(c.cassandraVersion) {
-			c.StartRpc = nil
-			c.ThriftPreparedStatementCacheSizeMb = nil
-		}
-
 		// Even though we default to Cassandra's stock defaults for num_tokens, we need to
 		// explicitly set it because the config builder defaults to num_tokens: 1
 		if c.NumTokens == nil {

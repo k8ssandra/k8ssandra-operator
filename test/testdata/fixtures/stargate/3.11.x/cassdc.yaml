@@ -1,0 +1,53 @@
+apiVersion: cassandra.datastax.com/v1beta1
+kind: CassandraDatacenter
+metadata:
+  name: dc1
+spec:
+  clusterName: test
+  config:
+    cassandra-yaml:
+      auto_snapshot: false
+      commitlog_segment_size_in_mb: 2
+      compaction_throughput_mb_per_sec: 0
+      concurrent_compactors: 1
+      concurrent_counter_writes: 2
+      concurrent_reads: 2
+      concurrent_writes: 2
+      counter_cache_size_in_mb: 0
+      key_cache_size_in_mb: 0
+      memtable_flush_writers: 1
+      prepared_statements_cache_size_mb: 1
+      slow_query_log_timeout_in_ms: 0
+      sstable_preemptive_open_interval_in_mb: 0
+    jvm-options:
+      additional-jvm-opts:
+        - -Dcassandra.system_distributed_replication_dc_names=dc1
+        - -Dcassandra.system_distributed_replication_per_dc=1
+      initial_heap_size: 512m
+      max_heap_size: 512m
+  resources:
+    limits:
+      memory: 800Mi
+  serverType: cassandra
+  serverVersion: ${CASSANDRA_VERSION}
+  networking:
+    hostNetwork: false
+  size: 3
+  racks:
+    - name: rack1
+      nodeAffinityLabels:
+        "topology.kubernetes.io/zone": rack1
+    - name: rack2
+      nodeAffinityLabels:
+        "topology.kubernetes.io/zone": rack2
+    - name: rack3
+      nodeAffinityLabels:
+        "topology.kubernetes.io/zone": rack3
+  storageConfig:
+    cassandraDataVolumeClaimSpec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: standard

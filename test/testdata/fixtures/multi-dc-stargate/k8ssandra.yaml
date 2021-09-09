@@ -5,7 +5,7 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.11"
+    serverVersion: ${CASSANDRA_VERSION}
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -30,9 +30,7 @@ spec:
         compaction_throughput_mb_per_sec: 0
         sstable_preemptive_open_interval_in_mb: 0
         key_cache_size_in_mb: 0
-        thrift_prepared_statements_cache_size_mb: 1
         prepared_statements_cache_size_mb: 1
-        start_rpc: false
         slow_query_log_timeout_in_ms: 0
         counter_cache_size_in_mb: 0
         concurrent_reads: 2
@@ -48,11 +46,11 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: kind-k8ssandra-0
+        k8sContext: ${CONTROL_PLANE_CONTEXT}
         size: 2
       - metadata:
           name: dc2
-        k8sContext: kind-k8ssandra-1
+        k8sContext: ${DATA_PLANE_CONTEXT_0}
         size: 2
   stargate:
     size: 1

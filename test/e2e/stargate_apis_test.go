@@ -4,6 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	neturl "net/url"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
@@ -12,11 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"net/http"
-	neturl "net/url"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int) {

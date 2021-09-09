@@ -126,7 +126,7 @@ ifdef E2E_TEST
 	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
 else
 	@echo Running e2e tests
-	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
+	go test -v -timeout 3600s ./test/e2e/... -args $(TEST_ARGS)
 endif
 
 # The e2e-setup-single and e2e-setup-multi targets load the operator image but do not

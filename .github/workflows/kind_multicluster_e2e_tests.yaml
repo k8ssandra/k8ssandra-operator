@@ -56,8 +56,11 @@ jobs:
           - CreateMultiStargateAndDatacenter
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
+        cassandra_version:
+          - "3.11.11"
+          - "4.0.1"
       fail-fast: false
-    name: ${{ matrix.e2e_test }}
+    name: MultiCluster-${{ matrix.e2e_test }}-${{ matrix.cassandra_version }}
     env:
       GOPATH: /home/runner/go
       GOROOT: /usr/local/go1.16
@@ -108,8 +111,8 @@ jobs:
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind clusters
         run: make e2e-setup-multi
-      - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} NODETOOL_STATUS_TIMEOUT=2m e2e-test
+      - name: Run e2e test ( ${{ matrix.e2e_test }}-${{ matrix.cassandra_version }} )
+        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} TEST_ARGS="--cassandraVersion=${{ matrix.cassandra_version }}" NODETOOL_STATUS_TIMEOUT=2m e2e-test
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2

@@ -19,9 +19,7 @@ spec:
       prepared_statements_cache_size_mb: 1
       slow_query_log_timeout_in_ms: 0
       sstable_preemptive_open_interval_in_mb: 0
-      start_rpc: false
-      thrift_prepared_statements_cache_size_mb: 1
-    jvm-options:
+    jvm-server-options:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
@@ -31,7 +29,7 @@ spec:
     limits:
       memory: 800Mi
   serverType: cassandra
-  serverVersion: 3.11.11
+  serverVersion: ${CASSANDRA_VERSION}
   networking:
     hostNetwork: false
   size: 3

@@ -1,11 +1,15 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,8 +48,10 @@ var (
 		reaperReady             pollingConfig
 	}
 
-	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
-	logKubectlOutput   = flag.Bool("logKubectlOutput", false, "")
+	logKustomizeOutput  = flag.Bool("logKustomizeOutput", false, "")
+	logKubectlOutput    = flag.Bool("logKubectlOutput", false, "")
+	cassandraVersion    = flag.String("cassandraVersion", "4.0.0", "Set version of Cassandra to be used in the e2e tests")
+	controlPlaneContext = flag.String("controlPlane", "", "Override control plane context name")
 )
 
 func TestOperator(t *testing.T) {
@@ -110,6 +116,8 @@ func TestOperator(t *testing.T) {
 }
 
 func beforeSuite(t *testing.T) {
+	flag.Parse()
+
 	if val, ok := os.LookupEnv("NODETOOL_STATUS_TIMEOUT"); ok {
 		timeout, err := time.ParseDuration(val)
 		require.NoError(t, err, fmt.Sprintf("failed to parse NODETOOL_STATUS_TIMEOUT value: %s", val))
@@ -195,7 +203,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
-		f, err := framework.NewE2eFramework()
+		f, err := framework.NewE2eFramework(*controlPlaneContext)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -323,12 +331,66 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		return err
 	}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
-		t.Log("kubectl apply failed")
+	// Substitute values in Kustomize templates for tests and apply them
+	fixtureFiles, err := os.ReadDir(fixtureDir)
+	if err != nil {
 		return err
 	}
 
+	versionSpecificDir := filepath.Join(fixtureDir, getCassandraFixtureDir())
+	if _, err := os.Stat(versionSpecificDir); !os.IsNotExist(err) {
+		additionalFixtureFiles, err := os.ReadDir(versionSpecificDir)
+		if err != nil {
+			return err
+		}
+
+		fixtureFiles = append(fixtureFiles, additionalFixtureFiles...)
+	}
+
+	for _, filu := range fixtureFiles {
+		path := filepath.Join(fixtureDir, filu.Name())
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		output, err := runEnvSubst(strings.NewReader(string(b)), f)
+		if err != nil {
+			t.Log("failed to run envsubst")
+			return err
+		}
+
+		if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, output); err != nil {
+			t.Log("kubectl apply failed")
+			return err
+		}
+	}
+
 	return nil
+}
+
+func getCassandraFixtureDir() string {
+	parts := strings.Split(*cassandraVersion, ".")
+	return fmt.Sprintf("%s.%s.x", parts[0], parts[1])
+}
+
+func runEnvSubst(input *strings.Reader, f *framework.E2eFramework) (*bytes.Buffer, error) {
+	// TODO Maybe text/template would make more sense? Pure go solution
+	cmd := exec.Command("envsubst")
+	cmd.Stdin = input
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	// Set environment variables
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("CASSANDRA_VERSION=%s", *cassandraVersion))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("CONTROL_PLANE_CONTEXT=%s", f.ControlPlaneContext))
+	for i, dataContext := range f.GetDataPlaneContexts() {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("DATA_PLANE_CONTEXT_%d=%s", i, dataContext))
+	}
+
+	err := cmd.Run()
+	return &out, err
 }
 
 func applyPollingDefaults() {
@@ -410,7 +472,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 
 	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
@@ -431,7 +493,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		return cassandraDatacenterReady(kdcStatus.Cassandra)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
-	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
@@ -482,33 +544,33 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("retrieve database credentials")
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+	t.Logf("deploying Stargate ingress routes in %s", f.ControlPlaneContext)
+	f.DeployStargateIngresses(t, f.ControlPlaneContext, 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.ControlPlaneContext, namespace)
 
 	replication := map[string]int{"dc1": 1}
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+	testStargateApis(t, ctx, f.ControlPlaneContext, 0, username, password, replication)
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 
-	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 
-	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+	t.Logf("deploying Stargate ingress routes in %s", f.ControlPlaneContext)
+	f.DeployStargateIngresses(t, f.ControlPlaneContext, 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.ControlPlaneContext, namespace)
 
 	replication := map[string]int{"dc1": 3}
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+	testStargateApis(t, ctx, f.ControlPlaneContext, 0, username, password, replication)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -521,7 +583,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -539,7 +601,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
-	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.GetDataPlaneContexts()[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -566,7 +628,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
+	opts := kubectl.Options{Namespace: namespace, Context: f.ControlPlaneContext}
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
@@ -574,7 +636,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	opts.Context = "kind-k8ssandra-1"
+	opts.Context = f.GetDataPlaneContexts()[0]
 	pod = "test-dc2-rack1-sts-0"
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
@@ -589,7 +651,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -607,7 +669,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
-	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.GetDataPlaneContexts()[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -633,7 +695,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
-	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc1-stargate")
@@ -662,7 +724,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	stargateKey = framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
+	stargateKey = framework.ClusterKey{K8sContext: f.GetDataPlaneContexts()[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
@@ -692,7 +754,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
+	opts := kubectl.Options{Namespace: namespace, Context: f.ControlPlaneContext}
 	pod := "test-dc1-rack1-sts-0"
 	count := 4
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
@@ -700,7 +762,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	opts.Context = "kind-k8ssandra-1"
+	opts.Context = f.GetDataPlaneContexts()[0]
 	pod = "test-dc2-rack1-sts-0"
 	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
 
@@ -709,18 +771,18 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("retrieve database credentials")
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+	t.Logf("deploying Stargate ingress routes in %s", f.ControlPlaneContext)
+	f.DeployStargateIngresses(t, f.ControlPlaneContext, 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.ControlPlaneContext, namespace)
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-1")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
+	t.Logf("deploying Stargate ingress routes in %s", f.GetDataPlaneContexts()[0])
+	f.DeployStargateIngresses(t, f.GetDataPlaneContexts()[0], 1, namespace, "test-dc2-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.GetDataPlaneContexts()[0], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
-	testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
+	testStargateApis(t, ctx, f.ControlPlaneContext, 0, username, password, replication)
+	testStargateApis(t, ctx, f.GetDataPlaneContexts()[0], 1, username, password, replication)
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

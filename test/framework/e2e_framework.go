@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -39,9 +40,11 @@ type E2eFramework struct {
 	*Framework
 
 	nodeToolStatusUN *regexp.Regexp
+
+	contexts []string
 }
 
-func NewE2eFramework() (*E2eFramework, error) {
+func NewE2eFramework(controlPlaneContext string) (*E2eFramework, error) {
 	configFile, err := filepath.Abs("../../build/kubeconfig")
 	if err != nil {
 		return nil, err
@@ -56,9 +59,9 @@ func NewE2eFramework() (*E2eFramework, error) {
 		return nil, err
 	}
 
-	controlPlaneContext := ""
 	var controlPlaneClient client.Client
-	remoteClients := make(map[string]client.Client, 0)
+	remoteClients := make(map[string]client.Client)
+	contexts := make([]string, 0, len(remoteClients))
 
 	for name, _ := range config.Contexts {
 		clientCfg := clientcmd.NewNonInteractiveClientConfig(*config, name, &clientcmd.ConfigOverrides{}, nil)
@@ -73,22 +76,22 @@ func NewE2eFramework() (*E2eFramework, error) {
 			return nil, err
 		}
 
-		// TODO Add a flag or option to allow the user to specify the control plane cluster
-		// if len(ControlPlaneContext) == 0 {
-		//	ControlPlaneContext = name
-		//	controlPlaneClient = remoteClient
-		// }
 		remoteClients[name] = remoteClient
+		contexts = append(contexts, name)
 	}
 
-	if remoteClient, found := remoteClients[defaultControlPlaneContext]; found {
-		controlPlaneContext = defaultControlPlaneContext
-		controlPlaneClient = remoteClient
-	} else {
-		for k8sContext, remoteClient := range remoteClients {
-			controlPlaneContext = k8sContext
+	if controlPlaneContext != "" {
+		if remoteClient, found := remoteClients[controlPlaneContext]; found {
 			controlPlaneClient = remoteClient
-			break
+		}
+	} else {
+		if remoteClient, found := remoteClients[defaultControlPlaneContext]; found {
+			controlPlaneContext = defaultControlPlaneContext
+			controlPlaneClient = remoteClient
+		} else {
+			// If no default name is found, pick the first one from our randomized list (config.Context is randomly ordered when iterated)
+			controlPlaneContext = contexts[0]
+			controlPlaneClient = remoteClients[controlPlaneContext]
 		}
 	}
 
@@ -96,21 +99,17 @@ func NewE2eFramework() (*E2eFramework, error) {
 
 	re := regexp.MustCompile("UN\\s\\s")
 
-	return &E2eFramework{Framework: f, nodeToolStatusUN: re}, nil
+	return &E2eFramework{Framework: f, nodeToolStatusUN: re, contexts: contexts}, nil
 }
 
-// getClusterContexts returns all contexts, including both control plane and data plane.
-func (f *E2eFramework) getClusterContexts() []string {
-	contexts := make([]string, 0, len(f.remoteClients))
-	for ctx, _ := range f.remoteClients {
-		contexts = append(contexts, ctx)
-	}
-	return contexts
+// GetClusterContexts returns all contexts, including both control plane and data plane.
+func (f *E2eFramework) GetClusterContexts() []string {
+	return f.contexts
 }
 
-func (f *E2eFramework) getDataPlaneContexts() []string {
-	contexts := make([]string, 0, len(f.remoteClients))
-	for ctx, _ := range f.remoteClients {
+func (f *E2eFramework) GetDataPlaneContexts() []string {
+	contexts := make([]string, 0, len(f.contexts))
+	for _, ctx := range f.contexts {
 		if ctx != f.ControlPlaneContext {
 			contexts = append(contexts, ctx)
 		}
@@ -304,7 +303,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
 
-	for _, k8sContext := range f.getClusterContexts() {
+	for _, k8sContext := range f.GetClusterContexts() {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Create Cassandra ConfigMap", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
@@ -342,7 +341,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string, clusterScoped b
 		return err
 	}
 
-	dataPlaneContexts := f.getDataPlaneContexts()
+	dataPlaneContexts := f.GetDataPlaneContexts()
 	if len(dataPlaneContexts) > 0 {
 		return f.kustomizeAndApply(dataPlane, namespace, dataPlaneContexts...)
 	}
@@ -353,7 +352,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string, clusterScoped b
 func (f *E2eFramework) DeployCertManager() error {
 	dir := filepath.Join("..", "..", "config", "cert-manager", "cert-manager-1.3.1.yaml")
 
-	for _, ctx := range f.getClusterContexts() {
+	for _, ctx := range f.GetClusterContexts() {
 		options := kubectl.Options{Context: ctx}
 		f.logger.Info("Deploy cert-manager", "Context", ctx)
 		if err := kubectl.Apply(options, dir); err != nil {
@@ -372,7 +371,7 @@ func (f *E2eFramework) DeployCassOperator(namespace string) error {
 
 	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
 
-	return f.kustomizeAndApply(dir, namespace, f.getClusterContexts()...)
+	return f.kustomizeAndApply(dir, namespace, f.GetClusterContexts()...)
 }
 
 // DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.

@@ -91,13 +91,12 @@ func (k ClusterKey) String() string {
 	return k.K8sContext + string(types.Separator) + k.Namespace + string(types.Separator) + k.Name
 }
 
-func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
-	var log logr.Logger
-	log = logrusr.NewLogger(logrus.New())
+func NewFramework(client client.Client, controlPlaneContext string, remoteClients map[string]client.Client) *Framework {
+	log := logrusr.NewLogger(logrus.New())
 	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
 
 	// TODO ControlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
-	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
+	return &Framework{Client: client, ControlPlaneContext: controlPlaneContext, remoteClients: remoteClients, logger: log}
 }
 
 // Get fetches the object specified by key from the cluster specified by key. An error is
@@ -202,7 +201,7 @@ func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updat
 // remote clusters.
 func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval time.Duration) error {
 	return wait.Poll(interval, timeout, func() (bool, error) {
-		if len(key.K8sContext) == 0 {
+		if key.K8sContext == "" {
 			for _, remoteClient := range f.remoteClients {
 				deployment := &appsv1.Deployment{}
 				if err := remoteClient.Get(context.TODO(), key.NamespacedName, deployment); err != nil {

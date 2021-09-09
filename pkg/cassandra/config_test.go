@@ -305,21 +305,6 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "[4.0.0] start_rpc, thrift_prepared_statements_cache_size_mb",
-			cassandraVersion: "4.0.0",
-			config: &api.CassandraConfig{
-				CassandraYaml: &api.CassandraYaml{
-					StartRpc:                           boolPtr(false),
-					ThriftPreparedStatementCacheSizeMb: intPtr(1),
-				},
-			},
-			want: `{
-              "cassandra-yaml": {
-				"num_tokens": 16
-              }
-            }`,
-		},
-		{
 			name:             "[3.11.11] num_tokens",
 			cassandraVersion: "3.11.11",
 			config: &api.CassandraConfig{

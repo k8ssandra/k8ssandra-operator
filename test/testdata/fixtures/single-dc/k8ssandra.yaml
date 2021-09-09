@@ -5,11 +5,10 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.11"
+    serverVersion: ${CASSANDRA_VERSION}
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: kind-k8ssandra-0
         size: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:
