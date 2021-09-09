@@ -34,6 +34,13 @@ You need to Kustomize 4.0.5 or later installed. See [here](https://kubectl.docs.
 
 Recent versions of `kubectl` include Kustomize. It is executed using the `-k` option. I prefer to install Kustomize and use the `kustomize` binary as I have found in the past that the one embedded with `kubectl` can be several versions behind and behave differently  than what is described in the Kustomize docs.
 
+### Install Cert Manager
+We need to first install Cert Manager as it is a dependency of cass-operator:
+
+```
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```
+
 ### Default Install
 First, create a kustomization directory that builds from the `main` branch:
 
@@ -66,16 +73,13 @@ NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
 k8ssandra-operator   1/1     1            1           2m
 ```
-Next, verify that the following CRDs are installed:
+Next, verify that the following CRDs are installed with `kubectl get crds`:
 
-```
-kubectl get crds
-NAME                                          CREATED AT
-cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
-clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
-k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
-stargates.k8ssandra.io                        2021-08-11T15:07:27Z
-```
+* cassandradatacenters.cassandra.datastax.com
+* clientconfigs.k8ssandra.io
+* k8ssandraclusters.k8ssandra.io
+* replicatedsecrets.k8ssandra.io
+* stargates.k8ssandra.io  
 
 ### Install into different namespace
 First, create the namespace:
