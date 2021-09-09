@@ -328,7 +328,7 @@ func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, d
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
 
-	err := remoteClient.List(ctx, podList, labels)
+	err := remoteClient.List(ctx, podList, labels, client.InNamespace(dc.Namespace))
 	if err != nil {
 		return nil, err
 	}
