@@ -4001,6 +4001,10 @@ spec:
                             type: string
                         type: object
                     type: object
+                  superUserSecret:
+                    description: SuperuserSecretName allows to override the default
+                      super user secret
+                    type: string
                   systemLoggerResources:
                     description: SystemLoggerResources is the cpu and memory resources
                       for the server-system-logger container.
