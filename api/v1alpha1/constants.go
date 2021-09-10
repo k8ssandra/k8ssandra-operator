@@ -6,8 +6,9 @@ const (
 	NameLabel      = "app.kubernetes.io/name"
 	NameLabelValue = "k8ssandra-operator"
 
-	InstanceLabel = "app.kubernetes.io/instance"
-	VersionLabel  = "app.kubernetes.io/version"
+	InstanceLabel  = "app.kubernetes.io/instance"
+	VersionLabel   = "app.kubernetes.io/version"
+	ManagedByLabel = "app.kubernetes.io/managed-by"
 
 	ComponentLabel               = "app.kubernetes.io/component"
 	ComponentLabelValueCassandra = "cassandra"

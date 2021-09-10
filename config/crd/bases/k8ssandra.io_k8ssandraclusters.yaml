@@ -3463,6 +3463,10 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  superUserSecret:
+                    description: SuperuserSecretName allows to override the default
+                      super user secret
+                    type: string
                 type: object
               k8sContextsSecret:
                 type: string

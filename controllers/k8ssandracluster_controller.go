@@ -19,11 +19,15 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math"
+	"sort"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"sort"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -98,8 +100,30 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		dcNames = append(dcNames, dc.Meta.Name)
 	}
 
+	// Reconcile the ReplicatedSecret and superuserSecret first (otherwise CassandraDatacenter will not start)
+	contextNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		contextNames = append(contextNames, dcTemplate.K8sContext)
+	}
+
+	if kc.Spec.Cassandra.SuperuserSecretName == "" {
+		kc.Spec.Cassandra.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
+	}
+
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, contextNames); err != nil {
+		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
+		return ctrl.Result{}, err
+	}
+
+	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
+		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
+		return ctrl.Result{}, err
+	}
+
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		desiredDc, err := newDatacenter(kcKey, kc.Spec.Cassandra.Cluster, dcNames, dcTemplate, seeds, systemDistributedRF)
+
+		desiredDc.Spec.SuperuserSecretName = kc.Spec.Cassandra.SuperuserSecretName
 
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
@@ -133,6 +157,14 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
 				logger.Info("Updating datacenter")
+
+				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
+					// If actualDc is created with SuperuserSecretName, it can't be changed anymore. We should reject all changes coming from K8ssandraCluster
+					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
+					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
+					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
+				}
+
 				actualDc = actualDc.DeepCopy()
 				resourceVersion := actualDc.GetResourceVersion()
 				desiredDc.DeepCopyInto(actualDc)
@@ -194,6 +226,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			return result, err
 		}
 	}
+
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 	return ctrl.Result{}, nil
 }

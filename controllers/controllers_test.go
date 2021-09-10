@@ -3,21 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"os"
-	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
-
 	"github.com/bombsimon/logrusr"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -28,7 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+
+	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 )
 
 const (
@@ -63,7 +62,6 @@ func TestControllers(t *testing.T) {
 	t.Run("Stargate", func(t *testing.T) {
 		testStargate(ctx, t)
 	})
-
 	t.Run("SecretController", func(t *testing.T) {
 		testSecretController(ctx, t)
 	})

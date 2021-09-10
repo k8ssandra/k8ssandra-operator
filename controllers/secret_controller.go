@@ -35,9 +35,10 @@ const (
 )
 
 // We need rights to update the target cluster's secrets, not necessarily this cluster
-// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch;update;create
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/status,verbs=get;update;patch
 
 type SecretSyncController struct {
 	ClientCache *clientcache.ClientCache
@@ -119,7 +120,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 					for _, deleteKey := range secretsToDelete {
 						err = remoteClient.Delete(ctx, deleteKey)
-						if err != nil {
+						if err != nil && !errors.IsNotFound(err) {
 							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
 							return ctrl.Result{}, err
 						}
@@ -143,8 +144,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		err := localClient.Update(ctx, rsec)
 		if err != nil {
 			logger.Error(err, "Failed to get add finalizer to replicated secret", "ReplicatedSecret", req.NamespacedName)
-			return ctrl.Result{Requeue: true}, err
 		}
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	// Add the new matcher rules also to our cache if not found
@@ -175,7 +176,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// For status updates
-	patch := client.MergeFromWithOptions(rsec.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFrom(rsec.DeepCopy())
+	// patch := client.MergeFromWithOptions(rsec.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	rsec.Status.Conditions = make([]api.ReplicationCondition, 0, len(rsec.Spec.ReplicationTargets))
 
 	for _, target := range rsec.Spec.ReplicationTargets {

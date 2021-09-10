@@ -81,7 +81,7 @@ func main() {
 		setupLog.Info("watch namespace configured", "namespace", watchNamespace)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
@@ -89,7 +89,9 @@ func main() {
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "dcabfccc.k8ssandra.io",
 		Namespace:              watchNamespace,
-	})
+	}
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to create manager")
 		os.Exit(1)
@@ -117,6 +119,7 @@ func main() {
 		}
 
 		additionalClusters := make([]cluster.Cluster, 0, len(cConfigs.Items))
+		contextNames := make([]string, 0, len(cConfigs.Items))
 
 		for _, cCfg := range cConfigs.Items {
 			// Create clients and add them to the client cache
@@ -145,6 +148,7 @@ func main() {
 			}
 
 			additionalClusters = append(additionalClusters, c)
+			contextNames = append(contextNames, cCfg.GetContextName())
 		}
 
 		// Create the reconciler and start it

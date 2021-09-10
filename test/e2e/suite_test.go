@@ -4,15 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -42,7 +43,7 @@ var (
 	}
 
 	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
-	logKubectlOutput = flag.Bool("logKubectlOutput", false, "")
+	logKubectlOutput   = flag.Bool("logKubectlOutput", false, "")
 )
 
 func TestOperator(t *testing.T) {
@@ -253,6 +254,10 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework) error {
 	}
 
 	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
+		return err
+	}
+
+	if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
 		return err
 	}
 

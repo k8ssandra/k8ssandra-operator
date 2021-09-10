@@ -3,9 +3,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,14 +20,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
 )
 
 func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
-	testEnv := &MultiClusterTestEnv{}
+	testEnv = &MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&K8ssandraClusterReconciler{
+		err := (&SecretSyncController{
+			ClientCache: clientCache,
+		}).SetupWithManager(mgr, clusters)
+		if err != nil {
+			return err
+		}
+
+		err = (&K8ssandraClusterReconciler{
 			Client:        mgr.GetClient(),
 			Scheme:        scheme.Scheme,
 			ClientCache:   clientCache,
@@ -214,6 +223,38 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("check that replicatedSecret was created")
+	replicatedSecretKey := types.NamespacedName{Name: cluster.Spec.Cassandra.Cluster, Namespace: namespace}
+	require.Eventually(func() bool {
+		sec := &api.ReplicatedSecret{}
+		err = f.Client.Get(ctx, replicatedSecretKey, sec)
+		if err != nil {
+			return false
+		}
+
+		return len(sec.Labels) > 0
+	}, timeout, interval, "Failed to find replicatedSecret")
+
+	t.Log("check that superuserSecret was created")
+	superuserSecretKey := types.NamespacedName{Name: secret.DefaultSuperuserSecretName(cluster.Spec.Cassandra.Cluster), Namespace: namespace}
+	require.Eventually(func() bool {
+		sec := &corev1.Secret{}
+		err = f.Client.Get(ctx, superuserSecretKey, sec)
+		if err != nil {
+			return false
+		}
+
+		return sec.Data != nil && len(sec.Data) == 2
+	}, timeout, interval, "Failed to find superuserSecret")
+
+	t.Log("check that superUserSecret was replicated to both clusters")
+	var empty struct{}
+	require.Eventually(func() bool {
+		return verifySecretsMatch(t, ctx, f.Client, []string{k8sCtx0, k8sCtx1}, map[string]struct{}{
+			superuserSecretKey.Name: empty,
+		}, namespace)
+	}, timeout, interval, "Failed to find matching superuserSecret from all clusters")
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {

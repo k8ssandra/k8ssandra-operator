@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,6 +97,9 @@ type K8ssandraClusterList struct {
 
 type Cassandra struct {
 	Cluster string `json:"cluster,omitempty"`
+
+	// SuperuserSecretName allows to override the default super user secret
+	SuperuserSecretName string `json:"superUserSecret,omitempty"`
 
 	Datacenters []CassandraDatacenterTemplateSpec `json:"datacenters,omitempty"`
 }
