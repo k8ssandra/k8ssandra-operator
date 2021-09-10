@@ -21,7 +21,7 @@ One of the primary features of this operator is multi-cluster support which will
 # Installing the operator
 There are a couple of options for installing the operator - build from source or remote installs via kustomize.
 
-**Note:** There are plans to add a Helm chart as well (TODO create and reference ticket here)
+**Note:** There are plans to add a Helm chart as well. See https://github.com/k8ssandra/k8ssandra-operator/issues/98
 
 **Note:** This section focuses on a single cluster install. See the multi-cluster section below for details on how to configure the operator for a multi-cluster install.
 
@@ -226,10 +226,57 @@ A kubeconfig entry for a cluster hosted by a cloud provider with include an auth
 ## Installation
 This section goes through the steps necessary for installing the data plane and then the control plane.
 
-### Install the data plane
-We set up the data plane first in order to create the `ClientConfig` objects needed to bootstrap the control plane.
+### Install kubectx
+[kubectx](https://github.com/ahmetb/kubectx) is a really handy tool when you are dealing with multiple clusters. The examples will use it so go ahead and install it now.
 
-Create a kustomization directory:
+
+### Install kind clusters
+The examples use [kind](https://kind.sigs.k8s.io/) clusters; however, the steps should work for any clusters provided they have routable IPs between pods.
+
+Download [setup-kind-multicluster.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/setup-kind-multicluster.sh). 
+
+**Note:** The `setup-kind-multicluster.sh` script is primarily intended for development and testing. It is used here for convenience.
+
+Run the script as follows:
+
+```
+./setup-kind-multicluster.sh --clusters 2
+```
+
+When creating a cluster, kind generates a kubeconfig with the address of the api server set to localhost. We need a kubeconfig that has the api server address set to its internal ip address. `setup-kind-multi-cluster.sh` takes care of this for us. Generated files are written into a `build` directory.
+
+Run `kubectx` without any arguments and verify that you see the following contexts listed in the output:
+
+* kind-k8ssandra-0
+* kind-k8ssandra-1
+
+### Install Cert Manager
+Install Cert Manager in k8ssandra-0:
+
+```
+kubectx kind-k8ssandra-0
+
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```
+
+Install Cert Manager in k8ssandra-1:
+
+```
+kubectx kind-k8ssandra-1
+
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```
+
+### Install the data plane
+We set up the data plane first in k8ssandra-1 order to create the `ClientConfig` objects needed to bootstrap the control plane.
+
+First swictch the active context to k8ssandra:
+
+```
+kubectx kind-k8ssandra-1
+```
+
+Now create a kustomization directory:
 
 ```sh
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
@@ -275,17 +322,20 @@ kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.cont
 
 Lastly, verify that the following CRDs are installed:
 
-```
-kubectl get crds
-NAME                                          CREATED AT
-cassandradatacenters.cassandra.datastax.com   2021-08-11T15:07:27Z
-clientconfigs.k8ssandra.io                    2021-08-11T15:07:27Z
-k8ssandraclusters.k8ssandra.io                2021-08-11T15:07:27Z
-stargates.k8ssandra.io                        2021-08-11T15:07:27Z
-```
+* cassandradatacenters.cassandra.datastax.com
+* certificaterequests.cert-manager.io
+* certificates.cert-manager.io
+* challenges.acme.cert-manager.io
+* clientconfigs.k8ssandra.io
+* clusterissuers.cert-manager.io
+* issuers.cert-manager.io
+* k8ssandraclusters.k8ssandra.io
+* orders.acme.cert-manager.io
+* replicatedsecrets.k8ssandra.io
+* stargates.k8ssandra.io
 
 ### Create a ClientConfig
-Now we need to create a `ClientConfig` for the remote cluster. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
+Now we need to create a `ClientConfig` for the k8ssandra-1. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 Here is a summary of what the script does:
 
