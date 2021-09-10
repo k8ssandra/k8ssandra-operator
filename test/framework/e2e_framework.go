@@ -509,12 +509,20 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 // remote clusters.
 func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all ReplicatedSecrets", "Namespace", namespace)
-	return f.deleteAllResources(
-		namespace,
-		&api.ReplicatedSecret{},
-		timeout,
-		interval,
-	)
+
+	if err := f.Client.DeleteAllOf(context.Background(), &api.ReplicatedSecret{}, client.InNamespace(namespace)); err != nil {
+		f.logger.Error(err, "failed to delete ReplicatedSecrets")
+		return err
+	}
+
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		list := &api.ReplicatedSecretList{}
+		if err := f.Client.List(context.Background(), list, client.InNamespace(namespace)); err != nil {
+			f.logger.Error(err, "failed to list ReplicatedSecrets")
+			return false, err
+		}
+		return len(list.Items) == 0, nil
+	})
 }
 
 func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
