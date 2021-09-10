@@ -24,9 +24,16 @@ import (
 
 func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
-	testEnv := &MultiClusterTestEnv{}
+	testEnv = &MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&K8ssandraClusterReconciler{
+		err := (&SecretSyncController{
+			ClientCache: clientCache,
+		}).SetupWithManager(mgr, clusters)
+		if err != nil {
+			return err
+		}
+
+		err = (&K8ssandraClusterReconciler{
 			Client:        mgr.GetClient(),
 			Scheme:        scheme.Scheme,
 			ClientCache:   clientCache,
@@ -217,6 +224,18 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
+	t.Log("check that replicatedSecret was created")
+	replicatedSecretKey := types.NamespacedName{Name: cluster.Spec.Cassandra.Cluster, Namespace: namespace}
+	require.Eventually(func() bool {
+		sec := &api.ReplicatedSecret{}
+		err = f.Client.Get(ctx, replicatedSecretKey, sec)
+		if err != nil {
+			return false
+		}
+
+		return len(sec.Labels) > 0
+	}, timeout, interval, "Failed to find replicatedSecret")
+
 	t.Log("check that superuserSecret was created")
 	superuserSecretKey := types.NamespacedName{Name: secret.DefaultSuperuserSecretName(cluster.Spec.Cassandra.Cluster), Namespace: namespace}
 	require.Eventually(func() bool {
@@ -228,6 +247,14 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 		return sec.Data != nil && len(sec.Data) == 2
 	}, timeout, interval, "Failed to find superuserSecret")
+
+	t.Log("check that superUserSecret was replicated to both clusters")
+	var empty struct{}
+	require.Eventually(func() bool {
+		return verifySecretsMatch(t, ctx, f.Client, []string{k8sCtx0, k8sCtx1}, map[string]struct{}{
+			superuserSecretKey.Name: empty,
+		}, namespace)
+	}, timeout, interval, "Failed to find matching superuserSecret from all clusters")
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
