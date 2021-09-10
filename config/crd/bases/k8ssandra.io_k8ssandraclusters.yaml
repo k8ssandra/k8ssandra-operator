@@ -37,19 +37,144 @@ spec:
             description: K8ssandraClusterSpec defines the desired state of K8ssandraCluster
             properties:
               cassandra:
+                description: Cassandra is a specification of the Cassandra cluster.
+                  This includes everything from the number of datacenters, the k8s
+                  cluster where each DC should be deployed, node affinity (via racks),
+                  individual C* node settings, JVM settings, and more.
                 properties:
                   cluster:
+                    description: Cluster is the name of the cluster. This corresponds
+                      to cluster_name in cassandra.yaml.
+                    minLength: 2
                     type: string
+                  config:
+                    description: CassandraConfig is configuration settings that are
+                      applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
+                      for 4.x.
+                    properties:
+                      cassandraYaml:
+                        properties:
+                          auto_snapshot:
+                            type: boolean
+                          commitlog_segment_size_in_mb:
+                            type: integer
+                          compaction_throughput_mb_per_sec:
+                            type: integer
+                          concurrent_compactors:
+                            type: integer
+                          concurrent_counter_writes:
+                            type: integer
+                          concurrent_reads:
+                            type: integer
+                          concurrent_writes:
+                            type: integer
+                          counter_cache_size_in_mb:
+                            type: integer
+                          file_cache_size_in_mb:
+                            type: integer
+                          key_cache_size_in_mb:
+                            type: integer
+                          memtable_flush_writers:
+                            type: integer
+                          prepared_statements_cache_size_mb:
+                            type: integer
+                          row_cache_size_in_mb:
+                            type: integer
+                          slow_query_log_timeout_in_ms:
+                            type: integer
+                          sstable_preemptive_open_interval_in_mb:
+                            type: integer
+                          start_rpc:
+                            type: boolean
+                          thrift_prepared_statements_cache_size_mb:
+                            type: integer
+                        type: object
+                      jvmOptions:
+                        properties:
+                          additionalOptions:
+                            items:
+                              type: string
+                            type: array
+                          heapNewGenSize:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          heapSize:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
                   datacenters:
+                    description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
                         config:
-                          description: RawMessage is a raw encoded JSON value. It
-                            implements Marshaler and Unmarshaler and can be used to
-                            delay JSON decoding or precompute a JSON encoding.
-                          format: byte
-                          type: string
-                          x-kubernetes-preserve-unknown-fields: true
+                          description: CassandraConfig is configuration settings that
+                            are applied to cassandra.yaml and jvm-options for 3.11.x
+                            or jvm-server-options for 4.x.
+                          properties:
+                            cassandraYaml:
+                              properties:
+                                auto_snapshot:
+                                  type: boolean
+                                commitlog_segment_size_in_mb:
+                                  type: integer
+                                compaction_throughput_mb_per_sec:
+                                  type: integer
+                                concurrent_compactors:
+                                  type: integer
+                                concurrent_counter_writes:
+                                  type: integer
+                                concurrent_reads:
+                                  type: integer
+                                concurrent_writes:
+                                  type: integer
+                                counter_cache_size_in_mb:
+                                  type: integer
+                                file_cache_size_in_mb:
+                                  type: integer
+                                key_cache_size_in_mb:
+                                  type: integer
+                                memtable_flush_writers:
+                                  type: integer
+                                prepared_statements_cache_size_mb:
+                                  type: integer
+                                row_cache_size_in_mb:
+                                  type: integer
+                                slow_query_log_timeout_in_ms:
+                                  type: integer
+                                sstable_preemptive_open_interval_in_mb:
+                                  type: integer
+                                start_rpc:
+                                  type: boolean
+                                thrift_prepared_statements_cache_size_mb:
+                                  type: integer
+                              type: object
+                            jvmOptions:
+                              properties:
+                                additionalOptions:
+                                  items:
+                                    type: string
+                                  type: array
+                                heapNewGenSize:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                heapSize:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                              type: object
+                          type: object
                         k8sContext:
                           type: string
                         metadata:
@@ -66,6 +191,26 @@ spec:
                               type: string
                             namespace:
                               type: string
+                          required:
+                          - name
+                          type: object
+                        networking:
+                          description: Networking enables host networking and configures
+                            a NodePort ports.
+                          properties:
+                            hostNetwork:
+                              type: boolean
+                            nodePort:
+                              properties:
+                                internode:
+                                  type: integer
+                                internodeSSL:
+                                  type: integer
+                                native:
+                                  type: integer
+                                nativeSSL:
+                                  type: integer
+                              type: object
                           type: object
                         racks:
                           items:
@@ -90,8 +235,8 @@ spec:
                             type: object
                           type: array
                         resources:
-                          description: Kubernetes resource requests and limits, per
-                            pod
+                          description: Resources is the cpu and memory resources for
+                            the cassandra container.
                           properties:
                             limits:
                               additionalProperties:
@@ -120,9 +265,11 @@ spec:
                         serverImage:
                           type: string
                         serverVersion:
+                          description: ServerVersion is the Cassandra version.
+                          pattern: (3\.11\.\d+)|(4\.0\.\d+)
                           type: string
                         size:
-                          description: Size is the number of data replicas to deploy
+                          description: Size is the number Cassandra pods to deploy
                             in this datacenter. This number does not include Stargate
                             instances.
                           format: int32
@@ -3157,6 +3304,9 @@ spec:
                           - size
                           type: object
                         storageConfig:
+                          description: StorageConfig is the persistent storage requirements
+                            for each Cassandra pod. This includes everything under
+                            /var/lib/cassandra, namely the commit log and data directories.
                           properties:
                             additionalVolumes:
                               items:
@@ -3456,20 +3606,433 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        systemLoggerResources:
+                          description: SystemLoggerResources is the cpu and memory
+                            resources for the server-system-logger container.
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of
+                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount
+                                of compute resources required. If Requests is omitted
+                                for a container, it defaults to Limits if that is
+                                explicitly specified, otherwise to an implementation-defined
+                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              type: object
+                          type: object
                       required:
-                      - serverVersion
                       - size
-                      - storageConfig
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  networking:
+                    description: Networking enables host networking and configures
+                      a NodePort ports.
+                    properties:
+                      hostNetwork:
+                        type: boolean
+                      nodePort:
+                        properties:
+                          internode:
+                            type: integer
+                          internodeSSL:
+                            type: integer
+                          native:
+                            type: integer
+                          nativeSSL:
+                            type: integer
+                        type: object
+                    type: object
+                  racks:
+                    description: Racks is a list of named racks. Note that racks are
+                      used to create node affinity. //
+                    items:
+                      description: Rack ...
+                      properties:
+                        name:
+                          description: The rack name
+                          minLength: 2
+                          type: string
+                        nodeAffinityLabels:
+                          additionalProperties:
+                            type: string
+                          description: NodeAffinityLabels to pin the rack, using node
+                            affinity
+                          type: object
+                        zone:
+                          description: Deprecated. Use nodeAffinityLabels instead.
+                            Zone name to pin the rack, using node affinity
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  resources:
+                    description: Resources is the cpu and memory resources for the
+                      cassandra container.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  serverImage:
+                    description: ServerImage is the image for the cassandra container.
+                      Note that this should be a management-api image. If left empty
+                      the operator will choose a default image based on ServerVersion.
+                    type: string
+                  serverVersion:
+                    description: ServerVersion is the Cassandra version.
+                    pattern: (3\.11\.\d+)|(4\.0\.\d+)
+                    type: string
+                  storageConfig:
+                    description: StorageConfig is the persistent storage requirements
+                      for each Cassandra pod. This includes everything under /var/lib/cassandra,
+                      namely the commit log and data directories.
+                    properties:
+                      additionalVolumes:
+                        items:
+                          description: StorageConfig defines additional storage configurations
+                          properties:
+                            mountPath:
+                              description: Mount path into cassandra container
+                              type: string
+                            name:
+                              description: Name of the pvc
+                              pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+                              type: string
+                            pvcSpec:
+                              description: Persistent volume claim spec
+                              properties:
+                                accessModes:
+                                  description: 'AccessModes contains the desired access
+                                    modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                                  items:
+                                    type: string
+                                  type: array
+                                dataSource:
+                                  description: 'This field can be used to specify
+                                    either: * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+                                    * An existing PVC (PersistentVolumeClaim) * An
+                                    existing custom resource that implements data
+                                    population (Alpha) In order to use custom resource
+                                    types that implement data population, the AnyVolumeDataSource
+                                    feature gate must be enabled. If the provisioner
+                                    or an external controller can support the specified
+                                    data source, it will create a new volume based
+                                    on the contents of the specified data source.'
+                                  properties:
+                                    apiGroup:
+                                      description: APIGroup is the group for the resource
+                                        being referenced. If APIGroup is not specified,
+                                        the specified Kind must be in the core API
+                                        group. For any other third-party types, APIGroup
+                                        is required.
+                                      type: string
+                                    kind:
+                                      description: Kind is the type of resource being
+                                        referenced
+                                      type: string
+                                    name:
+                                      description: Name is the name of resource being
+                                        referenced
+                                      type: string
+                                  required:
+                                  - kind
+                                  - name
+                                  type: object
+                                resources:
+                                  description: 'Resources represents the minimum resources
+                                    the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                                  properties:
+                                    limits:
+                                      additionalProperties:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      description: 'Limits describes the maximum amount
+                                        of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                      type: object
+                                    requests:
+                                      additionalProperties:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      description: 'Requests describes the minimum
+                                        amount of compute resources required. If Requests
+                                        is omitted for a container, it defaults to
+                                        Limits if that is explicitly specified, otherwise
+                                        to an implementation-defined value. More info:
+                                        https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                      type: object
+                                  type: object
+                                selector:
+                                  description: A label query over volumes to consider
+                                    for binding.
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: A label selector requirement
+                                          is a selector that contains values, a key,
+                                          and an operator that relates the key and
+                                          values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's
+                                              relationship to a set of values. Valid
+                                              operators are In, NotIn, Exists and
+                                              DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: values is an array of string
+                                              values. If the operator is In or NotIn,
+                                              the values array must be non-empty.
+                                              If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This
+                                              array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value}
+                                        pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions,
+                                        whose key field is "key", the operator is
+                                        "In", and the values array contains only "value".
+                                        The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                storageClassName:
+                                  description: 'Name of the StorageClass required
+                                    by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                                  type: string
+                                volumeMode:
+                                  description: volumeMode defines what type of volume
+                                    is required by the claim. Value of Filesystem
+                                    is implied when not included in claim spec.
+                                  type: string
+                                volumeName:
+                                  description: VolumeName is the binding reference
+                                    to the PersistentVolume backing this claim.
+                                  type: string
+                              type: object
+                          required:
+                          - mountPath
+                          - name
+                          - pvcSpec
+                          type: object
+                        type: array
+                      cassandraDataVolumeClaimSpec:
+                        description: PersistentVolumeClaimSpec describes the common
+                          attributes of storage devices and allows a Source for provider-specific
+                          attributes
+                        properties:
+                          accessModes:
+                            description: 'AccessModes contains the desired access
+                              modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                            items:
+                              type: string
+                            type: array
+                          dataSource:
+                            description: 'This field can be used to specify either:
+                              * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+                              * An existing PVC (PersistentVolumeClaim) * An existing
+                              custom resource that implements data population (Alpha)
+                              In order to use custom resource types that implement
+                              data population, the AnyVolumeDataSource feature gate
+                              must be enabled. If the provisioner or an external controller
+                              can support the specified data source, it will create
+                              a new volume based on the contents of the specified
+                              data source.'
+                            properties:
+                              apiGroup:
+                                description: APIGroup is the group for the resource
+                                  being referenced. If APIGroup is not specified,
+                                  the specified Kind must be in the core API group.
+                                  For any other third-party types, APIGroup is required.
+                                type: string
+                              kind:
+                                description: Kind is the type of resource being referenced
+                                type: string
+                              name:
+                                description: Name is the name of resource being referenced
+                                type: string
+                            required:
+                            - kind
+                            - name
+                            type: object
+                          resources:
+                            description: 'Resources represents the minimum resources
+                              the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                            properties:
+                              limits:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: 'Limits describes the maximum amount
+                                  of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                type: object
+                              requests:
+                                additionalProperties:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                description: 'Requests describes the minimum amount
+                                  of compute resources required. If Requests is omitted
+                                  for a container, it defaults to Limits if that is
+                                  explicitly specified, otherwise to an implementation-defined
+                                  value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                type: object
+                            type: object
+                          selector:
+                            description: A label query over volumes to consider for
+                              binding.
+                            properties:
+                              matchExpressions:
+                                description: matchExpressions is a list of label selector
+                                  requirements. The requirements are ANDed.
+                                items:
+                                  description: A label selector requirement is a selector
+                                    that contains values, a key, and an operator that
+                                    relates the key and values.
+                                  properties:
+                                    key:
+                                      description: key is the label key that the selector
+                                        applies to.
+                                      type: string
+                                    operator:
+                                      description: operator represents a key's relationship
+                                        to a set of values. Valid operators are In,
+                                        NotIn, Exists and DoesNotExist.
+                                      type: string
+                                    values:
+                                      description: values is an array of string values.
+                                        If the operator is In or NotIn, the values
+                                        array must be non-empty. If the operator is
+                                        Exists or DoesNotExist, the values array must
+                                        be empty. This array is replaced during a
+                                        strategic merge patch.
+                                      items:
+                                        type: string
+                                      type: array
+                                  required:
+                                  - key
+                                  - operator
+                                  type: object
+                                type: array
+                              matchLabels:
+                                additionalProperties:
+                                  type: string
+                                description: matchLabels is a map of {key,value} pairs.
+                                  A single {key,value} in the matchLabels map is equivalent
+                                  to an element of matchExpressions, whose key field
+                                  is "key", the operator is "In", and the values array
+                                  contains only "value". The requirements are ANDed.
+                                type: object
+                            type: object
+                          storageClassName:
+                            description: 'Name of the StorageClass required by the
+                              claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                            type: string
+                          volumeMode:
+                            description: volumeMode defines what type of volume is
+                              required by the claim. Value of Filesystem is implied
+                              when not included in claim spec.
+                            type: string
+                          volumeName:
+                            description: VolumeName is the binding reference to the
+                              PersistentVolume backing this claim.
+                            type: string
+                        type: object
+                    type: object
                   superUserSecret:
                     description: SuperuserSecretName allows to override the default
                       super user secret
                     type: string
+                  systemLoggerResources:
+                    description: SystemLoggerResources is the cpu and memory resources
+                      for the server-system-logger container.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
                 type: object
-              k8sContextsSecret:
-                type: string
               stargate:
                 description: Stargate defines the desired deployment characteristics
                   for Stargate in this K8ssandraCluster. If this is non-nil, Stargate

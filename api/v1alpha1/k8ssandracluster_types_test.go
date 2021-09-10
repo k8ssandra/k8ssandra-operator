@@ -31,9 +31,9 @@ func testK8ssandraClusterHasStargates(t *testing.T) {
 	t.Run("dc-level stargate", func(t *testing.T) {
 		kc := K8ssandraCluster{
 			Spec: K8ssandraClusterSpec{
-				Cassandra: &Cassandra{
+				Cassandra: &CassandraClusterTemplate{
 					Cluster: "cluster1",
-					Datacenters: []CassandraDatacenterTemplateSpec{
+					Datacenters: []CassandraDatacenterTemplate{
 						{
 							Size:     3,
 							Stargate: nil,
