@@ -504,6 +504,19 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 	)
 }
 
+// DeleteReplicatedSecrets deletes all the ReplicatedSecrets in the namespace. This causes
+// some delay while secret controller removes the finalizers and clears the replicated secrets from
+// remote clusters.
+func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all ReplicatedSecrets", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&api.ReplicatedSecret{},
+		timeout,
+		interval,
+	)
+}
+
 func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all k8ssandra-operator pods", "Namespace", namespace)
 	if err := f.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{"control-plane": "k8ssandra-operator"}); err != nil {

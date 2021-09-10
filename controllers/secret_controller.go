@@ -38,6 +38,7 @@ const (
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch;update;create
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets,verbs=get;list;watch;update;create;delete
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/status,verbs=get;update;patch
 
 type SecretSyncController struct {
 	ClientCache *clientcache.ClientCache
