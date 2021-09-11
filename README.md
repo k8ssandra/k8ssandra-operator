@@ -231,7 +231,7 @@ This section goes through the steps necessary for installing the data plane and 
 
 
 ### Install kind clusters
-The examples use [kind](https://kind.sigs.k8s.io/) clusters; however, the steps should work for any clusters provided they have routable IPs between pods.
+The examples use [kind](https://kind.sigs.k8s.io/) clusters; however, the steps should work for any clusters provided they have routable IPs between pods. kind clusters by default will run on the same Docker network which means that they will have routable IPs.
 
 Download [setup-kind-multicluster.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/setup-kind-multicluster.sh). 
 
@@ -403,7 +403,7 @@ Here is a summary of what the script does:
 Create a `ClientConfig` in the k8ssandra-0 cluster using the service account token and CA cert from k8ssandra-1:
 
 ```
-./create-clientconfig.sh --src-context kind-k8ssandra-1 --dest-context kind-k8ssandra-0 --output-dir clientconfig
+./scripts/create-clientconfig.sh --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 ```
 The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
@@ -420,7 +420,7 @@ kubectx kind-k8ssandra-0
 Delete the operator pod to trigger the restart:
 
 ```
-kubectl delete pod -l control-plane=k8ssandra-operato
+kubectl delete pod -l control-plane=k8ssandra-operator
 ```
 
 # Contributing
