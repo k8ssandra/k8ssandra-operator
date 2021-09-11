@@ -266,11 +266,63 @@ kubectx kind-k8ssandra-1
 
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 ```
+### Install the control plane
+We will install the control plane in k8ssandra-0. First, make sure your active context is configured correctly:
+
+```
+kubectx kind-k8ssandra-0
+```
+First, create a kustomization directory that builds from the `main` branch:
+
+```sh
+K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
+cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+resources:
+- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+EOF
+```
+
+Now install the operator:
+
+```
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```
+This installs the operator in the `default` namespace.
+
+Verify the installation. First check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+The operator looks for an environment variable named `K8SSANDRA_CONTROL_PLANE`. When set to `true` the control plane is enabled. It is enabled by default.
+
+Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
+
+```sh
+kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+```
+
+Lastly, verify that the following CRDs are installed:
+
+* cassandradatacenters.cassandra.datastax.com
+* certificaterequests.cert-manager.io
+* certificates.cert-manager.io
+* challenges.acme.cert-manager.io
+* clientconfigs.k8ssandra.io
+* clusterissuers.cert-manager.io
+* issuers.cert-manager.io
+* k8ssandraclusters.k8ssandra.io
+* orders.acme.cert-manager.io
+* replicatedsecrets.k8ssandra.io
+* stargates.k8ssandra.io
 
 ### Install the data plane
-We set up the data plane first in k8ssandra-1 order to create the `ClientConfig` objects needed to bootstrap the control plane.
+Now we will install the data plane in k8ssandra-1.
 
-First swictch the active context to k8ssandra:
+First switch the active context to k8ssandra:
 
 ```
 kubectx kind-k8ssandra-1
@@ -304,6 +356,7 @@ Now install the operator:
 ```
 kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
 ```
+
 This installs the operator in the `default` namespace.
 
 Verify the installation. First check that there are two Deployments. The output should look similar to this:
@@ -334,8 +387,9 @@ Lastly, verify that the following CRDs are installed:
 * replicatedsecrets.k8ssandra.io
 * stargates.k8ssandra.io
 
+
 ### Create a ClientConfig
-Now we need to create a `ClientConfig` for the k8ssandra-1. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
+Now we need to create a `ClientConfig` for the k8ssandra-1 cluster. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 Here is a summary of what the script does:
 
@@ -346,18 +400,28 @@ Here is a summary of what the script does:
 * Create a secret for the kubeconfig
 * Create a ClientConfig that references the secret
 
-Let's say we have two GKE clusters with contexts named `gke-1` and `gke-2`. Assumed we have followed the steps for installing the data plane in `gke-2`. Now we want to create a ClientConfig. The command to do so would look like this:
+Create a `ClientConfig` in the k8ssandra-0 cluster using the service account token and CA cert from k8ssandra-1:
 
 ```
-create-clientconfig.sh --src-context gke-2 --dest-context gke-1
+./create-clientconfig.sh --src-context kind-k8ssandra-1 --dest-context kind-k8ssandra-0 --output-dir clientconfig
 ```
-The script stores all of the artifacts that it generates in a directory which can be specified with the `--output-dir` option. If not specified, a temp directory is created.
+The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
 
-### Install the control plane
-Follow the previous instructions for installing the operator. It is configured to run the control plane by default.
+### Restart the control plane
+**TODO:** Add reference to ticket explaining the need to restart.
 
+Make sure the active context is k8ssandra-0:
+
+```
+kubectx kind-k8ssandra-0
+```
+Delete the operator pod to trigger the restart:
+
+```
+kubectl delete pod -l control-plane=k8ssandra-operato
+```
 
 # Contributing
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
