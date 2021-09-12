@@ -16,7 +16,7 @@
 
 set -e
 
-OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,help -n 'create-client-config' -- "$@")
+OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,in-cluster-kubeconfig:,help -n 'create-client-config' -- "$@")
 
 eval set -- "$OPTS"
 
@@ -24,21 +24,23 @@ function help() {
 cat << EOF
 Syntax: create-client-config.sh [options]
 Options:
-  --src-context <ctx>      The context for the source cluster that contains the service account.
-                           This or the src-kubeconfig option must be set.
-  --src-kubeconfig <cfg>   The kubeconfig for the source cluster that contains the service account.
-                           This or the src-context option must be set.
-  --dest-context <ctx>     The context for the cluster where the ClientConfig will be created.
-                           Defaults to the current context of the kubeconfig used.
-  --dest-kubeconfig <cfg>  The kubeconfig for the cluster where the ClientConfig will be created.
-                           Defaults to $HOME/.kube/config.
-  --namespace <ns>         The namespace in which the service account exists and
-                           where the ClientConfig will be created.
-  --serviceaccount <name>  The name of the service account from which the ClientConfig will be created.
-                           Defaults to k8ssandra-operator.
-  --output-dir <path>      The directory where generated artifacts are written.
-                           If not specified a temp directory is created.
-  --help                   Displays this help message.
+  --src-context <ctx>             The context for the source cluster that contains the service account.
+                                  This or the src-kubeconfig option must be set.
+  --src-kubeconfig <cfg>          The kubeconfig for the source cluster that contains the service account.
+                                  This or the src-context option must be set.
+  --dest-context <ctx>            The context for the cluster where the ClientConfig will be created.
+                                  Defaults to the current context of the kubeconfig used.
+  --dest-kubeconfig <cfg>         The kubeconfig for the cluster where the ClientConfig will be created.
+                                  Defaults to $HOME/.kube/config.
+  --namespace <ns>                The namespace in which the service account exists and
+                                  where the ClientConfig will be created.
+  --serviceaccount <name>         The name of the service account from which the ClientConfig will be created.
+                                  Defaults to k8ssandra-operator.
+  --output-dir <path>             The directory where generated artifacts are written.
+                                  If not specified a temp directory is created.
+  --in-cluster-kubeconfig <path>  Should be set when using kind cluster. This is the kubeconfig that has the
+                                  internal IP address of the API server.
+  --help                          Displays this help message.
 EOF
 }
 
@@ -49,16 +51,19 @@ dest_kubeconfig=""
 service_account="k8ssandra-operator"
 namespace=""
 output_dir=""
+in_cluster_kubeconfig=""
 
 while true; do
   case "$1" in
     --src-context ) src_context="$2"; shift 2 ;;
-    --src_kubeconfig ) src_kubeconfig="$2"; shift 2 ;;
+    --src-kubeconfig ) src_kubeconfig="$2"; shift 2 ;;
     --dest-context ) dest_context="$2"; shift 2 ;;
     --dest-kubeconfig ) dest_kubeconfig="$2"; shift 2 ;;
     --namespace ) namespace="$2"; shift 2 ;;
     --serviceaccount ) service_account="$2"; shift 2 ;;
     --output-dir ) output_dir="$2"; shift 2 ;;
+    --in-cluster-kubeconfig ) in_cluster_kubeconfig="$2"; shift 2 ;;
+    --dev ) dev_mode=true; shift 1 ;;
     -h | --help ) help; exit;;
     -- ) shift; break ;;
     * ) break ;;
@@ -76,21 +81,21 @@ namespace_opt=""
 dest_context_opt=""
 dest_kubeconfig_opt=""
 
-if [ -z "$src_context" ]; then
-  src_context=$(kubectl $src_kubeconfig config current-context)
+if [ -z "$output_dir" ]; then
+  output_dir=$(mktemp -d)
 else
-  src_kubeconfig=""
-  src_context_opt="--context $src_context"
+  mkdir -p $output_dir
 fi
 
 if [ ! -z "$src_kubeconfig" ]; then
   src_kubeconfig_opt="--kubeconfig $src_kubeconfig"
 fi
 
-if [ -z "$output_dir" ]; then
-  output_dir=$(mktemp -d)
+if [ ! -z "$src_context" ]; then
+  src_context_opt="--context $src_context"
 else
-  mkdir -p $output_dir
+  src_context=$(kubectl --kubeconfig $src_kubeconfig config current-context)
+  src_context_opt="--context $src_context"
 fi
 
 if [ ! -z "$namespace" ]; then
@@ -98,19 +103,26 @@ if [ ! -z "$namespace" ]; then
 fi
 
 if [ ! -z "$dest_kubeconfig" ]; then
-  dest_context_opt="--kubeconfig=$dest_kubeconfig"
+  dest_kubeconfig_opt="--kubeconfig $dest_kubeconfig"
 fi
 
 if [ ! -z "$dest_context" ]; then
-  dest_context_opt="--context=$dest_context"
+  dest_context_opt="--context $dest_context"
+else
+  dest_context=$(kubectl --kubeconfig $dest_kubeconfig config current-context)
 fi
 
 sa_secret=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get serviceaccount $service_account -o jsonpath='{.secrets[0].name}')
 sa_token=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get secret $sa_secret -o jsonpath='{.data.token}' | base64 -d)
 ca_cert=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get secret $sa_secret -o jsonpath="{.data['ca\.crt']}")
 
-cluster=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
-cluster_addr=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
+if [ -z "$in_cluster_kubeconfig" ]; then
+  cluster=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
+  cluster_addr=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
+else
+  cluster=$(kubectl --kubeconfig $in_cluster_kubeconfig config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
+  cluster_addr=$(kubectl --kubeconfig $in_cluster_kubeconfig config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
+fi
 
 output_kubeconfig="$output_dir/kubeconfig"
 echo "Creating $output_kubeconfig"
