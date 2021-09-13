@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
@@ -181,6 +182,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	rsec.Status.Conditions = make([]api.ReplicationCondition, 0, len(rsec.Spec.ReplicationTargets))
 
 	for _, target := range rsec.Spec.ReplicationTargets {
+		// Even if ReplicationTarget includes local client - remove it (it will cause errors)
 		// Only replicate to clusters that are in the ReplicatedSecret's context
 		remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
 		if err != nil {
@@ -258,6 +260,11 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func requiresUpdate(source, dest client.Object) bool {
+	// In case we target the same cluster
+	if source.GetUID() == dest.GetUID() {
+		return false
+	}
+
 	if srcHash, found := source.GetAnnotations()[api.ResourceHashAnnotation]; found {
 		// Get dest hash value
 		destHash, destFound := dest.GetAnnotations()[api.ResourceHashAnnotation]
@@ -290,7 +297,9 @@ func syncSecrets(src, dest *corev1.Secret) {
 	}
 
 	for k, v := range src.Annotations {
-		dest.Annotations[k] = v
+		if !filterValue(k) {
+			dest.Annotations[k] = v
+		}
 	}
 
 	// sync labels, src is more important
@@ -299,8 +308,15 @@ func syncSecrets(src, dest *corev1.Secret) {
 	}
 
 	for k, v := range src.Labels {
-		dest.Labels[k] = v
+		if !filterValue(k) {
+			dest.Labels[k] = v
+		}
 	}
+}
+
+// filterValue verifies the annotation is not something datacenter specific
+func filterValue(key string) bool {
+	return strings.HasPrefix(key, "cassandra.datastax.com/")
 }
 
 func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *corev1.Secret) error {

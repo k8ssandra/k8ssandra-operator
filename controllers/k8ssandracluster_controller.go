@@ -93,23 +93,20 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	var seeds []string
-	dcNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
-
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		dcNames = append(dcNames, dc.Meta.Name)
-	}
 
 	// Reconcile the ReplicatedSecret and superuserSecret first (otherwise CassandraDatacenter will not start)
-	contextNames := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		contextNames = append(contextNames, dcTemplate.K8sContext)
+		if dcTemplate.K8sContext != "" {
+			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
+		}
 	}
 
 	if kc.Spec.Cassandra.SuperuserSecretName == "" {
 		kc.Spec.Cassandra.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
 	}
 
-	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, contextNames); err != nil {
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets); err != nil {
 		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
 		return ctrl.Result{}, err
 	}
@@ -321,27 +318,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return ctrl.Result{}, nil
 }
 
-func (r *K8ssandraClusterReconciler) resolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dc.Name}
-
-	err := remoteClient.List(ctx, podList, labels, client.InNamespace(dc.Namespace))
-	if err != nil {
-		return nil, err
-	}
-
-	endpoints := make([]string, 0, 3)
-
-	for _, pod := range podList.Items {
-		endpoints = append(endpoints, pod.Status.PodIP)
-		if len(endpoints) > 2 {
-			break
-		}
-	}
-
-	return endpoints, nil
-}
-
 func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *api.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *api.Stargate {
 	desiredStargate := &api.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -364,21 +340,6 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 	return desiredStargate
 }
 
-func (r *K8ssandraClusterReconciler) updateAdditionalSeeds(ctx context.Context, kc *api.K8ssandraCluster, seeds []string, start, end int) error {
-	for i := start; i < end; i++ {
-		dc, remoteClient, err := r.getDatacenterForTemplate(ctx, kc, i)
-		if err != nil {
-			return err
-		}
-
-		if err = r.updateAdditionalSeedsForDatacenter(ctx, dc, seeds, remoteClient); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // addSeedEndpoints returns a new slice with endpoints added to seeds and duplicates
 // removed.
 func addSeedEndpoints(seeds []string, endpoints ...string) []string {
@@ -396,38 +357,6 @@ func addSeedEndpoints(seeds []string, endpoints ...string) []string {
 	sort.Strings(updatedSeeds)
 
 	return updatedSeeds
-}
-
-func (r *K8ssandraClusterReconciler) updateAdditionalSeedsForDatacenter(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []string, remoteClient client.Client) error {
-	patch := client.MergeFromWithOptions(dc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	if dc.Spec.AdditionalSeeds == nil {
-		dc.Spec.AdditionalSeeds = make([]string, 0, len(seeds))
-	}
-	dc.Spec.AdditionalSeeds = seeds
-	return remoteClient.Patch(ctx, dc, patch)
-}
-
-func (r *K8ssandraClusterReconciler) getDatacenterForTemplate(ctx context.Context, kc *api.K8ssandraCluster, idx int) (*cassdcapi.CassandraDatacenter, client.Client, error) {
-	dcTemplate := kc.Spec.Cassandra.Datacenters[idx]
-	k8ssandraKey := types.NamespacedName{Namespace: kc.Namespace, Name: kc.Name}
-	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	dc := &cassdcapi.CassandraDatacenter{}
-	dcKey := getDatacenterKey(dcTemplate, k8ssandraKey)
-	err = remoteClient.Get(ctx, dcKey, dc)
-
-	return dc, remoteClient, err
-}
-
-func getDatacenterKey(dcTemplate api.CassandraDatacenterTemplate, kcKey types.NamespacedName) types.NamespacedName {
-	if len(dcTemplate.Meta.Namespace) == 0 {
-		return types.NamespacedName{Namespace: kcKey.Namespace, Name: dcTemplate.Meta.Name}
-	}
-	return types.NamespacedName{Namespace: dcTemplate.Meta.Namespace, Name: dcTemplate.Meta.Name}
 }
 
 func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
@@ -450,7 +379,7 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 
 func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
 	if len(kc.Status.Datacenters) == 0 {
-		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
+		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus)
 	}
 
 	kdcStatus, found := kc.Status.Datacenters[dcName]
