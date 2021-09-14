@@ -412,6 +412,7 @@ func TestRequiresUpdate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "a",
 			Namespace: "b",
+			UID:       "1",
 		},
 	}
 
@@ -419,6 +420,7 @@ func TestRequiresUpdate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "a",
 			Namespace: "b",
+			UID:       "a",
 			Annotations: map[string]string{
 				api.ResourceHashAnnotation: "",
 			},
