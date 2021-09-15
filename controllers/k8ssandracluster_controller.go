@@ -23,7 +23,7 @@ import (
 	"sort"
 
 	"github.com/go-logr/logr"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -44,6 +44,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+const (
+	stargateAuthKeyspace = "data_endpoint_auth"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -412,19 +416,31 @@ func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
 ) error {
 	// TODO create a endpoint in the Management API to list existing keyspaces and test whether the keyspace
 	// already exists.
-	logger.Info(fmt.Sprintf("Ensuring that keyspace data_endpoint_auth exists in cluster %v...", dc.ClusterName))
-	replication := make(map[string]int, len(kc.Spec.Cassandra.Datacenters))
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
-		replication[dcTemplate.Meta.Name] = replicationFactor
-	}
-	if err := r.ManagementApi.CreateKeyspaceIfNotExists(ctx, dc, remoteClient, "data_endpoint_auth", replication, logger); err != nil {
-		logger.Error(err, "Failed to create keyspace data_endpoint_auth")
+	if managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger); err != nil {
 		return err
 	} else {
-		logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
+		logger.Info(fmt.Sprintf("Ensuring that keyspace %s exists in cluster %v...", stargateAuthKeyspace, dc.ClusterName))
+		if keyspaces, err := managementApi.ListKeyspaces(stargateAuthKeyspace); err != nil {
+			return err
+		} else if len(keyspaces) == 0 {
+			// Stargate auth keyspace doesn't exist, we need to create it.
+			replication := make(map[string]int, len(kc.Spec.Cassandra.Datacenters))
+			for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+				replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
+				replication[dcTemplate.Meta.Name] = replicationFactor
+			}
+			if err := managementApi.CreateKeyspaceIfNotExists(stargateAuthKeyspace, replication); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to create keyspace %s", stargateAuthKeyspace))
+				return err
+			} else {
+				logger.Info(fmt.Sprintf("Keyspace %s successfully created", stargateAuthKeyspace))
+				return nil
+			}
+		} else {
+			logger.Info(fmt.Sprintf("Keyspace %s already exists", stargateAuthKeyspace))
+			return nil
+		}
 	}
-	return nil
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

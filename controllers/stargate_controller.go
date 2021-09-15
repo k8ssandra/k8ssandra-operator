@@ -19,7 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	appsv1 "k8s.io/api/apps/v1"

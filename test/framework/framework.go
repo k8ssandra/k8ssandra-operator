@@ -3,11 +3,14 @@ package framework
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -19,8 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 )
 
 var (
