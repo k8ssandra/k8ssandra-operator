@@ -56,7 +56,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-KIND_CLUSTER ?= kind
+KIND_CLUSTER ?= k8ssandra-0
 GO_FLAGS=
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -133,6 +133,26 @@ else
 	@echo Running e2e tests
 	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
 endif
+
+kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
+
+kind-setup: build kustomize docker-build create-kind-cluster kind-load-image
+	@echo Setting up kind-k8ssandra-0
+	kubectx kind-k8ssandra-0
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+# Wait for cert-manager rollout to be fully done	
+	kubectl rollout status deployment cert-manager-webhook -n cert-manager
+	$(KUSTOMIZE) build scripts | kubectl apply -f -
+
+create-kind-cluster:
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
+
+create-kind-multicluster:
+	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+
+kind-load-image-multi:
+	kind load docker-image --name k8ssandra-0 ${IMG}
+	kind load docker-image --name k8ssandra-1 ${IMG}
 
 ##@ Deployment
 
