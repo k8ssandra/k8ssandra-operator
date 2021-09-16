@@ -157,4 +157,4 @@ make E2E_TEST=TestOperator/SingleDatacenterCluster e2e-test
 ```
 
 ### Resource Requirements
-Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.
+Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests on a MacBook Pro is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.

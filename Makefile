@@ -136,12 +136,7 @@ endif
 
 kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
 
-kind-setup: build kustomize docker-build create-kind-cluster kind-load-image
-	@echo Setting up kind-k8ssandra-0
-	kubectx kind-k8ssandra-0
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
-# Wait for cert-manager rollout to be fully done	
-	kubectl rollout status deployment cert-manager-webhook -n cert-manager
+kind-setup: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build scripts | kubectl apply -f -
 
 create-kind-cluster:
@@ -171,6 +166,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+# Wait for cert-manager rollout to be fully done	
+	kubectl rollout status deployment cert-manager-webhook -n cert-manager
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

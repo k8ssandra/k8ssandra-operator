@@ -79,10 +79,6 @@ while test $# -gt 0; do
   esac
 done
 
-# OPTS=$(getopt -o h --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,help -n 'create-kind-clusters' -- "$@")
-
-# eval set -- "$OPTS"
-
 function create_registry() {
   running="$(docker inspect -f '{{.State.Running}}' "${registry_name}" 2>/dev/null || true)"
   if [ "${running}" != 'true' ]; then
