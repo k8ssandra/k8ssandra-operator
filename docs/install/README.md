@@ -3,11 +3,10 @@ There are a couple of options for deploying the operator:
 
 * Kustomize
 * Build from source
-
-**Note:** Development of a Helm chart is in progress. See this [issue](https://github.com/k8ssandra/k8ssandra-operator/issues/98) for details.
+* Helm
 
 ## Prerequisites
-Make sure you have the following installed before going through the rest of the guide. 
+For development environment, make sure you have the following installed before going through the rest of the guide.
 
 * kind
 * kubectx
@@ -28,7 +27,7 @@ By default kind clusters run on the same Docker network which means we will have
 
 [setup-kind-multicluster.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/setup-kind-multicluster.sh) lives in the k8ssandra-operator repo. It is used extensively during development and testing. Not only does it configure and create kind clusters, it also generates kubeconfig files for each cluster.
 
-**Note:** kind generates a kubeconfig with the IP address of the api server set to localhost since the cluster is intended for local development. We need a kubeconfig with the IP address set to the internal address of the api server. `setup-kind-mulitcluster.sh` takes care of this for us.
+**Note:** kind generates a kubeconfig with the IP address of the api server set to localhost since the cluster is intended for local development. We need a kubeconfig with the IP address set to the internal address of the api server. `setup-kind-multicluster.sh` takes care of this for us.
 
 **create-clientconfig.sh**
 
@@ -49,7 +48,7 @@ Run `setup-kind-multicluster.sh` as follows:
 We need to first install Cert Manager as it is a dependency of cass-operator:
 
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 ## Install K8ssandra Operator
@@ -172,12 +171,30 @@ spec:
           heapSize: 256M
 EOF 
 ```
-## Multi-cluster Install with Kustomize
+
+## Install with helm
+
+The Helm installation happens using the base k8ssandra project. This will only install the necessary operators and CRDs, so follow the step above to create a new K8ssandraCluster. 
+
+First, add the k8ssandra repository and update the repository caches:
+
+```sh
+helm repo add k8ssandra https://helm.k8ssandra.io/
+helm repo update
+```
+
+Then, to install only the k8ssandra-operator (and cass-operator), run the following command which disables other components and creates a new namespace (set the desired namespace by modifying the ``-n k8ssandra-operator`` parameter):
+
+```sh
+helm install --devel k8ssandra k8ssandra/k8ssandra -n k8ssandra-operator --set cassandra.enabled=false --set reaper.enabled=false --set reaper-operator.enabled=false --set stargate.enabled=false --set kube-prometheus-stack.enabled=false --set k8ssandra-operator.enabled=true --create-namespace
+```
+
+# Multi-cluster Install with Kustomize
 If you previously created a cluster with `setup-kind-multicluster.sh` we need to delete it in order to create the multi-cluster setup. The script currently does not support adding clusters to an existing setup (see [#128](https://github.com/k8ssandra/k8ssandra-operator/issues/128)).
 
 We will create two kind clusters with 3 worker nodes per clusters. Remember that K8ssandra Operator requires clusters to have routable pod IPs. kind clusters by default will run on the same Docker network which means that they will have routable IPs.
 
-### Create kind clusters
+## Create kind clusters
 Run `setup-kind-multicluster.sh` as follows:
 
 ```
@@ -191,7 +208,7 @@ Run `kubectx` without any arguments and verify that you see the following contex
 * kind-k8ssandra-0
 * kind-k8ssandra-1
 
-### Install Cert Manager
+## Install Cert Manager
 Set the active context to `kind-k8ssandra-0`:
 
 ```
@@ -201,7 +218,7 @@ kubectx kind-k8ssandra-0
 Install Cert Manager:
 
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 Set the active context to `kind-k8ssandra-1`:
@@ -213,10 +230,10 @@ kubectx kind-k8ssandra-1
 Install Cert Manager:
 
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
-### Install the control plane
+## Install the control plane
 We will install the control plane in `kind-k8ssandra-0`. Make sure your active context is configured correctly:
 
 ```
@@ -273,7 +290,7 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
 ```sh
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
-### Install the data plane
+## Install the data plane
 Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
 ```
@@ -342,7 +359,7 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
-### Create a ClientConfig
+## Create a ClientConfig
 Now we need to create a `ClientConfig` for the `kind-k8ssandra-1` cluster. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 Here is a summary of what the script does:
@@ -363,7 +380,7 @@ The script stores all of the artifacts that it generates in a directory which is
 
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
 
-### Restart the control plane
+## Restart the control plane
 **TODO:** Add reference to ticket explaining the need to restart.
 
 Make the active context `kind-k8ssandra-0`:

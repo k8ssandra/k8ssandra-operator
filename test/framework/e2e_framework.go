@@ -303,17 +303,10 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 }
 
 func (f *E2eFramework) DeployCertManager() error {
-	dir := filepath.Join("..", "..", "config", "cert-manager", "cert-manager-1.3.1.yaml")
+	dir := filepath.Join("..", "..", "config", "cert-manager")
 
-	for _, ctx := range f.getClusterContexts() {
-		options := kubectl.Options{Context: ctx}
-		f.logger.Info("Deploy cert-manager", "Context", ctx)
-		if err := kubectl.Apply(options, dir); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	f.logger.Info("Deploy cert-manager")
+	return f.kustomizeAndApply(dir, "", f.getClusterContexts()...)
 }
 
 // DeployCassOperator deploys cass-operator in all remote clusters.
