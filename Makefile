@@ -136,14 +136,18 @@ endif
 
 kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
 
-kind-setup: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
+kind-single-setup: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build scripts | kubectl apply -f -
 
+kind-multi-setup: build kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager
+	$(KUSTOMIZE) build scripts | kubectl apply -f -
+	make create-client-config
+
 create-kind-cluster:
-	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4 -o
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4 -o
 
 kind-load-image-multi:
 	kind load docker-image --name k8ssandra-0 ${IMG}
@@ -168,6 +172,17 @@ cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 # Wait for cert-manager rollout to be fully done	
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
+
+cert-manager-multi: ## Install cert-manager to the clusters
+	for number in 0 1 ; do \
+	    kubectl config use-context kind-k8ssandra-$$number \
+		make cert-manager \
+    done
+
+create-client-config:
+	kubectl config use-context kind-k8ssandra-0
+	make install
+	scripts/create-clientconfig.sh --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

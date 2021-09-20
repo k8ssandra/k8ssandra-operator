@@ -16,6 +16,7 @@ num_clusters=1
 cluster_names="kind"
 kind_node_version="v1.21.2"
 kind_worker_nodes=3
+overwrite_clusters="no"
 
 while test $# -gt 0; do
   case "$1" in
@@ -59,14 +60,19 @@ while test $# -gt 0; do
       fi
       shift
       ;;
+    -o|--overwrite)
+      overwrite_clusters="yes"
+      shift
+      ;;
     -h|--help) 
       echo
       echo "Syntax: create-kind-clusters.sh [options]"
       echo "Options:"
-      echo "clusters           The number of clusters to create."
-      echo "cluster-names      A comma-delimited list of cluster names to create. Takes precedence over clusters option."
-      echo "kind-node-version  The image version of the kind nodes."
-      echo "kind-worker-nodes  The number of worker nodes to deploy."
+      echo "--clusters <nb clusters>              The number of clusters to create."
+      echo "--cluster-names <cluster names>       A comma-delimited list of cluster names to create. Takes precedence over clusters option."
+      echo "--kind-node-version <kind version>    The image version of the kind nodes."
+      echo "--kind-worker-nodes <nb kind workers> The number of worker nodes to deploy."
+      echo "-o | --overwrite                      Attempt to delete the clusters before recreating them."
       exit
       ;;
     --)
@@ -208,7 +214,9 @@ function create_k8s_contexts_secret() {
 
 create_registry
 
-delete_clusters
+if [[ "$overwrite_clusters" == "yes" ]]; then
+  delete_clusters
+fi
 
 create_clusters
 

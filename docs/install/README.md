@@ -185,7 +185,7 @@ spec:
         stargate:
           size: 1
           heapSize: 256M
-EOF 
+EOF
 ```
 ## Multi-cluster Install with Kustomize
 If you previously created a cluster with `setup-kind-multicluster.sh` we need to delete it in order to create the multi-cluster setup. The script currently does not support adding clusters to an existing setup (see [#128](https://github.com/k8ssandra/k8ssandra-operator/issues/128)).
