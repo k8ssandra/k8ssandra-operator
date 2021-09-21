@@ -136,12 +136,23 @@ endif
 
 kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
 
-kind-single-setup: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
-	$(KUSTOMIZE) build scripts | kubectl apply -f -
+single-up: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
+	$(KUSTOMIZE) build scripts/control_plane | kubectl apply -f -
 
-kind-multi-setup: build kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager
-	$(KUSTOMIZE) build scripts | kubectl apply -f -
+multi-up: build kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
+## install the control plane
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build scripts/control_plane | kubectl apply -f -
+## install the data plane
+	kubectl config use-context kind-k8ssandra-1
+	$(KUSTOMIZE) build scripts/data_plane | kubectl apply -f -
+## Create a client config
 	make create-client-config
+## Restart the control plane
+	kubectl config use-context kind-k8ssandra-0
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
 
 create-kind-cluster:
 	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4 -o
@@ -174,10 +185,10 @@ cert-manager: ## Install cert-manager to the cluster
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
 
 cert-manager-multi: ## Install cert-manager to the clusters
-	for number in 0 1 ; do \
-	    kubectl config use-context kind-k8ssandra-$$number \
-		make cert-manager \
-    done
+	kubectl config use-context kind-k8ssandra-0
+	make cert-manager
+	kubectl config use-context kind-k8ssandra-1
+	make cert-manager
 
 create-client-config:
 	kubectl config use-context kind-k8ssandra-0
