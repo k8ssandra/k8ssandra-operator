@@ -72,6 +72,10 @@ type ManagementApiFacade interface {
 	ListKeyspaces(
 		keyspaceName string,
 	) ([]string, error)
+
+	AlterKeyspace(
+		keyspaceName string,
+		replicationSettings map[string]int) error
 }
 
 type defaultManagementApiFacade struct {
@@ -160,12 +164,32 @@ func (r *defaultManagementApiFacade) ListKeyspaces(
 		return []string{}, err
 	} else {
 		for _, pod := range pods {
-			if keyspaces, err := r.nodeMgmtClient.ListKeyspaces(&pod, keyspaceName); err != nil {
+			if keyspaces, err := r.nodeMgmtClient.GetKeyspace(&pod, keyspaceName); err != nil {
 				r.logger.Error(err, fmt.Sprintf("Failed to CALL list keyspaces %s on pod %v", keyspaceName, pod.Name))
 			} else {
 				return keyspaces, nil
 			}
 		}
 		return []string{}, fmt.Errorf("CALL list keyspaces %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) AlterKeyspace(
+	keyspaceName string,
+	replicationSettings map[string]int,
+) error {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return err
+	} else {
+		for _, pod := range pods {
+			if err := r.nodeMgmtClient.AlterKeyspace(&pod, keyspaceName, r.createReplicationConfig(replicationSettings)); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL alter keyspace %s on pod %v", keyspaceName, pod.Name))
+			} else {
+				r.logger.Info(fmt.Sprintf("Successfully altered keyspace %s replication", keyspaceName))
+				return nil
+			}
+		}
+		return fmt.Errorf("CALL alter keyspaces %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
 	}
 }

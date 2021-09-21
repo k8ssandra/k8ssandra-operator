@@ -321,3 +321,7 @@ func prepareCRDs() error {
 func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
 	return []string{}, nil
 }
+
+func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {
+	return nil
+}
