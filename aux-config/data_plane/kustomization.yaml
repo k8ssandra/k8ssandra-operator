@@ -1,5 +1,5 @@
 resources:
-- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+- ../default
 
 patchesJson6902:
 - patch: |-
@@ -11,7 +11,3 @@ patchesJson6902:
     kind: Deployment
     name: k8ssandra-operator
     version: v1
-
-images:
-- name: k8ssandra/k8ssandra-operator
-  newTag: latest

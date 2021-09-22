@@ -137,15 +137,15 @@ endif
 kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
 
 single-up: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
-	$(KUSTOMIZE) build scripts/control_plane | kubectl apply -f -
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
 
 multi-up: build kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
-	$(KUSTOMIZE) build scripts/control_plane | kubectl apply -f -
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
 ## install the data plane
 	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build scripts/data_plane | kubectl apply -f -
+	$(KUSTOMIZE) build aux-config/data_plane | kubectl apply -f -
 ## Create a client config
 	make create-client-config
 ## Restart the control plane
