@@ -136,10 +136,16 @@ endif
 
 kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
 
-single-up: build kustomize docker-build create-kind-cluster kind-load-image cert-manager
+single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
 
-multi-up: build kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
+single-reload: build manifests kustomize docker-build kind-load-image cert-manager
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
+multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
@@ -153,12 +159,35 @@ multi-up: build kustomize docker-build create-kind-multicluster kind-load-image-
 	kubectl delete pod -l control-plane=k8ssandra-operator
 	kubectl rollout status deployment k8ssandra-operator
 
+multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
+# Reload the operator on the control-plane
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+# Reload the operator on the data-plane
+	kubectl config use-context kind-k8ssandra-1
+	$(KUSTOMIZE) build aux-config/data_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
+single-deploy:
+	kubectl config use-context kind-k8ssandra-0
+	kubectl apply -f test/testdata/fixture/single-dc/k8ssandra.yaml
+
+multi-deploy:
+	kubectl config use-context kind-k8ssandra-0
+	kubectl apply -f test/testdata/fixture/multi-dc-stargate/k8ssandra.yaml
+
+cleanup:
+	kind delete cluster --name k8ssandra-0
+	kind delete cluster --name k8ssandra-1
 
 create-kind-cluster:
-	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4 -o
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4 -o
+	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
 
 kind-load-image-multi:
 	kind load docker-image --name k8ssandra-0 ${IMG}
