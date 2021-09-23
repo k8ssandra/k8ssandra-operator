@@ -14,7 +14,7 @@
 # TODO Accept multiple values for the src-context option and generate a kubeconfig with
 #      entries for each
 
-set -e
+set -ex
 
 OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,in-cluster-kubeconfig:,help -n 'create-client-config' -- "$@")
 
@@ -63,7 +63,6 @@ while true; do
     --serviceaccount ) service_account="$2"; shift 2 ;;
     --output-dir ) output_dir="$2"; shift 2 ;;
     --in-cluster-kubeconfig ) in_cluster_kubeconfig="$2"; shift 2 ;;
-    --dev ) dev_mode=true; shift 1 ;;
     -h | --help ) help; exit;;
     -- ) shift; break ;;
     * ) break ;;
@@ -94,7 +93,7 @@ fi
 if [ ! -z "$src_context" ]; then
   src_context_opt="--context $src_context"
 else
-  src_context=$(kubectl --kubeconfig $src_kubeconfig config current-context)
+  src_context=$(kubectl $src_kubeconfig_opt config current-context)
   src_context_opt="--context $src_context"
 fi
 
@@ -109,7 +108,7 @@ fi
 if [ ! -z "$dest_context" ]; then
   dest_context_opt="--context $dest_context"
 else
-  dest_context=$(kubectl --kubeconfig $dest_kubeconfig config current-context)
+  dest_context=$(kubectl $dest_kubeconfig_opt config current-context)
 fi
 
 sa_secret=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get serviceaccount $service_account -o jsonpath='{.secrets[0].name}')
