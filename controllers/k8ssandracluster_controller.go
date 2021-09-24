@@ -123,6 +123,8 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
+	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
@@ -148,7 +150,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
-		remoteClient, err := r.buildRemoteClient(logger, dcTemplate, ctx, dcKey, actualDc, kc)
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -207,6 +209,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			//	logger.Error(err, "Failed to update seeds")
 			//	return ctrl.Result{}, err
 			// }
+			actualDcs = append(actualDcs, actualDc)
 		} else {
 			if errors.IsNotFound(err) {
 				// cassdc doesn't exist, we'll create it
@@ -222,24 +225,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 	}
 
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
-		dcConfig.AdditionalSeeds = seeds
-		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
-		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+	// Reconcile Stargate across all datacenters
+	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		actualDc := actualDcs[i]
+		dcKey := types.NamespacedName{Namespace: actualDc.Namespace, Name: actualDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
 
-		if err != nil {
-			logger.Error(err, "Failed to create new CassandraDatacenter")
-			return ctrl.Result{}, err
-		}
-
-		desiredDcHash := utils.DeepHashString(desiredDc)
-		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
-
-		actualDc := &cassdcapi.CassandraDatacenter{}
-
-		remoteClient, err := r.buildRemoteClient(logger, dcTemplate, ctx, dcKey, actualDc, kc)
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -254,28 +246,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 	return ctrl.Result{}, nil
-}
-
-func (r *K8ssandraClusterReconciler) buildRemoteClient(
-	logger logr.Logger,
-	dcTemplate api.CassandraDatacenterTemplate,
-	ctx context.Context,
-	dcKey types.NamespacedName,
-	actualDc *cassdcapi.CassandraDatacenter,
-	kc *api.K8ssandraCluster,
-) (client.Client, error) {
-	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-	if err != nil {
-		logger.Error(err, "Failed to get remote client for datacenter")
-		return nil, err
-	}
-
-	if remoteClient == nil {
-		logger.Info("remoteClient cannot be nil")
-		return nil, fmt.Errorf("remoteClient cannot be nil")
-	}
-
-	return remoteClient, nil
 }
 
 func (r *K8ssandraClusterReconciler) reconcileStargate(

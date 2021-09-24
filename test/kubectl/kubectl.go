@@ -98,9 +98,6 @@ func DeleteByName(opts Options, kind, name string, ignoreNotFound bool) error {
 	if ignoreNotFound {
 		cmd.Args = append(cmd.Args, "--ignore-not-found")
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
 	fmt.Println(cmd)
 	output, err := cmd.CombinedOutput()
 	if logOutput {
