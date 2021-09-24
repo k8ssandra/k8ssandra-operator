@@ -5,8 +5,7 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.10"
-    serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
+    serverVersion: "3.11.11"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

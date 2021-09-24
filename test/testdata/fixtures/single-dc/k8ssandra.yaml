@@ -5,7 +5,7 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.10"
+    serverVersion: "3.11.11"
     datacenters:
       - metadata:
           name: dc1

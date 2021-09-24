@@ -31,7 +31,7 @@ spec:
     limits:
       memory: 768Mi
   serverType: cassandra
-  serverVersion: 3.11.10
+  serverVersion: 3.11.11
   networking:
     hostNetwork: false
   size: 3

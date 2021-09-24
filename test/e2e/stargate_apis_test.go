@@ -22,19 +22,7 @@ import (
 	"testing"
 )
 
-func testStargateApis(
-	t *testing.T,
-	ctx context.Context,
-	k8sContextIdx int,
-	k8sContextName string,
-	username string,
-	password string,
-	replication map[string]int,
-	// for debugging purposes
-	namespace string,
-	dcName string,
-	stargateRacks ...string,
-) {
+func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int, namespace string, dcName string, stargateRacks ...string) {
 	t.Run(fmt.Sprintf("TestStargateApis[%d]", k8sContextIdx), func(t *testing.T) {
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
 			t.Log("test Stargate native API in context " + k8sContextName)
