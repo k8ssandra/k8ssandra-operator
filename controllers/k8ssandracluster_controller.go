@@ -209,7 +209,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			// }
 		} else {
 			if errors.IsNotFound(err) {
-				// cassdc doesn't exists, we'll create it
+				// cassdc doesn't exist, we'll create it
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
 					logger.Error(err, "Failed to create datacenter")
 					return ctrl.Result{}, err
