@@ -234,7 +234,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	}
 
 	if len(contexts) == 0 {
-		buf, err := kustomize.Build(kdir)
+		buf, err := kustomize.BuildDir(kdir)
 		if err != nil {
 			f.logger.Error(err, "kustomize build failed", "dir", kdir)
 			return err
@@ -247,7 +247,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	for _, ctx := range contexts {
 		f.logger.Info("kustomize build | kubectl apply", "Dir", dir, "Namespace", namespace, "Context", ctx)
 
-		buf, err := kustomize.Build(kdir)
+		buf, err := kustomize.BuildDir(kdir)
 		if err != nil {
 			f.logger.Error(err, "kustomize build failed", "dir", kdir)
 			return err
@@ -573,7 +573,7 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 
 	f.logger.Info("Undeploy k8ssandra-operator", "Namespace", namespace)
 
-	buf, err := kustomize.Build(dir)
+	buf, err := kustomize.BuildDir(dir)
 	if err != nil {
 		return err
 	}
