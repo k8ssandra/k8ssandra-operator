@@ -26,11 +26,11 @@ func testStargateApis(
 	t *testing.T,
 	ctx context.Context,
 	k8sContextIdx int,
+	k8sContextName string,
 	username string,
 	password string,
 	replication map[string]int,
 	// for debugging purposes
-	k8sContextName string,
 	namespace string,
 	dcName string,
 	stargateRacks ...string,

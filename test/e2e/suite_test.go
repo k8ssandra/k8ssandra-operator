@@ -394,7 +394,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
 
 	replication := map[string]int{"dc1": 1}
-	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "default")
+	testStargateApis(t, ctx, 0, "kind-k8ssandra-0", username, password, replication, namespace, "dc1", "default")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
@@ -420,7 +420,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
 
 	replication := map[string]int{"dc1": 3}
-	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "rack1", "rack2", "rack3")
+	testStargateApis(t, ctx, 0, "kind-k8ssandra-0", username, password, replication, namespace, "dc1", "rack1", "rack2", "rack3")
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -614,8 +614,8 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "rack1")
-	testStargateApis(t, ctx, 1, username, password, replication, "kind-k8ssandra-1", namespace, "dc2", "rack1")
+	testStargateApis(t, ctx, 0, "kind-k8ssandra-0", username, password, replication, namespace, "dc1", "rack1")
+	testStargateApis(t, ctx, 1, "kind-k8ssandra-1", username, password, replication, namespace, "dc2", "rack1")
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
