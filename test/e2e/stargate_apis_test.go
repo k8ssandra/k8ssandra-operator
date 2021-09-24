@@ -50,7 +50,6 @@ func testStargateApis(
 		t.Run("TestStargateRestApi", func(t *testing.T) {
 			t.Log("test Stargate REST API in context " + k8sContextName)
 			testStargateRestApis(t, k8sContextIdx, username, password, replication)
-			assert.True(t, false)
 		})
 	})
 }

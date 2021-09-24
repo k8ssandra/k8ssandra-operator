@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Config
+preferences: {}
+clusters:
+  - name: kind-k8ssandra-0
+    cluster:
+      certificate-authority-data: ...
+      server: https://127.0.0.1:65318
+users:
+  - name: kind-k8ssandra-0-k8ssandra-operator
+    user:
+      token: ...
+contexts:
+  - name: kind-k8ssandra-0
+    context:
+      cluster: kind-k8ssandra-0
+      user: kind-k8ssandra-0-k8ssandra-operator
+current-context: kind-k8ssandra-0
