@@ -68,7 +68,7 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	assert.NoError(t, err)
 	stargateHttp := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
 	stargateCql := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
-	timeout := 1 * time.Minute
+	timeout := 2 * time.Minute
 	interval := 1 * time.Second
 	assert.Eventually(t, func() bool {
 		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
