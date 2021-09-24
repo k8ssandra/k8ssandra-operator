@@ -250,6 +250,7 @@ type CassandraYaml struct {
 	// +optional
 	NumTokens *int `json:"num_tokens,omitempty"`
 
+	// +optional
 	AllocateTokensForLocalReplicationFactor *int `json:"allocate_tokens_for_local_replication_factor,omitempty"`
 
 	// +optional
