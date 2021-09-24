@@ -38,21 +38,38 @@ By default kind clusters run on the same Docker network which means we will have
 # Single Cluster Install with Kustomize
 We will first look at a single cluster install to demonstrate that while K8ssandra Operator is designed for multi-clluster use, it can be used in a single cluster without any extran configuration.
 
-## Create kind cluster
+## Automated Setup
+Run `make single-up` to create a single kind cluster and deploy k8ssandra-operator along with its dependencies.  
+Check that there are two Deployments. The output should look similar to this:
+
+```
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+
+The operator will be deployed in the `default` namespace using this procedure.
+
+**Note: if a k8ssandra-0 kind cluster already exists, running `make single-up` will delete and recreate it.**
+
+## Manual Setup
+
+### Create kind cluster
 Run `setup-kind-multicluster.sh` as follows:
 
 ```
 ./setup-kind-multicluster.sh --kind-worker-nodes 4
 ```
 
-## Install Cert Manager
+### Install Cert Manager
 We need to first install Cert Manager as it is a dependency of cass-operator:
 
 ```
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 ```
 
-## Install K8ssandra Operator
+### Install K8ssandra Operator
 The GitHub Actions for the project are configured to build and push a new operator image to Docker Hub whenever commits are pushed to `main`. 
 
 See [here](https://hub.docker.com/repository/docker/k8ssandra/k8ssandra-operator/tags?page=1&ordering=last_updated) on Docker Hub for a list of availabe images.
@@ -170,9 +187,35 @@ spec:
         stargate:
           size: 1
           heapSize: 256M
-EOF 
+EOF
 ```
-## Multi-cluster Install with Kustomize
+
+# Multi-cluster Install with Kustomize
+
+## Automated Setup
+Run `make multi-up` to create a multi kind cluster and deploy k8ssandra-operator along with its dependencies.  
+Check that there are two Deployments in each of the k8ssandra-0 and k8ssandra-1 kind clusters. The output should look similar to this:
+
+```
+kubectx kind-k8ssandra-0
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+
+kubectx kind-k8ssandra-1
+kubectl get deployment
+NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator        1/1     1            1           2m
+k8ssandra-operator   1/1     1            1           2m
+```
+
+The operator will be deployed in the `default` namespace using this procedure.
+
+**Note: if a k8ssandra-0 and/or a k8ssandra-1 kind clusters already exist, running `make single-up` will delete and recreate them.**
+
+## Manual Procedure
+
 If you previously created a cluster with `setup-kind-multicluster.sh` we need to delete it in order to create the multi-cluster setup. The script currently does not support adding clusters to an existing setup (see [#128](https://github.com/k8ssandra/k8ssandra-operator/issues/128)).
 
 We will create two kind clusters with 3 worker nodes per clusters. Remember that K8ssandra Operator requires clusters to have routable pod IPs. kind clusters by default will run on the same Docker network which means that they will have routable IPs.

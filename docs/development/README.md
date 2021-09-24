@@ -103,14 +103,31 @@ End-to-end tests require kind clusters that are built with the `scripts/setup-ki
 
 **Note:** There are plans to add the ability to run the tests against other clusters. This is being tracked in [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112).
 
-### Create the kind clusters
+### Automated procedure
+
+The makefile has a target which will create the kind clusters (deleting them first if they already exist), build the docker image and load it into both clusters before running the e2e tests.
+Just run the following:
+
+```
+make kind-e2e-test
+```
+
+If you want to run a single test, set the `E2E_TEST` variable as follows:
+
+```
+make E2E_TEST=TestOperator/SingleDatacenterCluster kind-e2e-test
+```
+
+### Manual procedure 
+
+#### Create the kind clusters
 The multi-cluster tests require two clusters.
 
 ```
 ./scripts/setup-kind-multicluster.sh --clusters 2
 ```
 
-### Build operator image
+#### Build operator image
 
 Before running tests, build the operator image:
 
@@ -118,7 +135,7 @@ Before running tests, build the operator image:
 make docker-build
 ```
 
-### Load the operator image into the clusters
+#### Load the operator image into the clusters
 Load the operator image with `make kind-load-image`:
 
 ```
@@ -129,9 +146,9 @@ make KIND_CLUSTER=k8ssandra-0 kind-load-image
 make KIND_CLUSTER=k8ssandra-1 kind-load-image
 ```
 
-### Run the tests
+#### Run the tests
 
-`make e2e-tests` runs the tests under `test/e2e`.
+`make e2e-test` runs the tests under `test/e2e`.
 
 If you want to run a single test, set the `E2E_TEST` variable as follows:
 
@@ -140,4 +157,4 @@ make E2E_TEST=TestOperator/SingleDatacenterCluster e2e-test
 ```
 
 ### Resource Requirements
-Multi-cluster tests will be more resource intensive than other tests. The Docker VM on my MacBook Pro is configured with 6 CPUs and  10 GB of memory for these tests. Your mileage may vary on other operating systems/setups.
+Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests on a MacBook Pro is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.

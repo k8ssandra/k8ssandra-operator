@@ -7,24 +7,37 @@
 #    - kustomize
 #    - kind
 
-# TODO add check to make sure gnu getopt is installed. This can be done with the -T option
-# of getopt.
-
 set -e
 
-OPTS=$(getopt -o h --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,help -n 'create-kind-clusters' -- "$@")
+getopt_version=$(getopt -V)
+if [[ "$getopt_version" == " --" ]]; then
+  echo "gnu-getopt doesn't seem to be installed. Install it using: brew install gnu-getopt"
+  exit 1
+fi
 
+OPTS=$(getopt -o ho --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,overwrite:,help -n 'create-kind-clusters' -- "$@")
 eval set -- "$OPTS"
 
-function help() {
-  echo
-  echo "Syntax: create-kind-clusters.sh [options]"
-  echo "Options:"
-  echo "clusters           The number of clusters to create."
-  echo "cluster-names      A comma-delimited list of cluster names to create. Takes precedence over clusters option."
-  echo "kind-node-version  The image version of the kind nodes."
-  echo "kind-worker-nodes  The number of worker nodes to deploy."
-}
+registry_name='kind-registry'
+registry_port='5000'
+num_clusters=1
+cluster_names="kind"
+kind_node_version="v1.21.2"
+kind_worker_nodes=3
+overwrite_clusters="no"
+
+while true; do
+  case "$1" in
+    --clusters ) num_clusters="$2"; shift 2 ;;
+    --cluster-names ) cluster_names="$2"; shift 2 ;;
+    --kind-node-version ) kind_node_version="$2"; shift 2 ;;
+    --kind-worker-nodes ) kind_worker_nodes="$2"; shift 2 ;;
+    -o | --overwrite) overwrite_clusters="yes"; shift ;;
+    -h | --help ) help; exit;;
+    -- ) shift; break ;;
+    * ) break ;;
+  esac
+done
 
 function create_registry() {
   running="$(docker inspect -f '{{.State.Running}}' "${registry_name}" 2>/dev/null || true)"
@@ -74,11 +87,23 @@ EOF
   docker network connect "kind" "$registry_name" || true
 }
 
-function create_clusters() {
-  echo "Creating clusters"
+function delete_clusters() {
+  echo "Deleting existing clusters..."
 
   for ((i=0; i<$num_clusters; i++))
   do
+    echo "Deleting cluster $((i+1)) out of $num_clusters"
+    kind delete cluster --name "k8ssandra-$i" || echo "Cluster k8ssandra-$i doesn't exist yet"
+  done
+  echo
+}
+
+function create_clusters() {
+  echo "Creating clusters..."
+
+  for ((i=0; i<$num_clusters; i++))
+  do
+    echo "Creating cluster $((i+1)) out of $num_clusters"
     create_cluster $i "k8ssandra-$i" $kind_worker_nodes $kind_node_version
   done
   echo
@@ -141,27 +166,11 @@ function create_k8s_contexts_secret() {
   done
 }
 
-registry_name='kind-registry'
-registry_port='5000'
-
-num_clusters=1
-cluster_names="kind"
-kind_node_version="v1.21.2"
-kind_worker_nodes=3
-
-while true; do
-  case "$1" in
-    --clusters ) num_clusters="$2"; shift 2 ;;
-    --cluster-names ) cluster_names="$2"; shift 2 ;;
-    --kind-node-version ) kind_node_version="$2"; shift 2 ;;
-    --kind-worker-nodes ) kind_worker_nodes="$2"; shift 2 ;;
-    -h | --help ) help; exit;;
-    -- ) shift; break ;;
-    * ) break ;;
-  esac
-done
-
 create_registry
+
+if [[ "$overwrite_clusters" == "yes" ]]; then
+  delete_clusters
+fi
 
 create_clusters
 

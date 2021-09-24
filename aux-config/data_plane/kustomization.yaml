@@ -1,0 +1,13 @@
+resources:
+- ../default
+
+patchesJson6902:
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/env/1/value
+      value: "false"
+  target:
+    group: apps
+    kind: Deployment
+    name: k8ssandra-operator
+    version: v1

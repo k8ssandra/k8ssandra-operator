@@ -56,7 +56,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-KIND_CLUSTER ?= kind
+KIND_CLUSTER ?= k8ssandra-0
 GO_FLAGS=
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -134,6 +134,65 @@ else
 	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
 endif
 
+kind-e2e-test: multi-up e2e-test
+
+single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+
+single-reload: build manifests kustomize docker-build kind-load-image cert-manager
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
+multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
+## install the control plane
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+## install the data plane
+	kubectl config use-context kind-k8ssandra-1
+	$(KUSTOMIZE) build aux-config/data_plane | kubectl apply -f -
+## Create a client config
+	make create-client-config
+## Restart the control plane
+	kubectl config use-context kind-k8ssandra-0
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
+multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
+# Reload the operator on the control-plane
+	kubectl config use-context kind-k8ssandra-0
+	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+# Reload the operator on the data-plane
+	kubectl config use-context kind-k8ssandra-1
+	$(KUSTOMIZE) build aux-config/data_plane | kubectl apply -f -
+	kubectl delete pod -l control-plane=k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator
+
+single-deploy:
+	kubectl config use-context kind-k8ssandra-0
+	kubectl apply -f test/testdata/samples/k8ssandra-single-kind.yaml
+
+multi-deploy:
+	kubectl config use-context kind-k8ssandra-0
+	kubectl apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
+
+cleanup:
+	kind delete cluster --name k8ssandra-0
+	kind delete cluster --name k8ssandra-1
+
+create-kind-cluster:
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
+
+create-kind-multicluster:
+	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+
+kind-load-image-multi:
+	kind load docker-image --name k8ssandra-0 ${IMG}
+	kind load docker-image --name k8ssandra-1 ${IMG}
+
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
@@ -151,6 +210,19 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+# Wait for cert-manager rollout to be fully done	
+	kubectl rollout status deployment cert-manager-webhook -n cert-manager
+
+cert-manager-multi: ## Install cert-manager to the clusters
+	kubectl config use-context kind-k8ssandra-0
+	make cert-manager
+	kubectl config use-context kind-k8ssandra-1
+	make cert-manager
+
+create-client-config:
+	kubectl config use-context kind-k8ssandra-0
+	make install
+	scripts/create-clientconfig.sh --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

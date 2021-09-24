@@ -16,6 +16,12 @@
 
 set -ex
 
+getopt_version=$(getopt -V)
+if [[ "$getopt_version" == " --" ]]; then
+  echo "gnu-getopt doesn't seem to be installed. Install it using: brew install gnu-getopt"
+  exit 1
+fi
+
 OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,in-cluster-kubeconfig:,help -n 'create-client-config' -- "$@")
 
 eval set -- "$OPTS"
