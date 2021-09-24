@@ -54,6 +54,8 @@ spec:
                     properties:
                       cassandraYaml:
                         properties:
+                          allocate_tokens_for_local_replication_factor:
+                            type: integer
                           auto_snapshot:
                             type: boolean
                           commitlog_segment_size_in_mb:
@@ -75,6 +77,8 @@ spec:
                           key_cache_size_in_mb:
                             type: integer
                           memtable_flush_writers:
+                            type: integer
+                          num_tokens:
                             type: integer
                           prepared_statements_cache_size_mb:
                             type: integer
@@ -120,6 +124,8 @@ spec:
                           properties:
                             cassandraYaml:
                               properties:
+                                allocate_tokens_for_local_replication_factor:
+                                  type: integer
                                 auto_snapshot:
                                   type: boolean
                                 commitlog_segment_size_in_mb:
@@ -141,6 +147,8 @@ spec:
                                 key_cache_size_in_mb:
                                   type: integer
                                 memtable_flush_writers:
+                                  type: integer
+                                num_tokens:
                                   type: integer
                                 prepared_statements_cache_size_mb:
                                   type: integer

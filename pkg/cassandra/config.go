@@ -48,6 +48,19 @@ func (c config) MarshalJSON() ([]byte, error) {
 			c.StartRpc = nil
 			c.ThriftPreparedStatementCacheSizeMb = nil
 		}
+
+		// Even though we default to Cassandra's stock defaults for num_tokens, we need to
+		// explicitly set it because the config builder defaults to num_tokens: 1
+		if c.NumTokens == nil {
+			if isCassandra4(c.cassandraVersion) {
+				numTokens := 16
+				c.NumTokens = &numTokens
+			} else {
+				numTokens := 256
+				c.NumTokens = &numTokens
+			}
+		}
+
 		config["cassandra-yaml"] = c.CassandraYaml
 	}
 
@@ -65,7 +78,9 @@ func (c config) MarshalJSON() ([]byte, error) {
 func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) config {
 	config := config{cassandraVersion: cassandraVersion}
 
-	if apiConfig.CassandraYaml != nil {
+	if apiConfig.CassandraYaml == nil {
+		config.CassandraYaml = &api.CassandraYaml{}
+	} else {
 		config.CassandraYaml = apiConfig.CassandraYaml
 	}
 
