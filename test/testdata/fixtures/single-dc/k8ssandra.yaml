@@ -25,3 +25,5 @@ spec:
         stargate:
           size: 1
           heapSize: 256M
+          cassandraConfigMapRef:
+            name: cassandra-config

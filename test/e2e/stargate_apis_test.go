@@ -17,9 +17,54 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"net/http"
 	neturl "net/url"
+	"os/exec"
 	"strconv"
 	"testing"
 )
+
+func testStargateApis(
+	t *testing.T,
+	ctx context.Context,
+	k8sContextIdx int,
+	username string,
+	password string,
+	replication map[string]int,
+	// for debugging purposes
+	k8sContextName string,
+	namespace string,
+	dcName string,
+	stargateRacks ...string,
+) {
+	t.Run(fmt.Sprintf("TestStargateApis[%d]", k8sContextIdx), func(t *testing.T) {
+		defer func() {
+			if t.Failed() {
+				for _, rack := range stargateRacks {
+					dumpStargateLogs(k8sContextName, namespace, dcName, rack)
+				}
+			}
+		}()
+		t.Run("TestStargateNativeApi", func(t *testing.T) {
+			t.Log("test Stargate native API in context " + k8sContextName)
+			testStargateNativeApi(t, ctx, k8sContextIdx, username, password, replication)
+		})
+		t.Run("TestStargateRestApi", func(t *testing.T) {
+			t.Log("test Stargate REST API in context " + k8sContextName)
+			testStargateRestApis(t, k8sContextIdx, username, password, replication)
+			assert.True(t, false)
+		})
+	})
+}
+
+func dumpStargateLogs(k8sContextName string, namespace string, dc string, rack string) {
+	deploymentName := fmt.Sprintf("deployment.apps/test-%s-%s-stargate-deployment", dc, rack)
+	cmd := exec.Command("kubectl", "logs", deploymentName, "-n", namespace, "--context", k8sContextName)
+	output, _ := cmd.CombinedOutput()
+	println()
+	fmt.Println("=============", "BEGIN STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
+	fmt.Println(string(output))
+	fmt.Println("=============", "END STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
+	println()
+}
 
 func testStargateRestApis(t *testing.T, k8sContextIdx int, username string, password string, replication map[string]int) {
 	restClient := resty.New()

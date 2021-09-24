@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -395,10 +394,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
 
 	replication := map[string]int{"dc1": 1}
-	t.Log("test Stargate REST API in context kind-k8ssandra-0")
-	testStargateRestApis(t, 0, username, password, replication)
-	t.Log("test Stargate native API in context kind-k8ssandra-0")
-	testStargateNativeApi(t, ctx, 0, username, password, replication)
+	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "default")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
@@ -424,10 +420,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
 
 	replication := map[string]int{"dc1": 3}
-	t.Log("test Stargate REST API in context kind-k8ssandra-0")
-	testStargateRestApis(t, 0, username, password, replication)
-	t.Log("test Stargate native API in context kind-k8ssandra-0")
-	testStargateNativeApi(t, ctx, 0, username, password, replication)
+	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "rack1", "rack2", "rack3")
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -621,44 +614,8 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApisMultiDc(t, ctx, 0, "kind-k8ssandra-0", "dc1", namespace, username, password, replication)
-	testStargateApisMultiDc(t, ctx, 1, "kind-k8ssandra-1", "dc2", namespace, username, password, replication)
-}
-
-func testStargateApisMultiDc(
-	t *testing.T,
-	ctx context.Context,
-	k8sContextIdx int,
-	k8sContextName string,
-	dcName string,
-	namespace string,
-	username string,
-	password string,
-	replication map[string]int,
-) {
-	panicked := true
-	defer func() {
-		if panicked || t.Failed() {
-			dumpStargateLogs(k8sContextName, namespace, dcName)
-		}
-	}()
-	t.Log("test Stargate native API in context " + k8sContextName)
-	testStargateNativeApi(t, ctx, k8sContextIdx, username, password, replication)
-
-	// FIXME data_endpoint_auth keyspace needs fixing
-	t.Log("test Stargate REST API in context " + k8sContextName)
-	testStargateRestApis(t, k8sContextIdx, username, password, replication)
-	panicked = false
-}
-
-func dumpStargateLogs(k8sContextName string, namespace string, dc string) {
-	cmd := exec.Command("kubectl", "logs", "deployment.apps/test-"+dc+"-rack1-stargate-deployment", "-n", namespace, "--context", k8sContextName)
-	output, _ := cmd.CombinedOutput()
-	println()
-	fmt.Println("=============", "BEGIN STARGATE LOGS", "context", k8sContextName, "namespace", namespace, "=============")
-	fmt.Println(string(output))
-	fmt.Println("=============", "END STARGATE LOGS", "context", k8sContextName, "namespace", namespace, "=============")
-	println()
+	testStargateApis(t, ctx, 0, username, password, replication, "kind-k8ssandra-0", namespace, "dc1", "rack1")
+	testStargateApis(t, ctx, 1, username, password, replication, "kind-k8ssandra-1", namespace, "dc2", "rack1")
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
