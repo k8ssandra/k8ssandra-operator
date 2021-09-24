@@ -666,7 +666,7 @@ func cassandraDatacenterReady(status *cassdcapi.CassandraDatacenterStatus) bool 
 }
 
 func configureZeroLog() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out:        os.Stderr,
 		TimeFormat: zerolog.TimeFormatUnix,
