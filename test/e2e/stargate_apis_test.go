@@ -36,13 +36,6 @@ func testStargateApis(
 	stargateRacks ...string,
 ) {
 	t.Run(fmt.Sprintf("TestStargateApis[%d]", k8sContextIdx), func(t *testing.T) {
-		defer func() {
-			if t.Failed() {
-				for _, rack := range stargateRacks {
-					dumpStargateLogs(k8sContextName, namespace, dcName, rack)
-				}
-			}
-		}()
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
 			t.Log("test Stargate native API in context " + k8sContextName)
 			testStargateNativeApi(t, ctx, k8sContextIdx, username, password, replication)
@@ -51,6 +44,11 @@ func testStargateApis(
 			t.Log("test Stargate REST API in context " + k8sContextName)
 			testStargateRestApis(t, k8sContextIdx, username, password, replication)
 		})
+		if t.Failed() {
+			for _, rack := range stargateRacks {
+				dumpStargateLogs(k8sContextName, namespace, dcName, rack)
+			}
+		}
 	})
 }
 
