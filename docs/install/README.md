@@ -38,7 +38,7 @@ By default kind clusters run on the same Docker network which means we will have
 # Single Cluster Install with Kustomize
 We will first look at a single cluster install to demonstrate that while K8ssandra Operator is designed for multi-clluster use, it can be used in a single cluster without any extran configuration.
 
-## Automated Setup
+## Automated Setup
 Run `make single-up` to create a single kind cluster and deploy k8ssandra-operator along with its dependencies.  
 Check that there are two Deployments. The output should look similar to this:
 

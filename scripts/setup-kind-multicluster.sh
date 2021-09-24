@@ -9,79 +9,33 @@
 
 set -e
 
+getopt_version=$(getopt -V)
+if [[ "$getopt_version" == " --" ]]; then
+  echo "gnu-getopt doesn't seem to be installed. Install it using: brew install gnu-getopt"
+  exit 1
+fi
+
+OPTS=$(getopt -o ho --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,overwrite:,help -n 'create-kind-clusters' -- "$@")
+eval set -- "$OPTS"
+
 registry_name='kind-registry'
 registry_port='5000'
-
 num_clusters=1
 cluster_names="kind"
 kind_node_version="v1.21.2"
 kind_worker_nodes=3
 overwrite_clusters="no"
 
-while test $# -gt 0; do
+while true; do
   case "$1" in
-    --clusters)
-      shift
-      if test $# -gt 0; then
-        export num_clusters=$1
-      else
-        echo "no num clusters specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --cluster-names)
-      shift
-      if test $# -gt 0; then
-        export cluster_names=$1
-      else
-        echo "no clusters names specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --kind-node-version)
-      shift
-      if test $# -gt 0; then
-        export kind_node_version=$1
-      else
-        echo "no kind node version specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --kind-worker-nodes)
-      shift
-      if test $# -gt 0; then
-        export kind_worker_nodes=$1
-      else
-        echo "no kind worker nodes specified"
-        exit 1
-      fi
-      shift
-      ;;
-    -o|--overwrite)
-      overwrite_clusters="yes"
-      shift
-      ;;
-    -h|--help) 
-      echo
-      echo "Syntax: create-kind-clusters.sh [options]"
-      echo "Options:"
-      echo "--clusters <nb clusters>              The number of clusters to create."
-      echo "--cluster-names <cluster names>       A comma-delimited list of cluster names to create. Takes precedence over clusters option."
-      echo "--kind-node-version <kind version>    The image version of the kind nodes."
-      echo "--kind-worker-nodes <nb kind workers> The number of worker nodes to deploy."
-      echo "-o | --overwrite                      Attempt to delete the clusters before recreating them."
-      exit
-      ;;
-    --)
-      shift;
-      break
-      ;;
-    *) 
-      break
-      ;;
+    --clusters ) num_clusters="$2"; shift 2 ;;
+    --cluster-names ) cluster_names="$2"; shift 2 ;;
+    --kind-node-version ) kind_node_version="$2"; shift 2 ;;
+    --kind-worker-nodes ) kind_worker_nodes="$2"; shift 2 ;;
+    -o | --overwrite) overwrite_clusters="yes"; shift ;;
+    -h | --help ) help; exit;;
+    -- ) shift; break ;;
+    * ) break ;;
   esac
 done
 

@@ -134,7 +134,7 @@ else
 	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
 endif
 
-kind-e2e-test: build kustomize docker-build create-kind-multicluster kind-load-image-multi e2e-test
+kind-e2e-test: multi-up e2e-test
 
 single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build aux-config/control_plane | kubectl apply -f -
@@ -173,11 +173,11 @@ multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-
 
 single-deploy:
 	kubectl config use-context kind-k8ssandra-0
-	kubectl apply -f test/testdata/fixture/single-dc/k8ssandra.yaml
+	kubectl apply -f test/testdata/samples/k8ssandra-single-kind.yaml
 
 multi-deploy:
 	kubectl config use-context kind-k8ssandra-0
-	kubectl apply -f test/testdata/fixture/multi-dc-stargate/k8ssandra.yaml
+	kubectl apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
 
 cleanup:
 	kind delete cluster --name k8ssandra-0

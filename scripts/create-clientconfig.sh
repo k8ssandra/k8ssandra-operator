@@ -16,6 +16,16 @@
 
 set -e
 
+getopt_version=$(getopt -V)
+if [[ "$getopt_version" == " --" ]]; then
+  echo "gnu-getopt doesn't seem to be installed. Install it using: brew install gnu-getopt"
+  exit 1
+fi
+
+OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,in-cluster-kubeconfig:,help -n 'create-client-config' -- "$@")
+
+eval set -- "$OPTS"
+
 function help() {
 cat << EOF
 Syntax: create-client-config.sh [options]
@@ -49,103 +59,20 @@ namespace=""
 output_dir=""
 in_cluster_kubeconfig=""
 
-while test $# -gt 0; do
+while true; do
   case "$1" in
-    --src-context)
-      shift
-      if test $# -gt 0; then
-        export src_context=$1
-      else
-        echo "no source context specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --src-kubeconfig)
-      shift
-      if test $# -gt 0; then
-        export src_kubeconfig=$1
-      else
-        echo "no source kubeconfig specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --dest-context)
-      shift
-      if test $# -gt 0; then
-        export dest_context=$1
-      else
-        echo "no destination context specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --dest-kubeconfig)
-      shift
-      if test $# -gt 0; then
-        export dest_kubeconfig=$1
-      else
-        echo "no destination kubeconfig specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --namespace)
-      shift
-      if test $# -gt 0; then
-        export namespace=$1
-      else
-        echo "no namespace specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --serviceaccount)
-      shift
-      if test $# -gt 0; then
-        export service_account=$1
-      else
-        echo "no service account specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --output-dir)
-      shift
-      if test $# -gt 0; then
-        export output_dir=$1
-      else
-        echo "no output directory specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --in-cluster-kubeconfig)
-      shift
-      if test $# -gt 0; then
-        export in_cluster_kubeconfig=$1
-      else
-        echo "no internal cluster IP kubeconfig specified"
-        exit 1
-      fi
-      shift
-      ;;
-    --dev)
-      dev_mode=true
-      shift
-      ;;
-    -h|--help) 
-      help
-      exit
-      ;;
-    --)
-      shift;
-      break
-      ;;
-    *) 
-      break
-      ;;
+    --src-context ) src_context="$2"; shift 2 ;;
+    --src-kubeconfig ) src_kubeconfig="$2"; shift 2 ;;
+    --dest-context ) dest_context="$2"; shift 2 ;;
+    --dest-kubeconfig ) dest_kubeconfig="$2"; shift 2 ;;
+    --namespace ) namespace="$2"; shift 2 ;;
+    --serviceaccount ) service_account="$2"; shift 2 ;;
+    --output-dir ) output_dir="$2"; shift 2 ;;
+    --in-cluster-kubeconfig ) in_cluster_kubeconfig="$2"; shift 2 ;;
+    --dev ) dev_mode=true; shift 1 ;;
+    -h | --help ) help; exit;;
+    -- ) shift; break ;;
+    * ) break ;;
   esac
 done
 
