@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int, namespace string, dcName string, stargateRacks ...string) {
@@ -263,6 +264,8 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 		Username: username,
 		Password: password,
 	})
+	cqlClient.ConnectTimeout = 30 * time.Second
+	cqlClient.ReadTimeout = 60 * time.Second
 	connection, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
 	require.NoError(t, err, "Failed to connect via CQL native port to %s", contactPoint)
 	return connection
