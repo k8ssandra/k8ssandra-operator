@@ -319,7 +319,7 @@ func prepareCRDs() error {
 }
 
 func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
-	return []string{}, nil
+	return []string{"data_auth_endpoint"}, nil
 }
 
 func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {

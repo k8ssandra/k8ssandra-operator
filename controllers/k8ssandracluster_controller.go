@@ -245,11 +245,9 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-			if kc.HasStargates() {
-				result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient)
-				if !result.IsZero() || err != nil {
-					return result, err
-				}
+			result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient)
+			if !result.IsZero() || err != nil {
+				return result, err
 			}
 		}
 	}

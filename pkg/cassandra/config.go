@@ -60,25 +60,26 @@ func (c config) MarshalJSON() ([]byte, error) {
 
 func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) config {
 	config := config{cassandraVersion: cassandraVersion}
-
-	if apiConfig.CassandraYaml != nil {
-		config.CassandraYaml = apiConfig.CassandraYaml
-	}
-
-	if apiConfig.JvmOptions != nil {
-		config.JvmOptions = &jvmOptions{}
-		if apiConfig.JvmOptions.HeapSize != nil {
-			heapSize := apiConfig.JvmOptions.HeapSize.Value()
-			config.JvmOptions.InitialHeapSize = &heapSize
-			config.JvmOptions.MaxHeapSize = &heapSize
+	if apiConfig != nil {
+		if apiConfig.CassandraYaml != nil {
+			config.CassandraYaml = apiConfig.CassandraYaml
 		}
 
-		if apiConfig.JvmOptions.HeapNewGenSize != nil {
-			newGenSize := apiConfig.JvmOptions.HeapNewGenSize.Value()
-			config.JvmOptions.HeapNewGenSize = &newGenSize
-		}
+		if apiConfig.JvmOptions != nil {
+			config.JvmOptions = &jvmOptions{}
+			if apiConfig.JvmOptions.HeapSize != nil {
+				heapSize := apiConfig.JvmOptions.HeapSize.Value()
+				config.JvmOptions.InitialHeapSize = &heapSize
+				config.JvmOptions.MaxHeapSize = &heapSize
+			}
 
-		config.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
+			if apiConfig.JvmOptions.HeapNewGenSize != nil {
+				newGenSize := apiConfig.JvmOptions.HeapNewGenSize.Value()
+				config.JvmOptions.HeapNewGenSize = &newGenSize
+			}
+
+			config.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
+		}
 	}
 
 	return config

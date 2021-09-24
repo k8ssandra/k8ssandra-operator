@@ -968,6 +968,34 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
 
+	t.Log("check that dc2 was created")
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
+
+	t.Log("check that remote seeds are set on dc2")
+	dc2 = &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.NoError(err, "failed to get dc2")
+
+	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
+
+	sg2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
+	}
+
+	t.Log("update dc2 status to ready")
+	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to update dc2 status to ready")
+
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
 
@@ -987,38 +1015,10 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	})
 	require.NoError(err, "failed to patch stargate status")
 
-	t.Log("check that dc2 was created")
-	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
-
-	t.Log("check that remote seeds are set on dc2")
-	dc2 = &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc2Key, dc2)
-	require.NoError(err, "failed to get dc2")
-
-	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
-
-	sg2Key := framework.ClusterKey{
-		K8sContext: k8sCtx1,
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
-	}
-
 	t.Logf("check that stargate %s has not been created", sg2Key)
 	sg2 := &api.Stargate{}
 	err = f.Get(ctx, sg2Key, sg2)
 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc2 is ready", sg2Key))
-
-	t.Log("update dc2 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to update dc2 status to ready")
 
 	t.Log("check that stargate sg2 is created")
 	require.Eventually(f.StargateExists(ctx, sg2Key), timeout, interval)
