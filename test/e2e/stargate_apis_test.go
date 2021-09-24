@@ -168,7 +168,7 @@ func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, to
 	assert.NoError(t, err, "Failed writing Stargate document")
 	stargateResponse := string(response.Body())
 	expectedResponse := fmt.Sprintf("{\"documentId\":\"%s\"}", documentId)
-	assert.Equal(t, expectedResponse, stargateResponse, "Unexpected response from Stargate: %s", stargateResponse)
+	assert.Equal(t, expectedResponse, stargateResponse, "Unexpected response from Stargate: '%s'", stargateResponse)
 	return documentId
 }
 
