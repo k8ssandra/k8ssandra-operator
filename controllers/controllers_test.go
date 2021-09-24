@@ -8,8 +8,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+
+	"github.com/bombsimon/logrusr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -20,13 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 )
 
@@ -313,4 +316,12 @@ func prepareCRDs() error {
 	}
 	cassOperatorCrdPath := filepath.Join(cassOperatorTargetDir, "crd.yaml")
 	return os.WriteFile(cassOperatorCrdPath, buf.Bytes(), 0644)
+}
+
+func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
+	return []string{"data_auth_endpoint"}, nil
+}
+
+func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {
+	return nil
 }

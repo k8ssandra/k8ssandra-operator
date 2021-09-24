@@ -3,12 +3,13 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"github.com/go-logr/logr"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/cass-operator/operator/pkg/httphelper"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
 )
 
 // ManagementApiFactory creates request-scoped instances of ManagementApiFacade. This component exists
@@ -67,6 +68,14 @@ type ManagementApiFacade interface {
 		keyspaceName string,
 		replication map[string]int,
 	) error
+
+	ListKeyspaces(
+		keyspaceName string,
+	) ([]string, error)
+
+	AlterKeyspace(
+		keyspaceName string,
+		replicationSettings map[string]int) error
 }
 
 type defaultManagementApiFacade struct {
@@ -145,4 +154,42 @@ func (r *defaultManagementApiFacade) getCassandraContainerStatus(pod corev1.Pod)
 		}
 	}
 	return nil
+}
+
+func (r *defaultManagementApiFacade) ListKeyspaces(
+	keyspaceName string,
+) ([]string, error) {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return []string{}, err
+	} else {
+		for _, pod := range pods {
+			if keyspaces, err := r.nodeMgmtClient.GetKeyspace(&pod, keyspaceName); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL list keyspaces %s on pod %v", keyspaceName, pod.Name))
+			} else {
+				return keyspaces, nil
+			}
+		}
+		return []string{}, fmt.Errorf("CALL list keyspaces %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) AlterKeyspace(
+	keyspaceName string,
+	replicationSettings map[string]int,
+) error {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return err
+	} else {
+		for _, pod := range pods {
+			if err := r.nodeMgmtClient.AlterKeyspace(&pod, keyspaceName, r.createReplicationConfig(replicationSettings)); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL alter keyspace %s on pod %v", keyspaceName, pod.Name))
+			} else {
+				r.logger.Info(fmt.Sprintf("Successfully altered keyspace %s replication", keyspaceName))
+				return nil
+			}
+		}
+		return fmt.Errorf("CALL alter keyspaces %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
 }

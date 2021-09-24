@@ -2,9 +2,10 @@ package cassandra
 
 import (
 	"encoding/json"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"strconv"
 	"strings"
+
+	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 )
 
 const (
@@ -29,6 +30,10 @@ type jvmOptions struct {
 	MaxHeapSize       *int64   `json:"max_heap_size,omitempty"`
 	HeapNewGenSize    *int64   `json:"heap_size_young_generation,omitempty"`
 	AdditionalOptions []string `json:"additional-jvm-opts,omitempty"`
+}
+
+func IsCassandra3(version string) bool {
+	return strings.HasPrefix(version, "3.")
 }
 
 func isCassandra4(version string) bool {
@@ -104,6 +109,30 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 	dcNames := "-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(replication.Datacenters, ",")
 	replicationFactor := "-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(replication.ReplicationFactor)
 	additionalOpts = append(additionalOpts, dcNames, replicationFactor)
+
+	jvmOpts.AdditionalOptions = additionalOpts
+	config.JvmOptions = jvmOpts
+	dcConfig.CassandraConfig = config
+}
+
+func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
+	config := dcConfig.CassandraConfig
+	if config == nil {
+		config = &api.CassandraConfig{
+			JvmOptions: &api.JvmOptions{},
+		}
+	} else if config.JvmOptions == nil {
+		config.JvmOptions = &api.JvmOptions{}
+	}
+
+	jvmOpts := config.JvmOptions
+	additionalOpts := jvmOpts.AdditionalOptions
+	if additionalOpts == nil {
+		additionalOpts = make([]string, 0, 1)
+	}
+
+	allowAlterFlag := "-Dcassandra.allow_alter_rf_during_range_movement=true"
+	additionalOpts = append(additionalOpts, allowAlterFlag)
 
 	jvmOpts.AdditionalOptions = additionalOpts
 	config.JvmOptions = jvmOpts

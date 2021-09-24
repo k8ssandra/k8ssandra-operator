@@ -23,7 +23,7 @@ import (
 	"sort"
 
 	"github.com/go-logr/logr"
-	cassdcapi "github.com/k8ssandra/cass-operator/operator/pkg/apis/cassandra/v1beta1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -44,6 +44,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+const (
+	stargateAuthKeyspace = "data_endpoint_auth"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -118,12 +122,18 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
-	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	// Reconcile CassandraDatacenter objects only
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		cassandra.ApplySystemReplication(dcConfig, systemReplication)
+		if !cassandra.IsCassandra3(dcConfig.ServerVersion) && kc.HasStargates() {
+			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
+			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
+		}
 		dcConfig.AdditionalSeeds = seeds
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
@@ -137,20 +147,15 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		desiredDcHash := utils.DeepHashString(desiredDc)
 		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
 
+		actualDc := &cassdcapi.CassandraDatacenter{}
+
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
-			logger.Error(err, "Failed to get remote client for datacenter")
 			return ctrl.Result{}, err
 		}
 
-		if remoteClient == nil {
-			logger.Info("remoteClient cannot be nil")
-			return ctrl.Result{}, fmt.Errorf("remoteClient cannot be nil")
-		}
-
-		actualDc := &cassdcapi.CassandraDatacenter{}
-
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
+			// cassdc already exists, we'll update it
 			if err = r.setStatusForDatacenter(kc, actualDc); err != nil {
 				logger.Error(err, "Failed to update status for datacenter")
 				return ctrl.Result{}, err
@@ -203,8 +208,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			//	logger.Error(err, "Failed to update seeds")
 			//	return ctrl.Result{}, err
 			// }
+			actualDcs = append(actualDcs, actualDc)
 		} else {
 			if errors.IsNotFound(err) {
+				// cassdc doesn't exist, we'll create it
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
 					logger.Error(err, "Failed to create datacenter")
 					return ctrl.Result{}, err
@@ -215,16 +222,24 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				return ctrl.Result{}, err
 			}
 		}
+	}
 
-		if kc.HasStargates() && i == 0 {
-			// only needs to be done once per cluster, so we do it when reconciling the first dc only
-			if err := r.ensureStargateAuthKeyspaceExists(ctx, kc, actualDc, remoteClient, logger); err != nil {
-				return ctrl.Result{RequeueAfter: longDelay}, err
-			}
+	// Reconcile Stargate across all datacenters
+	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		actualDc := actualDcs[i]
+		dcKey := types.NamespacedName{Namespace: actualDc.Namespace, Name: actualDc.Name}
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient)
-		if !result.IsZero() || err != nil {
-			return result, err
+
+		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
+			result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient)
+			if !result.IsZero() || err != nil {
+				return result, err
+			}
 		}
 	}
 
@@ -257,6 +272,12 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
+				// The Stargate keyspace could require to be created or altered.
+				// Doing this only if a new Stargate instance needs to be created,
+				// to avoid altering the schema each time we wait for it to be ready.
+				if err := r.reconcileStargateAuthKeyspace(ctx, kc, actualDc, remoteClient, logger); err != nil {
+					return ctrl.Result{RequeueAfter: longDelay}, err
+				}
 				logger.Info("Creating Stargate resource")
 				if err := remoteClient.Create(ctx, desiredStargate); err != nil {
 					logger.Error(err, "Failed to create Stargate resource")
@@ -403,7 +424,7 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
+func (r *K8ssandraClusterReconciler) reconcileStargateAuthKeyspace(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
@@ -412,20 +433,38 @@ func (r *K8ssandraClusterReconciler) ensureStargateAuthKeyspaceExists(
 ) error {
 	// TODO create a endpoint in the Management API to list existing keyspaces and test whether the keyspace
 	// already exists.
-	logger.Info(fmt.Sprintf("Ensuring that keyspace data_endpoint_auth exists in cluster %v...", dc.ClusterName))
-	replication := make(map[string]int, len(kc.Spec.Cassandra.Datacenters))
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
-		replication[dcTemplate.Meta.Name] = replicationFactor
-	}
 	if managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger); err != nil {
 		return err
-	} else if err := managementApi.CreateKeyspaceIfNotExists("data_endpoint_auth", replication); err != nil {
-		logger.Error(err, "Failed to create keyspace data_endpoint_auth")
-		return err
 	} else {
-		logger.Info("Keyspace data_endpoint_auth successfully created, or already exists")
-		return nil
+		desiredReplication := make(map[string]int, len(kc.Spec.Cassandra.Datacenters))
+		for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+			replicationFactor := int(math.Min(3.0, float64(dcTemplate.Size)))
+			desiredReplication[dcTemplate.Meta.Name] = replicationFactor
+		}
+		logger.Info(fmt.Sprintf("Ensuring that keyspace %s exists in cluster %v...", stargateAuthKeyspace, dc.ClusterName))
+		if keyspaces, err := managementApi.ListKeyspaces(stargateAuthKeyspace); err != nil {
+			return err
+		} else if len(keyspaces) == 0 {
+			// Stargate auth keyspace doesn't exist, we need to create it.
+			if err := managementApi.CreateKeyspaceIfNotExists(stargateAuthKeyspace, desiredReplication); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to create keyspace %s", stargateAuthKeyspace))
+				return err
+			} else {
+				logger.Info(fmt.Sprintf("Keyspace %s successfully created", stargateAuthKeyspace))
+				return nil
+			}
+		} else {
+			// Stargate keyspace exists, altering it to match the desired replication
+			// TODO: Check if the keyspace has the right replication settings before altering it. Requires a new mgmt api operation.
+			logger.Info(fmt.Sprintf("Keyspace %s already exists: %s", stargateAuthKeyspace, keyspaces[0]))
+			if err := managementApi.AlterKeyspace(stargateAuthKeyspace, desiredReplication); err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to alter keyspace %s", stargateAuthKeyspace))
+				return err
+			} else {
+				logger.Info(fmt.Sprintf("Keyspace %s successfully altered", stargateAuthKeyspace))
+				return nil
+			}
+		}
 	}
 }
 

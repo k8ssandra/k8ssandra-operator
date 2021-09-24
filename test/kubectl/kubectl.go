@@ -3,9 +3,10 @@ package kubectl
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 type Options struct {
