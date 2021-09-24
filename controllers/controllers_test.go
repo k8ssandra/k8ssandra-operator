@@ -38,7 +38,7 @@ const (
 	interval            = time.Millisecond * 500
 	clustersToCreate    = 3
 	clusterProtoName    = "cluster-%d"
-	cassOperatorVersion = "v1.8.0-rc.1"
+	cassOperatorVersion = "v1.8.0-rc.2"
 )
 
 var (
