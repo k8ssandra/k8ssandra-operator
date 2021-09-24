@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -131,7 +130,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		cassandra.ApplySystemReplication(dcConfig, systemReplication)
-		if !strings.HasPrefix(dcConfig.ServerVersion, "3") && kc.HasStargates() {
+		if !cassandra.IsCassandra3(dcConfig.ServerVersion) && kc.HasStargates() {
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}

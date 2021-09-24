@@ -32,6 +32,10 @@ type jvmOptions struct {
 	AdditionalOptions []string `json:"additional-jvm-opts,omitempty"`
 }
 
+func IsCassandra3(version string) bool {
+	return strings.HasPrefix(version, "3.")
+}
+
 func isCassandra4(version string) bool {
 	return strings.HasPrefix(version, "4.0")
 }
