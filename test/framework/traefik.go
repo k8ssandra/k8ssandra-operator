@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/datastax/go-cassandra-native-protocol/client"
-	"github.com/datastax/go-cassandra-native-protocol/message"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -53,7 +52,7 @@ func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
 	return nil
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, stargateServiceName string) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, stargateServiceName, username, password string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
 	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
 	dest := filepath.Join(dir, "stargate-ingress.yaml")
@@ -72,25 +71,22 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	timeout := 1 * time.Minute
 	interval := 1 * time.Second
 	assert.Eventually(t, func() bool {
-		response, err := resty.NewRequest().Get(stargateHttp)
-		// This endpoint should be invoked with POST, we expect a 405 with GET
-		return err == nil && response.StatusCode() == http.StatusMethodNotAllowed
+		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
+		body := fmt.Sprintf("{\"username\": \"%s\", \"password\": \"%s\"}", username, password)
+		request := resty.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetBody(body)
+		response, err := request.Post(url)
+		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
 	assert.Eventually(t, func() bool {
-		cqlClient := client.NewCqlClient(stargateCql, nil)
-		if connection, err := cqlClient.Connect(context.Background()); err != nil {
-			return false
-		} else {
-			defer connection.Close()
-			startup := connection.NewStartupRequest(primitive.ProtocolVersion4, 1)
-			if response, err := connection.SendAndReceive(startup); err != nil {
-				return false
-			} else {
-				// We expect the server to reply with AUTHENTICATE
-				_, ok := response.Body.Message.(*message.Authenticate)
-				return ok
-			}
-		}
+		cqlClient := client.NewCqlClient(stargateCql, &client.AuthCredentials{
+			Username: username,
+			Password: password,
+		})
+		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
+		defer connection.Close()
+		return err == nil
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 

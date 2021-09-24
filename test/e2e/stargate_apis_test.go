@@ -237,21 +237,21 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, use
 	return tokenStr
 }
 
-func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName string) (string, string) {
-	superUserSecret := retrieveSuperuserSecret(t, f, ctx, k8sContext, namespace, clusterName)
+func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) (string, string) {
+	superUserSecret := retrieveSuperuserSecret(t, f, ctx, namespace, clusterName)
 	username := string(superUserSecret.Data["username"])
 	password := string(superUserSecret.Data["password"])
 	return username, password
 }
 
-func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName string) *corev1.Secret {
+func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) *corev1.Secret {
 	superUserSecret := &corev1.Secret{}
 	superUserSecretKey := framework.ClusterKey{
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      clusterName + "-superuser",
 		},
-		K8sContext: k8sContext,
+		K8sContext: "kind-k8ssandra-0",
 	}
 	err := f.Get(ctx, superUserSecretKey, superUserSecret)
 	require.NoError(t, err, "Failed to get superuser secret")

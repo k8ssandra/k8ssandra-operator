@@ -386,12 +386,12 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+	t.Log("retrieve database credentials")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
 
-	t.Log("retrieve database credentials from kind-k8ssandra-0")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication, namespace, "dc1", "default")
@@ -412,12 +412,12 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 		return stargate.Status.IsReady()
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate s1 to become ready")
 
-	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+	t.Log("retrieve database credentials")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
 
-	t.Log("retrieve database credentials from kind-k8ssandra-0")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-0", namespace, "test")
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 3}
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication, namespace, "dc1", "rack1", "rack2", "rack3")
@@ -626,17 +626,16 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
+	t.Log("retrieve database credentials")
+	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
+
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
 	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-1")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service", username, password)
 	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-1", namespace)
-
-	// FIXME credentials from kind-k8ssandra-1 are being used in kind-k8ssandra-0
-	t.Log("retrieve database credentials from kind-k8ssandra-1")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, "kind-k8ssandra-1", namespace, "test")
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
