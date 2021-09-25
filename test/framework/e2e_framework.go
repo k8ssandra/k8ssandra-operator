@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -339,36 +340,34 @@ func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
 }
 
 func (f *E2eFramework) DeployK8sClientConfigs(namespace string) error {
-	// Read from disk whatever the thing deployed..
-	kubeConfigFile := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
-
-	b, err := ioutil.ReadFile(kubeConfigFile)
+	baseDir, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		return err
 	}
 
-	apiConfig, err := clientcmd.Load(b)
-	if err != nil {
-		return err
-	}
-	for _, ctx := range apiConfig.Contexts {
-		// Deploy Secrets from here
-		cCfg := api.ClientConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ctx.Cluster,
-				Namespace: namespace,
-			},
-			Spec: api.ClientConfigSpec{
-				ContextName: ctx.Cluster,
-				KubeConfigSecret: corev1.LocalObjectReference{
-					Name: "k8s-contexts",
-				},
-			},
-		}
-		err = f.Client.Create(context.Background(), &cCfg)
+	i := 0
+	for k8sContext, _ := range f.remoteClients {
+		f.logger.Info("Creating ClientConfig", "cluster", k8sContext)
+		srcCfg := fmt.Sprintf("k8ssandra-%d.yaml", i)
+		cmd := exec.Command(
+			filepath.Join("scripts", "create-clientconfig.sh"),
+			"--src-kubeconfig", filepath.Join("build", "kubeconfigs", srcCfg),
+			"--dest-kubeconfig", filepath.Join("build", "kubeconfigs", "k8ssandra-0.yaml"),
+			"--in-cluster-kubeconfig", filepath.Join("build", "kubeconfigs", "updated", srcCfg),
+			"--output-dir", filepath.Join("build", "clientconfigs", srcCfg),
+			"--namespace", namespace)
+		cmd.Dir = baseDir
+
+		fmt.Println(cmd)
+
+		output, err := cmd.CombinedOutput()
+		fmt.Println(string(output))
+
 		if err != nil {
 			return err
 		}
+
+		i++
 	}
 
 	return nil

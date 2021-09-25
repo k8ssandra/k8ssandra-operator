@@ -14,7 +14,7 @@
 # TODO Accept multiple values for the src-context option and generate a kubeconfig with
 #      entries for each
 
-set -ex
+set -e
 
 getopt_version=$(getopt -V)
 if [[ "$getopt_version" == " --" ]]; then
