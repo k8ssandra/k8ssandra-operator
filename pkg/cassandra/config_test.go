@@ -3,8 +3,9 @@ package cassandra
 import (
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"reflect"
 	"testing"
 )
 
@@ -106,10 +107,10 @@ func TestApplySystemReplication(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		ApplySystemReplication(tc.dcConfig, tc.replication)
-		if !reflect.DeepEqual(tc.want, tc.dcConfig) {
-			t.Errorf("%s - expected: %+v, got: %+v", tc.name, *tc.want, *tc.dcConfig)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ApplySystemReplication(tc.dcConfig, tc.replication)
+			require.Equal(t, tc.want, tc.dcConfig)
+		})
 	}
 }
 
@@ -126,8 +127,8 @@ func TestCreateJsonConfig(t *testing.T) {
 
 	tests := []test{
 		{
-			name:             "concurrent_reads, concurrent_writes, concurrent_counter_writes",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] concurrent_reads, concurrent_writes, concurrent_counter_writes",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					ConcurrentReads:         intPtr(8),
@@ -137,6 +138,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+                "num_tokens": 16,
                 "concurrent_reads": 8,
                 "concurrent_writes": 16,
                 "concurrent_counter_writes": 4
@@ -144,14 +146,35 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "heap size - Cassandra 4.0",
-			cassandraVersion: "4.0",
+			name:             "[3.11.11] heap size",
+			cassandraVersion: "3.11.11",
 			config: &api.CassandraConfig{
 				JvmOptions: &api.JvmOptions{
 					HeapSize: &heapSize,
 				},
 			},
 			want: `{
+              "cassandra-yaml": {
+                "num_tokens": 256
+              },
+              "jvm-options": {
+                "initial_heap_size": 1073741824,
+                "max_heap_size": 1073741824
+              }
+            }`,
+		},
+		{
+			name:             "[4.0.0] heap size",
+			cassandraVersion: "4.0.0",
+			config: &api.CassandraConfig{
+				JvmOptions: &api.JvmOptions{
+					HeapSize: &heapSize,
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "num_tokens": 16
+              },
               "jvm-server-options": {
                 "initial_heap_size": 1073741824,
                 "max_heap_size": 1073741824
@@ -159,8 +182,8 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "concurrent_reads and concurrent_writes with system replication",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] concurrent_reads and concurrent_writes with system replication",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					ConcurrentReads:  intPtr(8),
@@ -175,6 +198,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+                "num_tokens": 16,
                 "concurrent_reads": 8,
                 "concurrent_writes": 16
               },
@@ -187,8 +211,8 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "auto_snapshot, memtable_flush_writers, commitlog_segment_size_in_mb",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] auto_snapshot, memtable_flush_writers, commitlog_segment_size_in_mb",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					AutoSnapshot:           boolPtr(true),
@@ -198,6 +222,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+                "num_tokens": 16,
                 "auto_snapshot": true,
                 "memtable_flush_writers": 10,
                 "commitlog_segment_size_in_mb": 8192
@@ -205,8 +230,8 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "concurrent_compactors, compaction_throughput_mb_per_sec, sstable_preemptive_open_interval_in_mb",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] concurrent_compactors, compaction_throughput_mb_per_sec, sstable_preemptive_open_interval_in_mb",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					ConcurrentCompactors:            intPtr(4),
@@ -216,6 +241,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+				"num_tokens": 16,
                 "concurrent_compactors": 4,
                 "compaction_throughput_mb_per_sec": 64,
                 "sstable_preemptive_open_interval_in_mb": 0
@@ -223,8 +249,8 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "key_cache_size_in_mb, counter_cache_size_in_mb, prepared_statements_cache_size_mb, slow_query_log_timeout_in_ms",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] key_cache_size_in_mb, counter_cache_size_in_mb, prepared_statements_cache_size_mb, slow_query_log_timeout_in_ms",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					KeyCacheSizeMb:                intPtr(100),
@@ -235,6 +261,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+				"num_tokens": 16,
                 "key_cache_size_in_mb": 100,
                 "counter_cache_size_in_mb": 50,
                 "prepared_statements_cache_size_mb": 180,
@@ -243,8 +270,8 @@ func TestCreateJsonConfig(t *testing.T) {
             }`,
 		},
 		{
-			name:             "file_cache_size_in_mb, row_cache_size_in_mb",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] file_cache_size_in_mb, row_cache_size_in_mb",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					FileCacheSizeMb: intPtr(500),
@@ -253,6 +280,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+				"num_tokens": 16,
                 "file_cache_size_in_mb": 500,
                 "row_cache_size_in_mb": 100
               }
@@ -269,14 +297,15 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
+				"num_tokens": 256,
                 "start_rpc": false,
                 "thrift_prepared_statements_cache_size_mb": 1
               }
             }`,
 		},
 		{
-			name:             "[4.0] start_rpc, thrift_prepared_statements_cache_size_mb",
-			cassandraVersion: "4.0",
+			name:             "[4.0.0] start_rpc, thrift_prepared_statements_cache_size_mb",
+			cassandraVersion: "4.0.0",
 			config: &api.CassandraConfig{
 				CassandraYaml: &api.CassandraYaml{
 					StartRpc:                           boolPtr(false),
@@ -284,7 +313,51 @@ func TestCreateJsonConfig(t *testing.T) {
 				},
 			},
 			want: `{
-              "cassandra-yaml": { 
+              "cassandra-yaml": {
+				"num_tokens": 16
+              }
+            }`,
+		},
+		{
+			name:             "[3.11.11] num_tokens",
+			cassandraVersion: "3.11.11",
+			config: &api.CassandraConfig{
+				CassandraYaml: &api.CassandraYaml{
+					NumTokens: intPtr(32),
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "num_tokens": 32
+              }
+            }`,
+		},
+		{
+			name:             "[4.0.0] num_tokens",
+			cassandraVersion: "4.0.0",
+			config: &api.CassandraConfig{
+				CassandraYaml: &api.CassandraYaml{
+					NumTokens: intPtr(32),
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "num_tokens": 32
+              }
+            }`,
+		},
+		{
+			name:             "[4.0.0] allocate_tokens_for_local_replication_factor",
+			cassandraVersion: "4.0.0",
+			config: &api.CassandraConfig{
+				CassandraYaml: &api.CassandraYaml{
+					AllocateTokensForLocalReplicationFactor: intPtr(5),
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "allocate_tokens_for_local_replication_factor": 5,
+				"num_tokens": 16
               }
             }`,
 		},
@@ -307,29 +380,18 @@ func TestCreateJsonConfig(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		var err error
-		tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion)
-		if err != nil {
-			t.Errorf("%s - failed to create json dcConfig: %s", tc.name, err)
-			continue
-		}
-
-		expected, err := gabs.ParseJSON([]byte(tc.want))
-		if err != nil {
-			t.Errorf("%s - failed to parse expected value: %s", tc.name, err)
-			continue
-		}
-
-		actual, err := gabs.ParseJSON(tc.got)
-		if err != nil {
-			t.Errorf("%s - failed to parse actual value: %s", tc.name, err)
-			continue
-		}
-
-		if !reflect.DeepEqual(expected, actual) {
-			t.Errorf("%s - wanted: %s, got: %s", tc.name, expected, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			var err error
+			tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion)
+			require.NoError(t, err, "failed to create json dcConfig")
+			expected, err := gabs.ParseJSON([]byte(tc.want))
+			require.NoError(t, err, "failed to parse expected value")
+			actual, err := gabs.ParseJSON(tc.got)
+			require.NoError(t, err, "failed to parse actual value")
+			assert.Equal(t, expected, actual)
+		})
 	}
+
 }
 
 func intPtr(n int) *int {

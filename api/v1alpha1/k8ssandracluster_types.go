@@ -248,6 +248,12 @@ type CassandraYaml struct {
 	//PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
 
 	// +optional
+	NumTokens *int `json:"num_tokens,omitempty"`
+
+	// +optional
+	AllocateTokensForLocalReplicationFactor *int `json:"allocate_tokens_for_local_replication_factor,omitempty"`
+
+	// +optional
 	ConcurrentReads *int `json:"concurrent_reads,omitempty"`
 
 	// +optional

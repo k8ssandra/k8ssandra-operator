@@ -2,7 +2,7 @@ package cassandra
 
 import (
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"reflect"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -94,9 +94,9 @@ func TestComputeSystemReplication(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc.got = ComputeSystemReplication(tc.kluster)
-		if !reflect.DeepEqual(tc.want, tc.got) {
-			t.Errorf("%s - expected: %+v, got: %+v", tc.name, tc.want, tc.got)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			tc.got = ComputeSystemReplication(tc.kluster)
+			require.Equal(t, tc.want, tc.got)
+		})
 	}
 }
