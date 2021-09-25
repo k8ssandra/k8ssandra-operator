@@ -3,6 +3,8 @@ package cassandra
 import (
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"reflect"
 	"testing"
@@ -379,29 +381,18 @@ func TestCreateJsonConfig(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		var err error
-		tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion)
-		if err != nil {
-			t.Errorf("%s - failed to create json dcConfig: %s", tc.name, err)
-			continue
-		}
-
-		expected, err := gabs.ParseJSON([]byte(tc.want))
-		if err != nil {
-			t.Errorf("%s - failed to parse expected value: %s", tc.name, err)
-			continue
-		}
-
-		actual, err := gabs.ParseJSON(tc.got)
-		if err != nil {
-			t.Errorf("%s - failed to parse actual value: %s", tc.name, err)
-			continue
-		}
-
-		if !reflect.DeepEqual(expected, actual) {
-			t.Errorf("%s - wanted: %s, got: %s", tc.name, expected, actual)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			var err error
+			tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion)
+			require.NoError(t, err, "failed to create json dcConfig")
+			expected, err := gabs.ParseJSON([]byte(tc.want))
+			require.NoError(t, err, "failed to parse expected value")
+			actual, err := gabs.ParseJSON(tc.got)
+			require.NoError(t, err, "failed to parse actual value")
+			assert.Equal(t, expected, actual)
+		})
 	}
+
 }
 
 func intPtr(n int) *int {
