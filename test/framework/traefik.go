@@ -70,16 +70,16 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	stargateCql := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
-		body := fmt.Sprintf("{\"username\": \"%s\", \"password\": \"%s\"}", username, password)
+		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetBody(body)
 		response, err := request.Post(url)
 		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		cqlClient := client.NewCqlClient(stargateCql, &client.AuthCredentials{
 			Username: username,
 			Password: password,

@@ -8,6 +8,7 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,13 +18,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"net/http"
 	neturl "net/url"
-	"os/exec"
 	"strconv"
 	"testing"
 	"time"
 )
 
-func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int, namespace string, dcName string, stargateRacks ...string) {
+func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int) {
 	t.Run(fmt.Sprintf("TestStargateApis[%d]", k8sContextIdx), func(t *testing.T) {
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
 			t.Log("test Stargate native API in context " + k8sContextName)
@@ -33,30 +33,18 @@ func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, 
 			t.Log("test Stargate REST API in context " + k8sContextName)
 			testStargateRestApis(t, k8sContextIdx, username, password, replication)
 		})
-		if t.Failed() {
-			for _, rack := range stargateRacks {
-				dumpStargateLogs(k8sContextName, namespace, dcName, rack)
-			}
-		}
 	})
-}
-
-func dumpStargateLogs(k8sContextName string, namespace string, dc string, rack string) {
-	deploymentName := fmt.Sprintf("deployment.apps/test-%s-%s-stargate-deployment", dc, rack)
-	cmd := exec.Command("kubectl", "logs", deploymentName, "-n", namespace, "--context", k8sContextName)
-	output, _ := cmd.CombinedOutput()
-	println()
-	fmt.Println("=============", "BEGIN STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
-	fmt.Println(string(output))
-	fmt.Println("=============", "END STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
-	println()
 }
 
 func testStargateRestApis(t *testing.T, k8sContextIdx int, username string, password string, replication map[string]int) {
 	restClient := resty.New()
 	token := authenticate(t, restClient, k8sContextIdx, username, password)
-	testSchemaApi(t, restClient, k8sContextIdx, token, replication)
-	testDocumentApi(t, restClient, k8sContextIdx, token, replication)
+	t.Run("TestSchemaApi", func(t *testing.T) {
+		testSchemaApi(t, restClient, k8sContextIdx, token, replication)
+	})
+	t.Run("TestDocumentApi", func(t *testing.T) {
+		testDocumentApi(t, restClient, k8sContextIdx, token, replication)
+	})
 }
 
 func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int, username string, password string, replication map[string]int) {
@@ -98,6 +86,16 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 	response, err := request.Post(keyspaceUrl)
 	require.NoError(t, err, "Create keyspace with Schema API failed")
 	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create keyspace request to return 201")
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	require.Eventually(t, func() bool {
+		keyspaceUrl = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v", k8sContextIdx, keyspaceName)
+		request = restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token)
+		response, err = request.Get(keyspaceUrl)
+		return err == nil && response.StatusCode() == http.StatusOK
+	}, timeout, interval)
 	tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
 	tableJson := fmt.Sprintf(`{ "name": "%v",
   "columnDefinitions": [
@@ -114,6 +112,14 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 	response, err = request.Post(tableUrl)
 	require.NoError(t, err, "Create table with Schema API failed")
 	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create table request to return 201")
+	require.Eventually(t, func() bool {
+		tableUrl = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
+		request = restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token)
+		response, err = request.Get(tableUrl)
+		return err == nil && response.StatusCode() == http.StatusOK
+	}, timeout, interval)
 }
 
 func dropKeyspaceRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, keyspaceName string) {
@@ -168,8 +174,18 @@ func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextI
 		SetHeader("X-Cassandra-Token", token).
 		SetBody(documentNamespaceJson)
 	response, err := request.Post(url)
-	assert.NoError(t, err, "Failed creating Stargate document namespace")
+	require.NoError(t, err, "Failed creating Stargate document namespace")
 	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create namespace request to return 201")
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	require.Eventually(t, func() bool {
+		url = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces/%v", k8sContextIdx, documentNamespace)
+		request = restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token)
+		response, err = request.Get(url)
+		return err == nil && response.StatusCode() == http.StatusOK
+	}, timeout, interval)
 	return documentNamespace
 }
 
@@ -190,7 +206,7 @@ const (
 
 func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace, documentId string) string {
 	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/namespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
-	awesomeMovieDocument := fmt.Sprintf("{\"Director\":\"%s\",\"Name\":\"%s\"}", awesomeMovieDirector, awesomeMovieName)
+	awesomeMovieDocument := map[string]string{"Director": awesomeMovieDirector, "Name": awesomeMovieName}
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-Cassandra-Token", token).
@@ -209,18 +225,20 @@ func readDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, tok
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-Cassandra-Token", token).
 		Get(url)
-	assert.NoError(t, err, "Failed to retrieve Stargate document")
+	require.NoError(t, err, "Failed to retrieve Stargate document")
 	var genericJson map[string]interface{}
 	err = json.Unmarshal(response.Body(), &genericJson)
-	assert.NoError(t, err, "Failed to decode Stargate response")
+	require.NoError(t, err, "Failed to decode Stargate response")
 	assert.Equal(t, documentId, genericJson["documentId"], "Expected JSON payload to contain a field documentId")
+	require.NotNil(t, genericJson["data"], "Expected JSON payload to contain a field data")
+	require.IsType(t, map[string]interface{}{}, genericJson["data"], "Expected field data to be map[string]interface{}")
 	assert.Equal(t, awesomeMovieDirector, genericJson["data"].(map[string]interface{})["Director"], "Expected JSON payload to contain a field data.Director")
 	assert.Equal(t, awesomeMovieName, genericJson["data"].(map[string]interface{})["Name"], "Expected JSON payload to contain a field data.Name")
 }
 
 func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, username, password string) string {
 	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
-	body := fmt.Sprintf("{\"username\": \"%s\", \"password\": \"%s\"}", username, password)
+	body := map[string]string{"username": username, "password": password}
 	request := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
 		SetBody(body)
@@ -245,16 +263,23 @@ func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx co
 }
 
 func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) *corev1.Secret {
-	superUserSecret := &corev1.Secret{}
-	superUserSecretKey := framework.ClusterKey{
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      clusterName + "-superuser",
-		},
-		K8sContext: "kind-k8ssandra-0",
-	}
-	err := f.Get(ctx, superUserSecretKey, superUserSecret)
-	require.NoError(t, err, "Failed to get superuser secret")
+	var superUserSecret *corev1.Secret
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	require.Eventually(t, func() bool {
+		superUserSecret = &corev1.Secret{}
+		superUserSecretKey := framework.ClusterKey{
+			NamespacedName: types.NamespacedName{
+				Namespace: namespace,
+				Name:      secret.DefaultSuperuserSecretName(clusterName),
+			},
+			K8sContext: f.ControlPlaneContext,
+		}
+		err := f.Get(ctx, superUserSecretKey, superUserSecret)
+		return err == nil &&
+			len(superUserSecret.Data["username"]) >= 0 &&
+			len(superUserSecret.Data["password"]) >= 0
+	}, timeout, interval, "Failed to retrieve superuser secret")
 	return superUserSecret
 }
 
@@ -265,7 +290,7 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 		Password: password,
 	})
 	cqlClient.ConnectTimeout = 30 * time.Second
-	cqlClient.ReadTimeout = 60 * time.Second
+	cqlClient.ReadTimeout = 3 * time.Minute
 	connection, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
 	require.NoError(t, err, "Failed to connect via CQL native port to %s", contactPoint)
 	return connection

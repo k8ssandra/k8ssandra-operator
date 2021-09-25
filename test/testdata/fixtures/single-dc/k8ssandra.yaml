@@ -24,6 +24,18 @@ spec:
             heapSize: 512M
         stargate:
           size: 1
-          heapSize: 256M
+          heapSize: 512M
+          livenessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          readinessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
           cassandraConfigMapRef:
             name: cassandra-config
