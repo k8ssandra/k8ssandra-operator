@@ -17,9 +17,40 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 	"net/http"
 	neturl "net/url"
+	"os/exec"
 	"strconv"
 	"testing"
+	"time"
 )
+
+func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int, namespace string, dcName string, stargateRacks ...string) {
+	t.Run(fmt.Sprintf("TestStargateApis[%d]", k8sContextIdx), func(t *testing.T) {
+		t.Run("TestStargateNativeApi", func(t *testing.T) {
+			t.Log("test Stargate native API in context " + k8sContextName)
+			testStargateNativeApi(t, ctx, k8sContextIdx, username, password, replication)
+		})
+		t.Run("TestStargateRestApi", func(t *testing.T) {
+			t.Log("test Stargate REST API in context " + k8sContextName)
+			testStargateRestApis(t, k8sContextIdx, username, password, replication)
+		})
+		if t.Failed() {
+			for _, rack := range stargateRacks {
+				dumpStargateLogs(k8sContextName, namespace, dcName, rack)
+			}
+		}
+	})
+}
+
+func dumpStargateLogs(k8sContextName string, namespace string, dc string, rack string) {
+	deploymentName := fmt.Sprintf("deployment.apps/test-%s-%s-stargate-deployment", dc, rack)
+	cmd := exec.Command("kubectl", "logs", deploymentName, "-n", namespace, "--context", k8sContextName)
+	output, _ := cmd.CombinedOutput()
+	println()
+	fmt.Println("=============", "BEGIN STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
+	fmt.Println(string(output))
+	fmt.Println("=============", "END STARGATE LOGS", dc, rack, "context", k8sContextName, "namespace", namespace, "=============")
+	println()
+}
 
 func testStargateRestApis(t *testing.T, k8sContextIdx int, username string, password string, replication map[string]int) {
 	restClient := resty.New()
@@ -168,7 +199,7 @@ func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, to
 	assert.NoError(t, err, "Failed writing Stargate document")
 	stargateResponse := string(response.Body())
 	expectedResponse := fmt.Sprintf("{\"documentId\":\"%s\"}", documentId)
-	assert.Equal(t, expectedResponse, stargateResponse, "Unexpected response from Stargate: %s", stargateResponse)
+	assert.Equal(t, expectedResponse, stargateResponse, "Unexpected response from Stargate: '%s'", stargateResponse)
 	return documentId
 }
 
@@ -206,21 +237,21 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, use
 	return tokenStr
 }
 
-func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName string) (string, string) {
-	superUserSecret := retrieveSuperuserSecret(t, f, ctx, k8sContext, namespace, clusterName)
+func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) (string, string) {
+	superUserSecret := retrieveSuperuserSecret(t, f, ctx, namespace, clusterName)
 	username := string(superUserSecret.Data["username"])
 	password := string(superUserSecret.Data["password"])
 	return username, password
 }
 
-func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName string) *corev1.Secret {
+func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) *corev1.Secret {
 	superUserSecret := &corev1.Secret{}
 	superUserSecretKey := framework.ClusterKey{
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      clusterName + "-superuser",
 		},
-		K8sContext: k8sContext,
+		K8sContext: "kind-k8ssandra-0",
 	}
 	err := f.Get(ctx, superUserSecretKey, superUserSecret)
 	require.NoError(t, err, "Failed to get superuser secret")
@@ -233,6 +264,8 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 		Username: username,
 		Password: password,
 	})
+	cqlClient.ConnectTimeout = 30 * time.Second
+	cqlClient.ReadTimeout = 60 * time.Second
 	connection, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
 	require.NoError(t, err, "Failed to connect via CQL native port to %s", contactPoint)
 	return connection

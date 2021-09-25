@@ -5,8 +5,7 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.10"
-    serverImage: emerkle826/cass-mgmtapi:3.11.11-v0.1.28
+    serverVersion: "3.11.11"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -40,10 +39,10 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: "512M"
+        heapSize: "384M"
     resources:
       limits:
-        memory: 1024M
+        memory: 512Mi
     networking:
       hostNetwork: true
     datacenters:
@@ -66,12 +65,12 @@ spec:
                   operator: In
                   values:
                     - rack3
-    heapSize: 512Mi
+    heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
     resources:
       limits:
-        memory: 1024M
+        memory: 512Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10

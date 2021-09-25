@@ -12,9 +12,24 @@ func LogOutput(enabled bool) {
 	logOutput = enabled
 }
 
-func Build(dir string) (*bytes.Buffer, error) {
+func BuildDir(dir string) (*bytes.Buffer, error) {
 	cmd := exec.Command("kustomize", "build")
 	cmd.Dir = dir
+
+	fmt.Println(cmd)
+
+	output, err := cmd.CombinedOutput()
+	buffer := bytes.NewBuffer(output)
+
+	if logOutput {
+		fmt.Println(string(output))
+	}
+
+	return buffer, err
+}
+
+func BuildUrl(url string) (*bytes.Buffer, error) {
+	cmd := exec.Command("kustomize", "build", url)
 
 	fmt.Println(cmd)
 

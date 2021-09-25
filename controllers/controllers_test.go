@@ -34,10 +34,11 @@ import (
 )
 
 const (
-	timeout          = time.Second * 5
-	interval         = time.Millisecond * 500
-	clustersToCreate = 3
-	clusterProtoName = "cluster-%d"
+	timeout             = time.Second * 5
+	interval            = time.Millisecond * 500
+	clustersToCreate    = 3
+	clusterProtoName    = "cluster-%d"
+	cassOperatorVersion = "v1.8.0-rc.2"
 )
 
 var (
@@ -300,7 +301,7 @@ func prepareCRDs() error {
 	}
 
 	k8ssadraOperatorSrcDir := filepath.Join("..", "config", "crd")
-	buf, err := kustomize.Build(k8ssadraOperatorSrcDir)
+	buf, err := kustomize.BuildDir(k8ssadraOperatorSrcDir)
 	if err != nil {
 		return err
 	}
@@ -309,8 +310,8 @@ func prepareCRDs() error {
 		return err
 	}
 
-	cassOperatorSrcDir := filepath.Join("..", "config", "cass-operator-crd")
-	buf, err = kustomize.Build(cassOperatorSrcDir)
+	cassOperatorCrd := "github.com/k8ssandra/cass-operator/config/crd?ref=" + cassOperatorVersion
+	buf, err = kustomize.BuildUrl(cassOperatorCrd)
 	if err != nil {
 		return err
 	}

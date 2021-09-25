@@ -445,7 +445,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthKeyspace(
 		if keyspaces, err := managementApi.ListKeyspaces(stargateAuthKeyspace); err != nil {
 			return err
 		} else if len(keyspaces) == 0 {
-			// Stargate auth keyspace doesn't exist, we need to create it.
+			logger.Info(fmt.Sprintf("keyspace %s does not exist in cluster %v, creating it", stargateAuthKeyspace, dc.ClusterName))
 			if err := managementApi.CreateKeyspaceIfNotExists(stargateAuthKeyspace, desiredReplication); err != nil {
 				logger.Error(err, fmt.Sprintf("Failed to create keyspace %s", stargateAuthKeyspace))
 				return err
@@ -456,6 +456,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthKeyspace(
 		} else {
 			// Stargate keyspace exists, altering it to match the desired replication
 			// TODO: Check if the keyspace has the right replication settings before altering it. Requires a new mgmt api operation.
+			logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v, altering it", stargateAuthKeyspace, dc.ClusterName))
 			logger.Info(fmt.Sprintf("Keyspace %s already exists: %s", stargateAuthKeyspace, keyspaces[0]))
 			if err := managementApi.AlterKeyspace(stargateAuthKeyspace, desiredReplication); err != nil {
 				logger.Error(err, fmt.Sprintf("Failed to alter keyspace %s", stargateAuthKeyspace))
