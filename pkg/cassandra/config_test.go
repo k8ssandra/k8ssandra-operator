@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"reflect"
 	"testing"
 )
 
@@ -108,10 +107,10 @@ func TestApplySystemReplication(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		ApplySystemReplication(tc.dcConfig, tc.replication)
-		if !reflect.DeepEqual(tc.want, tc.dcConfig) {
-			t.Errorf("%s - expected: %+v, got: %+v", tc.name, *tc.want, *tc.dcConfig)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			ApplySystemReplication(tc.dcConfig, tc.replication)
+			require.Equal(t, tc.want, tc.dcConfig)
+		})
 	}
 }
 

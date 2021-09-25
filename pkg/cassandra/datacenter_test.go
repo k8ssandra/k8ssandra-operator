@@ -1,7 +1,7 @@
 package cassandra
 
 import (
-	"reflect"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -232,9 +232,9 @@ func TestCoalesce(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc.got = Coalesce(tc.clusterTemplate, tc.dcTemplate)
-		if !reflect.DeepEqual(tc.got, tc.want) {
-			t.Errorf("%s - expected: %+v, got: %+v", tc.name, tc.want, tc.got)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			tc.got = Coalesce(tc.clusterTemplate, tc.dcTemplate)
+			require.Equal(t, tc.want, tc.got)
+		})
 	}
 }
