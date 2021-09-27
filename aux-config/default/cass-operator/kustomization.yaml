@@ -1,4 +1,4 @@
 namespace: default
 resources:
-- github.com/k8ssandra/cass-operator/config/default?ref=v1.8.0-rc.1
+- github.com/k8ssandra/cass-operator/config/default?ref=v1.8.0-rc.2
 # namePrefix: cass-operator- # Can be removed in this case because cass-operator already has a namePrefix defined in the repo.

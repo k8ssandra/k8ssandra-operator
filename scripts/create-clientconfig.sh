@@ -152,12 +152,13 @@ users:
     token: $sa_token
 EOF
 
-output_secret="$src_context-config"
+output_secret=$(echo "$src_context-config" | tr '_' '-')
 echo "Creating secret $output_secret"
 
+kubectl $dest_kubeconfig_opt $dest_context_opt $namespace_opt delete secret $output_secret || true
 kubectl $dest_kubeconfig_opt $dest_context_opt $namespace_opt create secret generic $output_secret --from-file="$output_kubeconfig"
 
-clientconfig_name="$src_context"
+clientconfig_name=$(echo "$src_context" | tr '_' '-')
 clientconfig_path="${output_dir}/${clientconfig_name}.yaml"
 echo "Creating ClientConfig $clientconfig_path"
 cat > "$clientconfig_path" <<EOF
