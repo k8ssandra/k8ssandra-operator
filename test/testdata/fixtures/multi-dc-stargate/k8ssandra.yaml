@@ -70,7 +70,7 @@ spec:
       name: cassandra-config
     resources:
       limits:
-        memory: 800
+        memory: 800Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10
