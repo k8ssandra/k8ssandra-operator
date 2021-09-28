@@ -39,7 +39,7 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: "512M"
+        heapSize: "384M"
     resources:
       limits:
         memory: 800Mi
@@ -65,7 +65,7 @@ spec:
                   operator: In
                   values:
                     - rack3
-    heapSize: 512M
+    heapSize: 384M
     cassandraConfigMapRef:
       name: cassandra-config
     resources:
