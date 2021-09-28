@@ -45,11 +45,13 @@ Two base `make` commands are provided that deploy a basic kind-based Kubernetes 
 Each of these commands will do the following:
 
 * Create the kind-based cluster(s)
-* Install cert-manager to the cluster(s)
-* Install k8ssandra-operator and cass-operator to the cluster(s)
-* Install relevant CRDs to the cluster(s)
 
-Using this method, all installations are done in the `default` namespace.
+Across the cluster:
+
+* Install cert-manager in it's own namespace
+* Install cass-operator in the `default` namespace
+* Build the k8ssandra-operator from source, load the image into the kind nodes, and install it in the `default` namespace
+* Install relevant CRDs
 
 At completion, the cluster is now ready to accept a `K8ssandraCluster` deployment.
 
