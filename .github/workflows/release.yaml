@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 jobs:
-  release_cass_operator:
+  release_k8ssandra_operator:
     name: Release Docker Image
     runs-on: ubuntu-latest
     steps:
