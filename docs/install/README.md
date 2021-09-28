@@ -1,4 +1,6 @@
-# Overview 
+# Install Guide
+
+## Overview 
 There are a couple of options for deploying the operator:
 
 * Kustomize
@@ -34,26 +36,342 @@ By default kind clusters run on the same Docker network which means we will have
 
 [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) lives in the k8ssandra-operator repo. It is used to configure access to remote clusters. 
 
+## Quick Start
 
-# Single Cluster Install with Kustomize
-We will first look at a single cluster install to demonstrate that while K8ssandra Operator is designed for multi-clluster use, it can be used in a single cluster without any extran configuration.
+If you're interested in getting running as quickly as possible, there's a number of helper scripts that can be used to greatly reduce the steps to deploy a local K8ssandra cluster via kind for testing purposes.
 
-## Automated Setup
-Run `make single-up` to create a single kind cluster and deploy k8ssandra-operator along with its dependencies.  
-Check that there are two Deployments. The output should look similar to this:
+Two base `make` commands are provided that deploy a basic kind-based Kubernetes cluster(s).  These commands encapsulate the more detailed step-by-step installation instructions otherwise captured in this document.
 
+Each of these commands will do the following:
+
+* Create the kind-based cluster(s)
+* Install cert-manager to the cluster(s)
+* Install k8ssandra-operator and cass-operator to the cluster(s)
+* Install relevant CRDs to the cluster(s)
+
+Using this method, all installations are done in the `default` namespace.
+
+At completion, the cluster is now ready to accept a `K8ssandraCluster` deployment.
+
+**Note: if a k8ssandra-0 and/or k8ssandra-1 kind cluster already exists, running `make single-up` or `make multi-up` will delete and recreate them.**
+
+### Single Cluster
+
+Deploy a single kind based Kubernetes cluster.
+
+```sh
+make single-up
 ```
-kubectl get deployment
-NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-cass-operator        1/1     1            1           2m
-k8ssandra-operator   1/1     1            1           2m
+
+Once cluster should be available:
+
+```sh
+kubectx
 ```
 
-The operator will be deployed in the `default` namespace using this procedure.
+```sh
+kind-k8ssandra-0
+```
 
-**Note: if a k8ssandra-0 kind cluster already exists, running `make single-up` will delete and recreate it.**
+The cluster should consist of the following nodes:
 
-## Manual Setup
+```sh
+NAME                        STATUS   ROLES                  AGE     VERSION
+k8ssandra-0-control-plane   Ready    control-plane,master   3m24s   v1.21.2
+k8ssandra-0-worker          Ready    <none>                 2m53s   v1.21.2
+k8ssandra-0-worker2         Ready    <none>                 3m5s    v1.21.2
+k8ssandra-0-worker3         Ready    <none>                 2m53s   v1.21.2
+k8ssandra-0-worker4         Ready    <none>                 2m53s   v1.21.2
+```
+
+Once the Kubernetes cluster is ready, deploy a `K8ssandraCluster` like:
+
+```sh
+cat <<EOF | kubectl apply -f -
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "4.0.0"
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 3
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heapSize: 512M
+        stargate:
+          size: 1
+          heapSize: 256M
+EOF
+```
+
+Confirm that the resource has been created:
+
+```sh
+kubectl get K8ssandraClusters
+```
+
+```sh
+NAME   AGE
+demo   45s
+```
+
+```sh
+kubectl describe K8ssandraCluster demo
+```
+
+```sh
+Name:         demo
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  k8ssandra.io/v1alpha1
+Kind:         K8ssandraCluster
+...
+Status:
+  Datacenters:
+    dc1:
+      Cassandra:
+        Cassandra Operator Progress:  Updating
+        Node Statuses:
+Events:  <none>
+```
+
+Monitor the status of the deployment, eventually resulting in all of the resources being in the `Ready` state:
+
+```sh
+kubectl describe K8ssandraCluster demo
+```
+
+```sh
+Name:         demo
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  k8ssandra.io/v1alpha1
+Kind:         K8ssandraCluster
+...
+Status:
+  Datacenters:
+    dc1:
+      Cassandra:
+        Cassandra Operator Progress:  Ready
+      ...
+      Stargate:
+        Available Replicas:  1
+        Conditions:
+          Last Transition Time:  2021-09-28T03:32:07Z
+          Status:                True
+          Type:                  Ready
+        Deployment Refs:
+          demo-dc1-default-stargate-deployment
+        Progress:              Running
+        Ready Replicas:        1
+        Ready Replicas Ratio:  1/1
+        Replicas:              1
+        Service Ref:           demo-dc1-stargate-service
+        Updated Replicas:      1
+Events:                        <none>
+```
+
+### Multi-Cluster
+
+Deploy two kind based Kubernetes clusters with:
+
+```sh
+make multi-up
+```
+
+Two clusters should be available:
+
+```sh
+kubectx
+```
+
+```sh
+kind-k8ssandra-0
+kind-k8ssandra-1
+```
+
+Each cluster should consist of the following nodes:
+
+kind-k8ssandra-0:
+
+```sh
+NAME                        STATUS   ROLES                  AGE     VERSION
+k8ssandra-0-control-plane   Ready    control-plane,master   9m20s   v1.21.2
+k8ssandra-0-worker          Ready    <none>                 8m49s   v1.21.2
+k8ssandra-0-worker2         Ready    <none>                 8m49s   v1.21.2
+k8ssandra-0-worker3         Ready    <none>                 8m48s   v1.21.2
+k8ssandra-0-worker4         Ready    <none>                 8m49s   v1.21.2
+```
+
+kind-k8ssandra-1
+
+```sh
+NAME                        STATUS   ROLES                  AGE     VERSION
+k8ssandra-1-control-plane   Ready    control-plane,master   9m51s   v1.21.2
+k8ssandra-1-worker          Ready    <none>                 9m32s   v1.21.2
+k8ssandra-1-worker2         Ready    <none>                 9m20s   v1.21.2
+k8ssandra-1-worker3         Ready    <none>                 9m32s   v1.21.2
+k8ssandra-1-worker4         Ready    <none>                 9m20s   v1.21.2
+```
+
+You're now ready to deploy a `K8ssandraCluster`.
+
+Set your context to the control-plane cluster (`kind-k8ssandra-0`):
+
+```sh
+kubectx kind-k8ssandra-0
+```
+
+```sh
+Switched to context "kind-k8ssandra-0".
+```
+
+Deploy the `K8ssandraCluster` resource:
+
+```sh
+cat <<EOF | kubectl apply -f -
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "3.11.11"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+    config:
+      jvmOptions:
+        heapSize: 512M
+    networking:
+      hostNetwork: true    
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 3
+        stargate:
+          size: 1
+          heapSize: 256M
+      - metadata:
+          name: dc2
+        k8sContext: kind-k8ssandra-1
+        size: 3
+        stargate:
+          size: 1
+          heapSize: 256M 
+EOF
+```
+
+Confirm that the resource has been created:
+
+```sh
+kubectl get K8ssandraClusters
+```
+
+```sh
+NAME   AGE
+demo   45s
+```
+
+```sh
+kubectl describe K8ssandraCluster demo
+```
+
+```sh
+Name:         demo
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  k8ssandra.io/v1alpha1
+Kind:         K8ssandraCluster
+...
+Status:
+  Datacenters:
+    dc1:
+      Cassandra:
+        Cassandra Operator Progress:  Updating
+        Node Statuses:
+Events:  <none>
+```
+
+Monitor the status of the deployment, eventually resulting in all of the resources being in the `Ready` state:
+
+```sh
+kubectl describe K8ssandraCluster demo
+```
+
+```sh
+Name:         demo
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  k8ssandra.io/v1alpha1
+Kind:         K8ssandraCluster
+...
+Status:
+  Datacenters:
+    dc1:
+      Cassandra:
+        Cassandra Operator Progress:  Ready
+      ...
+      Stargate:
+        Available Replicas:  1
+        Conditions:
+          Last Transition Time:  2021-09-27T17:52:41Z
+          Status:                True
+          Type:                  Ready
+        Deployment Refs:
+          demo-dc1-default-stargate-deployment
+        Progress:              Running
+        Ready Replicas:        1
+        Ready Replicas Ratio:  1/1
+        Replicas:              1
+        Service Ref:           demo-dc1-stargate-service
+        Updated Replicas:      1
+    dc2:
+      Cassandra:
+        Cassandra Operator Progress:  Ready
+      ...
+      Stargate:
+        Available Replicas:  1
+        Conditions:
+          Last Transition Time:  2021-09-27T17:53:40Z
+          Status:                True
+          Type:                  Ready
+        Deployment Refs:
+          demo-dc2-default-stargate-deployment
+        Progress:              Running
+        Ready Replicas:        1
+        Ready Replicas Ratio:  1/1
+        Replicas:              1
+        Service Ref:           demo-dc2-stargate-service
+        Updated Replicas:      1
+Events:  <none>
+```
+
+## Single Cluster Install with Kustomize
+We will first look at a single cluster install to demonstrate that while K8ssandra Operator is designed for multi-cluster use, it can be used in a single cluster without any extra configuration.
 
 ### Create kind cluster
 Run `setup-kind-multicluster.sh` as follows:
@@ -123,6 +441,7 @@ NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
 k8ssandra-operator   1/1     1            1           2m
 ```
+
 ### Install into a different namespace
 This slight variation demonstrates how to install the operator into a different namespace.
 
@@ -156,7 +475,7 @@ kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
 ```
 This installs the operator in `k8ssandra-operator`.
 
-## Deploy a K8ssandraCluster
+### Deploy a K8ssandraCluster
 Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster and a Stargate node.
 
 ```sh
@@ -190,37 +509,15 @@ spec:
 EOF
 ```
 
-# Multi-cluster Install with Kustomize
+## Multi-cluster Install with Kustomize
 
-## Automated Setup
-Run `make multi-up` to create a multi kind cluster and deploy k8ssandra-operator along with its dependencies.  
-Check that there are two Deployments in each of the k8ssandra-0 and k8ssandra-1 kind clusters. The output should look similar to this:
-
-```
-kubectx kind-k8ssandra-0
-kubectl get deployment
-NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-cass-operator        1/1     1            1           2m
-k8ssandra-operator   1/1     1            1           2m
-
-kubectx kind-k8ssandra-1
-kubectl get deployment
-NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-cass-operator        1/1     1            1           2m
-k8ssandra-operator   1/1     1            1           2m
-```
-
-The operator will be deployed in the `default` namespace using this procedure.
-
-**Note: if a k8ssandra-0 and/or a k8ssandra-1 kind clusters already exist, running `make single-up` will delete and recreate them.**
-
-## Manual Procedure
+### Manual Procedure
 
 If you previously created a cluster with `setup-kind-multicluster.sh` we need to delete it in order to create the multi-cluster setup. The script currently does not support adding clusters to an existing setup (see [#128](https://github.com/k8ssandra/k8ssandra-operator/issues/128)).
 
 We will create two kind clusters with 3 worker nodes per clusters. Remember that K8ssandra Operator requires clusters to have routable pod IPs. kind clusters by default will run on the same Docker network which means that they will have routable IPs.
 
-### Create kind clusters
+#### Create kind clusters
 Run `setup-kind-multicluster.sh` as follows:
 
 ```
@@ -234,7 +531,7 @@ Run `kubectx` without any arguments and verify that you see the following contex
 * kind-k8ssandra-0
 * kind-k8ssandra-1
 
-### Install Cert Manager
+#### Install Cert Manager
 Set the active context to `kind-k8ssandra-0`:
 
 ```
@@ -259,7 +556,7 @@ Install Cert Manager:
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
 ```
 
-### Install the control plane
+#### Install the control plane
 We will install the control plane in `kind-k8ssandra-0`. Make sure your active context is configured correctly:
 
 ```
@@ -316,7 +613,7 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
 ```sh
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
-### Install the data plane
+#### Install the data plane
 Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
 ```
@@ -385,7 +682,7 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
-### Create a ClientConfig
+#### Create a ClientConfig
 Now we need to create a `ClientConfig` for the `kind-k8ssandra-1` cluster. We will use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 Here is a summary of what the script does:
@@ -406,7 +703,7 @@ The script stores all of the artifacts that it generates in a directory which is
 
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
 
-### Restart the control plane
+#### Restart the control plane
 **TODO:** Add reference to ticket explaining the need to restart.
 
 Make the active context `kind-k8ssandra-0`:
@@ -420,7 +717,7 @@ Delete the operator pod to trigger the restart:
 kubectl delete pod -l control-plane=k8ssandra-operator
 ```
 
-## Deploy a K8ssandraCluster
+### Deploy a K8ssandraCluster
 Now we will create a K8ssandraCluster that is comprised of a Cassandra cluster with 2 DCs and 3 nodes per DC, and a Stargate node per DC.
 
 ```sh
@@ -433,7 +730,6 @@ spec:
   cassandra:
     cluster: demo
     serverVersion: "3.11.11"
-    serverImage: k8ssandra/cass-management-api:3.11.11-v0.1.28
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
