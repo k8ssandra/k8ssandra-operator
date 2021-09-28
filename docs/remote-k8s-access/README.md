@@ -7,14 +7,14 @@ When the operator starts up it queries for ClientConfig objects. A ClientConfig 
 
 Before getting into details of using ClientConfigs we need to provide some background on service accounts, kubeconfig files, and secrets.
 
-## ServiceAccount
-All pods are associated with a ServiceAccount. If no ServiceAccount is specified for a pod, then the default one will be used.
+## Service Account
+All pods are associated with a service account. If no service account is specified for a pod, then the default one will be used.
 
-**Note:** Kubernetes creates a default ServiceAccount in each namespace.
+**Note:** Kubernetes creates a default service account in each namespace.
 
-The ServiceAccount is used to authenticate and authorizate the pod for any operations that it wants to perform against the api server. Authentication is done by way of a service account token which is stored in a secret. Kubernetes automatically mounts the secrect in the pod. Authorization is done with Roles and RoleBindings. The ServiceAccount is mapped to Roles and RoleBindings with RoleBindings and ClusterRoleBindings respectively.
+The api server authenticates a service account with a token that is stored in a secret. After authentication is done Kubernetes RBAC determine what operations the service account is authorized to perform.
 
-To learn more about this, see the official Kubernetes [docs](https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod) for accessing the api server from a pod.
+To learn more about this, see the official Kubernetes [docs](https://kubernetes.io/docs/reference/access-authn-authz/authentication/).
 
 A service account for the operator should be created in each cluster that the operator needs to access. This is done automatically as part of the operator installation.
 
@@ -43,23 +43,23 @@ Here is an example kubeconfig file that uses a bearer token:
 
 ```yaml
 apiVersion: v1
-clusters:
-- cluster:
-    certificate-authority-data: ...
-    server: https://127.0.0.1:65318
-  name: kind-k8ssandra-0
-contexts:
-- context:
-    cluster: kind-k8ssandra-0
-    user: kind-k8ssandra-0-k8ssandra-operator
-  name: kind-k8ssandra-0
-current-context: kind-k8ssandra-0
 kind: Config
 preferences: {}
+clusters:
+  - name: kind-k8ssandra-0
+    cluster:
+      certificate-authority-data: ...
+      server: https://127.0.0.1:65318 
 users:
-- name: kind-k8ssandra-0-k8ssandra-operator
-  user:
-    token: ...
+  - name: kind-k8ssandra-0-k8ssandra-operator
+    user:
+      token: ...
+contexts:
+  - name: kind-k8ssandra-0
+    context:
+      cluster: kind-k8ssandra-0
+      user: kind-k8ssandra-0-k8ssandra-operator
+current-context: kind-k8ssandra-0
 ```
 
 ## Kubeconfig Secret
@@ -71,16 +71,13 @@ Here is an example:
 
 ```yaml
 apiVersion: v1
-data:
-  kubeconfig: ... 
 kind: Secret
 metadata:
-  creationTimestamp: "2021-09-23T18:58:24Z"
   name: kind-k8ssandra-0-config
   namespace: default
-  resourceVersion: "164744"
-  uid: 722fff76-8836-4360-849f-ea55d610a26c
 type: Opaque
+data:
+  kubeconfig: ... 
 ```
 
 # ClientConfig
@@ -158,7 +155,7 @@ Proceed with caution before deleting a ClientConfig. If there are any K8ssandraC
 ## Creating a ClientConfig
 Creating a ClientConfig involves creating the kubeconfig file and secret. This can be error prone to do by hand. Instead use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
-**Note:** The operator should already be installed in the remote cluster for which you want to create a ClientConfig.
+The operator should already be installed in the remote cluster for which you want to create a ClientConfig. The operator service account is created when the operator is installed. Creating the ClientConfig requires access to that service account.
 
 Here is a brief summary of what the script does:
 
@@ -177,3 +174,5 @@ Suppose we have two clusters with context name `kind-k8ssandra-0` and `kind-k8ss
 The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
+
+**Note:** Remember to restart the operator in the control plane cluster after creating the ClientConfig.
