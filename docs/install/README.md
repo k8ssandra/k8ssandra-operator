@@ -392,29 +392,43 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3
 ### Install K8ssandra Operator
 The GitHub Actions for the project are configured to build and push a new operator image to Docker Hub whenever commits are pushed to `main`. 
 
-See [here](https://hub.docker.com/repository/docker/k8ssandra/k8ssandra-operator/tags?page=1&ordering=last_updated) on Docker Hub for a list of availabe images.
+See [here](https://hub.docker.com/repository/docker/k8ssandra/k8ssandra-operator/tags?page=1&ordering=last_updated) on Docker Hub for a list of available images.
 
-Create a kustomization directory that builds from the `main` branch:
+If you wish to install the default installation, one can install with kubectl:
+
+```console
+kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/default
+```
+
+In case you want to customize the installation, create a kustomization directory that builds from the `main` branch and in this case we'll add namespace creation and define new namespace. Note the `namespace` property which we added. This property tells Kustomize to apply a transformation on all resources that specify a namespace.
 
 ```sh
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
 cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
+
+namespace: k8ssandra-operator
+
 resources:
-- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
+- github.com/k8ssandra/k8ssandra-operator/config/deployments/default?ref=main
+
+components:
+- github.com/k8ssandra/k8ssandra-operator/config/components/namespace
 
 images:
 - name: k8ssandra/k8ssandra-operator
   newTag: 7a2d65bb
 EOF
 ```
+
 Now install the operator:
 
 ```
 kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
 ```
-This installs the operator in the `default` namespace.
 
-If you just want to generate the maninfests then run:
+This installs the operator in the `k8ssandra-operator` namespace.
+
+If you just want to generate the manifests then run:
 
 ```
 kustomize build $K8SSANDRA_OPERATOR_HOME
@@ -443,39 +457,6 @@ NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
 k8ssandra-operator   1/1     1            1           2m
 ```
-
-### Install into a different namespace
-This slight variation demonstrates how to install the operator into a different namespace.
-
-Create a namespace named `k8ssandra-operator`:
-
-```sh
-kubectl create ns k8ssandra-operator
-```
-Create a kustomization directory:
-
-```sh
-K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
-cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
-namespace: k8ssandra-operator
-
-resources:
-- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
-
-images:
-- name: k8ssandra/k8ssandra-operator
-  newTag: 7a2d65bb
-EOF
-```
-
-Note that the `namespace` property has been added. This property tells Kustomize to apply a transformation on all resources that specify a namespace.
-
-Now install the operator:
-
-```
-kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
-```
-This installs the operator in `k8ssandra-operator`.
 
 ### Deploy a K8ssandraCluster
 Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster and a Stargate node.
@@ -543,7 +524,7 @@ kubectx kind-k8ssandra-0
 Install Cert Manager:
 
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 Set the active context to `kind-k8ssandra-1`:
@@ -555,7 +536,7 @@ kubectx kind-k8ssandra-1
 Install Cert Manager:
 
 ```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 #### Install the control plane
@@ -615,6 +596,7 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
 ```sh
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
+
 #### Install the data plane
 Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
@@ -622,36 +604,12 @@ Now we will install the data plane in `kind-k8ssandra-1`. Switch the active cont
 kubectx kind-k8ssandra-1
 ```
 
-Create a kustomization directory:
-
-```sh
-K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
-cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
-resources:
-- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
-
-patchesJson6902:
-- patch: |-
-    - op: replace
-      path: /spec/template/spec/containers/0/env/1/value
-      value: "false"
-  target:
-    group: apps
-    kind: Deployment
-    name: k8ssandra-operator
-    version: v1
-
-images:
-- name: k8ssandra/k8ssandra-operator
-  newTag: 7a2d65bb
-EOF
-```
-
 Now install the operator:
 
+```console
+kubectl apply -k github.com/k8ssandra/config/deployments/dataplane
 ```
-kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
-```
+
 This installs the operator in the `default` namespace.
 
 Verify that the following CRDs are installed:
@@ -713,10 +671,11 @@ Make the active context `kind-k8ssandra-0`:
 ```
 kubectx kind-k8ssandra-0
 ```
-Delete the operator pod to trigger the restart:
+
+Restart the operator:
 
 ```
-kubectl delete pod -l control-plane=k8ssandra-operator
+kubectl rollout restart deployment k8ssandra-operator
 ```
 
 ### Deploy a K8ssandraCluster
