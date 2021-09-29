@@ -11,6 +11,13 @@ jobs:
     name: Build Image
     runs-on: ubuntu-latest
     steps:
+      - name: Increase open file limits
+          run: |
+            cat /etc/sysctl.conf
+            sudo echo fs.inotify.max_user_watches=120000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+            echo fs.inotify.max_user_watches
+            echo "checking limits"
+            sudo ulimit -a
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Set up Docker buildx
@@ -54,15 +61,11 @@ jobs:
       GOROOT: /usr/local/go1.16
       CGO_ENABLED: 0
     steps:
-      - name: Increase open file limits
+
+      - name: Free diskspace by removing unused packages
         run: |
-          cat /etc/sysctl.conf
-          sudo echo fs.inotify.max_user_watches=120000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-          echo fs.inotify.max_user_watches
-#      - name: Free diskspace by removing unused packages
-#        run: |
-#          sudo rm -rf /usr/local/lib/android
-#          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
 #      - uses: actions/checkout@v2
 #        if: github.event_name == 'pull_request'
 #        with:
