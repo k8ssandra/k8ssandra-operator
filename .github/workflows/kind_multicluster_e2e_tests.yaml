@@ -17,7 +17,7 @@ jobs:
           sudo echo fs.inotify.max_user_watches=120000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
           echo fs.inotify.max_user_watches
           echo "checking limits"
-          sudo ulimit -a
+          ulimit -a
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Set up Docker buildx
