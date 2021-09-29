@@ -49,11 +49,11 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 2
+        size: 1
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
-        size: 2
+        size: 1
   stargate:
     size: 1
     affinity:
