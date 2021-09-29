@@ -72,7 +72,7 @@ Join us on Discord [here](https://discord.gg/YewpWTYP0).
 
 For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo. 
 
-### Development
+## Development
 See the development [guide](docs/development/README.md).
 
 ## Dependencies
