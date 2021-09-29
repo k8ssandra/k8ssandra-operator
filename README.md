@@ -30,7 +30,7 @@ The data plane can be installed on any number of clusters. The control plane clu
 
 The data plane deploys and manages pods. Moreover, the data plane may interact directly with the managed applications. For example, the operator calls the management-api to create keyspaces in Cassandra.
 
-**TODO:** Add architecture diagram
+![](docs/img/k8ssandra-cluster-architecture.png)
 
 ## Requirements
 It is required to have routable pod IPs between Kubernetes clusters; however this requirement may be relaxed in the future.
