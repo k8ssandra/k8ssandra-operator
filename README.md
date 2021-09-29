@@ -19,7 +19,7 @@ K8ssandra 2.x will be based on the this operator.
 One of the primary features of this operator is multi-cluster support which will facilitate multi-region Cassandra clusters.
 
 ## Architecture
-The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It be used seamlessly in a single-cluster deployments as well.
+The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It can be used seamlessly in a single-cluster deployments as well.
 
 K8sandra Operator consists of a control plane and a data plane.
 The control plane creates and manages object that exist only in the api server. The control plane does not deploy or manage pods. 
