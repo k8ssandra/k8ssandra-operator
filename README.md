@@ -18,8 +18,8 @@ K8ssandra 2.x will be based on the this operator.
 
 One of the primary features of this operator is multi-cluster support which will facilitate multi-region Cassandra clusters.
 
-# Architecture
-The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It be used seamlessly in a single-cluster deployments as well.
+## Architecture
+The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It can be used seamlessly in a single-cluster deployments as well.
 
 K8sandra Operator consists of a control plane and a data plane.
 The control plane creates and manages object that exist only in the api server. The control plane does not deploy or manage pods. 
@@ -30,9 +30,13 @@ The data plane can be installed on any number of clusters. The control plane clu
 
 The data plane deploys and manages pods. Moreover, the data plane may interact directly with the managed applications. For example, the operator calls the management-api to create keyspaces in Cassandra.
 
-**TODO:** Add architecture diagram
+### Diagram
 
-## Requirements
+In this diagram you can see a small example of a multi-cluster deployment.
+
+![](docs/img/k8ssandra-cluster-architecture.png)
+
+### Requirements
 It is required to have routable pod IPs between Kubernetes clusters; however this requirement may be relaxed in the future.
 
 If you are running in a cloud provider, you can get routable IPs by installing the Kubernetes clusters in the same VPC.
@@ -49,17 +53,17 @@ The control plane needs to establish client connections to remote cluster where 
 A kubeconfig entry for a cluster hosted by a cloud provider with include an auth token for authenticated with the cloud provider. That token expires. If you use one of these kubeconfigs be aware that the operator will not be able to access the remote cluster once that token expires. For this reason it is recommended that you use the [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) script for configuring a connection to the remote cluster. This script is discussed in more detail in a later section.
 -->
 
-# Installing the operator
+## Installing the operator
 See the install [guide](docs/install/README.md).
 
 
-# Contributing
+## Contributing
 For more info on getting involved with K8ssandra, please check out the [k8ssandra community](https://k8ssandra.io/community/) page.
 
 The remainder of this section focuses on development of the operator itself.
 
 
-# Community
+## Community
 Check out the full K8ssandra docs at [k8ssandra.io](https://k8ssandra.io/).
 
 Start or join a forum discussion at [forum.k8ssandra.io](https://forum.k8ssandra.io/).
