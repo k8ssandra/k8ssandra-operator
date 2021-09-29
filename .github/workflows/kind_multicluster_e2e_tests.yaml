@@ -13,11 +13,17 @@ jobs:
     steps:
       - name: Increase open file limits
         run: |
+          echo "cat /etc/sysct.conf"
           cat /etc/sysctl.conf
+          echo
           sudo echo fs.inotify.max_user_watches=120000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
           echo fs.inotify.max_user_watches
+          echo "cat /etc/security/limits.conf"
+          cat /etc/security/limits.conf
+          echo
           echo "checking limits"
           ulimit -a
+          echo
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Set up Docker buildx
