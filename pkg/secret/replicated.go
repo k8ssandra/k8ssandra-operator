@@ -43,7 +43,7 @@ func DefaultSuperuserSecretName(clusterName string) string {
 	return secretName
 }
 
-// ReconcileSuperuserSecret creates the superUserSecret with propert annotations
+// ReconcileSuperuserSecret creates the superUserSecret with proper annotations
 func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
@@ -69,6 +69,8 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 			}
 
 			return c.Create(ctx, sec)
+		} else {
+			return err
 		}
 	}
 
