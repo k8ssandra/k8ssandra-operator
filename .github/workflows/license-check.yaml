@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - 'CHANGELOG/**'
 jobs:
   scan-repo:
     runs-on: ubuntu-latest
