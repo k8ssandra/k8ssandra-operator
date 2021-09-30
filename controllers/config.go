@@ -33,6 +33,7 @@ func InitConfig() {
 	}
 
 	val, found = os.LookupEnv(RequeueLongDelayEnvVar)
+	found = false
 	if found {
 		longDelay, err = time.ParseDuration(val)
 		if err != nil {

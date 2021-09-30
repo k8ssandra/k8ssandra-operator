@@ -10,6 +10,8 @@
 
 # Custom Resource Definitions
 
+Test a docs change
+
 ## Type definitions
 The Go type definition for custom resources live under the `api` directory in files with a `_types.go` suffix. The CRDs are derived from the structs defined in these files.
 
