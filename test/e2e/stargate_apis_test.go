@@ -55,7 +55,6 @@ func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int,
 	createKeyspaceAndTableNative(t, connection, tableName, keyspaceName, replication)
 	insertRowsNative(t, connection, 10, tableName, keyspaceName)
 	checkRowCountNative(t, connection, 10, tableName, keyspaceName)
-	dropKeyspaceNative(t, connection, keyspaceName)
 }
 
 func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
@@ -64,7 +63,6 @@ func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, to
 	createKeyspaceAndTableRest(t, restClient, k8sContextIdx, token, tableName, keyspaceName, replication)
 	insertRowsRest(t, restClient, k8sContextIdx, token, 10, tableName, keyspaceName)
 	checkRowCountRest(t, restClient, k8sContextIdx, token, 10, tableName, keyspaceName)
-	dropKeyspaceRest(t, restClient, k8sContextIdx, token, keyspaceName)
 }
 
 func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
@@ -73,7 +71,6 @@ func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, 
 	createDocumentNamespace(t, restClient, k8sContextIdx, token, documentNamespace, replication)
 	writeDocument(t, restClient, k8sContextIdx, token, documentNamespace, documentId)
 	readDocument(t, restClient, k8sContextIdx, token, documentNamespace, documentId)
-	dropDocumentNamespace(t, restClient, k8sContextIdx, token, documentNamespace)
 }
 
 func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, tableName, keyspaceName string, replication map[string]int) {
@@ -120,16 +117,6 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		response, err = request.Get(tableUrl)
 		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval)
-}
-
-func dropKeyspaceRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, keyspaceName string) {
-	keyspaceUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s", k8sContextIdx, keyspaceName)
-	request := restClient.NewRequest().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("X-Cassandra-Token", token)
-	response, err := request.Delete(keyspaceUrl)
-	assert.NoError(t, err, "Delete keyspace with Schema API failed")
-	assert.Equal(t, http.StatusNoContent, response.StatusCode(), "Expected drop keyspace request to return 204")
 }
 
 func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, nbRows int, tableName, keyspaceName string) {
@@ -187,16 +174,6 @@ func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextI
 		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval)
 	return documentNamespace
-}
-
-func dropDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace string) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces/%s", k8sContextIdx, documentNamespace)
-	request := restClient.NewRequest().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("X-Cassandra-Token", token)
-	response, err := request.Delete(url)
-	assert.NoError(t, err, "Failed deleting Stargate document namespace")
-	assert.Equal(t, http.StatusNoContent, response.StatusCode(), "Expected delete namespace request to return 201")
 }
 
 const (
@@ -311,11 +288,6 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 	require.IsType(t, &message.SchemaChangeResult{}, response.Body.Message, "Expected CREATE TABLE response to be of type SchemaChangeResult")
 	response = sendQuery(t, connection, fmt.Sprintf("TRUNCATE %s.%s", keyspaceName, tableName))
 	assert.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected TRUNCATE response to be of type VoidResult")
-}
-
-func dropKeyspaceNative(t *testing.T, connection *client.CqlClientConnection, keyspaceName string) {
-	response := sendQuery(t, connection, fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspaceName))
-	assert.IsType(t, &message.SchemaChangeResult{}, response.Body.Message, "Expected DROP KEYSPACE response to be of type SchemaChangeResult")
 }
 
 func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
