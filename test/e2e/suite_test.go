@@ -113,7 +113,7 @@ func e2eTest(ctx context.Context, fixture TestFixture, deployTraefik bool, test 
 		}
 
 		err = beforeTest(t, namespace, fixtureDir, f, deployTraefik)
-		defer afterTest(t, namespace, f, deployTraefik)
+		//defer afterTest(t, namespace, f, deployTraefik)
 
 		if err == nil {
 			test(t, ctx, namespace, f)
