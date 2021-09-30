@@ -3,8 +3,14 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - 'CHANGELOG/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - 'CHANGELOG/**'
 jobs:
   unit_integration_tests:
     name: Run unit/integration tests
