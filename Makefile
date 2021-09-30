@@ -169,9 +169,9 @@ multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 # Reload the operator on the data-plane
 	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build config/deployments/dataplane | kubectl apply -f -
-	kubectl delete pod -l control-plane=k8ssandra-operator
-	kubectl rollout status deployment k8ssandra-operator
+	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply -f -
+	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
+	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 
 single-deploy:
 	kubectl config use-context kind-k8ssandra-0
