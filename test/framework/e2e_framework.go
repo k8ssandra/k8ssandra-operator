@@ -167,7 +167,7 @@ func generateK8ssandraOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- ../../../../config/default
+- ../../../../config/deployments/default
 namespace: {{ .Namespace }}
 `
 	k := Kustomization{Namespace: namespace}
@@ -181,19 +181,8 @@ namespace: {{ .Namespace }}
 kind: Kustomization
 
 resources:
-- ../../../../config/default
+- ../../../../config/deployments/dataplane
 namespace: {{ .Namespace }}
-
-patchesJson6902:
-  - target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: k8ssandra-operator
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/env/1/value
-        value: "false"
 `
 	return generateKustomizationFile("k8ssandra-operator/data-plane", k, tmpl)
 }
