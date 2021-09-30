@@ -55,6 +55,8 @@ func TestOperator(t *testing.T) {
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", true, createSingleDatacenterCluster))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
+	// TODO enable after https://github.com/k8ssandra/k8ssandra-operator/issues/156 is fixed
+	// t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
 }
@@ -404,7 +406,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 }
 
-// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
+// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
