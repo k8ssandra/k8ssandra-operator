@@ -457,7 +457,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthKeyspace(
 			// Stargate keyspace exists, altering it to match the desired replication
 			// TODO: Check if the keyspace has the right replication settings before altering it. Requires a new mgmt api operation.
 			logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v, altering it", stargateAuthKeyspace, dc.ClusterName))
-			logger.Info(fmt.Sprintf("Keyspace %s already exists: %s", stargateAuthKeyspace, keyspaces[0]))
 			if err := managementApi.AlterKeyspace(stargateAuthKeyspace, desiredReplication); err != nil {
 				logger.Error(err, fmt.Sprintf("Failed to alter keyspace %s", stargateAuthKeyspace))
 				return err

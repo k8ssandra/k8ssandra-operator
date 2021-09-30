@@ -54,7 +54,9 @@ func TestOperator(t *testing.T) {
 	applyPollingDefaults()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", true, createSingleDatacenterCluster))
-	t.Run("createStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
+	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
+	// TODO enable after https://github.com/k8ssandra/k8ssandra-operator/issues/156 is fixed
+	// t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
 }
@@ -219,7 +221,7 @@ func applyPollingDefaults() {
 	polling.operatorDeploymentReady.timeout = 1 * time.Minute
 	polling.operatorDeploymentReady.interval = 1 * time.Second
 
-	polling.datacenterReady.timeout = 10 * time.Minute
+	polling.datacenterReady.timeout = 15 * time.Minute
 	polling.datacenterReady.interval = 15 * time.Second
 
 	polling.nodetoolStatus.timeout = 2 * time.Minute
@@ -228,7 +230,7 @@ func applyPollingDefaults() {
 	polling.k8ssandraClusterStatus.timeout = 1 * time.Minute
 	polling.k8ssandraClusterStatus.interval = 3 * time.Second
 
-	polling.stargateReady.timeout = 3 * time.Minute
+	polling.stargateReady.timeout = 5 * time.Minute
 	polling.stargateReady.interval = 5 * time.Second
 }
 
@@ -237,6 +239,13 @@ func afterTest(t *testing.T, namespace string, f *framework.E2eFramework, deploy
 }
 
 func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) error {
+
+	if t.Failed() {
+		f.DumpOperatorLogs(namespace)
+		f.DumpCassandraLogs(namespace)
+		f.DumpStargateLogs(namespace)
+	}
+
 	if err := f.DumpClusterInfo(t.Name(), namespace); err != nil {
 		t.Logf("failed to dump cluster info: %v", err)
 	}
@@ -394,10 +403,10 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 1}
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication, namespace, "dc1", "default")
+	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 }
 
-// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
+// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
@@ -420,7 +429,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 3}
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication, namespace, "dc1", "rack1", "rack2", "rack3")
+	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -639,8 +648,8 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication, namespace, "dc1", "rack1")
-	testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication, namespace, "dc2", "rack1")
+	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+	testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

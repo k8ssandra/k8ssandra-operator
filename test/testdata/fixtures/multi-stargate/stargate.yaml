@@ -5,7 +5,7 @@ metadata:
 spec:
   datacenterRef:
     name: dc1
-  size: 1
+  size: 3
   allowStargateOnDataNodes: true
   heapSize: 512Mi
   resources:

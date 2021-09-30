@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -597,4 +598,72 @@ func (f *E2eFramework) WaitForNodeToolStatusUN(opts kubectl.Options, pod string,
 		return actual == count, nil
 	})
 
+}
+
+func (f *E2eFramework) DumpOperatorLogs(namespace string) {
+	for _, k8sContextName := range f.getClusterContexts() {
+		f.logger.Info("dumping K8ssandra Operator logs in " + k8sContextName)
+		println()
+		fmt.Println("=============", "BEGIN DUMP", "deployment.apps/k8ssandra-operator", "context", k8sContextName, "namespace", namespace, "=============")
+		cmd := exec.Command("kubectl", "logs", "deployment.apps/k8ssandra-operator", "-n", namespace, "--context", k8sContextName)
+		output, _ := cmd.CombinedOutput()
+		fmt.Println(string(output))
+		fmt.Println("=============", "END DUMP", "deployment.apps/k8ssandra-operator", "context", k8sContextName, "namespace", namespace, "=============")
+		println()
+	}
+}
+
+func (f *E2eFramework) DumpCassandraLogs(namespace string) {
+	for _, k8sContextName := range f.getClusterContexts() {
+		f.logger.Info("dumping Cassandra logs in " + k8sContextName)
+		cmd := exec.Command("kubectl", "get", "pods", "-l", "app.kubernetes.io/managed-by=cass-operator", "-o", "name", "-n", namespace, "--context", k8sContextName)
+		output, _ := cmd.Output()
+		podNames := strings.Split(string(output), "\n")
+		for _, podName := range podNames {
+			if podName == "" {
+				continue
+			}
+			println()
+			fmt.Println("=============", "BEGIN DUMP", podName, "context", k8sContextName, "namespace", namespace, "=============")
+			cmd = exec.Command("kubectl", "describe", podName, "-n", namespace, "--context", k8sContextName)
+			output, _ = cmd.CombinedOutput()
+			fmt.Println(string(output))
+			println()
+			cmd = exec.Command("kubectl", "logs", podName, "-c", "server-system-logger", "-n", namespace, "--context", k8sContextName)
+			output, _ = cmd.CombinedOutput()
+			fmt.Println(string(output))
+			println()
+		}
+	}
+}
+
+func (f *E2eFramework) DumpStargateLogs(namespace string) {
+	for _, k8sContextName := range f.getClusterContexts() {
+		f.logger.Info("dumping Stargate logs in " + k8sContextName)
+		cmd := exec.Command("kubectl", "get", "pods", "-l", api.ComponentLabel+"="+api.ComponentLabelValueStargate, "-o", "name", "-n", namespace, "--context", k8sContextName)
+		output, _ := cmd.Output()
+		podNames := strings.Split(string(output), "\n")
+		for _, podName := range podNames {
+			if podName == "" {
+				continue
+			}
+			println()
+			fmt.Println("=============", "BEGIN DUMP", podName, "context", k8sContextName, "namespace", namespace, "=============")
+			cmd = exec.Command("kubectl", "describe", podName, "-n", namespace, "--context", k8sContextName)
+			output, _ = cmd.CombinedOutput()
+			fmt.Println(string(output))
+			println()
+			cmd = exec.Command("kubectl", "logs", podName, "-n", namespace, "--context", k8sContextName)
+			output, _ = cmd.CombinedOutput()
+			fmt.Println(string(output))
+			fmt.Println("=============", "END DUMP", podName, "context", k8sContextName, "namespace", namespace, "=============")
+			println()
+		}
+		fmt.Println("=============", "BEGIN DUMP", "stargate service", "context", k8sContextName, "namespace", namespace, "=============")
+		cmd = exec.Command("kubectl", "describe", "service", "-l", api.ComponentLabel+"="+api.ComponentLabelValueStargate, "-n", namespace, "--context", k8sContextName)
+		output, _ = cmd.CombinedOutput()
+		fmt.Println(string(output))
+		fmt.Println("=============", "END DUMP", "stargate service", "context", k8sContextName, "namespace", namespace, "=============")
+		println()
+	}
 }
