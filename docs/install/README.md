@@ -256,7 +256,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.0"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -639,8 +639,7 @@ to `true` the control plane is enabled. It is enabled by default.
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
 
 ```console
-kubectl get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.
-spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Install the data plane
@@ -653,8 +652,7 @@ kubectx kind-k8ssandra-1
 Install the operator:
 
 ```console
-helm install k8ssandra-operator k8ssandra/k8ssandra-operator -n k8ssandra-operator 
---create-namespace --set controlPlane=false
+helm install k8ssandra-operator k8ssandra/k8ssandra-operator -n k8ssandra-operator --create-namespace --set controlPlane=false
 ```
 
 This `helm install` command does the following:
@@ -687,8 +685,7 @@ k8ssandra-operator-k8ssandra-operator   1/1     1            1           85s
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
 ```console
-kubectl get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.
-spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Create a ClientConfig
@@ -736,7 +733,7 @@ Now we will create a K8ssandraCluster that consists of a Cassandra cluster with 
 nodes per DC, and a Stargate node per DC.
 
 ```sh
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
@@ -776,6 +773,18 @@ EOF
 ```
 
 ## Kustomize
+K8ssandra Operator can be installed with [Kustomize](https://kustomize.io/) which takes 
+a declarative approach to configuring and deploying resources whereas Helm takes more of 
+an imperative approach.
+
+The following examples use `kubectl apply -k` to deploy resources. The `-k` option
+essentially runs `kustomize build` over the specified directory followed by `kubectl
+apply`. See this [doc](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/)
+for details on the integration of Kustomize into `kubectl`.
+
+**Note:** If `kubectl -k <dir>` does not work for, you can instead use 
+`kustomize build <dir> | kubectl apply -f -`.
+
 
 ### Single Cluster
 We will first look at a single cluster install to demonstrate that while K8ssandra 
@@ -806,7 +815,7 @@ on Docker Hub for a list of available images.
 Install with kubectl:
 
 ```console
-kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/default
+kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -878,8 +887,7 @@ k8ssandra-operator   1/1     1            1           2m
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
 ```console
-kubectl get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.
-spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Deploy a K8ssandraCluster
@@ -887,7 +895,7 @@ Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluste
 Stargate node.
 
 ```sh
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
@@ -1185,7 +1193,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.0"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
