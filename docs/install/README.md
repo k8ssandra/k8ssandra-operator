@@ -899,7 +899,7 @@ Stargate node.
 
 ```sh
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
-apiVersion: k8ssandra.io/v1alphav1.0.0-alpha.11
+apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: demo
