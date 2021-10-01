@@ -153,7 +153,7 @@ Status:
 Events:  <none>
 ```
 
-Monitor the status of the deployment, eventually resulting in all of the resources being in the `Ready` state:
+Monitor the status of the deployment, eventually resulting in all the resources being in the `Ready` state:
 
 ```console
 kubectl -n k8ssandra-operator describe K8ssandraCluster demo
@@ -394,7 +394,7 @@ Verify that you see the `k8ssandra-operator` chart:
 ```console
 helm search repo k8ssandra-operator
 NAME                               	CHART VERSION	APP VERSION	DESCRIPTION
-k8ssandra/k8ssandra-operator       	0.31.0       	1.0.0      	Kubernetes operator which handles the provision...
+k8ssandra/k8ssandra-operator       	0.32.0       	1.0.0      	Kubernetes operator which handles the provision...
 ```
 
 ### Single Cluster 
@@ -432,7 +432,7 @@ helm ls -n k8ssandra-operator
 
 ```console
 NAME              	NAMESPACE         	REVISION	UPDATED                             	STATUS  	CHART                    	APP VERSION
-k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.31.0	1.0.0
+k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.0
 ```
 
 Verify that the following CRDs are installed:
@@ -614,7 +614,7 @@ helm ls -n k8ssandra-operator
 
 ```console
 NAME              	NAMESPACE         	REVISION	UPDATED                             	STATUS  	CHART                    	APP VERSION
-k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.31.0	1.0.0
+k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.0
 ```
 
 Verify that the following CRDs are installed:
@@ -845,7 +845,7 @@ components:
 
 images:
 - name: k8ssandra/k8ssandra-operator
-  newTag: 7a2d65bb
+  newTag: 1.0.0-alpha.1
 EOF
 ```
 
@@ -1169,8 +1169,6 @@ The script stores all of the artifacts that it generates in a directory which is
 The `--in-cluster-kubeconfig` option is required for clusters that run locally like kind.
 
 #### Restart the control plane
-**Note:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on 
-why it is necessary to restart the control plane operator.
 
 Make the active context `kind-k8ssandra-0`:
 
@@ -1183,6 +1181,9 @@ Restart the operator:
 ```console
 kubectl -n k8ssandra-operator rollout restart deployment k8ssandra-operator
 ```
+
+**Note:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on
+why it is necessary to restart the control plane operator.
 
 ### Deploy a K8ssandraCluster
 Now we will create a K8ssandraCluster that consists of a Cassandra cluster with 2 DCs and 3 
