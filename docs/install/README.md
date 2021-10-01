@@ -845,7 +845,7 @@ components:
 
 images:
 - name: k8ssandra/k8ssandra-operator
-  newTag: 1.0.0-alpha.1
+  newTag: v1.0.0-alpha.1
 EOF
 ```
 
@@ -899,7 +899,7 @@ Stargate node.
 
 ```sh
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
-apiVersion: k8ssandra.io/v1alpha1
+apiVersion: k8ssandra.io/v1alphav1.0.0-alpha.11
 kind: K8ssandraCluster
 metadata:
   name: demo
