@@ -56,8 +56,8 @@ Across the cluster:
 
 At completion, the cluster is now ready to accept a `K8ssandraCluster` deployment.
 
-**Note: if a k8ssandra-0 and/or k8ssandra-1 kind cluster already exists, running `make 
-single-up` or `make multi-up` will delete and recreate them.**
+**Note:** if a k8ssandra-0 and/or k8ssandra-1 kind cluster already exists, running `make 
+single-up` or `make multi-up` will delete and recreate them.
 
 ### Single Cluster
 
@@ -99,7 +99,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.0"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
@@ -256,7 +256,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.0"
+    serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -319,7 +319,8 @@ Status:
 Events:  <none>
 ```
 
-Monitor the status of the deployment, eventually resulting in all of the resources being in the `Ready` state:
+Monitor the status of the deployment, eventually resulting in all the resources being in 
+the `Ready` state:
 
 ```console
 kubectl -n k8ssandra-operator describe K8ssandraCluster demo
@@ -464,7 +465,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.0"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
@@ -517,7 +518,7 @@ Status:
 Events:  <none>
 ```
 
-Monitor the status of the deployment, eventually resulting in all of the resources being in the `Ready` state:
+Monitor the status of the deployment, eventually resulting in all the resources being in the `Ready` state:
 
 ```console
 kubectl -n k8ssandra-operator describe K8ssandraCluster demo
@@ -571,8 +572,8 @@ Run `setup-kind-multicluster.sh` as follows:
 ./setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
 ```
 
-When creating a cluster, kind generates a kubeconfig with the address of the api server 
-set to localhost. We need a kubeconfig that has the api server address set to its 
+When creating a cluster, kind generates a kubeconfig with the address of the API server 
+set to localhost. We need a kubeconfig that has the API server address set to its 
 internal ip address. `setup-kind-multi-cluster.sh` takes care of this for us. Generated 
 files are written into a `build` directory.
 
@@ -903,7 +904,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.0"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
@@ -1166,7 +1167,8 @@ The script stores all of the artifacts that it generates in a directory which is
 The `--in-cluster-kubeconfig` option is required for clusters that run locally like kind.
 
 #### Restart the control plane
-**TODO:** Add reference to ticket explaining the need to restart.
+**TODO:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on 
+why it is necessary to restart the control plane operator.
 
 Make the active context `kind-k8ssandra-0`:
 
@@ -1193,7 +1195,7 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.0"
+    serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
