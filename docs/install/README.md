@@ -726,7 +726,7 @@ kubectx kind-k8ssandra-0
 Restart the operator:
 
 ```console
-kubectl -n k8ssandra-operator rollout restart deployment k8ssandra-operator
+kubectl -n k8ssandra-operator rollout restart deployment k8ssandra-operator-k8ssandra-operator
 ```
 
 #### Deploy a K8ssandraCluster
