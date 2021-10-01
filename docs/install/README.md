@@ -378,15 +378,15 @@ We will first look at a single cluster install to demonstrate that while K8ssand
 ### Create kind cluster
 Run `setup-kind-multicluster.sh` as follows:
 
-```
+```sh
 ./setup-kind-multicluster.sh --kind-worker-nodes 4
 ```
 
 ### Install Cert Manager
 We need to first install Cert Manager as it is a dependency of cass-operator:
 
-```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+```console
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 ### Install K8ssandra Operator
@@ -399,6 +399,8 @@ If you wish to install the default installation, one can install with kubectl:
 ```console
 kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/default
 ```
+
+**Note:** This will deploy the `latest` operator image, i.e., `k8ssandra/k8ssandra-operator:latest`. In general it is best to avoid using `latest`. 
 
 In case you want to customize the installation, create a kustomization directory that builds from the `main` branch and in this case we'll add namespace creation and define new namespace. Note the `namespace` property which we added. This property tells Kustomize to apply a transformation on all resources that specify a namespace.
 
@@ -422,15 +424,15 @@ EOF
 
 Now install the operator:
 
-```
-kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```console
+kubectl apply -k $K8SSANDRA_OPERATOR_HOME
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
 
 If you just want to generate the manifests then run:
 
-```
+```console
 kustomize build $K8SSANDRA_OPERATOR_HOME
 ```
 
@@ -451,7 +453,7 @@ Verify that the following CRDs are installed:
 
 Check that there are two Deployments. The output should look similar to this:
 
-```
+```console
 kubectl get deployment
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
@@ -503,7 +505,7 @@ We will create two kind clusters with 3 worker nodes per clusters. Remember that
 #### Create kind clusters
 Run `setup-kind-multicluster.sh` as follows:
 
-```
+```sh
 ./setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
 ```
 
@@ -517,51 +519,38 @@ Run `kubectx` without any arguments and verify that you see the following contex
 #### Install Cert Manager
 Set the active context to `kind-k8ssandra-0`:
 
-```
+```console
 kubectx kind-k8ssandra-0
 ```
 
 Install Cert Manager:
 
-```
+```console
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 Set the active context to `kind-k8ssandra-1`:
 
-```
+```console
 kubectx kind-k8ssandra-1
 ```
 
 Install Cert Manager:
 
-```
+```console
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
 #### Install the control plane
 We will install the control plane in `kind-k8ssandra-0`. Make sure your active context is configured correctly:
 
-```
+```console
 kubectx kind-k8ssandra-0
-```
-Create a kustomization directory:
-
-```sh
-K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
-cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
-resources:
-- github.com/k8ssandra/k8ssandra-operator/config/default?ref=main
-
-images:
-- name: k8ssandra/k8ssandra-operator
-  newTag: 7a2d65bb
-EOF
 ```
 Now install the operator:
 
-```
-kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply -f -
+```console
+kubectl apply -k github.com/k8ssandra/config/deployments/control-plane
 ```
 This installs the operator in the `default` namespace.
 
@@ -582,7 +571,7 @@ Verify that the following CRDs are installed:
 
 Check that there are two Deployments. The output should look similar to this:
 
-```
+```console
 kubectl get deployment
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
@@ -607,7 +596,7 @@ kubectx kind-k8ssandra-1
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/dataplane
+kubectl apply -k github.com/k8ssandra/config/deployments/data-plane
 ```
 
 This installs the operator in the `default` namespace.
@@ -629,7 +618,7 @@ Verify that the following CRDs are installed:
 
 Check that there are two Deployments. The output should look similar to this:
 
-```
+```console
 kubectl get deployment
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
@@ -638,7 +627,7 @@ k8ssandra-operator   1/1     1            1           2m
 
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
-```sh
+```console
 kubectl get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
@@ -656,7 +645,7 @@ Here is a summary of what the script does:
 
 Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account token and CA cert from `kind-k8ssandra-1`:
 
-```
+```sh
 ./create-clientconfig.sh --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 ```
 The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
@@ -668,13 +657,13 @@ You can specify the namespace where the secret and ClientConfig are created with
 
 Make the active context `kind-k8ssandra-0`:
 
-```
+```console
 kubectx kind-k8ssandra-0
 ```
 
 Restart the operator:
 
-```
+```console
 kubectl rollout restart deployment k8ssandra-operator
 ```
 
