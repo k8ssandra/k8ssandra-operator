@@ -715,7 +715,6 @@ You can specify the namespace where the secret and ClientConfig are created with
 The `--in-cluster-kubeconfig` option is required for clusters that run locally like kind.
 
 #### Restart the control plane
-**TODO:** Add reference to ticket explaining the need to restart.
 
 Make the active context `kind-k8ssandra-0`:
 
@@ -728,6 +727,9 @@ Restart the operator:
 ```console
 kubectl -n k8ssandra-operator rollout restart deployment k8ssandra-operator-k8ssandra-operator
 ```
+
+**Note:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on
+why it is necessary to restart the control plane operator.
 
 #### Deploy a K8ssandraCluster
 Now we will create a K8ssandraCluster that consists of a Cassandra cluster with 2 DCs and 3 
@@ -1167,7 +1169,7 @@ The script stores all of the artifacts that it generates in a directory which is
 The `--in-cluster-kubeconfig` option is required for clusters that run locally like kind.
 
 #### Restart the control plane
-**TODO:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on 
+**Note:** See https://github.com/k8ssandra/k8ssandra-operator/issues/178 for details on 
 why it is necessary to restart the control plane operator.
 
 Make the active context `kind-k8ssandra-0`:
