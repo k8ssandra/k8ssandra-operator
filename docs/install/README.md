@@ -845,7 +845,7 @@ components:
 
 images:
 - name: k8ssandra/k8ssandra-operator
-  newTag: 1.0.0-alpha.1
+  newTag: v1.0.0-alpha.1
 EOF
 ```
 
