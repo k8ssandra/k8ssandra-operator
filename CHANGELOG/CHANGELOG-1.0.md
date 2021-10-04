@@ -14,6 +14,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+[CHANGE] Update cass-operator to v1.8.0
+
 ## v1.0.0-alpha.1 - 2021-09-30
 
 [FEATURE] [#98](https://github.com/k8ssandra/k8ssandra-operator/issues/98) Create Helm chart for the operator
