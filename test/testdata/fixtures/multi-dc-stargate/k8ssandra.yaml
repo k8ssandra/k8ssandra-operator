@@ -56,6 +56,7 @@ spec:
         size: 2
   stargate:
     size: 1
+    containerImage: docker.io/jsanda/stargate-3_11:latest
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
