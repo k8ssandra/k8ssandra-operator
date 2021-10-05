@@ -139,6 +139,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 								{Name: "DATACENTER_NAME", Value: dc.Name},
 								{Name: "RACK_NAME", Value: rack.Name},
 								{Name: "ENABLE_AUTH", Value: "true"},
+								{Name: "DISABLE_BUNDLES_WATCH", Value: "true"},
 							},
 
 							LivenessProbe:  &livenessProbe,
