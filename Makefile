@@ -109,6 +109,24 @@ ifdef TEST
 else
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./api/... ./pkg/... ./controllers/... -coverprofile cover.out
 endif
+
+PHONY: e2e-test
+e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test.
+ifdef E2E_TEST
+	@echo Running e2e test $(E2E_TEST)
+	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
+else
+	@echo Running e2e tests
+	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
+endif
+
+# The e2e-setup-single and e2e-setup-multi targets load the operator image but do not
+# build the image. This is partly because these targets are used in GHA workflows and the
+# operator image is built as a separate step there.
+e2e-setup-single: docker-build create-kind-cluster kind-load-image ##Setup a kind cluster for e2e tests. This loads the operator image but does not build it.
+
+e2e-setup-multi: docker-build create-kind-multicluster kind-load-image-multi ## Setup kind clusters for e2e tests. This loads the operator image but does not build it.
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
@@ -125,16 +143,6 @@ docker-push: ## Push docker image with the manager.
 
 kind-load-image:
 	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
-
-PHONY: e2e-test
-e2e-test:
-ifdef E2E_TEST
-	@echo Running e2e test $(E2E_TEST)
-	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
-else
-	@echo Running e2e tests
-	go test -v -timeout 3600s $(TEST_ARGS) ./test/e2e/...
-endif
 
 kind-e2e-test: multi-up e2e-test
 

@@ -139,6 +139,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 								{Name: "DATACENTER_NAME", Value: dc.Name},
 								{Name: "RACK_NAME", Value: rack.Name},
 								{Name: "ENABLE_AUTH", Value: "true"},
+								// Watching bundles is unnecessary in a k8s deployment. See
+								// https://github.com/stargate/stargate/issues/1286 for
+								// details.
+								{Name: "DISABLE_BUNDLES_WATCH", Value: "true"},
 							},
 
 							LivenessProbe:  &livenessProbe,
