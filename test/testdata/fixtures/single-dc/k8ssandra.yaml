@@ -21,10 +21,10 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 512M
+            heapSize: 384Mi
         stargate:
           size: 1
-          heapSize: 512M
+          heapSize: 384Mi
           livenessProbe:
             initialDelaySeconds: 100
             periodSeconds: 10
