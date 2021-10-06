@@ -446,10 +446,10 @@ k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 
 Verify that the following CRDs are installed:
 
 * `cassandradatacenters.cassandra.datastax.com`
-* `clientconfigs.k8ssandra.io`
+* `clientconfigs.config.k8ssandra.io`
 * `k8ssandraclusters.k8ssandra.io`
-* `replicatedsecrets.k8ssandra.io`
-* `stargates.k8ssandra.io`
+* `replicatedsecrets.replication.k8ssandra.io`
+* `stargates.stargate.k8ssandra.io`
 
 
 Check that there are two Deployments. The output should look similar to this:
@@ -886,13 +886,13 @@ Verify that the following CRDs are installed:
 * `certificaterequests.cert-manager.io`
 * `certificates.cert-manager.io`
 * `challenges.acme.cert-manager.io`
-* `clientconfigs.k8ssandra.io`
+* `clientconfigs.config.k8ssandra.io`
 * `clusterissuers.cert-manager.io`
 * `issuers.cert-manager.io`
 * `k8ssandraclusters.k8ssandra.io`
 * `orders.acme.cert-manager.io`
-* `replicatedsecrets.k8ssandra.io`
-* `stargates.k8ssandra.io`
+* `replicatedsecrets.replication.k8ssandra.io`
+* `stargates.stargate.k8ssandra.io`
 
 
 Check that there are two Deployments. The output should look similar to this:

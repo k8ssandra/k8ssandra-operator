@@ -24,6 +24,17 @@ import (
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	// StargateLabel is the distinctive label for all objects created by the Stargate controller. The label value is
+	// the Stargate resource name.
+	StargateLabel = "k8ssandra.io/stargate"
+
+	// StargateDeploymentLabel is a distinctive label for pods targeted by a deployment created by the Stargate
+	// controller. The label value is the Deployment name.
+	StargateDeploymentLabel = "k8ssandra.io/stargate-deployment"
+
+	DefaultStargateVersion = "1.0.36"
+)
 
 // StargateTemplate defines a template for deploying Stargate.
 type StargateTemplate struct {

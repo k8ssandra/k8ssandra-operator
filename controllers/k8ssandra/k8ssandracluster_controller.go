@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package k8ssandra
 
 import (
 	"context"
@@ -24,9 +24,11 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -52,6 +54,7 @@ const (
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
+	*config.ReconcilerConfig
 	client.Client
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
@@ -60,10 +63,11 @@ type K8ssandraClusterReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=config.k8ssandra.io,namespace="k8ssandra",resources=clientconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -75,7 +79,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: defaultDelay}, err
+		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
 	}
 
 	kc = kc.DeepCopy()
@@ -187,7 +191,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			if !cassandra.DatacenterReady(actualDc) {
 				logger.Info("Waiting for datacenter to become ready")
-				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 			}
 
 			logger.Info("The datacenter is ready")
@@ -220,7 +224,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 					logger.Error(err, "Failed to create datacenter")
 					return ctrl.Result{}, err
 				}
-				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 			} else {
 				logger.Error(err, "Failed to get datacenter")
 				return ctrl.Result{}, err
@@ -265,7 +269,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		Namespace: actualDc.Namespace,
 		Name:      stargate.ResourceName(kc, actualDc),
 	}
-	actualStargate := &api.Stargate{}
+	actualStargate := &stargateapi.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)
 
 	if stargateTemplate != nil {
@@ -280,14 +284,14 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				// Doing this only if a new Stargate instance needs to be created,
 				// to avoid altering the schema each time we wait for it to be ready.
 				if err := r.reconcileStargateAuthKeyspace(ctx, kc, actualDc, remoteClient, logger); err != nil {
-					return ctrl.Result{RequeueAfter: longDelay}, err
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
 				}
 				logger.Info("Creating Stargate resource")
 				if err := remoteClient.Create(ctx, desiredStargate); err != nil {
 					logger.Error(err, "Failed to create Stargate resource")
 					return ctrl.Result{}, err
 				} else {
-					return ctrl.Result{RequeueAfter: defaultDelay}, nil
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 				}
 			} else {
 				logger.Error(err, "Failed to get Stargate resource")
@@ -304,7 +308,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				desiredStargate.DeepCopyInto(actualStargate)
 				actualStargate.SetResourceVersion(resourceVersion)
 				if err = remoteClient.Update(ctx, actualStargate); err == nil {
-					return ctrl.Result{RequeueAfter: defaultDelay}, nil
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 				} else {
 					logger.Error(err, "Failed to update Stargate resource")
 					return ctrl.Result{}, err
@@ -312,7 +316,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 			}
 			if !actualStargate.Status.IsReady() {
 				logger.Info("Waiting for Stargate to become ready")
-				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 			}
 			logger.Info("Stargate is ready")
 		}
@@ -343,8 +347,8 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return ctrl.Result{}, nil
 }
 
-func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *api.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *api.Stargate {
-	desiredStargate := &api.Stargate{
+func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *stargateapi.Stargate {
+	desiredStargate := &stargateapi.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   stargateKey.Namespace,
 			Name:        stargateKey.Name,
@@ -357,7 +361,7 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 				api.K8ssandraClusterLabel: kc.Name,
 			},
 		},
-		Spec: api.StargateSpec{
+		Spec: stargateapi.StargateSpec{
 			StargateDatacenterTemplate: *stargateTemplate,
 			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
 		},
@@ -402,7 +406,7 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *api.Stargate, dcName string) error {
+func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *stargateapi.Stargate, dcName string) error {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus)
 	}
@@ -423,7 +427,7 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	}
 
 	if kc.Status.Datacenters[dcName].Stargate.Progress == "" {
-		kc.Status.Datacenters[dcName].Stargate.Progress = api.StargateProgressPending
+		kc.Status.Datacenters[dcName].Stargate.Progress = stargateapi.StargateProgressPending
 	}
 	return nil
 }
@@ -499,7 +503,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	for _, c := range clusters {
 		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.Watches(source.NewKindWithCache(&api.Stargate{}, c.GetCache()),
+		cb = cb.Watches(source.NewKindWithCache(&stargateapi.Stargate{}, c.GetCache()),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	}
 

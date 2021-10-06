@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,7 @@ type K8ssandraClusterSpec struct {
 	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
 	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
-	Stargate *StargateClusterTemplate `json:"stargate,omitempty"`
+	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -53,7 +54,7 @@ type K8ssandraClusterStatus struct {
 // K8ssandraStatus defines the observed of a k8ssandra instance
 type K8ssandraStatus struct {
 	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	Stargate  *StargateStatus                      `json:"stargate,omitempty"`
+	Stargate  *stargateapi.StargateStatus          `json:"stargate,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -195,7 +196,7 @@ type CassandraDatacenterTemplate struct {
 	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 	// deploying Stargate in this datacenter.
 	// +optional
-	Stargate *StargateDatacenterTemplate `json:"stargate,omitempty"`
+	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

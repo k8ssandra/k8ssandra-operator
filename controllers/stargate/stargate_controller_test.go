@@ -1,11 +1,12 @@
-package controllers
+package stargate
 
 import (
 	"context"
 	"testing"
+	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,15 +17,24 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 )
 
-func testStargate(ctx context.Context, t *testing.T) {
-	ctx, cancel := context.WithCancel(ctx)
-	testEnv := &TestEnv{}
+const (
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 500
+)
+
+func TestStargate(t *testing.T) {
+	ctx := testutils.TestSetup(t)
+	testEnv := &testutils.TestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager) error {
 		err := (&StargateReconciler{
-			Client: mgr.GetClient(),
-			Scheme: scheme.Scheme,
+			ReconcilerConfig: config.InitConfig(),
+			Client:           mgr.GetClient(),
+			Scheme:           scheme.Scheme,
 		}).SetupWithManager(mgr)
 		return err
 	})
@@ -33,7 +43,6 @@ func testStargate(ctx context.Context, t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
-	defer cancel()
 
 	t.Run("CreateStargateSingleRack", func(t *testing.T) {
 		testCreateStargateSingleRack(t, testEnv.TestClient)

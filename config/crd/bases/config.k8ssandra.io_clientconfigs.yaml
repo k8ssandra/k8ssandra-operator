@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
-  name: clientconfigs.k8ssandra.io
+  name: clientconfigs.config.k8ssandra.io
 spec:
-  group: k8ssandra.io
+  group: config.k8ssandra.io
   names:
     kind: ClientConfig
     listKind: ClientConfigList
@@ -16,7 +16,7 @@ spec:
     singular: clientconfig
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     schema:
       openAPIV3Schema:
         description: ClientConfig is the Schema for the kubeconfigs API

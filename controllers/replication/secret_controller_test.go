@@ -1,12 +1,14 @@
-package controllers
+package replication
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -19,20 +21,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+)
+
+const (
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 500
 )
 
 var (
 	targetCopyToCluster = "cluster-1"
 	targetNoCopyCluster = "cluster-2"
-	testEnv             *MultiClusterTestEnv
+	testEnv             *testutils.MultiClusterTestEnv
 )
 
-func testSecretController(ctx context.Context, t *testing.T) {
-	ctx, cancel := context.WithCancel(ctx)
-	testEnv = &MultiClusterTestEnv{}
+func TestSecretController(t *testing.T) {
+	ctx := testutils.TestSetup(t)
+	// ctx, cancel := context.WithCancel(ctx)
+	testEnv = &testutils.MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		return (&SecretSyncController{
-			ClientCache: clientCache,
+			ReconcilerConfig: config.InitConfig(),
+			ClientCache:      clientCache,
 		}).SetupWithManager(mgr, clusters)
 	})
 	if err != nil {
@@ -40,7 +51,7 @@ func testSecretController(ctx context.Context, t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
-	defer cancel()
+	// defer cancel()
 
 	// Secret controller tests
 	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
@@ -48,7 +59,6 @@ func testSecretController(ctx context.Context, t *testing.T) {
 	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
 
 	t.Run("ManagedReplicatedSecret", testEnv.ControllerTest(ctx, managedReplicatedSecret))
-
 }
 
 // copySecretsFromClusterToCluster Tests:
@@ -119,7 +129,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		if targetSecret.Name == generatedSecrets[0].Name {
 			phantomSecret := targetSecret.DeepCopy()
 			phantomSecret.Data["be-gone-key"] = []byte("my-phantom-value")
-			targetSecret.GetAnnotations()[api.ResourceHashAnnotation] = "XXXXXX"
+			targetSecret.GetAnnotations()[coreapi.ResourceHashAnnotation] = "XXXXXX"
 			err = modifierClient.Update(ctx, phantomSecret)
 			require.NoError(err)
 			break
@@ -335,7 +345,7 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 				for _, ts := range targetSecretList.Items {
 					if s.Name == ts.Name {
 						found = true
-						if s.GetAnnotations()[api.ResourceHashAnnotation] != ts.GetAnnotations()[api.ResourceHashAnnotation] {
+						if s.GetAnnotations()[coreapi.ResourceHashAnnotation] != ts.GetAnnotations()[coreapi.ResourceHashAnnotation] {
 							return false
 						}
 						break
@@ -370,7 +380,7 @@ func TestSyncSecrets(t *testing.T) {
 				"label1": "value1",
 			},
 			Annotations: map[string]string{
-				api.ResourceHashAnnotation: "12345678",
+				coreapi.ResourceHashAnnotation: "12345678",
 			},
 		},
 		Data: map[string][]byte{
@@ -387,7 +397,7 @@ func TestSyncSecrets(t *testing.T) {
 
 	dest.GetLabels()[OrphanResourceAnnotation] = "true"
 
-	dest.GetAnnotations()[api.ResourceHashAnnotation] = "9876555"
+	dest.GetAnnotations()[coreapi.ResourceHashAnnotation] = "9876555"
 
 	syncSecrets(orig, dest)
 
@@ -422,7 +432,7 @@ func TestRequiresUpdate(t *testing.T) {
 			Namespace: "b",
 			UID:       "a",
 			Annotations: map[string]string{
-				api.ResourceHashAnnotation: "",
+				coreapi.ResourceHashAnnotation: "",
 			},
 		},
 		Data: map[string][]byte{
@@ -430,7 +440,7 @@ func TestRequiresUpdate(t *testing.T) {
 		},
 	}
 
-	orig.GetAnnotations()[api.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
+	orig.GetAnnotations()[coreapi.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
 
 	// Secrets don't match
 	assert.True(requiresUpdate(orig, dest))
@@ -467,10 +477,10 @@ func managedReplicatedSecret(t *testing.T, ctx context.Context, f *framework.Fra
 
 	// Verify data in it
 
-	val, exists := replSecret.Labels[api.ManagedByLabel]
+	val, exists := replSecret.Labels[coreapi.ManagedByLabel]
 	assert.True(exists)
-	assert.Equal(api.NameLabelValue, val)
-	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
+	assert.Equal(coreapi.NameLabelValue, val)
+	val, exists = replSecret.Labels[coreapi.K8ssandraClusterLabel]
 	assert.True(exists)
 	assert.Equal("test", val)
 

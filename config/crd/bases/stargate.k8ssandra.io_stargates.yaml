@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
-  name: stargates.k8ssandra.io
+  name: stargates.stargate.k8ssandra.io
 spec:
-  group: k8ssandra.io
+  group: stargate.k8ssandra.io
   names:
     kind: Stargate
     listKind: StargateList

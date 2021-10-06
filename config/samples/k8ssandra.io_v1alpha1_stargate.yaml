@@ -1,4 +1,4 @@
-apiVersion: k8ssandra.io/v1alpha1
+apiVersion: stargate.k8ssandra.io/v1alpha1
 kind: Stargate
 metadata:
   name: stargate-sample

@@ -1,19 +1,25 @@
-package controllers
+package k8ssandra
 
 import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/Jeffail/gabs"
+	"github.com/go-logr/logr"
 
 	"strconv"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -27,29 +33,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+)
+
+const (
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 500
 )
 
 var (
 	defaultStorageClass = "default"
+	testEnv             *testutils.MultiClusterTestEnv
+	seedsResolver       = &fakeSeedsResolver{}
+	managementApi       = &fakeManagementApiFactory{}
 )
 
-func testK8ssandraCluster(ctx context.Context, t *testing.T) {
-	ctx, cancel := context.WithCancel(ctx)
-	testEnv = &MultiClusterTestEnv{}
+func TestK8ssandraCluster(t *testing.T) {
+	ctx := testutils.TestSetup(t)
+	testEnv = &testutils.MultiClusterTestEnv{}
+	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
+		return []string{}, nil
+	}
+
+	reconcilerConfig := config.InitConfig()
+
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&SecretSyncController{
-			ClientCache: clientCache,
+		err := (&replicationctrl.SecretSyncController{
+			ReconcilerConfig: reconcilerConfig,
+			ClientCache:      clientCache,
 		}).SetupWithManager(mgr, clusters)
 		if err != nil {
 			return err
 		}
 
 		err = (&K8ssandraClusterReconciler{
-			Client:        mgr.GetClient(),
-			Scheme:        scheme.Scheme,
-			ClientCache:   clientCache,
-			SeedsResolver: seedsResolver,
-			ManagementApi: managementApi,
+			ReconcilerConfig: reconcilerConfig,
+			Client:           mgr.GetClient(),
+			Scheme:           scheme.Scheme,
+			ClientCache:      clientCache,
+			SeedsResolver:    seedsResolver,
+			ManagementApi:    managementApi,
 		}).SetupWithManager(mgr, clusters)
 		return err
 	})
@@ -58,7 +82,6 @@ func testK8ssandraCluster(ctx context.Context, t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
-	defer cancel()
 
 	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
 	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
@@ -687,7 +710,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("check that replicatedSecret was created")
 	replicatedSecretKey := types.NamespacedName{Name: cluster.Spec.Cassandra.Cluster, Namespace: namespace}
 	require.Eventually(func() bool {
-		sec := &api.ReplicatedSecret{}
+		sec := &replicationapi.ReplicatedSecret{}
 		err = f.Client.Get(ctx, replicatedSecretKey, sec)
 		if err != nil {
 			return false
@@ -863,8 +886,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Stargate: &api.StargateDatacenterTemplate{
-							StargateClusterTemplate: api.StargateClusterTemplate{
+						Stargate: &stargateapi.StargateDatacenterTemplate{
+							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
 								Size: 1,
 							},
 						},
@@ -881,8 +904,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Stargate: &api.StargateDatacenterTemplate{
-							StargateClusterTemplate: api.StargateClusterTemplate{
+						Stargate: &stargateapi.StargateDatacenterTemplate{
+							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
 								Size: 1,
 							},
 						},
@@ -951,7 +974,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	}
 
 	t.Logf("check that stargate %s has not been created", sg1Key)
-	sg1 := &api.Stargate{}
+	sg1 := &stargateapi.Stargate{}
 	err = f.Get(ctx, sg1Key, sg1)
 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc1 is ready", sg1Key))
 
@@ -1014,15 +1037,15 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
 
 	t.Logf("update stargate sg1 status to ready")
-	err = f.PatchStagateStatus(ctx, sg1Key, func(sg *api.Stargate) {
+	err = f.PatchStagateStatus(ctx, sg1Key, func(sg *stargateapi.Stargate) {
 		now := metav1.Now()
-		sg.Status.Progress = api.StargateProgressRunning
+		sg.Status.Progress = stargateapi.StargateProgressRunning
 		sg.Status.AvailableReplicas = 1
 		sg.Status.Replicas = 1
 		sg.Status.ReadyReplicas = 1
 		sg.Status.UpdatedReplicas = 1
-		sg.Status.SetCondition(api.StargateCondition{
-			Type:               api.StargateReady,
+		sg.Status.SetCondition(stargateapi.StargateCondition{
+			Type:               stargateapi.StargateReady,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
 		})
@@ -1030,7 +1053,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.NoError(err, "failed to patch stargate status")
 
 	t.Logf("check that stargate %s has not been created", sg2Key)
-	sg2 := &api.Stargate{}
+	sg2 := &stargateapi.Stargate{}
 	err = f.Get(ctx, sg2Key, sg2)
 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc2 is ready", sg2Key))
 
@@ -1053,15 +1076,15 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	// require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
 
 	t.Logf("update stargate sg2 status to ready")
-	err = f.PatchStagateStatus(ctx, sg2Key, func(sg *api.Stargate) {
+	err = f.PatchStagateStatus(ctx, sg2Key, func(sg *stargateapi.Stargate) {
 		now := metav1.Now()
-		sg.Status.Progress = api.StargateProgressRunning
+		sg.Status.Progress = stargateapi.StargateProgressRunning
 		sg.Status.AvailableReplicas = 1
 		sg.Status.Replicas = 1
 		sg.Status.ReadyReplicas = 1
 		sg.Status.UpdatedReplicas = 1
-		sg.Status.SetCondition(api.StargateCondition{
-			Type:               api.StargateReady,
+		sg.Status.SetCondition(stargateapi.StargateCondition{
+			Type:               stargateapi.StargateReady,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
 		})
@@ -1127,13 +1150,13 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 	t.Log("check that stargate sg1 is deleted")
 	require.Eventually(func() bool {
-		err = f.Get(ctx, sg1Key, &api.Stargate{})
+		err = f.Get(ctx, sg1Key, &stargateapi.Stargate{})
 		return errors.IsNotFound(err)
 	}, timeout, interval)
 
 	t.Log("check that stargate sg2 is deleted")
 	require.Eventually(func() bool {
-		err = f.Get(ctx, sg2Key, &api.Stargate{})
+		err = f.Get(ctx, sg2Key, &stargateapi.Stargate{})
 		return errors.IsNotFound(err)
 	}, timeout, interval)
 
@@ -1176,4 +1199,74 @@ func intPtr(n int) *int {
 func parseResource(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
+}
+
+type fakeSeedsResolver struct {
+	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
+}
+
+func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
+	return r.callback(dc)
+}
+
+type fakeManagementApiFactory struct {
+}
+
+func (f fakeManagementApiFactory) NewManagementApiFacade(ctx context.Context, dc *cassdcapi.CassandraDatacenter, k8sClient client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+	return &fakeManagementApi{}, nil
+}
+
+type fakeManagementApi struct {
+}
+
+func (r *fakeManagementApi) CreateKeyspaceIfNotExists(keyspaceName string, replication map[string]int) error {
+	return nil
+}
+
+func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
+	return []string{"data_auth_endpoint"}, nil
+}
+
+func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {
+	return nil
+}
+
+// verifySecretsMatch checks that the same secret is copied to other clusters
+func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}, namespace string) bool {
+	secretList := &corev1.SecretList{}
+	err := localClient.List(ctx, secretList, client.InNamespace(namespace))
+	if err != nil {
+		return false
+	}
+
+	for _, remoteCluster := range remoteClusters {
+		testClient := testEnv.Clients[remoteCluster]
+
+		targetSecretList := &corev1.SecretList{}
+		err := testClient.List(ctx, targetSecretList, client.InNamespace(namespace))
+		if err != nil {
+			return false
+		}
+
+		for _, s := range secretList.Items {
+			if _, exists := secrets[s.Name]; exists {
+				// Find the corresponding item from targetSecretList - or fail if it's not there
+				found := false
+				for _, ts := range targetSecretList.Items {
+					if s.Name == ts.Name {
+						found = true
+						if s.GetAnnotations()[api.ResourceHashAnnotation] != ts.GetAnnotations()[api.ResourceHashAnnotation] {
+							return false
+						}
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
 }

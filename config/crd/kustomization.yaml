@@ -3,9 +3,9 @@
 # It should be run by config/default
 resources:
 - bases/k8ssandra.io_k8ssandraclusters.yaml
-- bases/k8ssandra.io_stargates.yaml
-- bases/k8ssandra.io_clientconfigs.yaml
-- bases/k8ssandra.io_replicatedsecrets.yaml
+- bases/stargate.k8ssandra.io_stargates.yaml
+- bases/config.k8ssandra.io_clientconfigs.yaml
+- bases/replication.k8ssandra.io_replicatedsecrets.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

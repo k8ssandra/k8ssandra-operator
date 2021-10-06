@@ -162,7 +162,7 @@ clientconfig_name=$(echo "$src_context" | tr '_' '-')
 clientconfig_path="${output_dir}/${clientconfig_name}.yaml"
 echo "Creating ClientConfig $clientconfig_path"
 cat > "$clientconfig_path" <<EOF
-apiVersion: k8ssandra.io/v1alpha1
+apiVersion: config.k8ssandra.io/v1beta1
 kind: ClientConfig
 metadata:
   name: $clientconfig_name

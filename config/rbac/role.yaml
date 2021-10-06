@@ -32,6 +32,18 @@ rules:
   - update
   - watch
 - apiGroups:
+  - config.k8ssandra.io
+  resources:
+  - clientconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - ""
   resources:
   - pods
@@ -91,7 +103,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - k8ssandra.io
+  - replication.k8ssandra.io
   resources:
   - replicatedsecrets
   verbs:
@@ -102,13 +114,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - k8ssandra.io
+  - replication.k8ssandra.io
   resources:
   - replicatedsecrets/finalizers
   verbs:
   - update
 - apiGroups:
-  - k8ssandra.io
+  - replication.k8ssandra.io
   resources:
   - replicatedsecrets/status
   verbs:
@@ -116,7 +128,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - k8ssandra.io
+  - stargate.k8ssandra.io
   resources:
   - stargates
   verbs:
@@ -128,13 +140,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - k8ssandra.io
+  - stargate.k8ssandra.io
   resources:
   - stargates/finalizers
   verbs:
   - update
 - apiGroups:
-  - k8ssandra.io
+  - stargate.k8ssandra.io
   resources:
   - stargates/status
   verbs:

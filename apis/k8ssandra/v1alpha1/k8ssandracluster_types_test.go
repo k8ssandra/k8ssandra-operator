@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"testing"
 
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,7 +23,7 @@ func testK8ssandraClusterHasStargates(t *testing.T) {
 	t.Run("cluster-level stargate", func(t *testing.T) {
 		kc := K8ssandraCluster{
 			Spec: K8ssandraClusterSpec{
-				Stargate: &StargateClusterTemplate{
+				Stargate: &stargateapi.StargateClusterTemplate{
 					Size: 3,
 				},
 			},
@@ -41,8 +42,8 @@ func testK8ssandraClusterHasStargates(t *testing.T) {
 						},
 						{
 							Size: 3,
-							Stargate: &StargateDatacenterTemplate{
-								StargateClusterTemplate: StargateClusterTemplate{
+							Stargate: &stargateapi.StargateDatacenterTemplate{
+								StargateClusterTemplate: stargateapi.StargateClusterTemplate{
 									Size: 3,
 								},
 							},

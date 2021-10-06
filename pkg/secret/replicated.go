@@ -13,7 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 )
 
 const (
@@ -82,7 +83,7 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) error {
 	// We use leaderID to ensure that this leader instance of k8ssandra-operator is using the correct ReplicatedSecret (it can be shared between different k8ssandra-operators)
 	targetRepSec := generateReplicatedSecret(clusterName, namespace, targetContexts)
-	repSec := &api.ReplicatedSecret{}
+	repSec := &replicationapi.ReplicatedSecret{}
 	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -97,18 +98,18 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName
 	return c.Update(ctx, repSec)
 }
 
-func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *api.ReplicatedSecret {
+func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
 
-	replicationTargets := make([]api.ReplicationTarget, 0, len(targetContexts))
+	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(targetContexts))
 	for _, ctx := range targetContexts {
-		replicationTargets = append(replicationTargets, api.ReplicationTarget{
+		replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
 			K8sContextName: ctx,
 		})
 	}
 
-	return &api.ReplicatedSecret{
+	return &replicationapi.ReplicatedSecret{
 		ObjectMeta: getManagedObjectMeta(clusterName, namespace, clusterName),
-		Spec: api.ReplicatedSecretSpec{
+		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					api.ManagedByLabel:        api.NameLabelValue,

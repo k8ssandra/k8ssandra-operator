@@ -1,6 +1,7 @@
 domain: k8ssandra.io
 layout:
 - go.kubebuilder.io/v3
+multigroup: true
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
@@ -13,29 +14,31 @@ resources:
   controller: true
   group: k8ssandra.io
   kind: K8ssandraCluster
-  path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
+  path: github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
   domain: k8ssandra.io
+  group: stargate
   kind: Stargate
-  version: ""
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: k8ssandra.io
-  group: k8ssandra.io
-  kind: ClientConfig
-  path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
+  path: github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   domain: k8ssandra.io
-  group: k8ssandra.io
+  group: config
+  kind: ClientConfig
+  path: github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: k8ssandra.io
+  group: replication
   kind: ReplicatedSecret
-  path: github.com/k8ssandra/k8ssandra-operator/api/v1alpha1
+  path: github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1
   version: v1alpha1
 version: "3"

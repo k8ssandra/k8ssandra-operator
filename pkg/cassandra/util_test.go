@@ -1,9 +1,10 @@
 package cassandra
 
 import (
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/stretchr/testify/require"
 )
 
 func TestComputeSystemReplication(t *testing.T) {
