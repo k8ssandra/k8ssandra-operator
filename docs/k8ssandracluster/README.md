@@ -36,8 +36,8 @@ spec:
 
 This manifest specifies a 3-node Cassandra cluster with a single datacenter.
 
-When this K8ssandraCluster is created, K8ssandra Operator creates a CassandraDatacenter. The
-CassandraDatacenter is then managed by Cass Operator.
+When the K8ssandraCluster is created, K8ssandra Operator creates a CassandraDatacenter 
+named `dc1`. `dc1` will be managed by Cass Operator.
 
 # Multi-Datacenter Cluster
 K8ssandra Operator delegates most of the work with managing a CassandraDatacenter to 
@@ -98,7 +98,7 @@ K8ssandra Operator creates the CassandraDatacenters in the order in which they a
 declared. It first creates `dc1`. When `dc1` is ready, it creates `dc2`. Finally, when 
 `dc2` is ready, the operator creates `dc3`.
 
-# Configuring Cassandra
+# Cassandra
 Cassandra can be configured at the cluster level and at the datacenter level. Let's look 
 at some examples to see how this works.
 
@@ -203,9 +203,9 @@ These are used to configure `cassandra.yaml` and `jvm-server.options` for Cassan
 worker node affinity.
 
 ## Cluster Configuration
-With the exception of `nodeAffinityLabels` in the previous example the datacenters are 
-configured the same. We can eliminate the duplication by declaring configuration at the 
-cluster level:
+In the prior example the datacenters are configured the same except for their `racks` 
+and `nodeAffinityLabels` in particular. We can eliminate the duplication by declaring 
+the configuration at the cluster level.
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -267,3 +267,90 @@ spec:
             nodeAffinityLabels:
               "topology.kubernetes.io/zone": west-1c
 ```
+The datacenters inherit the cluster level settings which include:
+
+* `cluster`
+* `superUserSecret`
+* `serverVersion`
+* `size`
+* `storageConfig`
+* `config`
+* `resources`
+
+## Mixed Configuration
+Let's say that we want higher storage capacity for `dc2`:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    superUserSecret: demo-superuser
+    serverVersion: "4.0.0"
+    size: 9
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 500Gi
+    config:
+      cassandraYaml:
+        concurrent_reads: 8
+        concurrent_writes: 16
+        compaction_throughput_mb_per_sec: 128
+        key_cache_size_in_mb: 100
+      jvmOptions:
+        heapSize: 512M
+    resources:
+      limits:
+        memory: 1024Mi
+    datacenters:
+      - metadata:
+          name: dc1
+          namespace: default
+        k8sContext: east
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1c
+      - metadata:
+          name: dc2
+          namespace: default
+        k8sContext: west
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Ti
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1c
+```
+
+We declare `storageConfig` for `dc2`. This overrides the cluster level setting. All 
+other cluster level settings are inherited
+
+# Stargate
+K8ssandra Operator provides a `Stargate` CustomResourceDefinition
