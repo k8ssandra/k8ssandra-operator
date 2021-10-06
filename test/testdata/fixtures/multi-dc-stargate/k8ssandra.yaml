@@ -59,7 +59,7 @@ spec:
     stargateContainerImage:
       registry: docker.io
       repository: jsanda/stargate-3_11
-      tag: latest
+      tag: bc73a29a
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
