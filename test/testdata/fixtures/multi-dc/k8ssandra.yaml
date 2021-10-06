@@ -42,12 +42,12 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: "512M"
+        heapSize: 384Mi
     networking:
       hostNetwork: true
     resources:
       limits:
-        memory: 800Mi
+        memory: 512Mi
     datacenters:
       - metadata:
           name: dc1

@@ -21,10 +21,17 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 512M
+            heapSize: 384Mi
         stargate:
+          stargateContainerImage:
+            # Temporarily use a custom image that includes
+            # https://github.com/stargate/stargate/pull/1300 until there is an updated, official
+            # Stargate image with these changes.
+            registry: docker.io
+            repository: jsanda/stargate-3_11
+            tag: bc73a29a
           size: 1
-          heapSize: 512M
+          heapSize: 384Mi
           livenessProbe:
             initialDelaySeconds: 100
             periodSeconds: 10
