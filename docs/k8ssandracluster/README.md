@@ -16,7 +16,6 @@ spec:
   cassandra:
     cluster: demo
     serverVersion: "4.0.0"
-    size: 3
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -31,13 +30,16 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-          namespace: default        
+          namespace: default
+        size: 3
 ```
 
 This manifest specifies a 3-node Cassandra cluster with a single datacenter.
 
 When the K8ssandraCluster is created, K8ssandra Operator creates a CassandraDatacenter 
-named `dc1`. `dc1` will be managed by Cass Operator.
+named `dc1`. `dc1` will be managed by Cass Operator. We will look more closely at the 
+interaction between K8ssandra Operator and Cass Operator in the reconcilation section 
+later in this document.
 
 # Multi-Datacenter Cluster
 K8ssandra Operator delegates most of the work with managing a CassandraDatacenter to 
@@ -50,6 +52,10 @@ multi-region Cassandra cluster with a datacenter in each of the Kubernetes clust
 
 Here is how that would look:
 
+<!--
+It might be good to have section focused on configuring topology.
+-->
+
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -59,7 +65,6 @@ spec:
   cassandra:
     cluster: demo
     serverVersion: "4.0.0"
-    size: 3
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -75,14 +80,17 @@ spec:
       - metadata:
           name: dc1
           namespace: default
+        size: 3  
         k8sContext: east
       - metadata:
           name: dc2
           namespace: default
-        k8sContext: central
+        size: 3  
+        k8sContext: central        
       - metadata:
           name: dc3
           namespace: default
+        size: 3  
         k8sContext: west
 ```
 We specify 3 datacenters. The `k8sContext` field determines in which Kubernetes cluster 
@@ -95,8 +103,8 @@ If `k8sContext` is omitted, the CassandraDatacenter will be created in the local
 which is also the control plane cluster.
 
 K8ssandra Operator creates the CassandraDatacenters in the order in which they are 
-declared. It first creates `dc1`. When `dc1` is ready, it creates `dc2`. Finally, when 
-`dc2` is ready, the operator creates `dc3`.
+declared. It first creates `dc1` in the `east` cluster. When `dc1` is ready, it creates 
+`dc2` in `central`. Finally, when `dc2` is ready, the operator creates `dc3` in `west`.
 
 # Cassandra
 Cassandra can be configured at the cluster level and at the datacenter level. Let's look 
@@ -186,10 +194,14 @@ spec:
             nodeAffinityLabels:
               "topology.kubernetes.io/zone": west-1c
 ```
-This manifest an 18 node cluster split evenly across two datacenters.
+This manifest declares a Cassandra cluster with two datacenters and nine nodes per 
+datacenter.
 
 The `cluster` and `superUserSecret` properties can only be set at the cluster level since
 they are cluster-wide settings.
+
+The `size` property can only be set at the datacenter level. This specifies the number 
+of Cassandra nodes for the datacenter.
 
 `storageConfig` configures the PersistentVolumeClaim for Cassandra's data volume.
 
@@ -217,7 +229,6 @@ spec:
     cluster: demo
     superUserSecret: demo-superuser
     serverVersion: "4.0.0"
-    size: 9
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -242,6 +253,7 @@ spec:
           name: dc1
           namespace: default
         k8sContext: east
+        size: 9
         racks:
           - name: rack1
             nodeAffinityLabels:
@@ -255,7 +267,8 @@ spec:
       - metadata:
           name: dc2
           namespace: default
-        k8sContext: west        
+        k8sContext: west
+        size: 9
         racks:
           - name: rack1
             nodeAffinityLabels:
@@ -278,7 +291,8 @@ The datacenters inherit the cluster level settings which include:
 * `resources`
 
 ## Mixed Configuration
-Let's say that we want higher storage capacity for `dc2`:
+Let's say that we want a higher storage capacity for `dc2`. We change the manifest as 
+follows:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -290,7 +304,6 @@ spec:
     cluster: demo
     superUserSecret: demo-superuser
     serverVersion: "4.0.0"
-    size: 9
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -315,6 +328,7 @@ spec:
           name: dc1
           namespace: default
         k8sContext: east
+        size: 9
         racks:
           - name: rack1
             nodeAffinityLabels:
@@ -329,6 +343,7 @@ spec:
           name: dc2
           namespace: default
         k8sContext: west
+        size: 9
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -350,7 +365,49 @@ spec:
 ```
 
 We declare `storageConfig` for `dc2`. This overrides the cluster level setting. All 
-other cluster level settings are inherited
+other cluster level settings are inherited by `dc2`.
 
 # Stargate
-K8ssandra Operator provides a `Stargate` CustomResourceDefinition
+K8ssandra Operator provides a `Stargate` CustomResourceDefinition and a controller for 
+managing `Stargate` objects.
+
+Let's revisit the initial example and add Stargate to it:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "4.0.0"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+    config:
+      jvmOptions:
+        heapSize: 512M
+    datacenters:
+      - metadata:
+          name: dc1
+          namespace: default
+        size: 3  
+        stargate:
+          size: 1
+```
+When the K8ssandraCluster is created, the K8ssandraCluster controller creates a 
+CassandraDatacenter with three Cassandra nodes. It then creates a Stargate object. The 
+Stargate controller will in turn deploy a single Stargate node.
+
+By default, Stargate pods will be scheduled onto different worker nodes than the ones on 
+which Cassandra pods are scheduled.
+
+## Configuration
+
+# Reconciliation
