@@ -410,4 +410,167 @@ which Cassandra pods are scheduled.
 
 ## Configuration
 
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "4.0.0"
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 3
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heapSize: 512Mi
+        stargate:
+          serviceAccount: my-stargate-serviceaccount 
+          size: 1
+          heapSize: 512Mi
+          resources:
+            limits:
+              cpu: "1"
+              memory: "1024Mi"
+          livenessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 20
+          readinessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 20
+```
+Stargate is configured at the datacenter level.
+
+`size` specifies the number of Stargate nodes.
+
+`serviceAccount` specifies the service account to use for Stargate pods.
+
+`heapSize` configures the min/max heap of the Stargate JVM.
+
+`resources` configures CPU and/or memory resources for Stargate pods.
+
+`livenessProbe` configures the liveness probe. 
+
+`readinessProbe` configures the readiness probe.
+
+### Topology
+As mentioned previously, Stargate pods will be scheduled onto different worker nodes 
+than the ones on which Cassandra pods are scheduled. If you want to allow Cassandra pods 
+and Stargate pods to be co-located on the same worker nodes, set the  
+`allowStargateOnDataNodes` property to `true`:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "4.0.0"
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 1
+        stargate:
+          allowStargateOnDataNodes: true
+```
+
+The Stargate controller uses the same node affinity and pod anti-affinity rules that  
+Cass Operator uses for Cassandra pods. You can override the default affinity settings as 
+follows:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    config:
+      jvmOptions:
+        heapSize: 1024M
+    serverVersion: 4.0.0
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: standard    
+    datacenters:
+    - metadata:
+        name: dc1
+        size: 3
+      racks:
+      - name: rack1
+        nodeAffinityLabels:
+          topology.kubernetes.io/zone: us-east1-a
+      - name: rack2
+        nodeAffinityLabels:
+          topology.kubernetes.io/zone: us-east1-b
+      - name: rack3
+        nodeAffinityLabels:
+          topology.kubernetes.io/zone: us-east1-c
+      stargate:
+        size: 3
+        heapSize: 1024Mi
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: topology.kubernetes.io/zone
+                  operator: In
+                  values:
+                  - us-east1-b
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: k8ssandra.io/stargate
+                  operator: In
+                  values:
+                  - demo-dc1-stargate
+                - key: cassandra.datastax.com/datacenter
+                  operator: In
+                  values:
+                  - dc1
+              topologyKey: kubernetes.io/hostname        
+```
+Let's focus on the `racks` and `affinity` properties. We are creating a three node 
+datacenter with three racks. Cass Operator will generate node affinity rules for such that:
+
+* Cassandra pods in rack1 will be scheduled onto worker nodes in zone `us-east1-a`
+* Cassandra pods in rack2 will be scheduled onto worker nodes in zone `us-east1-b`
+* Cassandra pods in rack3 will be scheduled onto worker nodes in zone `us-east1-c`
+
+We are creating three Stargate nodes. By default, they would be spread evenly across the 
+racks using the same affinity rules used for Cassandra pods. There would be one Stargate 
+pod per zone. 
+
+Instead of the defaults, we only want Stargate pods to be scheduled in the 
+`us-east1-b` zone. The `nodeAffinity` takes care of this. Furthermore, we want to 
+prevent Stargate pods from being co-located with other Stargate pods or Cassnandra pods. 
+The `podAntiAffinity` addresses this.
+
 # Reconciliation
