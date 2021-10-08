@@ -1,0 +1,108 @@
+# This workflow is for tests that require a single cluster.
+name: Run single-cluster e2e tests on a schedule
+on:
+  schedule:
+    - cron:  '55 2 * * *'
+jobs:
+  build_image:
+    name: Build Image
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-integ-
+      - name: Build image
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          file: Dockerfile
+          context: .
+          push: false
+          tags: k8ssandra/k8ssandra-operator:latest
+          platforms: linux/amd64
+          outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+      - name: Upload k8ssandra-operator image
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp/k8ssandra-operator.tar
+  kind_e2e_tests:
+    runs-on: self-hosted
+    needs: build_image
+    strategy:
+      matrix:
+        e2e_test:
+          - CreateSingleDatacenterCluster
+          - createStargateAndDatacenter
+      fail-fast: false
+    name: ${{ matrix.e2e_test }}
+    env:
+      GOPATH: /home/runner/go
+      GOROOT: /usr/local/go1.16
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v2
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Install kubectl
+        run: |
+          mkdir -p ~/.local/bin/
+          echo "export PATH=~/.local/bin/:$PATH" >> ~/.bashrc 
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          mv kubectl ~/.local/bin/
+      - name: Install kustomize
+        run: make kustomize
+      - name: Install Kind
+        run: go get sigs.k8s.io/kind
+      - name: Install yq
+        run: |
+          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
+          tar -xzf yq_linux_amd64.tar.gz
+          mkdir -p ~/.local/bin/
+          echo "export PATH=~/.local/bin/:$PATH" >> ~/.bashrc 
+          mv yq_linux_amd64.tar.gz ~/.local/bin/
+      - name: Create Kind Clusters
+        run: ./scripts/setup-kind-multicluster.sh --clusters 1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Download k8ssandra-operator image
+        uses: actions/download-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp
+      - name: Load images
+        run: |
+          docker load --input /tmp/k8ssandra-operator.tar
+      - name: Load image on kind nodes
+        run: make KIND_CLUSTER=k8ssandra-0 kind-load-image
+      - name: Run e2e test ( ${{ matrix.e2e_test }} )
+        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
+      - name: Archive k8s logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8s-logs-${{ matrix.e2e_test }}
+          path: ./build/test
