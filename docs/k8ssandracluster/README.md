@@ -37,81 +37,17 @@ spec:
 This manifest specifies a 3-node Cassandra cluster with a single datacenter.
 
 When the K8ssandraCluster is created, K8ssandra Operator creates a CassandraDatacenter 
-named `dc1`. `dc1` will be managed by Cass Operator. We will look more closely at the 
-interaction between K8ssandra Operator and Cass Operator in the reconcilation section 
+named `dc1`. `datacenters` is an array. Each element is a specification for a 
+CassandraDatacenter. `dc1` will be managed by Cass Operator. We will look more closely 
+at the interaction between K8ssandra Operator and Cass Operator in the reconcilation section 
 later in this document.
 
-# Multi-Datacenter Cluster
-K8ssandra Operator delegates most of the work with managing a CassandraDatacenter to 
-Cass Operator. Cass Operator focuses on the local datacenter. K8ssandra Operator builds 
-on that to provide support for multi-datacenter clusters which can span across multiple 
-Kubernetes clusters.
+# Cassandra Configuration
+Cassandra can be configured at the cluster level and at the datacenter level. We will go 
+through some examples to illustrate how this works.
 
-Suppose we have 3 Kubernetes clusters - `east`, `central`, and `west`. We want a 
-multi-region Cassandra cluster with a datacenter in each of the Kubernetes clusters. 
-
-Here is how that would look:
-
-<!--
-It might be good to have section focused on configuring topology.
--->
-
-```yaml
-apiVersion: k8ssandra.io/v1alpha1
-kind: K8ssandraCluster
-metadata:
-  name: demo
-spec:
-  cassandra:
-    cluster: demo
-    serverVersion: "4.0.0"
-    storageConfig:
-      cassandraDataVolumeClaimSpec:
-        storageClassName: standard
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 5Gi
-    config:
-      jvmOptions:
-        heapSize: 512M
-    datacenters:
-      - metadata:
-          name: dc1
-          namespace: default
-        size: 3  
-        k8sContext: east
-      - metadata:
-          name: dc2
-          namespace: default
-        size: 3  
-        k8sContext: central        
-      - metadata:
-          name: dc3
-          namespace: default
-        size: 3  
-        k8sContext: west
-```
-We specify 3 datacenters. The `k8sContext` field determines in which Kubernetes cluster 
-the CassandraDatacenter will be created.
-
-**Note:** See [Remote Cluster Connection Management](../remote-k8s-access/README.md) for 
-information on how to configure K8ssandra Operator to access remote clusters.
-
-If `k8sContext` is omitted, the CassandraDatacenter will be created in the local cluster 
-which is also the control plane cluster.
-
-K8ssandra Operator creates the CassandraDatacenters in the order in which they are 
-declared. It first creates `dc1` in the `east` cluster. When `dc1` is ready, it creates 
-`dc2` in `central`. Finally, when `dc2` is ready, the operator creates `dc3` in `west`.
-
-# Cassandra
-Cassandra can be configured at the cluster level and at the datacenter level. Let's look 
-at some examples to see how this works.
-
-## Datacenter Configuration 
-Configure Cassandra at the datacenter level:
+## Datacenter Configuration
+Let's first look at configuring Cassandra at the datacenter level:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -125,10 +61,10 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-          namespace: default
-        k8sContext: east
+          labels:
+            env: dev
         serverVersion: "4.0.0"  
-        size: 9   
+        size: 3   
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -148,76 +84,48 @@ spec:
         resources:
           limits:
             memory: 1024Mi
-        racks:
-        - name: rack1
-          nodeAffinityLabels:
-            "topology.kubernetes.io/zone": east-1a
-        - name: rack2
-          nodeAffinityLabels:
-            "topology.kubernetes.io/zone": east-1b
-        - name: rack3
-          nodeAffinityLabels:
-            "topology.kubernetes.io/zone": east-1c
-      - metadata:
-          name: dc2
-          namespace: default
-        k8sContext: west  
-        serverVersion: "4.0.0"
-        size: 9
-        storageConfig:
-          cassandraDataVolumeClaimSpec:
-            storageClassName: standard
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 500Gi
-        config:
-          cassandraYaml:
-            concurrent_reads: 8
-            concurrent_writes: 16
-            compaction_throughput_mb_per_sec: 128
-            key_cache_size_in_mb: 100
-          jvmOptions:
-            heapSize: 512M
-        resources:
-          limits:
-            memory: 1024Mi
-        racks:
-          - name: rack1
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1a
-          - name: rack2
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1b
-          - name: rack3
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1c
 ```
-This manifest declares a Cassandra cluster with two datacenters and nine nodes per 
-datacenter.
+This manifest declares a Cassandra cluster with one datacenter that has three nodes.
 
-The `cluster` and `superUserSecret` properties can only be set at the cluster level since
-they are cluster-wide settings.
+Let's first talk about the `metadata` field under `datacenters`. It configures the 
+metadata for the underlying CassandraDatacenter. `name` sets the name of the 
+CassandraDatacenter. We also specify `labels` for illustration.
 
-The `size` property can only be set at the datacenter level. This specifies the number 
-of Cassandra nodes for the datacenter.
+`cluster` configures the `cluster_name` property in cassandra.yaml.
 
-`storageConfig` configures the PersistentVolumeClaim for Cassandra's data volume.
+`superUserSecret` points to a secret containing default superuser credentials. This is 
+optional. The operator will create a secret with a random password if this property is 
+not set.
 
-`config` has two keys both of which are optional - `cassandraYaml` and `jvmOptions`. 
-These are used to configure `cassandra.yaml` and `jvm-server.options` for Cassandra 4 or 
+**Note:** The `cluster` and `superUserSecret` properties can only be set at the cluster 
+level since they are cluster-wide settings.
+
+`size` specifies the number of Cassandra nodes for the datacenter. It can only be 
+configured at the datacenter level.
+
+`storageConfig` configures the PersistentVolumeClaim for Cassandra's data volume which 
+is mounted at `/var/lib/cassandra`.
+
+`config` has two keys both of which are optional - `cassandraYaml` and `jvmOptions`.
+These are used to configure `cassandra.yaml` and `jvm-server.options` for Cassandra 4 or
 `jvm.options` for Cassandra 3.
+
+Properties nested under `cassandraYaml` are set verbatim in `cassandra.yaml`.
+
+`heapSize` sets the min and max heap properties, i.e., `-Xms` and `-Xmx`.
+
+<!--
+TODO: Consider providing a separate doc that goes into full detail on the config 
+property and enumerates all settings that are configurable.
+-->
+
+**Note:** At this time `jvmOptions` only supports the `heapSize` property. How other JVM 
+settings such as gargabe collection are configured is still under development.
 
 `resources` configures CPU and/or memory for the Cassandra pods.
 
-`racks` declares the racks for the datacenter. The `nodeAffinityLabels` key creates 
-worker node affinity.
-
 ## Cluster Configuration
-In the prior example the datacenters are configured the same except for their `racks` 
-and `nodeAffinityLabels` in particular. We can eliminate the duplication by declaring 
-the configuration at the cluster level.
+Now let's see how we can configure things at the cluster level:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -227,8 +135,8 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    superUserSecret: demo-superuser
     serverVersion: "4.0.0"
+    superUserSecret: demo-superuser
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -251,48 +159,18 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-          namespace: default
-        k8sContext: east
-        size: 9
-        racks:
-          - name: rack1
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1a
-          - name: rack2
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1b
-          - name: rack3
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1c
-      - metadata:
-          name: dc2
-          namespace: default
-        k8sContext: west
-        size: 9
-        racks:
-          - name: rack1
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1a
-          - name: rack2
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1b
-          - name: rack3
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1c
+          labels:
+            env: dev          
+        size: 3
 ```
-The datacenters inherit the cluster level settings which include:
+This looks very similar to the previous example. The difference is that most properties 
+are now declared at the same level as the `datacenters` property, i.e., the cluster level.
 
-* `cluster`
-* `superUserSecret`
-* `serverVersion`
-* `size`
-* `storageConfig`
-* `config`
-* `resources`
+Properties defined at the cluster level are inherited by all datacenters.
 
-## Mixed Configuration
-Let's say that we want a higher storage capacity for `dc2`. We change the manifest as 
-follows:
+## Hybrid Configuration
+Let's briefly look at a hybrid configuration with properties set at both the cluster and 
+datacenter levels.
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -302,8 +180,8 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    superUserSecret: demo-superuser
     serverVersion: "4.0.0"
+    superUserSecret: demo-superuser
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -311,64 +189,38 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 500Gi
-    config:
-      cassandraYaml:
-        concurrent_reads: 8
-        concurrent_writes: 16
-        compaction_throughput_mb_per_sec: 128
-        key_cache_size_in_mb: 100
-      jvmOptions:
-        heapSize: 512M
+            storage: 500Gi    
     resources:
       limits:
         memory: 1024Mi
     datacenters:
       - metadata:
           name: dc1
-          namespace: default
-        k8sContext: east
-        size: 9
-        racks:
-          - name: rack1
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1a
-          - name: rack2
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1b
-          - name: rack3
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": east-1c
-      - metadata:
-          name: dc2
-          namespace: default
-        k8sContext: west
-        size: 9
-        storageConfig:
-          cassandraDataVolumeClaimSpec:
-            storageClassName: standard
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 1Ti
-        racks:
-          - name: rack1
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1a
-          - name: rack2
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1b
-          - name: rack3
-            nodeAffinityLabels:
-              "topology.kubernetes.io/zone": west-1c
+          labels:
+            env: dev          
+        size: 3
+        config:
+          cassandraYaml:
+            concurrent_reads: 8
+            concurrent_writes: 16
+            compaction_throughput_mb_per_sec: 128
+            key_cache_size_in_mb: 100
+          jvmOptions:
+            heapSize: 1024M
+        resources:
+          limits:
+            memory: 2048Mi
 ```
+`storageConfig` is defined at the cluster level while `config` is defined at the 
+datacenter level.
 
-We declare `storageConfig` for `dc2`. This overrides the cluster level setting. All 
-other cluster level settings are inherited by `dc2`.
+Notice that `resources` is defined at both the cluster and datacenter levels. Properties 
+at the datacenter level take precedence.
+
+We will see more detail examples involving multiple datacenters in the topology examples.
 
 # Stargate
-K8ssandra Operator provides a `Stargate` CustomResourceDefinition and a controller for 
+K8ssandra Operator provides a `Stargate` CustomResourceDefinition and a controller for
 managing `Stargate` objects.
 
 Let's revisit the initial example and add Stargate to it:
@@ -401,14 +253,18 @@ spec:
         stargate:
           size: 1
 ```
-When the K8ssandraCluster is created, the K8ssandraCluster controller creates a 
-CassandraDatacenter with three Cassandra nodes. It then creates a Stargate object. The 
+When the K8ssandraCluster is created, the K8ssandraCluster controller creates a
+CassandraDatacenter with three Cassandra nodes. It then creates a Stargate object. The
 Stargate controller will in turn deploy a single Stargate node.
 
-By default, Stargate pods will be scheduled onto different worker nodes than the ones on 
-which Cassandra pods are scheduled.
-
 ## Configuration
+Here we look at basic configuration for Stargate. Topology related configuration is 
+covered later. Stargate is configured at the datacenter level as demonstrated in the 
+next example:
+
+<!--
+TODO: Add examples for rack level configuration
+-->
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -422,7 +278,6 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: kind-k8ssandra-0
         size: 3
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -432,9 +287,6 @@ spec:
             resources:
               requests:
                 storage: 5Gi
-        config:
-          jvmOptions:
-            heapSize: 512Mi
         stargate:
           serviceAccount: my-stargate-serviceaccount 
           size: 1
@@ -456,7 +308,7 @@ spec:
             successThreshold: 1
             timeoutSeconds: 20
 ```
-Stargate is configured at the datacenter level.
+This specifies a cluster with three Cassandra nodes and one Stargate node.
 
 `size` specifies the number of Stargate nodes.
 
@@ -466,15 +318,22 @@ Stargate is configured at the datacenter level.
 
 `resources` configures CPU and/or memory resources for Stargate pods.
 
-`livenessProbe` configures the liveness probe. 
+`livenessProbe` configures the liveness probe.
 
 `readinessProbe` configures the readiness probe.
 
-### Topology
-As mentioned previously, Stargate pods will be scheduled onto different worker nodes 
-than the ones on which Cassandra pods are scheduled. If you want to allow Cassandra pods 
-and Stargate pods to be co-located on the same worker nodes, set the  
-`allowStargateOnDataNodes` property to `true`:
+# Topology
+K8ssandra Operator provides support for multi-datacenter clusters which can span across 
+multiple Kubernetes clusters. In this section we explore the various ways of configuring 
+the topology of a K8ssandraCluster.
+
+## Pod Anti-affinity
+By default, Cass Operator creates pod anti-affinity rules that prevent Cassandra pods 
+from being scheduled onto the same Kubernetes worker nodes. K8ssandra Operator creates 
+similar pod anti-affinity rules to prevent Stargate pods being scheduled onto the same 
+worker nodes.
+
+We can relax these constraints with a couple properties as illustrated in the next example:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -488,14 +347,44 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        size: 1
+        allowMultipleNodesPerWorker: true  
+        size: 3
+        resources:
+          limits:
+            cpu: 800m
+            memory: 1024Mi
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
         stargate:
+          size: 1
           allowStargateOnDataNodes: true
+          resources:
+          limits:
+            cpu: 600m
+            memory: 512Mi
 ```
+`allowMultipleNodesPerWorker` tells Cass Operator to allow Cassandra pods to be 
+scheduled onto the same worker nodes. When this is set to `true` you are required to also 
+set `resources`.
 
-The Stargate controller uses the same node affinity and pod anti-affinity rules that  
-Cass Operator uses for Cassandra pods. You can override the default affinity settings as 
-follows:
+`allowStargateOnDataNodes` tells K8ssandra Operator to allow Stargate pods to be 
+scheduled onto the same worker nodes as Cassandra pods.
+
+## Racks / Node Affinity
+Cass Operator and in turn K8ssandra Operator use the logical abstraction of racks for 
+configuring worker node affinity rules.
+
+Let's look at an example that assumes the Kubernetes cluster has three failure zones - 
+east-1a, east-1b, and east-1c. We want to create a nine-node Cassandra cluster spread 
+evenly across three racks. Furthermore, we want a Stargate node per rack.
+
+Here's how we can configure that topology:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -505,72 +394,149 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    config:
-      jvmOptions:
-        heapSize: 1024M
-    serverVersion: 4.0.0
+    serverVersion: "4.0.0"
     storageConfig:
       cassandraDataVolumeClaimSpec:
+        storageClassName: standard
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 5Gi
-        storageClassName: standard    
+            storage: 500Gi
+    config:
+      jvmOptions:
+        heapSize: 512Mi
     datacenters:
-    - metadata:
-        name: dc1
-        size: 3
-      racks:
-      - name: rack1
-        nodeAffinityLabels:
-          topology.kubernetes.io/zone: us-east1-a
-      - name: rack2
-        nodeAffinityLabels:
-          topology.kubernetes.io/zone: us-east1-b
-      - name: rack3
-        nodeAffinityLabels:
-          topology.kubernetes.io/zone: us-east1-c
-      stargate:
-        size: 3
-        heapSize: 1024Mi
-        affinity:
-          nodeAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-              nodeSelectorTerms:
-              - matchExpressions:
-                - key: topology.kubernetes.io/zone
-                  operator: In
-                  values:
-                  - us-east1-b
-          podAntiAffinity:
-            requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                - key: k8ssandra.io/stargate
-                  operator: In
-                  values:
-                  - demo-dc1-stargate
-                - key: cassandra.datastax.com/datacenter
-                  operator: In
-                  values:
-                  - dc1
-              topologyKey: kubernetes.io/hostname        
+      - metadata:
+          name: dc1
+        k8sContext: east
+        size: 9
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1c
+        stargate:
+          size: 3
+          heapSize: 256Mi
 ```
-Let's focus on the `racks` and `affinity` properties. We are creating a three node 
-datacenter with three racks. Cass Operator will generate node affinity rules for such that:
 
-* Cassandra pods in rack1 will be scheduled onto worker nodes in zone `us-east1-a`
-* Cassandra pods in rack2 will be scheduled onto worker nodes in zone `us-east1-b`
-* Cassandra pods in rack3 will be scheduled onto worker nodes in zone `us-east1-c`
+Cass Operator creates a StatefulSet per rack. It creates node affinity based on 
+`nodeAffinityLabels`. Cass Operator makes a best effort to distribute Cassandra nodes 
+evenly across racks. With three racks and nine nodes, we will have balanced racks. If we 
+had set `size: 10`, then one rack would have four nodes.
 
-We are creating three Stargate nodes. By default, they would be spread evenly across the 
-racks using the same affinity rules used for Cassandra pods. There would be one Stargate 
-pod per zone. 
+K8ssandra Operator uses the rack configuration of the CassandraDatacenter to create node 
+affinity rules for Stargate. K8ssandra Operator creates a Deployment per rack and also 
+makes a best effort to evenly distribute Stargate nodes across racks.
 
-Instead of the defaults, we only want Stargate pods to be scheduled in the 
-`us-east1-b` zone. The `nodeAffinity` takes care of this. Furthermore, we want to 
-prevent Stargate pods from being co-located with other Stargate pods or Cassnandra pods. 
-The `podAntiAffinity` addresses this.
+## Multiple Datacenters
+K8ssandra Operator provides support for creating multi-datacenter clusters which can 
+span across multiple Kubenretes clusters.
+
+**Note:** See [Remote Cluster Connection Management](../remote-k8s-access/README.md) for
+information on how to configure K8ssandra Operator to access remote clusters.
+
+Let's say we have 3 Kubernetes clusters - `east`, `central`, and `west`. We want to 
+create a multi-region Cassandra cluster with a datacenter in each of the Kubernetes 
+clusters. Furthermore, we want to deploy Stargate in each rack in the `central` datacenter. 
+Here is how that might look:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    cluster: demo
+    serverVersion: "4.0.0"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 500Gi
+    config:
+      jvmOptions:
+        heapSize: 2Gi
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 3  
+        k8sContext: east
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": east-1c
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 1Ti      
+      - metadata:
+          name: dc2
+        size: 3  
+        k8sContext: central
+        config:
+          jvmOptions:
+            heapSize: 4Gi
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": central-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": central-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": central-1c
+        stargate:
+          size: 3
+      - metadata:
+          name: dc3
+        size: 3  
+        k8sContext: west
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1a
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1b
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": west-1c
+```
+We specify 3 datacenters. The `k8sContext` field determines in which Kubernetes cluster
+the CassandraDatacenter will be created.
+
+If `k8sContext` is omitted, the CassandraDatacenter will be created in the local cluster
+which is also the control plane cluster.
+
+K8ssandra Operator creates the CassandraDatacenters in the order in which they are
+declared. It first creates `dc1` in the `east` cluster. When `dc1` is ready, it creates
+`dc2` in `central`. Finally, when `dc2` is ready, the operator creates `dc3` in `west`.
+
+Notice that settings are defined at the cluster level as well as the at the dataceter 
+level. `dc1` overrides `storageConfig` and `dc2` overrides `config`.
+
 
 # Reconciliation
+ **TODO**
