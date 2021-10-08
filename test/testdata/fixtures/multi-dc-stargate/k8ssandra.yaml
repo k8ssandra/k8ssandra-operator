@@ -56,13 +56,6 @@ spec:
         size: 2
   stargate:
     size: 1
-    stargateContainerImage:
-      registry: docker.io
-      # Temporarily use a custom image that includes
-      # https://github.com/stargate/stargate/pull/1300 until there is an updated, official
-      # Stargate image with these changes.
-      repository: jsanda/stargate-3_11
-      tag: bc73a29a
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
