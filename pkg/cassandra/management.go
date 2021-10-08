@@ -62,8 +62,8 @@ func (d defaultManagementApiFactory) NewManagementApiFacade(
 // ManagementApiFacade is a component mirroring methods available on httphelper.NodeMgmtClient.
 type ManagementApiFacade interface {
 
-	// CreateKeyspaceIfNotExists calls the management API "/ops/keyspace/create" endpoint to create a new keyspace if it
-	// does not exist yet. Calling this method on an existing keyspace is a no-op.
+	// CreateKeyspaceIfNotExists calls the management API "POST /ops/keyspace/create" endpoint to create a new keyspace
+	// if it does not exist yet. Calling this method on an existing keyspace is a no-op.
 	CreateKeyspaceIfNotExists(
 		keyspaceName string,
 		replication map[string]int,
@@ -76,6 +76,17 @@ type ManagementApiFacade interface {
 	AlterKeyspace(
 		keyspaceName string,
 		replicationSettings map[string]int) error
+
+	// GetKeyspaceReplication calls the management API "GET /ops/keyspace/replication" endpoint to retrieve the given
+	// keyspace replication settings.
+	GetKeyspaceReplication(keyspaceName string) (map[string]string, error)
+
+	// ListTables calls the management API "GET /ops/tables" endpoint to retrieve the table names in the given keyspace.
+	ListTables(keyspaceName string) ([]string, error)
+
+	// CreateTable  calls the management API "POST /ops/tables/create" endpoint to create a new table in the given
+	// keyspace.
+	CreateTable(definition *httphelper.TableDefinition) error
 }
 
 type defaultManagementApiFacade struct {
@@ -191,5 +202,56 @@ func (r *defaultManagementApiFacade) AlterKeyspace(
 			}
 		}
 		return fmt.Errorf("CALL alter keyspaces %s failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) GetKeyspaceReplication(keyspaceName string) (map[string]string, error) {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return nil, err
+	} else {
+		for _, pod := range pods {
+			if replication, err := r.nodeMgmtClient.GetKeyspaceReplication(&pod, keyspaceName); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL get keyspace %s replication on pod %v", keyspaceName, pod.Name))
+			} else {
+				r.logger.Info(fmt.Sprintf("Successfully got keyspace %s replication", keyspaceName))
+				return replication, nil
+			}
+		}
+		return nil, fmt.Errorf("CALL get keyspace %s replication failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) ListTables(keyspaceName string) ([]string, error) {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return nil, err
+	} else {
+		for _, pod := range pods {
+			if tables, err := r.nodeMgmtClient.ListTables(&pod, keyspaceName); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL get keyspace %s tables on pod %v", keyspaceName, pod.Name))
+			} else {
+				r.logger.Info(fmt.Sprintf("Successfully got keyspace %s tables", keyspaceName))
+				return tables, nil
+			}
+		}
+		return nil, fmt.Errorf("CALL get keyspace %s tables failed on all datacenter %v pods", keyspaceName, r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) CreateTable(table *httphelper.TableDefinition) error {
+	if pods, err := r.fetchDatacenterPods(); err != nil {
+		r.logger.Error(err, "Failed to fetch datacenter pods")
+		return err
+	} else {
+		for _, pod := range pods {
+			if err := r.nodeMgmtClient.CreateTable(&pod, table); err != nil {
+				r.logger.Error(err, fmt.Sprintf("Failed to CALL create table on pod %v", pod.Name))
+			} else {
+				r.logger.Info(fmt.Sprintf("Successfully created table %s.%s", table.KeyspaceName, table.TableName))
+				return nil
+			}
+		}
+		return fmt.Errorf("CALL create table failed on all datacenter %v pods", r.dc.Name)
 	}
 }
