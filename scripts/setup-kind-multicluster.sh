@@ -22,7 +22,7 @@ registry_name='kind-registry'
 registry_port='5000'
 num_clusters=1
 cluster_names="kind"
-kind_node_version="v1.21.2"
+kind_node_version="v1.22.1"
 kind_worker_nodes=3
 overwrite_clusters="no"
 
