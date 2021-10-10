@@ -47,7 +47,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 # operator-sdk 1.11.9 bumps the k8s version to 1.21 but we have to temporarily downgrade due to
 # https://github.com/kubernetes-sigs/controller-runtime/issues/1571
 #ENVTEST_K8S_VERSION = 1.21
-ENVTEST_K8S_VERSION = 1.20.2
+ENVTEST_K8S_VERSION = 1.22
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
