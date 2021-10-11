@@ -3,11 +3,8 @@ kind: Kustomization
 
 # Do not set namespace here!
 
-# (Install cert-manager?)
-# Install cass-operator in clusterScope
-# Install k8ssandra-operator in clusterScope
 resources:
-  - github.com/k8ssandra/cass-operator/config/deployments/cluster
+  - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=v1.8.0
   - ../../default
 
 components:
