@@ -21,6 +21,9 @@ const (
 	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
 	// "{{ .Values.clusterDomain | default \"cluster.local\" }}
 	clusterDomain = "cluster.local"
+
+	ServerConfigContainerName = "server-config-init"
+	ConfigBuilderImage        = "datastax/cass-config-builder:1.0.4-ubi7"
 )
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
@@ -57,6 +60,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		nodeSelector := computeNodeSelector(template, dc)
 		tolerations := computeTolerations(template, dc)
 		affinity := computeAffinity(template, dc, &rack)
+		configBuilderContainer := createConfigBuilderContainer(dc, &rack)
 
 		deployment := appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -159,6 +163,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 				},
 			},
 		}
+
+		if template.CassandraConfigMapRef != nil {
+			deployment.Spec.Template.Spec.InitContainers = []corev1.Container{configBuilderContainer}
+		}
+
 		if klusterName, found := stargate.Labels[api.K8ssandraClusterLabel]; found {
 			deployment.Labels[api.K8ssandraClusterLabel] = klusterName
 			deployment.Spec.Template.ObjectMeta.Labels[api.K8ssandraClusterLabel] = klusterName
@@ -167,6 +176,64 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		deployments[deploymentName] = deployment
 	}
 	return deployments
+}
+
+// createConfigBuilderContainer adds a initContainer that uses cass-config-builder to create the config. Mostly copied over from
+// cass-operator with slightly reduced features
+func createConfigBuilderContainer(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) corev1.Container {
+	serverCfg := corev1.Container{}
+
+	serverCfg.Name = ServerConfigContainerName
+
+	// TODO When adding operator configuration, add back the ImagePullPolicy and image config
+	serverCfg.Image = ConfigBuilderImage
+
+	serverCfg.VolumeMounts = []corev1.VolumeMount{
+		{
+			Name:      "cassandra-config",
+			MountPath: cassandraConfigDir,
+		},
+	}
+
+	serverCfg.Resources = corev1.ResourceRequirements{
+		Requests: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    *resource.NewMilliQuantity(500, resource.DecimalSI),
+			corev1.ResourceMemory: *resource.NewScaledQuantity(256, resource.Mega),
+		},
+		Limits: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    *resource.NewMilliQuantity(1000, resource.DecimalSI),
+			corev1.ResourceMemory: *resource.NewScaledQuantity(256, resource.Mega),
+		},
+	}
+
+	serverVersion := dc.Spec.ServerVersion
+
+	// Convert the bool to a string for the env var setting
+	useHostIpForBroadcast := "false"
+	if dc.IsNodePortEnabled() {
+		useHostIpForBroadcast = "true"
+	}
+
+	serverCfg.Env = []corev1.EnvVar{
+		{Name: "POD_IP", ValueFrom: selectorFromFieldPath("status.podIP")},
+		{Name: "HOST_IP", ValueFrom: selectorFromFieldPath("status.hostIP")},
+		{Name: "USE_HOST_IP_FOR_BROADCAST", Value: useHostIpForBroadcast},
+		{Name: "RACK_NAME", Value: rack.Name},
+		{Name: "PRODUCT_VERSION", Value: serverVersion},
+		{Name: "PRODUCT_NAME", Value: dc.Spec.ServerType},
+		// TODO remove this post 1.0
+		{Name: "DSE_VERSION", Value: serverVersion},
+	}
+
+	return serverCfg
+}
+
+func selectorFromFieldPath(fieldPath string) *corev1.EnvVarSource {
+	return &corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{
+			FieldPath: fieldPath,
+		},
+	}
 }
 
 func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {

@@ -1,12 +1,13 @@
 package cassandra
 
 import (
+	"testing"
+
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"testing"
 )
 
 func TestApplySystemReplication(t *testing.T) {
@@ -300,21 +301,6 @@ func TestCreateJsonConfig(t *testing.T) {
 				"num_tokens": 256,
                 "start_rpc": false,
                 "thrift_prepared_statements_cache_size_mb": 1
-              }
-            }`,
-		},
-		{
-			name:             "[4.0.0] start_rpc, thrift_prepared_statements_cache_size_mb",
-			cassandraVersion: "4.0.0",
-			config: &api.CassandraConfig{
-				CassandraYaml: &api.CassandraYaml{
-					StartRpc:                           boolPtr(false),
-					ThriftPreparedStatementCacheSizeMb: intPtr(1),
-				},
-			},
-			want: `{
-              "cassandra-yaml": {
-				"num_tokens": 16
               }
             }`,
 		},
