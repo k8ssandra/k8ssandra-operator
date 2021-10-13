@@ -304,7 +304,7 @@ demo   45s
 ```
 
 ```console
-kubectl describe K8ssandraCluster demo
+kubectl describe -n k8ssandra-operator K8ssandraCluster demo
 ```
 
 ```sh
