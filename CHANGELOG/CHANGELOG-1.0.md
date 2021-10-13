@@ -17,6 +17,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
 
+* [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
+
 ## v1.0.0-alpha.2 - 2021-12-03
 
 * [FEATURE] [#4](https://github.com/k8ssandra/k8ssandra-operator/issues/4) Add support for Reaper
