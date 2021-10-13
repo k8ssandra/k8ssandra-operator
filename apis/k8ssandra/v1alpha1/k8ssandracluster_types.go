@@ -88,6 +88,7 @@ type K8ssandraStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=k8ssandraclusters,shortName=k8c;k8cs
 
 // K8ssandraCluster is the Schema for the k8ssandraclusters API
 type K8ssandraCluster struct {
