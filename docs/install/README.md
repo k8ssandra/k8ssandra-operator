@@ -12,6 +12,7 @@ Make sure you have the following installed before going through the rest of the 
 
 * kind
 * kubectx
+* yq (YAML processor)
 * setup-kind-multicluster.sh
 * create-clientconfig.sh
 
@@ -24,6 +25,10 @@ By default kind clusters run on the same Docker network which means we will have
 **kubectx**
 
 [kubectx](https://github.com/ahmetb/kubectx) is a really handy tool when you are dealing with multiple clusters. The examples will use it so go ahead and install it now.
+
+**yq**
+
+[yq](https://github.com/mikefarah/yq#install) is lightweight and portable command-line YAML processor.
 
 **setup-kind-multicluster.sh**
 
