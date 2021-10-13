@@ -398,6 +398,9 @@ Verify that you see the `k8ssandra-operator` chart:
 
 ```console
 helm search repo k8ssandra-operator
+```
+
+```console
 NAME                               	CHART VERSION	APP VERSION	DESCRIPTION
 k8ssandra/k8ssandra-operator       	0.32.0       	1.0.0      	Kubernetes operator which handles the provision...
 ```
@@ -453,6 +456,9 @@ Check that there are two Deployments. The output should look similar to this:
 
 ```console
 kubectl -n k8ssandra-operator get deployment
+```
+
+```console
 NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
 k8ssandra-operator-cass-operator        1/1     1            1           85s
 k8ssandra-operator-k8ssandra-operator   1/1     1            1           85s
@@ -634,6 +640,9 @@ Check that there are two Deployments. The output should look similar to this:
 
 ```console
 kubectl -n k8ssandra-operator get deployment
+```
+
+```console
 NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
 k8ssandra-operator-cass-operator        1/1     1            1           85s
 k8ssandra-operator-k8ssandra-operator   1/1     1            1           85s
@@ -683,6 +692,9 @@ Check that there are two Deployments. The output should look similar to this:
 
 ```console
 kubectl -n k8ssandra-operator get deployment
+```
+
+```console
 NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
 k8ssandra-operator-cass-operator        1/1     1            1           85s
 k8ssandra-operator-k8ssandra-operator   1/1     1            1           85s
@@ -1090,6 +1102,9 @@ Check that there are two Deployments. The output should look similar to this:
 
 ```console
 kubectl get deployment
+```
+
+```console
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
 k8ssandra-operator   1/1     1            1           2m
@@ -1138,6 +1153,8 @@ Check that there are two Deployments. The output should look similar to this:
 
 ```console
 kubectl -n k8ssandra-operator get deployment
+```
+```console
 NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
 cass-operator        1/1     1            1           2m
 k8ssandra-operator   1/1     1            1           2m
