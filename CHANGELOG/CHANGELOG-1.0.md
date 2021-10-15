@@ -14,7 +14,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
-[CHANGE] Update cass-operator to v1.8.0
+* [CHANGE] [#182](https://github.com/k8ssandra/k8ssandra-operator/pull/182) Update cass-operator to v1.8.0
+* [BUGFIX] [#203](https://github.com/k8ssandra/k8ssandra-operator/issues/203) Superuser secret name not set on CassandraDatacenters
 
 ## v1.0.0-alpha.1 - 2021-09-30
 

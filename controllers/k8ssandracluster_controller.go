@@ -107,7 +107,11 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	}
 
 	if kc.Spec.Cassandra.SuperuserSecretName == "" {
+		// Note that we do not persist this change because doing so would prevent us from
+		// differentiating between a default secret by the operator vs one provided by the
+		// client that happens to have the same name as the default name.
 		kc.Spec.Cassandra.SuperuserSecretName = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
+		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
 	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets); err != nil {
