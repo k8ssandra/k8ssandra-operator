@@ -4188,7 +4188,7 @@ spec:
                             type: string
                         type: object
                     type: object
-                  superUserSecret:
+                  superuserSecret:
                     description: SuperuserSecretName allows to override the default
                       super user secret
                     type: string

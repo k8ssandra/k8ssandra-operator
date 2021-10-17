@@ -26,18 +26,19 @@ type SystemReplication struct {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta              api.EmbeddedObjectMeta
-	Cluster           string
-	ServerImage       string
-	ServerVersion     string
-	Size              int32
-	Resources         *corev1.ResourceRequirements
-	SystemReplication SystemReplication
-	StorageConfig     *cassdcapi.StorageConfig
-	Racks             []cassdcapi.Rack
-	CassandraConfig   *api.CassandraConfig
-	AdditionalSeeds   []string
-	Networking        *cassdcapi.NetworkingConfig
+	Meta                api.EmbeddedObjectMeta
+	Cluster             string
+	SuperUserSecretName string
+	ServerImage         string
+	ServerVersion       string
+	Size                int32
+	Resources           *corev1.ResourceRequirements
+	SystemReplication   SystemReplication
+	StorageConfig       *cassdcapi.StorageConfig
+	Racks               []cassdcapi.Rack
+	CassandraConfig     *api.CassandraConfig
+	AdditionalSeeds     []string
+	Networking          *cassdcapi.NetworkingConfig
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -65,16 +66,17 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:     template.Cluster,
-			ServerImage:     template.ServerImage,
-			Size:            template.Size,
-			ServerType:      "cassandra",
-			ServerVersion:   template.ServerVersion,
-			Config:          rawConfig,
-			Racks:           template.Racks,
-			StorageConfig:   *template.StorageConfig,
-			AdditionalSeeds: template.AdditionalSeeds,
-			Networking:      template.Networking,
+			ClusterName:         template.Cluster,
+			ServerImage:         template.ServerImage,
+			SuperuserSecretName: template.SuperUserSecretName,
+			Size:                template.Size,
+			ServerType:          "cassandra",
+			ServerVersion:       template.ServerVersion,
+			Config:              rawConfig,
+			Racks:               template.Racks,
+			StorageConfig:       *template.StorageConfig,
+			AdditionalSeeds:     template.AdditionalSeeds,
+			Networking:          template.Networking,
 		},
 	}
 
@@ -92,6 +94,7 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 
 	// Handler cluster-wide settings first
 	dcConfig.Cluster = clusterTemplate.Cluster
+	dcConfig.SuperUserSecretName = clusterTemplate.SuperuserSecretName
 
 	// DC-level settings
 	dcConfig.Meta = dcTemplate.Meta

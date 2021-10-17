@@ -102,7 +102,7 @@ type CassandraClusterTemplate struct {
 	Cluster string `json:"cluster,omitempty"`
 
 	// SuperuserSecretName allows to override the default super user secret
-	SuperuserSecretName string `json:"superUserSecret,omitempty"`
+	SuperuserSecretName string `json:"superuserSecret,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a
 	// management-api image. If left empty the operator will choose a default image based

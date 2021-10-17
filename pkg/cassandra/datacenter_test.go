@@ -28,10 +28,11 @@ func TestCoalesce(t *testing.T) {
 	tests := []test{
 		{
 			// There are some properties that should only be set at the cluster-level
-			// and should not differ among DCs. Cluster name is a good example.
+			// and should not differ among DCs.
 			name: "Set non-override configs",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster: "k8ssandra",
+				Cluster:             "k8ssandra",
+				SuperuserSecretName: "test-superuser",
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -52,7 +53,8 @@ func TestCoalesce(t *testing.T) {
 						"env": "dev",
 					},
 				},
-				Size: 3,
+				SuperUserSecretName: "test-superuser",
+				Size:                3,
 			},
 		},
 		{

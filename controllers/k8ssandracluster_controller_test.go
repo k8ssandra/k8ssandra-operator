@@ -105,6 +105,8 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
@@ -203,6 +205,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	k8sCtx1 := "cluster-1"
 
 	clusterName := "cluster-configs"
+	superUserSecretName := "test-superuser"
 	serverVersion := "4.0.0"
 	dc1Size := int32(6)
 	dc2Size := int32(12)
@@ -214,8 +217,9 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:       clusterName,
-				ServerVersion: serverVersion,
+				Cluster:             clusterName,
+				SuperuserSecretName: superUserSecretName,
+				ServerVersion:       serverVersion,
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 						StorageClassName: &defaultStorageClass,
@@ -257,6 +261,10 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
+	klusterKey := client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name}
+	err = f.Client.Get(ctx, klusterKey, kluster)
+	require.NoError(err, "failed to get K8ssandraCluster")
+
 	t.Log("verify configuration of dc1")
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc1Key, dc1)
@@ -266,6 +274,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	assert.Equal(kluster.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
+	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
@@ -291,6 +300,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	assert.Equal(kluster.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
+	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
@@ -668,6 +678,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
 
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, cluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -889,6 +901,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	allPodIps := make([]string, 0, 6)
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
+
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1131,6 +1145,19 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			kc.Status.Datacenters[dc2Key.Name].Stargate == nil
 	}, timeout, interval)
 
+}
+
+func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
+	t.Logf("check that the default superuser secret is created")
+	assert.Eventually(t, func() bool {
+		secretName := secret.DefaultSuperuserSecretName(kluster.Spec.Cassandra.Cluster)
+		defaultSecret := &corev1.Secret{}
+		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: kluster.Namespace, Name: secretName}, defaultSecret); err != nil {
+			t.Logf("failed to get superuser secret: %v", err)
+			return false
+		}
+		return true
+	}, timeout, interval)
 }
 
 func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
