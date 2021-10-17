@@ -115,6 +115,8 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 
 	// It exists, override whatever was in it
 	currentResourceVersion := repSec.ResourceVersion
+	// Need to copy the finalizers here; otherwise, they get overwritten and lost. This
+	// will be refactored in https://github.com/k8ssandra/k8ssandra-operator/issues/206
 	finalizers := repSec.Finalizers
 	targetRepSec.DeepCopyInto(repSec)
 	repSec.ResourceVersion = currentResourceVersion

@@ -88,11 +88,12 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	kc = kc.DeepCopy()
 	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	result, err := r.reconcile(ctx, kc, logger)
-	// TODO Don't patch the status if the K8ssandraCluster was deleted
-	if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
-		logger.Error(patchErr, "failed to update k8ssandracluster status")
-	} else {
-		logger.Info("updated k8ssandracluster status")
+	if kc.GetDeletionTimestamp() == nil {
+		if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
+			logger.Error(patchErr, "failed to update k8ssandracluster status")
+		} else {
+			logger.Info("updated k8ssandracluster status")
+		}
 	}
 	return result, err
 }
