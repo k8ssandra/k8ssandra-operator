@@ -138,6 +138,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
@@ -289,6 +290,8 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -437,6 +440,8 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -578,6 +583,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -711,6 +718,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	allPodIps = append(allPodIps, dc2PodIps...)
 
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, cluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -935,6 +943,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	allPodIps = append(allPodIps, dc2PodIps...)
 
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1190,6 +1199,27 @@ func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *f
 		}
 		return true
 	}, timeout, interval)
+}
+
+func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Log("check ReplicatedSecret reconciled")
+
+	replSecret := &api.ReplicatedSecret{}
+	replSecretKey := types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}
+
+	require.Eventually(t, func() bool {
+		err := f.Client.Get(ctx, replSecretKey, replSecret)
+		return err == nil
+	}, timeout, interval)
+
+	val, exists := replSecret.Labels[api.ManagedByLabel]
+	assert.True(t, exists)
+	assert.Equal(t, api.NameLabelValue, val)
+	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
+	assert.True(t, exists)
+	assert.Equal(t, kc.Spec.Cassandra.Cluster, val)
+
+	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(replSecret.Spec.ReplicationTargets))
 }
 
 func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
