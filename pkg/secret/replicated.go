@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"math/big"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -80,21 +83,42 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 }
 
 // ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
-func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) error {
-	// We use leaderID to ensure that this leader instance of k8ssandra-operator is using the correct ReplicatedSecret (it can be shared between different k8ssandra-operators)
-	targetRepSec := generateReplicatedSecret(clusterName, namespace, targetContexts)
+//func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) (*api.ReplicatedSecret, error) {
+func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
+	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		if dcTemplate.K8sContext != "" {
+			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
+		}
+	}
+
+	targetRepSec := generateReplicatedSecret(kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets)
+	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
 	repSec := &replicationapi.ReplicatedSecret{}
-	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
+
+	err := controllerutil.SetControllerReference(kc, targetRepSec, scheme)
+	if err != nil {
+		logger.Error(err, "Failed to set owner reference on ReplicatedSecret", "ReplicatedSect", key)
+		return err
+	}
+
+	err = c.Get(ctx, types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return c.Create(ctx, targetRepSec)
+			logger.Info("Creating ReplicatedSecret", "ReplicatedSecret", key)
+			if err = c.Create(ctx, targetRepSec); err == nil {
+				return nil
+			}
 		}
+		return err
 	}
 
 	// It exists, override whatever was in it
 	currentResourceVersion := repSec.ResourceVersion
+	finalizers := repSec.Finalizers
 	targetRepSec.DeepCopyInto(repSec)
 	repSec.ResourceVersion = currentResourceVersion
+	repSec.Finalizers = finalizers
 	return c.Update(ctx, repSec)
 }
 
