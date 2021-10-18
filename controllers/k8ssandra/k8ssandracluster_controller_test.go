@@ -1197,7 +1197,7 @@ func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *f
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	t.Log("check ReplicatedSecret reconciled")
 
-	replSecret := &api.ReplicatedSecret{}
+	replSecret := &replicationapi.ReplicatedSecret{}
 	replSecretKey := types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}
 
 	require.Eventually(t, func() bool {
