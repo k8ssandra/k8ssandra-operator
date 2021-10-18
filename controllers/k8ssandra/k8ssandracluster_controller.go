@@ -141,7 +141,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
 				api.K8ssandraClusterLabel: kc.Name,
 			}
-			stargateList := &api.StargateList{}
+			stargateList := &stargateapi.StargateList{}
 			options := client.ListOptions{
 				Namespace:     namespace,
 				LabelSelector: labels.SelectorFromSet(selector),
@@ -167,7 +167,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 
 		if hasErrors {
-			return ctrl.Result{RequeueAfter: defaultDelay}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
 		patch := client.MergeFrom(kc.DeepCopy())
