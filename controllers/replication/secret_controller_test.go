@@ -38,7 +38,7 @@ var (
 
 func TestSecretController(t *testing.T) {
 	ctx := testutils.TestSetup(t)
-	// ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		return (&SecretSyncController{
@@ -51,7 +51,7 @@ func TestSecretController(t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
-	// defer cancel()
+	defer cancel()
 
 	// Secret controller tests
 	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))

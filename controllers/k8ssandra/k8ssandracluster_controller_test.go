@@ -51,6 +51,7 @@ var (
 
 func TestK8ssandraCluster(t *testing.T) {
 	ctx := testutils.TestSetup(t)
+	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{}
 	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
 		return []string{}, nil
@@ -82,6 +83,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
+	defer cancel()
 
 	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
 	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))

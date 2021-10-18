@@ -29,6 +29,7 @@ const (
 
 func TestStargate(t *testing.T) {
 	ctx := testutils.TestSetup(t)
+	ctx, cancel := context.WithCancel(ctx)
 	testEnv := &testutils.TestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager) error {
 		err := (&StargateReconciler{
@@ -43,6 +44,7 @@ func TestStargate(t *testing.T) {
 	}
 
 	defer testEnv.Stop(t)
+	defer cancel()
 
 	t.Run("CreateStargateSingleRack", func(t *testing.T) {
 		testCreateStargateSingleRack(t, testEnv.TestClient)
