@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,12 +59,12 @@ func TestRequiresUpdate(t *testing.T) {
 	currentRepSec = generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
-	currentRepSec.Spec.ReplicationTargets = append(currentRepSec.Spec.ReplicationTargets, api.ReplicationTarget{
+	currentRepSec.Spec.ReplicationTargets = append(currentRepSec.Spec.ReplicationTargets, replicationapi.ReplicationTarget{
 		K8sContextName: "some-distant-backup-galaxy",
 	})
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
-	currentRepSec.Spec.ReplicationTargets = []api.ReplicationTarget{
+	currentRepSec.Spec.ReplicationTargets = []replicationapi.ReplicationTarget{
 		{
 			K8sContextName: "some-distant-backup-galaxy",
 		},

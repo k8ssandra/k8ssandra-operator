@@ -118,13 +118,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
-	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets); err != nil {
-		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
+	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
+		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
 		return ctrl.Result{}, err
 	}
 
-	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
-		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets); err != nil {
+		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
 		return ctrl.Result{}, err
 	}
 
@@ -133,6 +133,12 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+
+		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, dcTemplate.K8sContext) {
+			// ReplicatedSecret has not replicated yet, wait until it has
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
+		}
+
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.

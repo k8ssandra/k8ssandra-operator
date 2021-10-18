@@ -102,8 +102,23 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName
 	return nil
 }
 
-func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
+func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, namespace, targetContext string) bool {
+	repSec := &replicationapi.ReplicatedSecret{}
+	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
+	if err != nil {
+		return false
+	}
 
+	for _, cond := range repSec.Status.Conditions {
+		if cond.Cluster == targetContext && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
+}
+
+func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
 	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(targetContexts))
 	for _, ctx := range targetContexts {
 		replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
@@ -125,7 +140,7 @@ func generateReplicatedSecret(clusterName, namespace string, targetContexts []st
 	}
 }
 
-func requiresUpdate(current, desired *api.ReplicatedSecret) bool {
+func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 	// Ensure our labels are there (allow additionals) and our selector is there (nothing else) and replicationTargets has at least our targets
 
 	// Selector must not change
