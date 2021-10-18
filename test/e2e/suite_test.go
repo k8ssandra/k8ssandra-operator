@@ -264,15 +264,7 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTr
 	timeout := 3 * time.Minute
 	interval := 10 * time.Second
 
-	if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
-		return err
-	}
-
-	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-		return err
-	}
-
-	if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
+	if err := f.WaitForK8ssadraClusterDeletion(namespace, timeout, interval); err != nil {
 		return err
 	}
 
