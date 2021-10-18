@@ -1,4 +1,4 @@
-package controllers
+package test
 
 import (
 	"context"
@@ -6,19 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
-
-	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 
 	"github.com/bombsimon/logrusr"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -28,60 +20,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
 
 const (
-	timeout             = time.Second * 5
-	interval            = time.Millisecond * 500
 	clustersToCreate    = 3
 	clusterProtoName    = "cluster-%d"
 	cassOperatorVersion = "v1.8.0"
 )
 
 var (
-	seedsResolver  = &fakeSeedsResolver{}
-	managementApi  = &fakeManagementApiFactory{}
 	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
-
-func TestControllers(t *testing.T) {
-	ctx := ctrl.SetupSignalHandler()
-
-	log := logrusr.NewLogger(logrus.New())
-	logf.SetLogger(log)
-
-	defaultDelay = time.Millisecond * 500
-	longDelay = time.Second
-
-	if err := prepareCRDs(); err != nil {
-		t.Fatalf("failed to prepare CRDs: %s", err)
-	}
-
-	t.Run("K8ssandraCluster", func(t *testing.T) {
-		testK8ssandraCluster(ctx, t)
-	})
-	t.Run("Stargate", func(t *testing.T) {
-		testStargate(ctx, t)
-	})
-	t.Run("SecretController", func(t *testing.T) {
-		testSecretController(ctx, t)
-	})
-}
-
-func registerApis() error {
-	if err := api.AddToScheme(scheme.Scheme); err != nil {
-		return err
-	}
-
-	if err := cassdcapi.AddToScheme(scheme.Scheme); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 type TestEnv struct {
 	*envtest.Environment
@@ -99,8 +56,8 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 
 	e.Environment = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "build", "crd", "k8ssandra-operator"),
-			filepath.Join("..", "build", "crd", "cass-operator")},
+			filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
+			filepath.Join("..", "..", "build", "crd", "cass-operator")},
 	}
 
 	cfg, err := e.Environment.Start()
@@ -155,6 +112,10 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
 	metrics.DefaultBindAddress = "0"
 
+	// if err := prepareCRDs(); err != nil {
+	// 	t.Fatalf("failed to prepare CRDs: %s", err)
+	// }
+
 	if err := registerApis(); err != nil {
 		return err
 	}
@@ -165,16 +126,13 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	cfgs := make([]*rest.Config, e.clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
 
-	if err := prepareCRDs(); err != nil {
-		t.Fatalf("failed to prepare CRDs: %s", err)
-	}
-
 	for i := 0; i < e.clustersToCreate; i++ {
 		clusterName := fmt.Sprintf(clusterProtoName, i)
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
-				filepath.Join("..", "build", "crd", "k8ssandra-operator"),
-				filepath.Join("..", "build", "crd", "cass-operator")},
+				filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
+				filepath.Join("..", "..", "build", "crd", "cass-operator"),
+			},
 			ErrorIfCRDPathMissing: true,
 		}
 
@@ -256,56 +214,44 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
 
-		seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-			return []string{}, nil
-		}
-
 		test(t, ctx, f, namespace)
 	}
 }
 
-type fakeSeedsResolver struct {
-	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
-}
+func TestSetup(t *testing.T) context.Context {
+	ctx := ctrl.SetupSignalHandler()
 
-func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	return r.callback(dc)
-}
+	log := logrusr.NewLogger(logrus.New())
+	logf.SetLogger(log)
 
-type fakeManagementApiFactory struct {
-}
+	if err := prepareCRDs(); err != nil {
+		t.Fatalf("failed to prepare CRDs: %s", err)
+	}
 
-func (f fakeManagementApiFactory) NewManagementApiFacade(ctx context.Context, dc *cassdcapi.CassandraDatacenter, k8sClient client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
-	return &fakeManagementApi{}, nil
-}
-
-type fakeManagementApi struct {
-}
-
-func (r *fakeManagementApi) CreateKeyspaceIfNotExists(keyspaceName string, replication map[string]int) error {
-	return nil
+	return ctx
 }
 
 // prepareCRDs runs kustomize build over the k8ssandra-operator and cass-operator CRDs and
 // writes them to the build/crd directory. This only needs to be call once for the whole
 // test suite.
 func prepareCRDs() error {
-	k8ssadraOperatorTargetDir := filepath.Join("..", "build", "crd", "k8ssandra-operator")
-	if err := os.MkdirAll(k8ssadraOperatorTargetDir, 0755); err != nil {
+	k8ssandraOperatorTargetDir := filepath.Join("..", "..", "build", "crd", "k8ssandra-operator")
+	if err := os.MkdirAll(k8ssandraOperatorTargetDir, 0755); err != nil {
 		return err
 	}
 
-	cassOperatorTargetDir := filepath.Join("..", "build", "crd", "cass-operator")
+	cassOperatorTargetDir := filepath.Join("..", "..", "build", "crd", "cass-operator")
 	if err := os.MkdirAll(cassOperatorTargetDir, 0755); err != nil {
 		return err
 	}
 
-	k8ssadraOperatorSrcDir := filepath.Join("..", "config", "crd")
-	buf, err := kustomize.BuildDir(k8ssadraOperatorSrcDir)
+	k8ssandraOperatorSrcDir := filepath.Join("..", "..", "config", "crd")
+
+	buf, err := kustomize.BuildDir(k8ssandraOperatorSrcDir)
 	if err != nil {
 		return err
 	}
-	k8ssandraOperatorCrdPath := filepath.Join(k8ssadraOperatorTargetDir, "crd.yaml")
+	k8ssandraOperatorCrdPath := filepath.Join(k8ssandraOperatorTargetDir, "crd.yaml")
 	if err = os.WriteFile(k8ssandraOperatorCrdPath, buf.Bytes(), 0644); err != nil {
 		return err
 	}
@@ -319,10 +265,26 @@ func prepareCRDs() error {
 	return os.WriteFile(cassOperatorCrdPath, buf.Bytes(), 0644)
 }
 
-func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
-	return []string{"data_auth_endpoint"}, nil
-}
+func registerApis() error {
+	if err := api.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
 
-func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {
+	if err := cassdcapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := stargateapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := configapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := replicationapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
 	return nil
 }

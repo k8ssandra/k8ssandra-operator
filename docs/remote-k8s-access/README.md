@@ -94,7 +94,7 @@ The operator stores the remote clients in a cache that persists for the lifetime
 Let's look at an example ClientConfig:
 
 ```yaml
-apiVersion: k8ssandra.io/v1alpha1
+apiVersion: config.k8ssandra.io/v1alpha1
 kind: ClientConfig
 meta:
   name: kind-k8ssandra-1

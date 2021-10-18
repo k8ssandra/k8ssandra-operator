@@ -1,4 +1,4 @@
-package controllers
+package replication
 
 import (
 	"context"
@@ -6,8 +6,10 @@ import (
 	"strings"
 	"sync"
 
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +30,7 @@ import (
 
 // TODO Or .. ReplicatedResource? Just set Kind to the resource ..
 
+// TODO Move these to apis?
 const (
 	replicatedResourceFinalizer = "replicatedresource.k8ssandra.io/finalizer"
 
@@ -37,11 +40,12 @@ const (
 
 // We need rights to update the target cluster's secrets, not necessarily this cluster
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets,verbs=get;list;watch;update;create;delete
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/finalizers,verbs=update
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=replication.k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets,verbs=get;list;watch;update;create;delete
+// +kubebuilder:rbac:groups=replication.k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=replication.k8ssandra.io,namespace="k8ssandra",resources=replicatedsecrets/status,verbs=get;update;patch
 
 type SecretSyncController struct {
+	*config.ReconcilerConfig
 	ClientCache *clientcache.ClientCache
 	// TODO We need a better structure for empty selectors (match whole kind)
 	WatchNamespaces []string
@@ -265,9 +269,9 @@ func requiresUpdate(source, dest client.Object) bool {
 		return false
 	}
 
-	if srcHash, found := source.GetAnnotations()[api.ResourceHashAnnotation]; found {
+	if srcHash, found := source.GetAnnotations()[coreapi.ResourceHashAnnotation]; found {
 		// Get dest hash value
-		destHash, destFound := dest.GetAnnotations()[api.ResourceHashAnnotation]
+		destHash, destFound := dest.GetAnnotations()[coreapi.ResourceHashAnnotation]
 		if !destFound {
 			return true
 		}
@@ -324,8 +328,8 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	if sec.GetAnnotations() == nil {
 		sec.Annotations = make(map[string]string)
 	}
-	if existingHash, found := sec.GetAnnotations()[api.ResourceHashAnnotation]; !found || (existingHash != hash) {
-		sec.GetAnnotations()[api.ResourceHashAnnotation] = hash
+	if existingHash, found := sec.GetAnnotations()[coreapi.ResourceHashAnnotation]; !found || (existingHash != hash) {
+		sec.GetAnnotations()[coreapi.ResourceHashAnnotation] = hash
 		return s.ClientCache.GetLocalClient().Update(ctx, sec)
 	}
 	return nil

@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,11 +65,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 				Namespace:   stargate.Namespace,
 				Annotations: map[string]string{},
 				Labels: map[string]string{
-					api.NameLabel:      api.NameLabelValue,
-					api.PartOfLabel:    api.PartOfLabelValue,
-					api.ComponentLabel: api.ComponentLabelValueStargate,
-					api.CreatedByLabel: api.CreatedByLabelValueStargateController,
-					api.StargateLabel:  stargate.Name,
+					coreapi.NameLabel:      coreapi.NameLabelValue,
+					coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+					coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+					coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+					api.StargateLabel:      stargate.Name,
 				},
 			},
 
@@ -86,10 +87,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							api.NameLabel:               api.NameLabelValue,
-							api.PartOfLabel:             api.PartOfLabelValue,
-							api.ComponentLabel:          api.ComponentLabelValueStargate,
-							api.CreatedByLabel:          api.CreatedByLabelValueStargateController,
+							coreapi.NameLabel:           coreapi.NameLabelValue,
+							coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
+							coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
+							coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
 							api.StargateLabel:           stargate.Name,
 							api.StargateDeploymentLabel: deploymentName,
 						},
@@ -159,11 +160,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 				},
 			},
 		}
-		if klusterName, found := stargate.Labels[api.K8ssandraClusterLabel]; found {
-			deployment.Labels[api.K8ssandraClusterLabel] = klusterName
-			deployment.Spec.Template.ObjectMeta.Labels[api.K8ssandraClusterLabel] = klusterName
+		if klusterName, found := stargate.Labels[coreapi.K8ssandraClusterLabel]; found {
+			deployment.Labels[coreapi.K8ssandraClusterLabel] = klusterName
+			deployment.Spec.Template.ObjectMeta.Labels[coreapi.K8ssandraClusterLabel] = klusterName
 		}
-		deployment.Annotations[api.ResourceHashAnnotation] = utils.DeepHashString(deployment)
+		deployment.Annotations[coreapi.ResourceHashAnnotation] = utils.DeepHashString(deployment)
 		deployments[deploymentName] = deployment
 	}
 	return deployments

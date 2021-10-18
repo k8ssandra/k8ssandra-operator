@@ -14,14 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package stargate
 
 import (
 	"context"
 	"fmt"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,18 +36,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
 
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=stargates/finalizers,verbs=update
+// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
 
 // StargateReconciler reconciles a Stargate object
 type StargateReconciler struct {
+	*config.ReconcilerConfig
 	client.Client
 	Scheme *runtime.Scheme
 }
@@ -100,7 +103,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{}, err
 				}
 			}
-			return ctrl.Result{RequeueAfter: defaultDelay}, nil
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 		} else {
 			logger.Error(err, "Failed to fetch CassandraDatacenter", "CassandraDatacenter", dcKey)
 			return ctrl.Result{}, err
@@ -118,7 +121,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 		logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
-		return ctrl.Result{RequeueAfter: defaultDelay}, nil
+		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 	}
 
 	racks := len(actualDc.GetRacks())
@@ -182,12 +185,12 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			} else {
 				logger.Info("Stargate Deployment deleted successfully", "Deployment", deploymentKey)
-				return ctrl.Result{RequeueAfter: longDelay}, nil
+				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 			}
 		} else {
 			// Deployment already exists: check if it needs to be updated
-			desiredDeploymentHash := desiredDeployment.Annotations[api.ResourceHashAnnotation]
-			if actualDeploymentHash, found := actualDeployment.Annotations[api.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
+			desiredDeploymentHash := desiredDeployment.Annotations[coreapi.ResourceHashAnnotation]
+			if actualDeploymentHash, found := actualDeployment.Annotations[coreapi.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
 				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
 				resourceVersion := actualDeployment.GetResourceVersion()
 				desiredDeployment.DeepCopyInto(&actualDeployment)
@@ -201,7 +204,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{}, err
 				} else {
 					logger.Info("Stargate Deployment updated successfully", "Deployment", deploymentKey)
-					return ctrl.Result{RequeueAfter: longDelay}, nil
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 				}
 			}
 			delete(desiredDeployments, actualDeployment.Name)
@@ -231,7 +234,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		} else {
 			logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
-			return ctrl.Result{RequeueAfter: longDelay}, nil
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 		}
 	}
 
@@ -263,7 +266,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 		logger.Info("Waiting for deployments to be rolled out", "Stargate", req.NamespacedName)
-		return ctrl.Result{RequeueAfter: defaultDelay}, nil
+		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 	}
 
 	// Compute the desired service
@@ -291,7 +294,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				}
 			} else {
 				logger.Info("Stargate Service created successfully", "Service", serviceKey)
-				return ctrl.Result{RequeueAfter: defaultDelay}, nil
+				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 			}
 		} else {
 			logger.Error(err, "Failed to fetch Stargate Service", "Service", serviceKey)
@@ -300,8 +303,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check if the service needs to be updated
-	desiredServiceHash := desiredService.Annotations[api.ResourceHashAnnotation]
-	if actualServiceHash, found := actualService.Annotations[api.ResourceHashAnnotation]; !found || actualServiceHash != desiredServiceHash {
+	desiredServiceHash := desiredService.Annotations[coreapi.ResourceHashAnnotation]
+	if actualServiceHash, found := actualService.Annotations[coreapi.ResourceHashAnnotation]; !found || actualServiceHash != desiredServiceHash {
 		logger.Info("Updating Stargate Service", "Service", serviceKey)
 		resourceVersion := actualService.GetResourceVersion()
 		desiredService.DeepCopyInto(actualService)
@@ -315,7 +318,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, err
 		} else {
 			logger.Info("Stargate Service updated successfully", "Service", serviceKey)
-			return ctrl.Result{RequeueAfter: longDelay}, nil
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 		}
 	}
 

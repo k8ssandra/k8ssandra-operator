@@ -11,7 +11,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	//"k8s.io/client-go/tools/clientcmd"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+
+	api "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

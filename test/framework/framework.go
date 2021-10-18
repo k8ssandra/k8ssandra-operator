@@ -11,7 +11,10 @@ import (
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,6 +41,15 @@ func Init(t *testing.T) {
 
 	err = api.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for k8ssandra-operator")
+
+	err = stargateapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for stargate")
+
+	err = configapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for k8ssandra-operator configs")
+
+	err = replicationapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for k8ssandra-operator replication")
 
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
@@ -151,8 +163,8 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
-func (f *Framework) PatchStagateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *api.Stargate)) error {
-	sg := &api.Stargate{}
+func (f *Framework) PatchStagateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
+	sg := &stargateapi.Stargate{}
 	err := f.Get(ctx, key, sg)
 
 	if err != nil {
@@ -248,21 +260,21 @@ func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func()
 }
 
 // NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
-func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *api.Stargate) bool) func() bool {
-	return func(condition func(*api.Stargate) bool) func() bool {
+func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *stargateapi.Stargate) bool) func() bool {
+	return func(condition func(*stargateapi.Stargate) bool) func() bool {
 		return f.withStargate(ctx, key, condition)
 	}
 }
 
 // withStargate Fetches the stargate specified by key and then calls condition.
-func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*api.Stargate) bool) func() bool {
+func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*stargateapi.Stargate) bool) func() bool {
 	return func() bool {
 		remoteClient, found := f.remoteClients[key.K8sContext]
 		if !found {
 			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
 			return false
 		}
-		stargate := &api.Stargate{}
+		stargate := &stargateapi.Stargate{}
 		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
 			return condition(stargate)
 		} else {
@@ -274,7 +286,7 @@ func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition 
 
 func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
 	withStargate := f.NewWithStargate(ctx, key)
-	return withStargate(func(dc *api.Stargate) bool {
+	return withStargate(func(dc *stargateapi.Stargate) bool {
 		return true
 	})
 }

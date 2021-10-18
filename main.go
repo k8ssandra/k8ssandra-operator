@@ -24,6 +24,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -38,8 +39,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	k8ssandraiov1alpha1 "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/controllers"
+	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	k8ssandraiov1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
+	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
+	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -53,6 +59,9 @@ func init() {
 
 	utilruntime.Must(k8ssandraiov1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cassdcapi.AddToScheme(scheme))
+	utilruntime.Must(replicationapi.AddToScheme(scheme))
+	utilruntime.Must(stargateapi.AddToScheme(scheme))
+	utilruntime.Must(configapi.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -105,13 +114,13 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	controllers.InitConfig()
+	reconcilerConfig := config.InitConfig()
 
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
 
-		cConfigs := k8ssandraiov1alpha1.ClientConfigList{}
+		cConfigs := configapi.ClientConfigList{}
 		err = uncachedClient.List(ctx, &cConfigs, client.InNamespace(watchNamespace))
 		if err != nil {
 			setupLog.Error(err, "unable to fetch cluster connections")
@@ -153,29 +162,32 @@ func main() {
 
 		// Create the reconciler and start it
 
-		if err = (&controllers.K8ssandraClusterReconciler{
-			Client:        mgr.GetClient(),
-			Scheme:        mgr.GetScheme(),
-			ClientCache:   clientCache,
-			SeedsResolver: cassandra.NewRemoteSeedsResolver(),
-			ManagementApi: cassandra.NewManagementApiFactory(),
+		if err = (&k8ssandractrl.K8ssandraClusterReconciler{
+			ReconcilerConfig: reconcilerConfig,
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			ClientCache:      clientCache,
+			SeedsResolver:    cassandra.NewRemoteSeedsResolver(),
+			ManagementApi:    cassandra.NewManagementApiFactory(),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}
 
-		if err = (&controllers.SecretSyncController{
-			ClientCache:     clientCache,
-			WatchNamespaces: []string{watchNamespace},
+		if err = (&replicationctrl.SecretSyncController{
+			ReconcilerConfig: reconcilerConfig,
+			ClientCache:      clientCache,
+			WatchNamespaces:  []string{watchNamespace},
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)
 		}
 	}
 
-	if err = (&controllers.StargateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&stargatectrl.StargateReconciler{
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Stargate")
 		os.Exit(1)

@@ -13,7 +13,9 @@ import (
 	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/api/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	corev1 "k8s.io/api/core/v1"
@@ -485,10 +487,10 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 	f.logger.Info("deleting all Stargates", "Namespace", namespace)
 	return f.deleteAllResources(
 		namespace,
-		&api.Stargate{},
+		&stargateapi.Stargate{},
 		timeout,
 		interval,
-		client.HasLabels{api.StargateLabel},
+		client.HasLabels{stargateapi.StargateLabel},
 	)
 }
 
@@ -498,13 +500,13 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("deleting all ReplicatedSecrets", "Namespace", namespace)
 
-	if err := f.Client.DeleteAllOf(context.Background(), &api.ReplicatedSecret{}, client.InNamespace(namespace)); err != nil {
+	if err := f.Client.DeleteAllOf(context.Background(), &replicationapi.ReplicatedSecret{}, client.InNamespace(namespace)); err != nil {
 		f.logger.Error(err, "failed to delete ReplicatedSecrets")
 		return err
 	}
 
 	return wait.Poll(interval, timeout, func() (bool, error) {
-		list := &api.ReplicatedSecretList{}
+		list := &replicationapi.ReplicatedSecretList{}
 		if err := f.Client.List(context.Background(), list, client.InNamespace(namespace)); err != nil {
 			f.logger.Error(err, "failed to list ReplicatedSecrets")
 			return false, err
