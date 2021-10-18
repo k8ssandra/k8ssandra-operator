@@ -228,6 +228,11 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyClusterTemplateConfigs verifies that settings specified at the cluster-level, i.e.,
@@ -346,6 +351,12 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyDatacenterTemplateConfigs verifies that settings specified at the dc-level, i.e.,
@@ -494,6 +505,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyClusterTemplateAndDatacenterTemplateConfigs specifies settings in the cluster
@@ -639,6 +656,12 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, systemRF int, dcNames ...string) (*gabs.Container, error) {
@@ -881,6 +904,12 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -1195,6 +1224,13 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			kc.Status.Datacenters[dc2Key.Name].Stargate == nil
 	}, timeout, interval)
 
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, sg1Key, &stargateapi.Stargate{})
+	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
 }
 
 func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
@@ -1207,7 +1243,7 @@ func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *f
 			return false
 		}
 		return true
-	}, timeout, interval)
+	}, timeout, interval, "failed to verify that the default superuser secret was created")
 }
 
 func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
@@ -1220,7 +1256,14 @@ func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framew
 			return false
 		}
 		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
-	}, timeout, interval)
+	}, timeout, interval, "failed to verify that finalizer was added")
+}
+
+func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Framework, key framework.ClusterKey, obj client.Object) {
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, key, obj)
+		return err != nil && errors.IsNotFound(err)
+	}, timeout, interval, "failed to verify object does not exist", key)
 }
 
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
@@ -1229,10 +1272,14 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	replSecret := &replicationapi.ReplicatedSecret{}
 	replSecretKey := types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}
 
-	require.Eventually(t, func() bool {
+	assert.Eventually(t, func() bool {
 		err := f.Client.Get(ctx, replSecretKey, replSecret)
 		return err == nil
-	}, timeout, interval)
+	}, timeout, interval, "failed to get ReplicatedSecret")
+
+	if replSecret == nil {
+		return
+	}
 
 	val, exists := replSecret.Labels[api.ManagedByLabel]
 	assert.True(t, exists)
