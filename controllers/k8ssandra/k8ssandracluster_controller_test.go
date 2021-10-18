@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+        "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 )
@@ -137,6 +138,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -290,6 +292,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
@@ -440,6 +443,8 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kluster)
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
@@ -583,6 +588,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kluster)
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
@@ -717,6 +724,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, cluster)
 	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
 
@@ -942,6 +950,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -1198,6 +1207,19 @@ func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *f
 			return false
 		}
 		return true
+	}, timeout, interval)
+}
+
+func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
+	t.Log("check finalizer added to K8ssandraCluster")
+
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
 	}, timeout, interval)
 }
 
