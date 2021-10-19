@@ -12,11 +12,15 @@ import (
 	"text/template"
 	"time"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
@@ -464,14 +468,48 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 	return nil
 }
 
-// WaitForK8ssadraClusterDeletion blocks until either the timeout is reached or until there
-// no K8ssandraCluster objects in namespace.
-func (f *E2eFramework) WaitForK8ssadraClusterDeletion(namespace string, timeout, interval time.Duration) error {
+// DeleteDatacenters deletes all CassandraDatacenters in namespace in all remote clusters.
+// This function blocks until all pods from all CassandraDatacenters have terminated.
+func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all CassandraDatacenters", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&cassdcapi.CassandraDatacenter{},
+		timeout,
+		interval,
+		client.HasLabels{cassdcapi.ClusterLabel},
+	)
+}
+
+// DeleteStargates deletes all Stargates in namespace in all remote clusters.
+// This function blocks until all pods from all Stargates have terminated.
+func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all Stargates", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&stargateapi.Stargate{},
+		timeout,
+		interval,
+		client.HasLabels{stargateapi.StargateLabel},
+	)
+}
+
+// DeleteReplicatedSecrets deletes all the ReplicatedSecrets in the namespace. This causes
+// some delay while secret controller removes the finalizers and clears the replicated secrets from
+// remote clusters.
+func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all ReplicatedSecrets", "Namespace", namespace)
+
+	if err := f.Client.DeleteAllOf(context.Background(), &replicationapi.ReplicatedSecret{}, client.InNamespace(namespace)); err != nil {
+		f.logger.Error(err, "failed to delete ReplicatedSecrets")
+		return err
+	}
+
 	return wait.Poll(interval, timeout, func() (bool, error) {
-		list := &api.K8ssandraClusterList{}
+		list := &replicationapi.ReplicatedSecretList{}
 		if err := f.Client.List(context.Background(), list, client.InNamespace(namespace)); err != nil {
-			f.logger.Error(err, "failed to list K8ssandraClusters")
-			return false, nil
+			f.logger.Error(err, "failed to list ReplicatedSecrets")
+			return false, err
 		}
 		return len(list.Items) == 0, nil
 	})
@@ -483,6 +521,38 @@ func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, in
 		return err
 	}
 	return nil
+}
+
+func (f *E2eFramework) deleteAllResources(
+	namespace string,
+	resource client.Object,
+	timeout, interval time.Duration,
+	podListOptions ...client.ListOption,
+) error {
+	for _, remoteClient := range f.remoteClients {
+		if err := remoteClient.DeleteAllOf(context.TODO(), resource, client.InNamespace(namespace)); err != nil {
+			// If the CRD wasn't deployed at all to this cluster, keep going
+			if _, ok := err.(*meta.NoKindMatchError); !ok {
+				return err
+			}
+		}
+	}
+	// Check that all pods created by resources are terminated
+	// FIXME Should there be a separate wait.Poll call per cluster?
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		podListOptions = append(podListOptions, client.InNamespace(namespace))
+		for k8sContext, remoteClient := range f.remoteClients {
+			list := &corev1.PodList{}
+			if err := remoteClient.List(context.TODO(), list, podListOptions...); err != nil {
+				f.logger.Error(err, "failed to list pods", "Context", k8sContext)
+				return false, err
+			}
+			if len(list.Items) > 0 {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 }
 
 func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
