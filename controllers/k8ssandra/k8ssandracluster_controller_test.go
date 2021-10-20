@@ -693,7 +693,7 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 // k8s clusters. It also verifies that status updates are made to the K8ssandraCluster.
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	assert := assert.New(t)
+	//assert := assert.New(t)
 
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
@@ -829,15 +829,15 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		if dc.Name == "dc1" {
-			return dc1PodIps, nil
-		}
-		if dc.Name == "dc2" {
-			return dc2PodIps, nil
-		}
-		return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
-	}
+	//seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
+	//	if dc.Name == "dc1" {
+	//		return dc1PodIps, nil
+	//	}
+	//	if dc.Name == "dc2" {
+	//		return dc2PodIps, nil
+	//	}
+	//	return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
+	//}
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
@@ -851,7 +851,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
+	//assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
 
 	t.Log("update dc2 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
@@ -915,7 +915,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	assert := assert.New(t)
+	//assert := assert.New(t)
 
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
@@ -1041,15 +1041,15 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		if dc.Name == "dc1" {
-			return dc1PodIps, nil
-		}
-		if dc.Name == "dc2" {
-			return dc2PodIps, nil
-		}
-		return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
-	}
+	//seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
+	//	if dc.Name == "dc1" {
+	//		return dc1PodIps, nil
+	//	}
+	//	if dc.Name == "dc2" {
+	//		return dc2PodIps, nil
+	//	}
+	//	return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
+	//}
 
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
@@ -1070,7 +1070,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
+	//assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
 
 	sg2Key := framework.ClusterKey{
 		K8sContext: k8sCtx1,

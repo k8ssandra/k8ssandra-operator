@@ -73,6 +73,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints,verbs=get;list;watch;create;update;patch;delete
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("K8ssandraCluster", req.NamespacedName)
@@ -196,7 +197,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return ctrl.Result{}, nil
 	}
 
-	var seeds []string
+	//var seeds []string
 
 	// Reconcile the ReplicatedSecret and superuserSecret first (otherwise CassandraDatacenter will not start)
 	if kc.Spec.Cassandra.SuperuserSecretName == "" {
@@ -224,6 +225,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+
+	seeds, err := r.findSeeds(ctx, kc, kcLogger)
+	if err != nil {
+		kcLogger.Error(err, "Failed to find seed nodes")
+		return ctrl.Result{}, err
+	}
+
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
@@ -242,7 +250,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
-		dcConfig.AdditionalSeeds = seeds
 		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 		if reaperTemplate != nil {
 			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig)
@@ -265,6 +272,49 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		// reconcile seeds
+
+		if len(seeds) > 0 {
+			desiredEndpoints := newEndpoints(desiredDc, seeds)
+			actualEndpoints := &corev1.Endpoints{}
+			endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
+
+			if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
+				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+					logger.Info("Updating Endpoints", "K8SContext", dcTemplate.K8sContext, "CassandraDatacenter", dcKey, "Endpoints", endpointsKey)
+					actualEndpoints := actualEndpoints.DeepCopy()
+					resourceVersion := actualEndpoints.GetResourceVersion()
+					desiredEndpoints.DeepCopyInto(actualEndpoints)
+					actualEndpoints.SetResourceVersion(resourceVersion)
+					if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
+						logger.Error(err, "Failed to update Endpoints",
+							"K8SContext", dcTemplate.K8sContext,
+							"CassandraDatacenter", dcKey,
+							"Endpoints", endpointsKey)
+						return ctrl.Result{}, err
+					}
+				}
+			} else {
+				if errors.IsNotFound(err) {
+					if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
+						logger.Error(err, "Failed to create Endpoints",
+							"K8SContext", dcTemplate.K8sContext,
+							"CassandraDatacenter", dcKey,
+							"Endpoints", endpointsKey)
+						return ctrl.Result{}, err
+					}
+				} else {
+					logger.Error(err, "Failed to get Endpoints",
+						"K8SContext", dcTemplate.K8sContext,
+						"CassandraDatacenter", dcKey,
+						"Endpoints", endpointsKey)
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
+		// end reconcile seeds
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			// cassdc already exists, we'll update it
@@ -300,26 +350,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			logger.Info("The datacenter is ready")
 
-			endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
-			if err != nil {
-				logger.Error(err, "Failed to resolve seed endpoints")
-				return ctrl.Result{}, err
-			}
-
-			// The following code will update the AdditionalSeeds property for the
-			// datacenters. We will wind up having endpoints from every DC listed in
-			// the AdditionalSeeds property. We really want to exclude the seeds from
-			// the current DC. It is not a major concern right now as this is a short-term
-			// solution for handling seed addresses.
-			seeds = addSeedEndpoints(seeds, endpoints...)
-
-			// Temporarily do not update seeds on existing dcs. SEE
-			// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
-			// logger.Info("Updating seeds", "Seeds", seeds)
-			// if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
-			//	logger.Error(err, "Failed to update seeds")
-			//	return ctrl.Result{}, err
-			// }
 			actualDcs = append(actualDcs, actualDc)
 		} else {
 			if errors.IsNotFound(err) {
@@ -570,6 +600,73 @@ func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraClust
 			Reaper:    kdcStatus.Reaper.DeepCopy(),
 		}
 	}
+}
+
+func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) ([]corev1.Pod, error) {
+	pods := make([]corev1.Pod, 0)
+
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		if err != nil {
+			logger.Error(err, "Failed to get remote client", "K8sContext", dcTemplate.K8sContext)
+			return nil, err
+		}
+
+		namespace := kc.Namespace
+		if dcTemplate.Meta.Namespace != "" {
+			namespace = dcTemplate.Meta.Namespace
+		}
+
+		list := &corev1.PodList{}
+		selector := map[string]string{
+			cassdcapi.ClusterLabel:    kc.Spec.Cassandra.Cluster,
+			cassdcapi.DatacenterLabel: dcTemplate.Meta.Name,
+			cassdcapi.SeedNodeLabel:   "true",
+		}
+
+		dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
+
+		if err := remoteClient.Get(ctx, dcKey, &cassdcapi.CassandraDatacenter{}); err != nil && errors.IsNotFound(err) {
+			continue
+		}
+
+		if err := remoteClient.List(ctx, list, client.InNamespace(namespace), client.MatchingLabels(selector)); err != nil {
+			logger.Error(err, "Failed to get seed pods", "K8sContext", dcTemplate.K8sContext, "DC", dcKey)
+			return nil, err
+		}
+
+		pods = append(pods, list.Items...)
+	}
+
+	return pods, nil
+}
+
+func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1.Endpoints {
+	ep := corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   dc.Namespace,
+			Name:        dc.GetAdditionalSeedsServiceName(),
+			Labels:      dc.GetDatacenterLabels(),
+			Annotations: map[string]string{},
+		},
+	}
+
+	addresses := make([]corev1.EndpointAddress, 0, len(seeds))
+	for _, seed := range seeds {
+		addresses = append(addresses, corev1.EndpointAddress{
+			IP: seed.Status.PodIP,
+		})
+	}
+
+	ep.Subsets = []corev1.EndpointSubset{
+		{
+			Addresses: addresses,
+		},
+	}
+
+	ep.Annotations[api.ResourceHashAnnotation] = utils.DeepHashString(ep)
+
+	return &ep
 }
 
 // SetupWithManager sets up the controller with the Manager.
