@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -81,7 +82,6 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 
 // ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
 func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) error {
-	// We use leaderID to ensure that this leader instance of k8ssandra-operator is using the correct ReplicatedSecret (it can be shared between different k8ssandra-operators)
 	targetRepSec := generateReplicatedSecret(clusterName, namespace, targetContexts)
 	repSec := &replicationapi.ReplicatedSecret{}
 	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
@@ -91,15 +91,34 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName
 		}
 	}
 
-	// It exists, override whatever was in it
-	currentResourceVersion := repSec.ResourceVersion
-	targetRepSec.DeepCopyInto(repSec)
-	repSec.ResourceVersion = currentResourceVersion
-	return c.Update(ctx, repSec)
+	// It exists, compare and update only if necessary
+	if requiresUpdate(repSec, targetRepSec) {
+		currentResourceVersion := repSec.ResourceVersion
+		targetRepSec.DeepCopyInto(repSec)
+		repSec.ResourceVersion = currentResourceVersion
+		return c.Update(ctx, repSec)
+	}
+
+	return nil
+}
+
+func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, namespace, targetContext string) bool {
+	repSec := &replicationapi.ReplicatedSecret{}
+	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
+	if err != nil {
+		return false
+	}
+
+	for _, cond := range repSec.Status.Conditions {
+		if cond.Cluster == targetContext && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
 }
 
 func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
-
 	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(targetContexts))
 	for _, ctx := range targetContexts {
 		replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
@@ -119,6 +138,37 @@ func generateReplicatedSecret(clusterName, namespace string, targetContexts []st
 			ReplicationTargets: replicationTargets,
 		},
 	}
+}
+
+func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
+	// Ensure our labels are there (allow additionals) and our selector is there (nothing else) and replicationTargets has at least our targets
+
+	// Selector must not change
+	if !reflect.DeepEqual(current.Spec.Selector, desired.Spec.Selector) {
+		return true
+	}
+
+	// Labels must have our labels, additionals allowed
+	for k, v := range desired.Labels {
+		if current.Labels[k] != v {
+			return true
+		}
+	}
+
+	// TargetContexts must have our desired ones, additionals allowed also.
+	currentContexts := make(map[string]bool, len(current.Spec.ReplicationTargets))
+
+	for _, target := range current.Spec.ReplicationTargets {
+		currentContexts[target.K8sContextName] = true
+	}
+
+	for _, target := range desired.Spec.ReplicationTargets {
+		if _, found := currentContexts[target.K8sContextName]; !found {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getManagedObjectMeta(name, namespace, clusterName string) metav1.ObjectMeta {
