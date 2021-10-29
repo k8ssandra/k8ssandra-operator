@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"math/big"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
 
@@ -83,7 +84,6 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 }
 
 // ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
-//func ReconcileReplicatedSecret(ctx context.Context, c client.Client, clusterName, namespace string, targetContexts []string) (*api.ReplicatedSecret, error) {
 func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
 	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
@@ -114,20 +114,25 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 	}
 
 	// It exists, override whatever was in it
-	currentResourceVersion := repSec.ResourceVersion
-	// Need to copy the finalizers here; otherwise, they get overwritten and lost. This
-	// will be refactored in https://github.com/k8ssandra/k8ssandra-operator/issues/206
-	finalizers := repSec.Finalizers
-	targetRepSec.DeepCopyInto(repSec)
-	repSec.ResourceVersion = currentResourceVersion
-	repSec.Finalizers = finalizers
-	return c.Update(ctx, repSec)
-}
+	if requiresUpdate(repSec, targetRepSec) {
+		currentResourceVersion := repSec.ResourceVersion
+		// Need to copy the finalizers here; otherwise, they get overwritten and lost. This
+		// will be refactored in https://github.com/k8ssandra/k8ssandra-operator/issues/206
+		finalizers := repSec.Finalizers
+		targetRepSec.DeepCopyInto(repSec)
+		repSec.ResourceVersion = currentResourceVersion
+		repSec.Finalizers = finalizers
+		return c.Update(ctx, repSec)
+	}
 
 	return nil
 }
 
 func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, namespace, targetContext string) bool {
+	if targetContext == "" {
+		return true
+	}
+
 	repSec := &replicationapi.ReplicatedSecret{}
 	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
 	if err != nil {

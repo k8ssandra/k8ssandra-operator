@@ -171,7 +171,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 
 		patch := client.MergeFrom(kc.DeepCopy())
-		kc.SetFinalizers(nil)
+		controllerutil.RemoveFinalizer(kc, k8ssandraClusterFinalizer)
 		if err := r.Client.Patch(ctx, kc, patch); err != nil {
 			kcLogger.Error(err, "Failed to remove finalizer")
 			return ctrl.Result{}, err
@@ -210,7 +210,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return ctrl.Result{}, err
 	}
 
-		if err := secret.ReconcileReplicatedSecret(ctx, r.Client, r.Scheme, kc, kcLogger); err != nil {
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, r.Scheme, kc, kcLogger); err != nil {
 		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
 		return ctrl.Result{}, err
 	}
@@ -223,6 +223,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
+			kcLogger.Info("Waiting for secret replication")
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 		}
 
