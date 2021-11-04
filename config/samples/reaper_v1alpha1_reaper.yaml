@@ -1,0 +1,7 @@
+apiVersion: reaper.k8ssandra.io/v1alpha1
+kind: Reaper
+metadata:
+  name: reaper-sample
+spec:
+  # Add fields here
+  foo: bar

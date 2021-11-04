@@ -41,4 +41,13 @@ resources:
   kind: ReplicatedSecret
   path: github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: reaper
+  kind: Reaper
+  path: github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1
+  version: v1alpha1
 version: "3"

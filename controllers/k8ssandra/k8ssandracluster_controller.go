@@ -19,6 +19,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"k8s.io/apimachinery/pkg/labels"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
@@ -50,7 +51,6 @@ import (
 )
 
 const (
-	stargateAuthKeyspace      = "data_endpoint_auth"
 	k8ssandraClusterFinalizer = "k8ssandracluster.k8ssandra.io/finalizer"
 )
 
@@ -70,6 +70,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
 // +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -136,10 +137,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				hasErrors = true
 			}
 
-			selector := map[string]string{
-				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterLabel: kc.Name,
-			}
+			selector := utils.CreatedByK8ssandraControllerLabels(kc.Name)
 			stargateList := &stargateapi.StargateList{}
 			options := client.ListOptions{
 				Namespace:     namespace,
@@ -162,6 +160,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 						hasErrors = true
 					}
 				}
+			}
+
+			if r.deleteReapers(ctx, kc, dcTemplate, namespace, remoteClient, kcLogger) {
+				hasErrors = true
 			}
 		}
 
@@ -204,8 +206,12 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
-	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Spec.Cassandra.Cluster, kc.GetNamespace()); err != nil {
+	if err := secret.ReconcileSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Name, kc.Namespace); err != nil {
 		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileReaperSecrets(ctx, kc, kcLogger); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -220,7 +226,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
-		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, dcTemplate.K8sContext) {
+		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Name, kc.Namespace, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			kcLogger.Info("Waiting for secret replication")
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
@@ -236,6 +242,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 		dcConfig.AdditionalSeeds = seeds
+		r.addReaperSettingsToDcConfig(kc, &dcTemplate, dcConfig, kcLogger)
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
@@ -325,28 +332,42 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 	}
 
-	// Reconcile Stargate across all datacenters
+	kcLogger.Info("All dcs reconciled")
+
+	// Reconcile Stargate and Reaper across all datacenters
 	stargateAuthSchemaReconciled := false
+	reaperBackendSchemaReconciled := false
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		actualDc := actualDcs[i]
 		dcKey := types.NamespacedName{Namespace: actualDc.Namespace, Name: actualDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
 
-		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		logger.Info("Reconciling Stargate and Reaper for dc " + actualDc.Name)
 
-		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
-			result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient, &stargateAuthSchemaReconciled)
-			if !result.IsZero() || err != nil {
-				return result, err
-			}
+		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
+			return ctrl.Result{}, err
+		} else if err = remoteClient.Get(ctx, dcKey, actualDc); err != nil {
+			logger.Error(err, "Failed to get datacenter")
+			return ctrl.Result{}, err
+		} else if result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient, &stargateAuthSchemaReconciled); !result.IsZero() || err != nil {
+			return result, err
+		} else if result, err := r.reconcileReaper(ctx, kc, dcTemplate, actualDc, logger, remoteClient, &reaperBackendSchemaReconciled); !result.IsZero() || err != nil {
+			return result, err
 		}
 	}
 
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 	return ctrl.Result{}, nil
+}
+
+func (r *K8ssandraClusterReconciler) getSecretReplicationTargets(kc *api.K8ssandraCluster) []string {
+	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		if dcTemplate.K8sContext != "" {
+			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
+		}
+	}
+	return replicationTargets
 }
 
 func (r *K8ssandraClusterReconciler) reconcileStargate(
@@ -425,19 +446,16 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
 				return ctrl.Result{}, err
 			}
-		} else {
-			if actualStargate.Labels[api.CreatedByLabel] == api.CreatedByLabelValueK8ssandraClusterController &&
-				actualStargate.Labels[api.K8ssandraClusterLabel] == kc.Name {
-				if err := remoteClient.Delete(ctx, actualStargate); err != nil {
-					logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
-					return ctrl.Result{}, err
-				} else {
-					r.removeStargateStatus(kc, dcTemplate.Meta.Name)
-					logger.Info("Stargate deleted", "Stargate", stargateKey)
-				}
+		} else if utils.IsCreatedByK8ssandraController(actualStargate, kc.Name) {
+			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
+				logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
+				return ctrl.Result{}, err
 			} else {
-				logger.Info("Not deleting Stargate since it wasn't created by this controller", "Stargate", stargateKey)
+				r.removeStargateStatus(kc, dcTemplate.Meta.Name)
+				logger.Info("Stargate deleted", "Stargate", stargateKey)
 			}
+		} else {
+			logger.Info("Not deleting Stargate since it wasn't created by this controller", "Stargate", stargateKey)
 		}
 	}
 	return ctrl.Result{}, nil
@@ -535,11 +553,14 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 	remoteClient client.Client,
 	logger logr.Logger,
 ) error {
-	if managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger); err != nil {
-		return err
-	} else {
-		return stargate.ReconcileAuthSchema(kc, dc, managementApi, logger)
+	managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	if err == nil {
+		replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
+		if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err == nil {
+			err = stargate.ReconcileAuthTable(managementApi, logger)
+		}
 	}
+	return err
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
@@ -547,6 +568,7 @@ func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraClust
 		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
 			Stargate:  nil,
 			Cassandra: kdcStatus.Cassandra.DeepCopy(),
+			Reaper:    kdcStatus.Reaper.DeepCopy(),
 		}
 	}
 }
@@ -558,10 +580,9 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
-		labels := mapObj.GetLabels()
-		cluster, found := labels[api.K8ssandraClusterLabel]
-		if found {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: cluster}})
+		k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterLabel)
+		if k8cName != "" {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: k8cName}})
 		}
 		return requests
 	}
@@ -570,6 +591,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 		cb = cb.Watches(source.NewKindWithCache(&stargateapi.Stargate{}, c.GetCache()),
+			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+		cb = cb.Watches(source.NewKindWithCache(&reaperapi.Reaper{}, c.GetCache()),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	}
 

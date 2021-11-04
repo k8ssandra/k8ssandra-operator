@@ -1,0 +1,24 @@
+# permissions for end users to edit reapers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: reaper-editor-role
+rules:
+- apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers/status
+  verbs:
+  - get

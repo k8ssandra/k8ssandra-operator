@@ -39,6 +39,8 @@ type DatacenterConfig struct {
 	CassandraConfig     *api.CassandraConfig
 	AdditionalSeeds     []string
 	Networking          *cassdcapi.NetworkingConfig
+	Users               []cassdcapi.CassandraUser
+	PodTemplateSpec     *corev1.PodTemplateSpec
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -66,17 +68,19 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:         template.Cluster,
-			ServerImage:         template.ServerImage,
-			SuperuserSecretName: template.SuperUserSecretName,
 			Size:                template.Size,
-			ServerType:          "cassandra",
 			ServerVersion:       template.ServerVersion,
+			ServerImage:         template.ServerImage,
+			ServerType:          "cassandra",
 			Config:              rawConfig,
 			Racks:               template.Racks,
 			StorageConfig:       *template.StorageConfig,
-			AdditionalSeeds:     template.AdditionalSeeds,
+			ClusterName:         template.Cluster,
+			SuperuserSecretName: template.SuperUserSecretName,
+			Users:               template.Users,
 			Networking:          template.Networking,
+			AdditionalSeeds:     template.AdditionalSeeds,
+			PodTemplateSpec:     template.PodTemplateSpec,
 		},
 	}
 

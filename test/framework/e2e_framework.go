@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -232,7 +233,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: defaultControlPlaneContext}
+		options := kubectl.Options{Namespace: namespace, Context: defaultControlPlaneContext, ServerSide: true}
 		return kubectl.Apply(options, buf)
 	}
 
@@ -245,7 +246,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: ctx}
+		options := kubectl.Options{Namespace: namespace, Context: ctx, ServerSide: true}
 		if err := kubectl.Apply(options, buf); err != nil {
 			return err
 		}
@@ -491,6 +492,19 @@ func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.
 		timeout,
 		interval,
 		client.HasLabels{stargateapi.StargateLabel},
+	)
+}
+
+// DeleteReapers deletes all Reapers in namespace in all remote clusters.
+// This function blocks until all pods from all Reapers have terminated.
+func (f *E2eFramework) DeleteReapers(namespace string, timeout, interval time.Duration) error {
+	f.logger.Info("deleting all Reapers", "Namespace", namespace)
+	return f.deleteAllResources(
+		namespace,
+		&reaperapi.Reaper{},
+		timeout,
+		interval,
+		client.HasLabels{reaperapi.ReaperLabel},
 	)
 }
 

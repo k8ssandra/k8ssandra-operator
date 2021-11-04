@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"fmt"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"os"
 	"path/filepath"
 	"testing"
@@ -275,6 +276,10 @@ func registerApis() error {
 	}
 
 	if err := stargateapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := reaperapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 

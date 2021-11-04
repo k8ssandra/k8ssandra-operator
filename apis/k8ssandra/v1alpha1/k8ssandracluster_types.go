@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -38,6 +39,11 @@ type K8ssandraClusterSpec struct {
 	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
 	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
+
+	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
+	// If this is non-nil, Reaper will be deployed on every Cassandra datacenter in this K8ssandraCluster.
+	// +optional
+	Reaper *reaperapi.ReaperTemplate `json:"reaper,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -55,6 +61,7 @@ type K8ssandraClusterStatus struct {
 type K8ssandraStatus struct {
 	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
 	Stargate  *stargateapi.StargateStatus          `json:"stargate,omitempty"`
+	Reaper    *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -197,6 +204,11 @@ type CassandraDatacenterTemplate struct {
 	// deploying Stargate in this datacenter.
 	// +optional
 	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
+
+	// Reaper defines the desired deployment characteristics for Reaper in this datacenter. Leave nil to skip
+	// deploying Reaper in this datacenter.
+	// +optional
+	Reaper *reaperapi.ReaperTemplate `json:"reaper,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
@@ -236,17 +248,17 @@ type Auth struct {
 }
 
 type CassandraYaml struct {
-	//Authenticator string `json:"authenticator,omitempty"`
+	// Authenticator string `json:"authenticator,omitempty"`
 	//
-	//Authorizer string `json:"authorizer,omitempty"`
+	// Authorizer string `json:"authorizer,omitempty"`
 	//
-	//RoleManager string `json:"role_manager,omitempty"`
+	// RoleManager string `json:"role_manager,omitempty"`
 	//
-	//RoleValidityMillis *int64 `json:"roles_validity_in_ms,omitempty"`
+	// RoleValidityMillis *int64 `json:"roles_validity_in_ms,omitempty"`
 	//
-	//RoleUpdateIntervalMillis *int64 `json:"roles_update_interval_in_ms,omitempty"`
+	// RoleUpdateIntervalMillis *int64 `json:"roles_update_interval_in_ms,omitempty"`
 	//
-	//PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
+	// PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
 
 	// +optional
 	NumTokens *int `json:"num_tokens,omitempty"`

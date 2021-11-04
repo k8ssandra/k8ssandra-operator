@@ -84,9 +84,13 @@ type ManagementApiFacade interface {
 	// ListTables calls the management API "GET /ops/tables" endpoint to retrieve the table names in the given keyspace.
 	ListTables(keyspaceName string) ([]string, error)
 
-	// CreateTable  calls the management API "POST /ops/tables/create" endpoint to create a new table in the given
+	// CreateTable calls the management API "POST /ops/tables/create" endpoint to create a new table in the given
 	// keyspace.
 	CreateTable(definition *httphelper.TableDefinition) error
+
+	// EnsureKeyspaceReplication checks if the given keyspace has the given replication, and if it does not,
+	// alters it to match the desired replication.
+	EnsureKeyspaceReplication(keyspaceName string, replication map[string]int) error
 }
 
 type defaultManagementApiFacade struct {
@@ -253,5 +257,36 @@ func (r *defaultManagementApiFacade) CreateTable(table *httphelper.TableDefiniti
 			}
 		}
 		return fmt.Errorf("CALL create table failed on all datacenter %v pods", r.dc.Name)
+	}
+}
+
+func (r *defaultManagementApiFacade) EnsureKeyspaceReplication(keyspaceName string, replication map[string]int) error {
+	r.logger.Info(fmt.Sprintf("Ensuring that keyspace %s exists in cluster %v...", keyspaceName, r.dc.Spec.ClusterName))
+	if keyspaces, err := r.ListKeyspaces(keyspaceName); err != nil {
+		return err
+	} else if len(keyspaces) == 0 {
+		r.logger.Info(fmt.Sprintf("keyspace %s does not exist in cluster %v, creating it", keyspaceName, r.dc.Spec.ClusterName))
+		if err := r.CreateKeyspaceIfNotExists(keyspaceName, replication); err != nil {
+			return err
+		} else {
+			r.logger.Info(fmt.Sprintf("Keyspace %s successfully created", keyspaceName))
+			return nil
+		}
+	} else {
+		r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v", keyspaceName, r.dc.Spec.ClusterName))
+		if actualReplication, err := r.GetKeyspaceReplication(keyspaceName); err != nil {
+			return err
+		} else if CompareReplications(actualReplication, replication) {
+			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication", keyspaceName))
+			return nil
+		} else {
+			r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v but has wrong replication, altering it", keyspaceName, r.dc.Spec.ClusterName))
+			if err := r.AlterKeyspace(keyspaceName, replication); err != nil {
+				return err
+			} else {
+				r.logger.Info(fmt.Sprintf("Keyspace %s successfully altered", keyspaceName))
+				return nil
+			}
+		}
 	}
 }

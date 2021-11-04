@@ -103,6 +103,26 @@ rules:
   - patch
   - update
 - apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - replication.k8ssandra.io
   resources:
   - replicatedsecrets

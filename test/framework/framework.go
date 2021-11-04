@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"testing"
 	"time"
 
@@ -44,6 +45,9 @@ func Init(t *testing.T) {
 
 	err = stargateapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for stargate")
+
+	err = reaperapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for reaper")
 
 	err = configapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for k8ssandra-operator configs")
@@ -163,8 +167,23 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
-func (f *Framework) PatchStagateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
+func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
 	sg := &stargateapi.Stargate{}
+	err := f.Get(ctx, key, sg)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(sg)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+	return remoteClient.Status().Patch(ctx, sg, patch)
+}
+
+func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updateFn func(sg *reaperapi.Reaper)) error {
+	sg := &reaperapi.Reaper{}
 	err := f.Get(ctx, key, sg)
 
 	if err != nil {
@@ -295,7 +314,39 @@ func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition 
 
 func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
 	withStargate := f.NewWithStargate(ctx, key)
-	return withStargate(func(dc *stargateapi.Stargate) bool {
+	return withStargate(func(s *stargateapi.Stargate) bool {
+		return true
+	})
+}
+
+// NewWithReaper is a function generator for withReaper that is bound to ctx, and key.
+func (f *Framework) NewWithReaper(ctx context.Context, key ClusterKey) func(func(reaper *reaperapi.Reaper) bool) func() bool {
+	return func(condition func(*reaperapi.Reaper) bool) func() bool {
+		return f.withReaper(ctx, key, condition)
+	}
+}
+
+// withReaper Fetches the reaper specified by key and then calls condition.
+func (f *Framework) withReaper(ctx context.Context, key ClusterKey, condition func(*reaperapi.Reaper) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Reaper", "key", key)
+			return false
+		}
+		reaper := &reaperapi.Reaper{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, reaper); err == nil {
+			return condition(reaper)
+		} else {
+			f.logger.Error(err, "failed to get Reaper", "key", key)
+			return false
+		}
+	}
+}
+
+func (f *Framework) ReaperExists(ctx context.Context, key ClusterKey) func() bool {
+	withReaper := f.NewWithReaper(ctx, key)
+	return withReaper(func(r *reaperapi.Reaper) bool {
 		return true
 	})
 }

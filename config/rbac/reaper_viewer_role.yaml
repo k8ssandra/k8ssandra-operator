@@ -1,0 +1,20 @@
+# permissions for end users to view reapers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: reaper-viewer-role
+rules:
+- apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - reaper.k8ssandra.io
+  resources:
+  - reapers/status
+  verbs:
+  - get
