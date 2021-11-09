@@ -4,7 +4,7 @@ kind: Kustomization
 # Do not set namespace here!
 
 resources:
-  - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=v1.8.0
+  - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=master
   - ../../default
 
 components:
