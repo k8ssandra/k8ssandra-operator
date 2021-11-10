@@ -378,6 +378,19 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 	}
 
+	// If we reach this point all CassandraDatacenters are ready. We only set the
+	// CassandraInitialized condition if it is unset, i.e., only once. This allows us to
+	// distinguish whether we are deploying a CassandraDatacenter as part of a new cluster
+	// or as part of an existing cluster.
+	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionUnknown {
+		now := metav1.Now()
+		(&kc.Status).SetCondition(api.K8ssandraClusterCondition{
+			Type:               api.CassandraInitialized,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	}
+
 	kcLogger.Info("All dcs reconciled")
 
 	if kc.HasStargates() {

@@ -197,6 +197,10 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			return false
 		}
 
+		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) != corev1.ConditionTrue {
+			t.Logf("Expected status condition %s to be true", api.CassandraInitialized)
+		}
+
 		if len(kc.Status.Datacenters) == 0 {
 			return false
 		}
@@ -767,6 +771,11 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			return false
 		}
 
+		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
+			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
+			return false
+		}
+
 		if len(kc.Status.Datacenters) == 0 {
 			return false
 		}
@@ -809,6 +818,11 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		err = f.Get(ctx, kcKey, kc)
 		if err != nil {
 			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) != corev1.ConditionTrue {
+			t.Logf("Expected status condition %s to be true", api.CassandraInitialized)
 			return false
 		}
 
@@ -939,6 +953,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
+		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
+			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
+			return false
+		}
+
 		if len(kc.Status.Datacenters) == 0 {
 			return false
 		}
@@ -1057,6 +1076,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		err = f.Get(ctx, kcKey, kc)
 		if err != nil {
 			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) != corev1.ConditionTrue {
+			t.Logf("Expected status condition %s to be true", api.CassandraInitialized)
 			return false
 		}
 
