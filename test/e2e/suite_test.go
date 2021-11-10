@@ -56,8 +56,7 @@ func TestOperator(t *testing.T) {
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", true, createSingleDatacenterCluster))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
-	// TODO enable after https://github.com/k8ssandra/k8ssandra-operator/issues/156 is fixed
-	// t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
+	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
 }

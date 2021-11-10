@@ -3,6 +3,10 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/cass-operator/pkg/httphelper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 
@@ -1217,23 +1221,22 @@ func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdc
 type fakeManagementApiFactory struct {
 }
 
-func (f fakeManagementApiFactory) NewManagementApiFacade(ctx context.Context, dc *cassdcapi.CassandraDatacenter, k8sClient client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
-	return &fakeManagementApi{}, nil
-}
-
-type fakeManagementApi struct {
-}
-
-func (r *fakeManagementApi) CreateKeyspaceIfNotExists(keyspaceName string, replication map[string]int) error {
-	return nil
-}
-
-func (r *fakeManagementApi) ListKeyspaces(keyspaceName string) ([]string, error) {
-	return []string{"data_auth_endpoint"}, nil
-}
-
-func (r *fakeManagementApi) AlterKeyspace(keyspaceName string, replication map[string]int) error {
-	return nil
+func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
+	m := new(mocks.ManagementApiFacade)
+	m.On("CreateKeyspaceIfNotExists", stargate.AuthKeyspace, mock.Anything).Return(nil)
+	m.On("ListKeyspaces", stargate.AuthKeyspace).Return([]string{stargate.AuthKeyspace}, nil)
+	m.On("AlterKeyspace", stargate.AuthKeyspace, mock.Anything).Return(nil)
+	m.On("GetKeyspaceReplication", stargate.AuthKeyspace).Return(
+		map[string]string{
+			"class": "org.apache.cassandra.locator.NetworkTopologyStrategy",
+			"dc1":   "1",
+		},
+		nil)
+	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
+	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
+		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
+	})).Return(nil)
+	return m, nil
 }
 
 // verifySecretsMatch checks that the same secret is copied to other clusters
