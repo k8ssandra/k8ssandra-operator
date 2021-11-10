@@ -63,6 +63,10 @@ type K8ssandraClusterStatus struct {
 type K8ssandraClusterConditionType string
 
 const (
+	// CassandraInitialized is set to true when the Cassandra cluster becomes ready for
+	// the first time. During the life time of the C* cluster CassandraDatacenters may have
+	// their readiness condition change back and forth. Once set, this condition however
+	// does not change.
 	CassandraInitialized = "CassandraInitialized"
 )
 
