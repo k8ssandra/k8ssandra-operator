@@ -156,10 +156,19 @@ func main() {
 			}
 
 			// Add cluster to the manager
-			c, err := cluster.New(cfg, func(o *cluster.Options) {
-				o.Scheme = scheme
-				o.Namespace = watchNamespace
-			})
+			var c cluster.Cluster
+			if strings.Contains(watchNamespace, ",") {
+				c, err = cluster.New(cfg, func(o *cluster.Options) {
+					o.Scheme = scheme
+					o.Namespace = ""
+					o.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+				})
+			} else {
+				c, err = cluster.New(cfg, func(o *cluster.Options) {
+					o.Scheme = scheme
+					o.Namespace = watchNamespace
+				})
+			}
 			if err != nil {
 				setupLog.Error(err, "unable to create manager cluster connection")
 				os.Exit(1)

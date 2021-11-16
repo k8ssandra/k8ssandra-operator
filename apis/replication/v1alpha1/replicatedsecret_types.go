@@ -41,7 +41,7 @@ type ReplicationTarget struct {
 	// TODO Implement at some point
 	// Namespace to replicate the data to in the target cluster. If left empty, current namespace is used.
 	// +optional
-	// Namespace string `json:"namespace,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 
 	// K8sContextName defines the target cluster name as set in the ClientConfig. If left empty, current cluster is assumed
 	// +optional

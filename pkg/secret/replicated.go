@@ -95,10 +95,13 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterNa
 
 // ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
 func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
-	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.K8sContext != "" {
-			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
+		if dcTemplate.K8sContext != "" || dcTemplate.Meta.Namespace != "" {
+			replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
+				K8sContextName: dcTemplate.K8sContext,
+				Namespace: dcTemplate.Meta.Namespace,
+			})
 		}
 	}
 
@@ -158,14 +161,7 @@ func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, nam
 	return false
 }
 
-func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
-	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(targetContexts))
-	for _, ctx := range targetContexts {
-		replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
-			K8sContextName: ctx,
-		})
-	}
-
+func generateReplicatedSecret(clusterName, namespace string, replicationTargets []replicationapi.ReplicationTarget) *replicationapi.ReplicatedSecret {
 	return &replicationapi.ReplicatedSecret{
 		ObjectMeta: getManagedObjectMeta(clusterName, namespace, clusterName),
 		Spec: replicationapi.ReplicatedSecretSpec{
