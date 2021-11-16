@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Do not set namespace here!
+
+resources:
+  - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=211eac97af729b03d8551ebccb88c6e7e376c567
+  - ../../default
+
+components:
+  - ../../components/clusterscope
