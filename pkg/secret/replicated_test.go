@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -10,7 +11,9 @@ import (
 )
 
 func TestLabelIsSet(t *testing.T) {
-	repSec := generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	kcKey := client.ObjectKey{Namespace: "namespace", Name: "name"}
+	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
+	repSec := generateReplicatedSecret(kcKey, targets)
 	val, exists := repSec.Labels[api.ManagedByLabel]
 	require.True(t, exists)
 	require.Equal(t, api.NameLabelValue, val)
@@ -43,20 +46,22 @@ func TestDefaultSuperuserSecretName(t *testing.T) {
 
 func TestRequiresUpdate(t *testing.T) {
 	assert := assert.New(t)
-	desiredRepSec := generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	kcKey := client.ObjectKey{Namespace: "namespace", Name: "name"}
+	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
+	desiredRepSec := generateReplicatedSecret(kcKey, targets)
 
 	// Labels should allow additional stuff, but must have our desired ones
-	currentRepSec := generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	currentRepSec := generateReplicatedSecret(kcKey, targets)
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
 	currentRepSec.Labels["my-personal-one"] = "supersecret"
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
-	currentRepSec.Labels[api.K8ssandraClusterLabel] = "wrong-cluster"
+	currentRepSec.Labels[api.K8ssandraClusterNameLabel] = "wrong-cluster"
 	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
 
 	// ReplicationTargets can include additional stuff, but not remove our targets
-	currentRepSec = generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	currentRepSec = generateReplicatedSecret(kcKey, targets)
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
 	currentRepSec.Spec.ReplicationTargets = append(currentRepSec.Spec.ReplicationTargets, replicationapi.ReplicationTarget{
@@ -72,13 +77,13 @@ func TestRequiresUpdate(t *testing.T) {
 	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
 
 	// Selector must always match what we have, nothing additional even allowed
-	currentRepSec = generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	currentRepSec = generateReplicatedSecret(kcKey, targets)
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
 	currentRepSec.Spec.Selector.MatchLabels["new-matcher"] = "my-only-work"
 	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
 
-	currentRepSec = generateReplicatedSecret("name", "namespace", []string{"cluster-1"})
+	currentRepSec = generateReplicatedSecret(kcKey, targets)
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
 	currentRepSec.Spec.Selector.MatchLabels = make(map[string]string)

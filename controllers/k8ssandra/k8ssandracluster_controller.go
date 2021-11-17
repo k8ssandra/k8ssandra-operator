@@ -205,7 +205,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
-	if err := secret.ReconcileSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Name, kc.Namespace); err != nil {
+	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kcKey); err != nil {
 		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
 		return ctrl.Result{}, err
 	}
@@ -232,9 +232,9 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
-		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Name, kc.Namespace, dcTemplate.K8sContext) {
+		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
-			kcLogger.Info("Waiting for secret replication")
+			kcLogger.Info("Waiting for replication to complete")
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 		}
 
@@ -509,11 +509,11 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 			Name:        stargateKey.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.NameLabel:             api.NameLabelValue,
-				api.PartOfLabel:           api.PartOfLabelValue,
-				api.ComponentLabel:        api.ComponentLabelValueStargate,
-				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterLabel: kc.Name,
+				api.NameLabel:                 api.NameLabelValue,
+				api.PartOfLabel:               api.PartOfLabelValue,
+				api.ComponentLabel:            api.ComponentLabelValueStargate,
+				api.CreatedByLabel:            api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel: kc.Name,
 			},
 		},
 		Spec: stargateapi.StargateSpec{
@@ -621,7 +621,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
-		k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterLabel)
+		k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
 		if k8cName != "" {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: k8cName}})
 		}

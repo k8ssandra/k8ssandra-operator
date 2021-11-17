@@ -23,5 +23,6 @@ const (
 	PartOfLabel      = "app.kubernetes.io/part-of"
 	PartOfLabelValue = "k8ssandra"
 
-	K8ssandraClusterLabel = "k8ssandra.io/cluster"
+	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
+	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
 )

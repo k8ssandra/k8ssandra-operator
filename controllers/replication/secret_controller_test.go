@@ -2,14 +2,19 @@ package replication
 
 import (
 	"context"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
+	"fmt"
+	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"testing"
 	"time"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -19,10 +24,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 )
 
 const (
@@ -34,6 +35,8 @@ var (
 	targetCopyToCluster = "cluster-1"
 	targetNoCopyCluster = "cluster-2"
 	testEnv             *testutils.MultiClusterTestEnv
+	scheme              *runtime.Scheme
+	logger              logr.Logger
 )
 
 func TestSecretController(t *testing.T) {
@@ -41,6 +44,8 @@ func TestSecretController(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
+		scheme = mgr.GetScheme()
+		logger = mgr.GetLogger()
 		return (&SecretSyncController{
 			ReconcilerConfig: config.InitConfig(),
 			ClientCache:      clientCache,
@@ -70,11 +75,13 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	var empty struct{}
 
 	rsec := generateReplicatedSecret(namespace)
+	rsec.Name = "broke"
 	err := f.Client.Create(ctx, rsec)
 	require.NoError(err, "failed to create replicated secret to main cluster")
 
 	generatedSecrets := generateSecrets(namespace)
-	for _, s := range generatedSecrets {
+	for i, s := range generatedSecrets {
+		s.Name = fmt.Sprintf("broken-secret-%d", i)
 		err := f.Client.Create(ctx, s)
 		require.NoError(err, "failed to create secret to main cluster")
 	}
@@ -173,9 +180,13 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	t.Log("verify the replicated secrets are gone from the remote cluster")
 	remoteClient := testEnv.Clients[targetCopyToCluster]
 	require.Eventually(func() bool {
+		t.Logf("checking for secret deletion: %v", types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace})
 		remoteSecret := &corev1.Secret{}
 		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret)
 		if err != nil {
+			if !errors.IsNotFound(err) {
+				t.Logf("Failed to get secret: %v", err)
+			}
 			return errors.IsNotFound(err)
 		}
 		return false
@@ -254,6 +265,8 @@ func generateSecrets(namespace string) []*corev1.Secret {
 				Name:      "test-secret-first",
 				Labels: map[string]string{
 					"secret-controller": "test",
+					"cluster-namespace": namespace,
+					"cluster-name":      "k8ssandra",
 				},
 			},
 			Type: "Opaque",
@@ -285,7 +298,11 @@ func generateReplicatedSecret(namespace string) *api.ReplicatedSecret {
 		},
 		Spec: api.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"secret-controller": "test"},
+				MatchLabels: map[string]string{
+					"secret-controller": "test",
+					"cluster-namespace": namespace,
+					"cluster-name":      "k8ssandra",
+				},
 			},
 			ReplicationTargets: []api.ReplicationTarget{
 				{
