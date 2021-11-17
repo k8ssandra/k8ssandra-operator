@@ -213,6 +213,15 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 	})
 }
 
+func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.ObjectKey) error {
+	kc := &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, key, kc)
+	if err != nil {
+		return err
+	}
+	return f.Client.Delete(ctx, kc)
+}
+
 func (f *Framework) DeleteK8ssandraClusters(namespace string) error {
 	// TODO This will need to be updated when we add a finalizer in K8ssandraCluster
 	// We will want to block until that finalizer is removed.

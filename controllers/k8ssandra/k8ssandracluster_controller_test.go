@@ -36,6 +36,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
@@ -137,7 +138,9 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
@@ -225,6 +228,11 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyClusterTemplateConfigs verifies that settings specified at the cluster-level, i.e.,
@@ -289,6 +297,9 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -340,6 +351,12 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyDatacenterTemplateConfigs verifies that settings specified at the dc-level, i.e.,
@@ -437,6 +454,10 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -484,6 +505,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 // applyClusterTemplateAndDatacenterTemplateConfigs specifies settings in the cluster
@@ -578,6 +605,10 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err := f.Client.Create(ctx, kluster)
 	require.NoError(err, "failed to create K8sandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	verifyDefaultSuperUserSecretCreated(ctx, t, f, kluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -625,6 +656,12 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, systemRF int, dcNames ...string) (*gabs.Container, error) {
@@ -710,7 +747,9 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, cluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -865,6 +904,12 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -934,7 +979,9 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	allPodIps = append(allPodIps, dc1PodIps...)
 	allPodIps = append(allPodIps, dc2PodIps...)
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1177,6 +1224,13 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			kc.Status.Datacenters[dc2Key.Name].Stargate == nil
 	}, timeout, interval)
 
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, sg1Key, &stargateapi.Stargate{})
+	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
 }
 
 func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
@@ -1189,7 +1243,52 @@ func verifyDefaultSuperUserSecretCreated(ctx context.Context, t *testing.T, f *f
 			return false
 		}
 		return true
-	}, timeout, interval)
+	}, timeout, interval, "failed to verify that the default superuser secret was created")
+}
+
+func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
+	t.Log("check finalizer added to K8ssandraCluster")
+
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
+	}, timeout, interval, "failed to verify that finalizer was added")
+}
+
+func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Framework, key framework.ClusterKey, obj client.Object) {
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, key, obj)
+		return err != nil && errors.IsNotFound(err)
+	}, timeout, interval, "failed to verify object does not exist", key)
+}
+
+func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Log("check ReplicatedSecret reconciled")
+
+	replSecret := &replicationapi.ReplicatedSecret{}
+	replSecretKey := types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}
+
+	assert.Eventually(t, func() bool {
+		err := f.Client.Get(ctx, replSecretKey, replSecret)
+		return err == nil
+	}, timeout, interval, "failed to get ReplicatedSecret")
+
+	if replSecret == nil {
+		return
+	}
+
+	val, exists := replSecret.Labels[api.ManagedByLabel]
+	assert.True(t, exists)
+	assert.Equal(t, api.NameLabelValue, val)
+	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
+	assert.True(t, exists)
+	assert.Equal(t, kc.Spec.Cassandra.Cluster, val)
+
+	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(replSecret.Spec.ReplicationTargets))
 }
 
 func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {

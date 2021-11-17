@@ -545,7 +545,7 @@ func (f *E2eFramework) deleteAllResources(
 			list := &corev1.PodList{}
 			if err := remoteClient.List(context.TODO(), list, podListOptions...); err != nil {
 				f.logger.Error(err, "failed to list pods", "Context", k8sContext)
-				return false, err
+				return false, nil
 			}
 			if len(list.Items) > 0 {
 				return false, nil

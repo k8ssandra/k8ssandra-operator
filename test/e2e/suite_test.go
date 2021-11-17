@@ -151,11 +151,6 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := f.DeployCassOperator(namespace); err != nil {
-		t.Log("failed to deploy cass-operator")
-		return err
-	}
-
 	if err := f.DeployCassandraConfigMap(namespace); err != nil {
 		t.Log("failed to deploy cassandra configmap")
 		return err

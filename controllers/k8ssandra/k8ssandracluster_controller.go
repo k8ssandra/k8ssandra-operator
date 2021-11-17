@@ -19,6 +19,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 
 	"github.com/go-logr/logr"
@@ -45,6 +47,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+const (
+	stargateAuthKeyspace      = "data_endpoint_auth"
+	k8ssandraClusterFinalizer = "k8ssandracluster.k8ssandra.io/finalizer"
 )
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
@@ -80,31 +87,115 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	kc = kc.DeepCopy()
 	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	result, err := r.reconcile(ctx, kc, logger)
-	if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
-		logger.Error(patchErr, "failed to update k8ssandracluster status")
-	} else {
-		logger.Info("updated k8ssandracluster status")
+	if kc.GetDeletionTimestamp() == nil {
+		if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
+			logger.Error(patchErr, "failed to update k8ssandracluster status")
+		} else {
+			logger.Info("updated k8ssandracluster status")
+		}
 	}
 	return result, err
 }
 
 func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ssandraCluster, kcLogger logr.Logger) (ctrl.Result, error) {
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+
+	if kc.DeletionTimestamp != nil {
+		if !controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer) {
+			return ctrl.Result{}, nil
+		}
+
+		kcLogger.Info("Starting deletion")
+
+		hasErrors := false
+
+		for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+			namespace := dcTemplate.Meta.Namespace
+			if namespace == "" {
+				namespace = kc.Namespace
+			}
+			dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
+
+			remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+			if err != nil {
+				kcLogger.Error(err, "Failed to get remote client", "Context", dcTemplate.K8sContext)
+				hasErrors = true
+				continue
+			}
+
+			dc := &cassdcapi.CassandraDatacenter{}
+			err = remoteClient.Get(ctx, dcKey, dc)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					kcLogger.Error(err, "Failed to get CassandraDatacenter for deletion",
+						"CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+					hasErrors = true
+				}
+			} else if err = remoteClient.Delete(ctx, dc); err != nil {
+				kcLogger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+
+			selector := map[string]string{
+				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterLabel: kc.Name,
+			}
+			stargateList := &stargateapi.StargateList{}
+			options := client.ListOptions{
+				Namespace:     namespace,
+				LabelSelector: labels.SelectorFromSet(selector),
+			}
+
+			err = remoteClient.List(ctx, stargateList, &options)
+			if err != nil {
+				kcLogger.Error(err, "Failed to list Stargate objects", "Context", dcTemplate.K8sContext)
+				hasErrors = true
+				continue
+			}
+
+			for _, sg := range stargateList.Items {
+				if err = remoteClient.Delete(ctx, &sg); err != nil {
+					key := client.ObjectKey{Namespace: namespace, Name: sg.Name}
+					if !errors.IsNotFound(err) {
+						kcLogger.Error(err, "Failed to delete Stargate", "Stargate", key,
+							"Context", dcTemplate.K8sContext)
+						hasErrors = true
+					}
+				}
+			}
+		}
+
+		if hasErrors {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		}
+
+		patch := client.MergeFrom(kc.DeepCopy())
+		controllerutil.RemoveFinalizer(kc, k8ssandraClusterFinalizer)
+		if err := r.Client.Patch(ctx, kc, patch); err != nil {
+			kcLogger.Error(err, "Failed to remove finalizer")
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	if !controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer) {
+		patch := client.MergeFrom(kc.DeepCopy())
+		controllerutil.AddFinalizer(kc, k8ssandraClusterFinalizer)
+		if err := r.Client.Patch(ctx, kc, patch); err != nil {
+			kcLogger.Error(err, "Failed to add finalizer")
+			return ctrl.Result{}, err
+		}
+	}
+
 	if kc.Spec.Cassandra == nil {
 		// TODO handle the scenario of CassandraClusterTemplate being set to nil after having a non-nil value
 		return ctrl.Result{}, nil
 	}
 
-	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	var seeds []string
 
 	// Reconcile the ReplicatedSecret and superuserSecret first (otherwise CassandraDatacenter will not start)
-	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.K8sContext != "" {
-			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
-		}
-	}
-
 	if kc.Spec.Cassandra.SuperuserSecretName == "" {
 		// Note that we do not persist this change because doing so would prevent us from
 		// differentiating between a default secret by the operator vs one provided by the
@@ -118,7 +209,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return ctrl.Result{}, err
 	}
 
-	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets); err != nil {
+	if err := secret.ReconcileReplicatedSecret(ctx, r.Client, r.Scheme, kc, kcLogger); err != nil {
 		kcLogger.Error(err, "Failed to reconcile ReplicatedSecret")
 		return ctrl.Result{}, err
 	}
@@ -131,6 +222,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Spec.Cassandra.Cluster, kc.Namespace, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
+			kcLogger.Info("Waiting for secret replication")
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 		}
 
