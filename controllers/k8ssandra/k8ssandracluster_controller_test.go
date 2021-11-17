@@ -1193,7 +1193,7 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	val, exists := replSecret.Labels[api.ManagedByLabel]
 	assert.True(t, exists)
 	assert.Equal(t, api.NameLabelValue, val)
-	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
+	val, exists = replSecret.Labels[api.K8ssandraClusterNameLabel]
 	assert.True(t, exists)
 	assert.Equal(t, kc.Name, val)
 
