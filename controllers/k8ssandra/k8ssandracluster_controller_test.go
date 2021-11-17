@@ -36,8 +36,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-        "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 )

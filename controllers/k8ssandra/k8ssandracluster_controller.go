@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/labels"
-	"math"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 
