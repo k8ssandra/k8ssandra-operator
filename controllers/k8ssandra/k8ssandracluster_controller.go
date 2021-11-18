@@ -509,11 +509,12 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 			Name:        stargateKey.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.NameLabel:                 api.NameLabelValue,
-				api.PartOfLabel:               api.PartOfLabelValue,
-				api.ComponentLabel:            api.ComponentLabelValueStargate,
-				api.CreatedByLabel:            api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterNameLabel: kc.Name,
+				api.NameLabel:                      api.NameLabelValue,
+				api.PartOfLabel:                    api.PartOfLabelValue,
+				api.ComponentLabel:                 api.ComponentLabelValueStargate,
+				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel:      kc.Name,
+				api.K8ssandraClusterNamespaceLabel: kc.Namespace,
 			},
 		},
 		Spec: stargateapi.StargateSpec{
@@ -621,9 +622,13 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
-		k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
-		if k8cName != "" {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: k8cName}})
+		
+		// k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		labels := mapObj.GetLabels()
+		cluster, nameFound := labels[api.K8ssandraClusterNameLabel]
+		namespace, namespaceFound := labels[api.K8ssandraClusterNamespaceLabel]
+		if nameFound && namespaceFound {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: cluster}})
 		}
 		return requests
 	}
