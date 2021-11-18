@@ -1,0 +1,15 @@
+# https://github.com/traefik/traefik/blob/v2.5.1/docs/content/reference/dynamic-configuration/traefik.containo.us_ingressroutes.yaml
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: test-dc1-reaper-service-http-ingress # actual namespace will be kustomized
+  namespace: default # actual namespace will be kustomized
+spec:
+  entryPoints:
+    - web-http
+  routes:
+    - match: Host(`reaper.127.0.0.1.nip.io`)
+      kind: Rule
+      services:
+        - name: test-dc1-reaper-service # actual service name will be kustomized
+          port: 8080

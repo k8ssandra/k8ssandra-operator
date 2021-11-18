@@ -8,13 +8,9 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
-	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"net/http"
 	neturl "net/url"
@@ -230,34 +226,6 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, use
 	tokenStr := token.(string)
 	assert.NotEmpty(t, tokenStr, "REST authentication response did not have expected authToken field")
 	return tokenStr
-}
-
-func retrieveDatabaseCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) (string, string) {
-	superUserSecret := retrieveSuperuserSecret(t, f, ctx, namespace, clusterName)
-	username := string(superUserSecret.Data["username"])
-	password := string(superUserSecret.Data["password"])
-	return username, password
-}
-
-func retrieveSuperuserSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, clusterName string) *corev1.Secret {
-	var superUserSecret *corev1.Secret
-	timeout := 2 * time.Minute
-	interval := 1 * time.Second
-	require.Eventually(t, func() bool {
-		superUserSecret = &corev1.Secret{}
-		superUserSecretKey := framework.ClusterKey{
-			NamespacedName: types.NamespacedName{
-				Namespace: namespace,
-				Name:      secret.DefaultSuperuserSecretName(clusterName),
-			},
-			K8sContext: f.ControlPlaneContext,
-		}
-		err := f.Get(ctx, superUserSecretKey, superUserSecret)
-		return err == nil &&
-			len(superUserSecret.Data["username"]) >= 0 &&
-			len(superUserSecret.Data["password"]) >= 0
-	}, timeout, interval, "Failed to retrieve superuser secret")
-	return superUserSecret
 }
 
 func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx int, username, password string) *client.CqlClientConnection {

@@ -360,16 +360,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	return ctrl.Result{}, nil
 }
 
-func (r *K8ssandraClusterReconciler) getSecretReplicationTargets(kc *api.K8ssandraCluster) []string {
-	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.K8sContext != "" {
-			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
-		}
-	}
-	return replicationTargets
-}
-
 func (r *K8ssandraClusterReconciler) reconcileStargate(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
