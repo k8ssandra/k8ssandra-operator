@@ -161,7 +161,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			},
 		}
 		if klusterName, found := stargate.Labels[coreapi.K8ssandraClusterLabel]; found {
-			deployment.Labels[coreapi.K8ssandraClusterLabel] = dc.ClusterName
+			deployment.Labels[coreapi.K8ssandraClusterLabel] = klusterName
 			deployment.Spec.Template.ObjectMeta.Labels[coreapi.K8ssandraClusterLabel] = klusterName
 		}
 		deployment.Annotations[coreapi.ResourceHashAnnotation] = utils.DeepHashString(deployment)
