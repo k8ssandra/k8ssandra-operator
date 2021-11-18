@@ -68,6 +68,10 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 			Name:  "REAPER_CASS_LOCAL_DC",
 			Value: dc.Name,
 		},
+		{
+			Name:  "REAPER_CASS_KEYSPACE",
+			Value: reaper.Spec.Keyspace,
+		},
 	}
 
 	if reaper.Spec.AutoScheduling.Enabled {

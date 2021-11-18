@@ -60,8 +60,8 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
-	t.Run("CreateSingleReaper", e2eTest(ctx, "single-dc-reaper", false, createSingleReaper))
-	t.Run("CreateMultiReaper", e2eTest(ctx, "multi-dc-reaper", false, createMultiReaper))
+	t.Run("CreateSingleReaper", e2eTest(ctx, "single-dc-reaper", true, createSingleReaper))
+	t.Run("CreateMultiReaper", e2eTest(ctx, "multi-dc-reaper", true, createMultiReaper))
 }
 
 func beforeSuite(t *testing.T) {

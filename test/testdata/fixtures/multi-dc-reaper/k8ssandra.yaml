@@ -3,9 +3,13 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  reaper:
+    keyspace: reaper_ks
+    cassandraUserSecretRef: reaper-cql-secret
+    jmxUserSecretRef: reaper-jmx-secret
   cassandra:
     cluster: test
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
@@ -27,6 +31,8 @@ spec:
         reaper:
           autoScheduling:
             enabled: true
+            repairType: ADAPTIVE
+            timeBeforeFirstSchedule: P1D
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
@@ -46,4 +52,4 @@ spec:
           hostNetwork: true
         reaper:
           autoScheduling:
-            enabled: true
+            enabled: false

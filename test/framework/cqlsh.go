@@ -44,7 +44,6 @@ func (f *E2eFramework) ExecuteCql(t *testing.T, ctx context.Context, k8sContext,
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, k8cName)
 	options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 	output, _ := kubectl.Exec(options, pod,
-		"--",
 		"/opt/cassandra/bin/cqlsh",
 		"--username",
 		username,
