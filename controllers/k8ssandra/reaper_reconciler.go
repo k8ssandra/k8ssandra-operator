@@ -86,6 +86,39 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 	return nil
 }
 
+func (r *K8ssandraClusterReconciler) getReaperKeyspaces(kc *api.K8ssandraCluster) []string {
+	keyspacesSet := map[string]bool{}
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper, dcTemplate.Reaper)
+		if reaperTemplate != nil {
+			keyspacesSet[reaperTemplate.Keyspace] = true
+		}
+	}
+	keyspaces := make([]string, 0)
+	for keyspace := range keyspacesSet {
+		keyspaces = append(keyspaces, keyspace)
+	}
+	return keyspaces
+}
+
+func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	actualDc *cassdcapi.CassandraDatacenter,
+	keyspace string,
+	remoteClient client.Client,
+	logger logr.Logger,
+) error {
+	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger)
+	if err != nil {
+		return err
+	}
+	return managementApiFacade.EnsureKeyspaceReplication(
+		keyspace,
+		cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...),
+	)
+}
+
 func (r *K8ssandraClusterReconciler) reconcileReaper(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -93,7 +126,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 	remoteClient client.Client,
-	reaperBackendSchemaReconciled *bool,
 ) (ctrl.Result, error) {
 
 	reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
@@ -107,18 +139,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	if reaperTemplate != nil {
 
 		logger.Info("Reaper present for DC " + actualDc.Name)
-
-		if !*reaperBackendSchemaReconciled {
-			if managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger); err != nil {
-				return ctrl.Result{}, err
-			} else if err := managementApiFacade.EnsureKeyspaceReplication(
-				reaperTemplate.Keyspace,
-				cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...),
-			); err != nil {
-				return ctrl.Result{}, err
-			}
-			*reaperBackendSchemaReconciled = true
-		}
 
 		desiredReaper := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
 

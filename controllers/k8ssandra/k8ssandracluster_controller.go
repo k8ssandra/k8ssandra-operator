@@ -338,24 +338,41 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcLogger.Info("All dcs reconciled")
 
+	if kc.HasStargates() {
+		kcLogger.Info("Reconciling Stargate auth schema")
+		dcTemplate := kc.Spec.Cassandra.Datacenters[0]
+		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
+			return ctrl.Result{}, err
+		} else if err := r.reconcileStargateAuthSchema(ctx, kc, actualDcs[0], remoteClient, kcLogger); err != nil {
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
+		}
+	}
+
+	if reaperKeyspaces := r.getReaperKeyspaces(kc); len(reaperKeyspaces) > 0 {
+		kcLogger.Info("Reconciling Reaper schema")
+		dcTemplate := kc.Spec.Cassandra.Datacenters[0]
+		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
+			return ctrl.Result{}, err
+		} else {
+			for _, keyspace := range reaperKeyspaces {
+				if err := r.reconcileReaperSchema(ctx, kc, actualDcs[0], keyspace, remoteClient, kcLogger); err != nil {
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
+				}
+			}
+		}
+	}
+
 	// Reconcile Stargate and Reaper across all datacenters
-	stargateAuthSchemaReconciled := false
-	reaperBackendSchemaReconciled := false
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		actualDc := actualDcs[i]
 		dcKey := types.NamespacedName{Namespace: actualDc.Namespace, Name: actualDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
-
 		logger.Info("Reconciling Stargate and Reaper for dc " + actualDc.Name)
-
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			return ctrl.Result{}, err
-		} else if err = remoteClient.Get(ctx, dcKey, actualDc); err != nil {
-			logger.Error(err, "Failed to get datacenter")
-			return ctrl.Result{}, err
-		} else if result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient, &stargateAuthSchemaReconciled); !result.IsZero() || err != nil {
+		} else if result, err := r.reconcileStargate(ctx, kc, dcTemplate, actualDc, logger, remoteClient); !result.IsZero() || err != nil {
 			return result, err
-		} else if result, err := r.reconcileReaper(ctx, kc, dcTemplate, actualDc, logger, remoteClient, &reaperBackendSchemaReconciled); !result.IsZero() || err != nil {
+		} else if result, err := r.reconcileReaper(ctx, kc, dcTemplate, actualDc, logger, remoteClient); !result.IsZero() || err != nil {
 			return result, err
 		}
 	}
@@ -371,7 +388,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 	remoteClient client.Client,
-	stargateAuthSchemaReconciled *bool,
 ) (ctrl.Result, error) {
 
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
@@ -383,13 +399,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	logger = logger.WithValues("Stargate", stargateKey)
 
 	if stargateTemplate != nil {
-
-		if !*stargateAuthSchemaReconciled {
-			if err := r.reconcileStargateAuthSchema(ctx, kc, actualDc, remoteClient, logger); err != nil {
-				return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
-			}
-			*stargateAuthSchemaReconciled = true
-		}
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
 		desiredStargateHash := utils.DeepHashString(desiredStargate)
