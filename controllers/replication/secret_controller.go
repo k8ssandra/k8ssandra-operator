@@ -3,6 +3,7 @@ package replication
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
 
@@ -33,9 +34,6 @@ import (
 // TODO Move these to apis?
 const (
 	replicatedResourceFinalizer = "replicatedresource.k8ssandra.io/finalizer"
-
-	// OrphanResourceAnnotation when set to true prevents the deletion of secret from target clusters even if matching ReplicatedSecret is removed
-	OrphanResourceAnnotation = "replicatedresource.k8ssandra.io/orphan"
 )
 
 // We need rights to update the target cluster's secrets, not necessarily this cluster
@@ -72,7 +70,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			// Fetch all secrets from managed cluster.
 			// Remove only those secrets which are not matched by any other ReplicatedSecret and do not have the orphan annotation
-			if val, found := rsec.GetAnnotations()[OrphanResourceAnnotation]; !found || val != "true" {
+			if val, found := rsec.GetAnnotations()[secret.OrphanResourceAnnotation]; !found || val != "true" {
 				logger.Info("Cleaning up all the replicated resources", "ReplicatedSecret", req.NamespacedName)
 				selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
 				if err != nil {
@@ -101,7 +99,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 							continue
 						}
 
-						if val, found := sec.GetAnnotations()[OrphanResourceAnnotation]; found && val == "true" {
+						if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
 							// Managed cluster has orphan set to the secret, do not delete it from target clusters
 							continue SecretsToCheck
 						}

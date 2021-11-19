@@ -2,6 +2,7 @@ package replication
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"testing"
 	"time"
 
@@ -392,14 +393,14 @@ func TestSyncSecrets(t *testing.T) {
 
 	assert.Equal(orig.Data, dest.Data)
 
-	dest.GetLabels()[OrphanResourceAnnotation] = "true"
+	dest.GetLabels()[secret.OrphanResourceAnnotation] = "true"
 
 	dest.GetAnnotations()[coreapi.ResourceHashAnnotation] = "9876555"
 
 	syncSecrets(orig, dest)
 
 	// Verify additional orphan annotation was not removed
-	assert.Contains(dest.GetLabels(), OrphanResourceAnnotation)
+	assert.Contains(dest.GetLabels(), secret.OrphanResourceAnnotation)
 
 	// Verify original labels and their values are set
 	for k, v := range orig.GetLabels() {
