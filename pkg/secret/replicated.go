@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"math/big"
@@ -84,6 +85,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterNa
 	// It exists or was created: ensure it has proper annotations
 	if !utils.IsManagedBy(currentSec, clusterName) {
 		utils.SetManagedBy(currentSec, clusterName)
+		utils.AddAnnotation(currentSec, replication.OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}
 	return nil
