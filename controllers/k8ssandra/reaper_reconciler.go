@@ -59,10 +59,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 			jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
 
 			if cassandraUserSecretRef == "" {
-				cassandraUserSecretRef = reaper.DefaultUserSecretName(kc.Name, dcTemplate.Meta.Name)
+				cassandraUserSecretRef = reaper.DefaultUserSecretName(kc.Name)
 			}
 			if jmxUserSecretRef == "" {
-				jmxUserSecretRef = reaper.DefaultJmxUserSecretName(kc.Name, dcTemplate.Meta.Name)
+				jmxUserSecretRef = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
 
 			logger = logger.WithValues(

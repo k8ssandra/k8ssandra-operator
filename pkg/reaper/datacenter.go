@@ -20,7 +20,7 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperTemplate, dcCon
 func addUser(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
 	cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
 	if cassandraUserSecretRef == "" {
-		cassandraUserSecretRef = DefaultUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
+		cassandraUserSecretRef = DefaultUserSecretName(dcConfig.Cluster)
 	}
 	dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
 		SecretName: cassandraUserSecretRef,
@@ -31,7 +31,7 @@ func addUser(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.Datac
 func addInitContainer(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
 	jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
 	if jmxUserSecretRef == "" {
-		jmxUserSecretRef = DefaultJmxUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
+		jmxUserSecretRef = DefaultJmxUserSecretName(dcConfig.Cluster)
 	}
 	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, corev1.Container{
 		Name:            "jmx-credentials",

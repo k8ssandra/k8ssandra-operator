@@ -43,10 +43,10 @@ func NewReaper(
 		},
 	}
 	if desiredReaper.Spec.CassandraUserSecretRef == "" {
-		desiredReaper.Spec.CassandraUserSecretRef = DefaultUserSecretName(kc.Name, dc.Name)
+		desiredReaper.Spec.CassandraUserSecretRef = DefaultUserSecretName(kc.Name)
 	}
 	if desiredReaper.Spec.JmxUserSecretRef == "" {
-		desiredReaper.Spec.JmxUserSecretRef = DefaultJmxUserSecretName(kc.Name, dc.Name)
+		desiredReaper.Spec.JmxUserSecretRef = DefaultJmxUserSecretName(kc.Name)
 	}
 	utils.AddHashAnnotation(desiredReaper, k8ssandraapi.ResourceHashAnnotation)
 	return desiredReaper

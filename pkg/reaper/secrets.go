@@ -20,12 +20,12 @@ var EnableCassAuthVar = &corev1.EnvVar{
 	Value: "true",
 }
 
-func DefaultUserSecretName(k8cName, dcName string) string {
-	return fmt.Sprintf("%v-%v-reaper", k8cName, dcName)
+func DefaultUserSecretName(k8cName string) string {
+	return fmt.Sprintf("%v-reaper", k8cName)
 }
 
-func DefaultJmxUserSecretName(k8cName, dcName string) string {
-	return fmt.Sprintf("%v-%v-reaper-jmx", k8cName, dcName)
+func DefaultJmxUserSecretName(k8cName string) string {
+	return fmt.Sprintf("%v-reaper-jmx", k8cName)
 }
 
 func GetCassandraAuthEnvironmentVars(secret *corev1.Secret) (*corev1.EnvVar, *corev1.EnvVar, error) {
