@@ -69,6 +69,8 @@ TEST_ARGS=
 
 NS ?= k8ssandra-operator
 
+CLUSTER_SCOPE = false
+
 all: build
 
 ##@ General
@@ -158,7 +160,11 @@ single-reload: build manifests kustomize docker-build kind-load-image cert-manag
 multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
+ifeq ($(CLUSTER_SCOPE),true)
+	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply -f -
+else
 	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
+endif
 ## install the data plane
 	kubectl config use-context kind-k8ssandra-1
 	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
@@ -172,12 +178,20 @@ multi-up: cleanup build manifests kustomize docker-build create-kind-multicluste
 multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
 # Reload the operator on the control-plane
 	kubectl config use-context kind-k8ssandra-0
+ifeq ($(CLUSTER_SCOPE),true)
+	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
+else
 	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
+endif
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 # Reload the operator on the data-plane
 	kubectl config use-context kind-k8ssandra-1
+ifeq ($(CLUSTER_SCOPE),true)
+	$(KUSTOMIZE) build config/deployments/data-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
+else
 	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
+endif
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 

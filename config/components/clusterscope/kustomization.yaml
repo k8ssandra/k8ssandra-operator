@@ -36,6 +36,3 @@ patchesJson6902:
     - op: replace
       path: /subjects/0/name
       value: k8ssandra-operator
-    - op: add
-      path: /subjects/0/namespace
-      value: k8ssandra-operator

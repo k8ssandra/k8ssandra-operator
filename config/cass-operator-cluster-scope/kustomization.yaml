@@ -1,0 +1,20 @@
+# This provides support for configuring and deploying cass-operator with cluster scope
+# alongside k8ssandra-operator. We aren't using the kustomizations from the cass-operator
+# repo because they deploy cass-operator to the cass-operator namespace and we want to
+# be able to deploy to a different namespace, namely the k8ssandra-operator namespace.
+#
+# This kustomization needs to be used with another one that creates a namespace so that
+# the subject's namespace in the ClusterRoleBindings are configured correctly.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: cass-operator-
+
+namespace: cass-operator
+
+resources:
+  - github.com/k8ssandra/cass-operator/config/default?ref=211eac97af729b03d8551ebccb88c6e7e376c567
+
+components:
+  - ../components/cass-operator-cluster-scope
+  - github.com/k8ssandra/cass-operator/config/components/webhook?ref=211eac97af729b03d8551ebccb88c6e7e376c567
