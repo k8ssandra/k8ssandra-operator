@@ -28,7 +28,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 			&cassandra.DatacenterConfig{
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
-				Users:   []cassdcapi.CassandraUser{{SecretName: "cluster1-dc1-reaper", Superuser: true}},
+				Users:   []cassdcapi.CassandraUser{{SecretName: "cluster1-reaper", Superuser: true}},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{{
@@ -40,7 +40,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									Name: "REAPER_JMX_USERNAME",
 									ValueFrom: &corev1.EnvVarSource{
 										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-dc1-reaper-jmx"},
+											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-reaper-jmx"},
 											Key:                  "username",
 										},
 									},
@@ -49,7 +49,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									Name: "REAPER_JMX_PASSWORD",
 									ValueFrom: &corev1.EnvVarSource{
 										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-dc1-reaper-jmx"},
+											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-reaper-jmx"},
 											Key:                  "password",
 										},
 									},
