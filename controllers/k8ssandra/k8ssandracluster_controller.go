@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"k8s.io/apimachinery/pkg/labels"
 	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
@@ -242,7 +243,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 		dcConfig.AdditionalSeeds = seeds
-		r.addReaperSettingsToDcConfig(kc, &dcTemplate, dcConfig, kcLogger)
+		reaperTemplate := reaper.Coalesce(dcTemplate.Reaper.DeepCopy(), kc.Spec.Reaper.DeepCopy())
+		if reaperTemplate != nil {
+			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig)
+		}
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)

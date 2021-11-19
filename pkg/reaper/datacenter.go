@@ -1,12 +1,39 @@
 package reaper
 
 import (
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
 )
 
-func AddReaperSettingsToDcPodTemplate(template *corev1.PodTemplateSpec, jmxUserSecretRef string) *corev1.PodTemplateSpec {
-	template.Spec.InitContainers = append(template.Spec.InitContainers, corev1.Container{
+func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+	addUser(reaperTemplate, dcConfig)
+	if dcConfig.PodTemplateSpec == nil {
+		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	addInitContainer(reaperTemplate, dcConfig)
+	modifyMainContainer(dcConfig)
+}
+
+func addUser(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+	cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
+	if cassandraUserSecretRef == "" {
+		cassandraUserSecretRef = DefaultUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
+	}
+	dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
+		SecretName: cassandraUserSecretRef,
+		Superuser:  true,
+	})
+}
+
+func addInitContainer(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+	jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
+	if jmxUserSecretRef == "" {
+		jmxUserSecretRef = DefaultJmxUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
+	}
+	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, corev1.Container{
 		Name:            "jmx-credentials",
 		Image:           "docker.io/busybox:1.33.1",
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -40,9 +67,18 @@ func AddReaperSettingsToDcPodTemplate(template *corev1.PodTemplateSpec, jmxUserS
 			MountPath: "/config",
 		}},
 	})
-	template.Spec.Containers = append(template.Spec.Containers, corev1.Container{
+}
+
+func modifyMainContainer(dcConfig *cassandra.DatacenterConfig) {
+	for i, container := range dcConfig.PodTemplateSpec.Spec.Containers {
+		if container.Name == reconciliation.CassandraContainerName {
+			container.Env = append(container.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
+			dcConfig.PodTemplateSpec.Spec.Containers[i] = container
+			return
+		}
+	}
+	dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, corev1.Container{
 		Name: reconciliation.CassandraContainerName,
 		Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
 	})
-	return template
 }

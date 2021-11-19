@@ -24,7 +24,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,7 +42,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 	logger.Info("Reconciling Reaper user secrets")
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
-		reaperTemplate := reaper.Coalesce(dcTemplate.Reaper.DeepCopy(), kc.Spec.Reaper.DeepCopy())
+		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 		if reaperTemplate != nil {
 
 			namespace := dcTemplate.Meta.Namespace
@@ -87,36 +86,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) addReaperSettingsToDcConfig(
-	kc *api.K8ssandraCluster,
-	dcTemplate *api.CassandraDatacenterTemplate,
-	dcConfig *cassandra.DatacenterConfig,
-	logger logr.Logger,
-) {
-	reaperTemplate := reaper.Coalesce(dcTemplate.Reaper.DeepCopy(), kc.Spec.Reaper.DeepCopy())
-	if reaperTemplate != nil {
-		reaperName := reaper.ResourceName(kc.Name, dcConfig.Meta.Name)
-		reaperKey := types.NamespacedName{Namespace: dcConfig.Meta.Namespace, Name: reaperName}
-		logger = logger.WithValues("Reaper", reaperKey)
-		cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
-		if cassandraUserSecretRef == "" {
-			cassandraUserSecretRef = reaper.DefaultUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
-		}
-		jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
-		if jmxUserSecretRef == "" {
-			jmxUserSecretRef = reaper.DefaultJmxUserSecretName(dcConfig.Cluster, dcConfig.Meta.Name)
-		}
-		dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
-			SecretName: cassandraUserSecretRef,
-			Superuser:  true,
-		})
-		if dcConfig.PodTemplateSpec == nil {
-			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-		}
-		dcConfig.PodTemplateSpec = reaper.AddReaperSettingsToDcPodTemplate(dcConfig.PodTemplateSpec, jmxUserSecretRef)
-	}
-}
-
 func (r *K8ssandraClusterReconciler) reconcileReaper(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -127,7 +96,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	reaperBackendSchemaReconciled *bool,
 ) (ctrl.Result, error) {
 
-	reaperTemplate := reaper.Coalesce(dcTemplate.Reaper.DeepCopy(), kc.Spec.Reaper.DeepCopy())
+	reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
 		Name:      reaper.ResourceName(kc.Name, actualDc.Name),
