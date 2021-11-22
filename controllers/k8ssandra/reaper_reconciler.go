@@ -40,78 +40,48 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 	logger logr.Logger,
 ) error {
 	logger.Info("Reconciling Reaper user secrets")
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-
-		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
-		if reaperTemplate != nil {
-
-			namespace := dcTemplate.Meta.Namespace
-			if len(namespace) == 0 {
-				namespace = kc.Namespace
-			}
-			dcKey := types.NamespacedName{Namespace: namespace, Name: dcTemplate.Meta.Name}
-			logger = logger.WithValues("CassandraDatacenter", dcKey)
-			reaperName := reaper.ResourceName(kc.Name, dcTemplate.Meta.Name)
-			reaperKey := types.NamespacedName{Namespace: dcKey.Namespace, Name: reaperName}
-			logger = logger.WithValues("Reaper", reaperKey)
-
-			cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
-			jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
-
-			if cassandraUserSecretRef == "" {
-				cassandraUserSecretRef = reaper.DefaultUserSecretName(kc.Name)
-			}
-			if jmxUserSecretRef == "" {
-				jmxUserSecretRef = reaper.DefaultJmxUserSecretName(kc.Name)
-			}
-
-			logger = logger.WithValues(
-				"ReaperCassandraUserSecretRef",
-				cassandraUserSecretRef,
-				"ReaperJmxUserSecretRef",
-				jmxUserSecretRef,
-			)
-
-			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kc.Name, kc.Namespace); err != nil {
-				logger.Error(err, "Failed to reconcile Reaper CQL user secret")
-				return err
-			}
-			if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef, kc.Name, kc.Namespace); err != nil {
-				logger.Error(err, "Failed to reconcile Reaper JMX user secret")
-				return err
-			}
+	if kc.Spec.Reaper != nil {
+		cassandraUserSecretRef := kc.Spec.Reaper.CassandraUserSecretRef
+		jmxUserSecretRef := kc.Spec.Reaper.JmxUserSecretRef
+		if cassandraUserSecretRef == "" {
+			cassandraUserSecretRef = reaper.DefaultUserSecretName(kc.Name)
+		}
+		if jmxUserSecretRef == "" {
+			jmxUserSecretRef = reaper.DefaultJmxUserSecretName(kc.Name)
+		}
+		logger = logger.WithValues(
+			"ReaperCassandraUserSecretRef",
+			cassandraUserSecretRef,
+			"ReaperJmxUserSecretRef",
+			jmxUserSecretRef,
+		)
+		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kc.Name, kc.Namespace); err != nil {
+			logger.Error(err, "Failed to reconcile Reaper CQL user secret")
+			return err
+		}
+		if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef, kc.Name, kc.Namespace); err != nil {
+			logger.Error(err, "Failed to reconcile Reaper JMX user secret")
+			return err
 		}
 	}
 	logger.Info("Reaper user secrets successfully reconciled")
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) getReaperKeyspaces(kc *api.K8ssandraCluster) []string {
-	keyspacesSet := map[string]bool{}
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper, dcTemplate.Reaper)
-		if reaperTemplate != nil {
-			keyspacesSet[reaperTemplate.Keyspace] = true
-		}
-	}
-	keyspaces := make([]string, 0)
-	for keyspace := range keyspacesSet {
-		keyspaces = append(keyspaces, keyspace)
-	}
-	return keyspaces
-}
-
 func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	actualDc *cassdcapi.CassandraDatacenter,
-	keyspace string,
 	remoteClient client.Client,
 	logger logr.Logger,
 ) error {
 	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger)
 	if err != nil {
 		return err
+	}
+	keyspace := reaperapi.DefaultKeyspace
+	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
+		keyspace = kc.Spec.Reaper.Keyspace
 	}
 	return managementApiFacade.EnsureKeyspaceReplication(
 		keyspace,

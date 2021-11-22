@@ -14,13 +14,13 @@ import (
 func TestAddReaperSettingsToDcConfig(t *testing.T) {
 	tests := []struct {
 		name           string
-		reaperTemplate *reaperapi.ReaperTemplate
+		reaperTemplate *reaperapi.ReaperClusterTemplate
 		actual         *cassandra.DatacenterConfig
 		expected       *cassandra.DatacenterConfig
 	}{
 		{
 			"defaults",
-			&reaperapi.ReaperTemplate{},
+			&reaperapi.ReaperClusterTemplate{},
 			&cassandra.DatacenterConfig{
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
@@ -75,7 +75,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 		},
 		{
 			"existing objects",
-			&reaperapi.ReaperTemplate{
+			&reaperapi.ReaperClusterTemplate{
 				CassandraUserSecretRef: "cass-user",
 				JmxUserSecretRef:       "jmx-user",
 			},

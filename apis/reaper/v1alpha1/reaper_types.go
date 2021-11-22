@@ -25,10 +25,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	ReaperLabel = "k8ssandra.io/reaper"
+	ReaperLabel     = "k8ssandra.io/reaper"
+	DefaultKeyspace = "reaper_db"
 )
 
-type ReaperTemplate struct {
+type ReaperDatacenterTemplate struct {
 
 	// The image to use.
 	// +kubebuilder:default="thelastpickle/cassandra-reaper:3.0.0"
@@ -42,26 +43,6 @@ type ReaperTemplate struct {
 	// +kubebuilder:default="default"
 	// +optional
 	ServiceAccountName string `json:"ServiceAccountName,omitempty"`
-
-	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
-	// does not exist, and if this Reaper resource is managed by K8ssandra.
-	// +kubebuilder:default="reaper_db"
-	// +optional
-	Keyspace string `json:"keyspace,omitempty"`
-
-	// Defines the username and password that Reaper will use to authenticate CQL connections to Cassandra
-	// clusters. These credentials need to be stored on each Cassandra node. If CQL authentication is not required,
-	// leave this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys:
-	// "username" and "password".
-	// +optional
-	CassandraUserSecretRef string `json:"cassandraUserSecretRef,omitempty"`
-
-	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra
-	// clusters. These credentials need to be stored on each Cassandra node. If JMX authentication is not required,
-	// leave this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys:
-	// "username" and "password".
-	// +optional
-	JmxUserSecretRef string `json:"jmxUserSecretRef,omitempty"`
 
 	// Auto scheduling properties. When you enable the auto-schedule feature, Reaper dynamically schedules repairs for
 	// all non-system keyspaces in a cluster. A cluster's keyspaces are monitored and any modifications (additions or
@@ -155,6 +136,30 @@ type AutoScheduling struct {
 	ExcludedKeyspaces []string `json:"excludedKeyspaces,omitempty"`
 }
 
+type ReaperClusterTemplate struct {
+	ReaperDatacenterTemplate `json:",inline"`
+
+	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
+	// does not exist, and if this Reaper resource is managed by K8ssandra.
+	// +kubebuilder:default="reaper_db"
+	// +optional
+	Keyspace string `json:"keyspace,omitempty"`
+
+	// Defines the username and password that Reaper will use to authenticate CQL connections to Cassandra
+	// clusters. These credentials need to be stored on each Cassandra node. If CQL authentication is not required,
+	// leave this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys:
+	// "username" and "password".
+	// +optional
+	CassandraUserSecretRef string `json:"cassandraUserSecretRef,omitempty"`
+
+	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra
+	// clusters. These credentials need to be stored on each Cassandra node. If JMX authentication is not required,
+	// leave this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys:
+	// "username" and "password".
+	// +optional
+	JmxUserSecretRef string `json:"jmxUserSecretRef,omitempty"`
+}
+
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.
 // TODO this object could be used by Stargate too; which currently cannot locate DCs outside of its own namespace.
 type CassandraDatacenterRef struct {
@@ -171,7 +176,7 @@ type CassandraDatacenterRef struct {
 
 // ReaperSpec defines the desired state of Reaper
 type ReaperSpec struct {
-	ReaperTemplate `json:",inline"`
+	ReaperClusterTemplate `json:",inline"`
 
 	// DatacenterRef is the reference of a CassandraDatacenter resource that this Reaper instance should manage. It will
 	// also be used as the backend for persisting Reaper's state. Reaper must be able to access the JMX port (7199 by

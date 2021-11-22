@@ -23,7 +23,7 @@ func NewReaper(
 	reaperKey types.NamespacedName,
 	kc *k8ssandraapi.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
-	reaperTemplate *reaperapi.ReaperTemplate,
+	reaperTemplate *reaperapi.ReaperClusterTemplate,
 ) *reaperapi.Reaper {
 	labels := createResourceLabels(kc)
 	desiredReaper := &reaperapi.Reaper{
@@ -34,7 +34,7 @@ func NewReaper(
 			Labels:      labels,
 		},
 		Spec: reaperapi.ReaperSpec{
-			ReaperTemplate: *reaperTemplate,
+			ReaperClusterTemplate: *reaperTemplate,
 			DatacenterRef: reaperapi.CassandraDatacenterRef{
 				Name:      dc.Name,
 				Namespace: dc.Namespace,
@@ -72,13 +72,13 @@ func computeReaperDcAvailability(kc *k8ssandraapi.K8ssandraCluster) string {
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
 // defined in both templates, the dc-level property takes precedence.
-func Coalesce(clusterTemplate *api.ReaperTemplate, dcTemplate *api.ReaperTemplate) *api.ReaperTemplate {
+func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.ReaperDatacenterTemplate) *api.ReaperClusterTemplate {
 
 	if clusterTemplate == nil && dcTemplate == nil {
 		return nil
 	}
 
-	coalesced := &api.ReaperTemplate{}
+	coalesced := &api.ReaperClusterTemplate{}
 
 	if dcTemplate != nil && len(dcTemplate.Image) != 0 {
 		coalesced.Image = dcTemplate.Image
@@ -98,21 +98,15 @@ func Coalesce(clusterTemplate *api.ReaperTemplate, dcTemplate *api.ReaperTemplat
 		coalesced.ServiceAccountName = clusterTemplate.ServiceAccountName
 	}
 
-	if dcTemplate != nil && len(dcTemplate.Keyspace) != 0 {
-		coalesced.Keyspace = dcTemplate.Keyspace
-	} else if clusterTemplate != nil && len(clusterTemplate.Keyspace) != 0 {
+	if clusterTemplate != nil && len(clusterTemplate.Keyspace) != 0 {
 		coalesced.Keyspace = clusterTemplate.Keyspace
 	}
 
-	if dcTemplate != nil && len(dcTemplate.CassandraUserSecretRef) != 0 {
-		coalesced.CassandraUserSecretRef = dcTemplate.CassandraUserSecretRef
-	} else if clusterTemplate != nil && len(clusterTemplate.CassandraUserSecretRef) != 0 {
+	if clusterTemplate != nil && len(clusterTemplate.CassandraUserSecretRef) != 0 {
 		coalesced.CassandraUserSecretRef = clusterTemplate.CassandraUserSecretRef
 	}
 
-	if dcTemplate != nil && len(dcTemplate.JmxUserSecretRef) != 0 {
-		coalesced.JmxUserSecretRef = dcTemplate.JmxUserSecretRef
-	} else if clusterTemplate != nil && len(clusterTemplate.JmxUserSecretRef) != 0 {
+	if clusterTemplate != nil && len(clusterTemplate.JmxUserSecretRef) != 0 {
 		coalesced.JmxUserSecretRef = clusterTemplate.JmxUserSecretRef
 	}
 

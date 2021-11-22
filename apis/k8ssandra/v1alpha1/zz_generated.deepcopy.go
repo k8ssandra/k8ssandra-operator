@@ -176,7 +176,7 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 	}
 	if in.Reaper != nil {
 		in, out := &in.Reaper, &out.Reaper
-		*out = new(reaperv1alpha1.ReaperTemplate)
+		*out = new(reaperv1alpha1.ReaperDatacenterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -434,7 +434,7 @@ func (in *K8ssandraClusterSpec) DeepCopyInto(out *K8ssandraClusterSpec) {
 	}
 	if in.Reaper != nil {
 		in, out := &in.Reaper, &out.Reaper
-		*out = new(reaperv1alpha1.ReaperTemplate)
+		*out = new(reaperv1alpha1.ReaperClusterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
 }

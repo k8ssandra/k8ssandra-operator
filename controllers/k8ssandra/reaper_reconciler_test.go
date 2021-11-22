@@ -45,7 +45,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Reaper: &reaperapi.ReaperTemplate{
+						Reaper: &reaperapi.ReaperDatacenterTemplate{
 							AutoScheduling: reaperapi.AutoScheduling{Enabled: true},
 						},
 					},
@@ -61,7 +61,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Reaper: &reaperapi.ReaperTemplate{
+						Reaper: &reaperapi.ReaperDatacenterTemplate{
 							AutoScheduling: reaperapi.AutoScheduling{Enabled: true},
 						},
 					},

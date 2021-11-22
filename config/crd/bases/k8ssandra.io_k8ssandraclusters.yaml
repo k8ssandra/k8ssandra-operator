@@ -1321,15 +1321,6 @@ spec:
                                   pattern: ([-+]?)P(?:([-+]?[0-9]+)D)?(T(?:([-+]?[0-9]+)H)?(?:([-+]?[0-9]+)M)?(?:([-+]?[0-9]+)(?:[.,]([0-9]{0,9}))?S)?)?
                                   type: string
                               type: object
-                            cassandraUserSecretRef:
-                              description: 'Defines the username and password that
-                                Reaper will use to authenticate CQL connections to
-                                Cassandra clusters. These credentials need to be stored
-                                on each Cassandra node. If CQL authentication is not
-                                required, leave this field empty. The secret must
-                                be in the same namespace as Reaper itself and must
-                                contain two keys: "username" and "password".'
-                              type: string
                             image:
                               default: thelastpickle/cassandra-reaper:3.0.0
                               description: The image to use.
@@ -1511,22 +1502,6 @@ spec:
                                       type: string
                                   type: object
                               type: object
-                            jmxUserSecretRef:
-                              description: 'Defines the username and password that
-                                Reaper will use to authenticate JMX connections to
-                                Cassandra clusters. These credentials need to be stored
-                                on each Cassandra node. If JMX authentication is not
-                                required, leave this field empty. The secret must
-                                be in the same namespace as Reaper itself and must
-                                contain two keys: "username" and "password".'
-                              type: string
-                            keyspace:
-                              default: reaper_db
-                              description: The keyspace to use to store Reaper's state.
-                                Will default to "reaper_db" if unspecified. Will be
-                                created if it does not exist, and if this Reaper resource
-                                is managed by K8ssandra.
-                              type: string
                             podSecurityContext:
                               description: PodSecurityContext contains a pod-level
                                 SecurityContext to apply to Reaper pods.

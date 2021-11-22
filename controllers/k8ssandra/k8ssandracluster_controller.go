@@ -243,7 +243,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 		dcConfig.AdditionalSeeds = seeds
-		reaperTemplate := reaper.Coalesce(dcTemplate.Reaper.DeepCopy(), kc.Spec.Reaper.DeepCopy())
+		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 		if reaperTemplate != nil {
 			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig)
 		}
@@ -348,17 +348,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 	}
 
-	if reaperKeyspaces := r.getReaperKeyspaces(kc); len(reaperKeyspaces) > 0 {
+	if kc.HasReapers() {
 		kcLogger.Info("Reconciling Reaper schema")
 		dcTemplate := kc.Spec.Cassandra.Datacenters[0]
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			return ctrl.Result{}, err
-		} else {
-			for _, keyspace := range reaperKeyspaces {
-				if err := r.reconcileReaperSchema(ctx, kc, actualDcs[0], keyspace, remoteClient, kcLogger); err != nil {
-					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
-				}
-			}
+		} else if err := r.reconcileReaperSchema(ctx, kc, actualDcs[0], remoteClient, kcLogger); err != nil {
+			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, err
 		}
 	}
 

@@ -43,7 +43,7 @@ type K8ssandraClusterSpec struct {
 	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
 	// If this is non-nil, Reaper will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
-	Reaper *reaperapi.ReaperTemplate `json:"reaper,omitempty"`
+	Reaper *reaperapi.ReaperClusterTemplate `json:"reaper,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -88,6 +88,24 @@ func (in *K8ssandraCluster) HasStargates() bool {
 	}
 	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
 		if dcTemplate.Stargate != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// HasReapers returns true if at least one Reaper resource will be created as part of the creation
+// of this K8ssandraCluster object.
+func (in *K8ssandraCluster) HasReapers() bool {
+	if in == nil {
+		return false
+	} else if in.Spec.Reaper != nil {
+		return true
+	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
+		return false
+	}
+	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
+		if dcTemplate.Reaper != nil {
 			return true
 		}
 	}
@@ -208,7 +226,7 @@ type CassandraDatacenterTemplate struct {
 	// Reaper defines the desired deployment characteristics for Reaper in this datacenter. Leave nil to skip
 	// deploying Reaper in this datacenter.
 	// +optional
-	Reaper *reaperapi.ReaperTemplate `json:"reaper,omitempty"`
+	Reaper *reaperapi.ReaperDatacenterTemplate `json:"reaper,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

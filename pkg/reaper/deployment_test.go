@@ -313,7 +313,7 @@ func newTestReaper() *reaperapi.Reaper {
 				Name:      dcName,
 				Namespace: namespace,
 			},
-			ReaperTemplate: reaperapi.ReaperTemplate{
+			ReaperClusterTemplate: reaperapi.ReaperClusterTemplate{
 				Keyspace: "reaper_db",
 			},
 		},

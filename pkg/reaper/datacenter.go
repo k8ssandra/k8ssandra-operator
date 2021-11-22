@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
 	addUser(reaperTemplate, dcConfig)
 	if dcConfig.PodTemplateSpec == nil {
 		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -17,7 +17,7 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperTemplate, dcCon
 	modifyMainContainer(dcConfig)
 }
 
-func addUser(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+func addUser(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
 	cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
 	if cassandraUserSecretRef == "" {
 		cassandraUserSecretRef = DefaultUserSecretName(dcConfig.Cluster)
@@ -28,7 +28,7 @@ func addUser(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.Datac
 	})
 }
 
-func addInitContainer(reaperTemplate *reaperapi.ReaperTemplate, dcConfig *cassandra.DatacenterConfig) {
+func addInitContainer(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
 	jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
 	if jmxUserSecretRef == "" {
 		jmxUserSecretRef = DefaultJmxUserSecretName(dcConfig.Cluster)
