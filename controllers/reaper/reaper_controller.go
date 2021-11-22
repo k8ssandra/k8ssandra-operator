@@ -54,7 +54,7 @@ type ReaperReconciler struct {
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=services,verbs=get;list;watch;create
 
 func (r *ReaperReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx).WithValues("Reaper", req.NamespacedName)
+	logger := log.FromContext(ctx, "Reaper", req.NamespacedName)
 
 	logger.Info("Starting Reaper reconciliation")
 
