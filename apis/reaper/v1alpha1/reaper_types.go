@@ -195,10 +195,16 @@ type ReaperSpec struct {
 type ReaperProgress string
 
 const (
-	ReaperProgressPending     = ReaperProgress("Pending")
-	ReaperProgressDeploying   = ReaperProgress("Deploying")
+	// ReaperProgressPending is Reaper's status when it's waiting for the datacenter to become ready.
+	ReaperProgressPending = ReaperProgress("Pending")
+	// ReaperProgressDeploying is Reaper's status when it's waiting for the Reaper instance and its associated service
+	// to become ready.
+	ReaperProgressDeploying = ReaperProgress("Deploying")
+	// ReaperProgressConfiguring is Reaper's status when the Reaper instance is ready for work and is being connected
+	// its target datacenter.
 	ReaperProgressConfiguring = ReaperProgress("Configuring")
-	ReaperProgressRunning     = ReaperProgress("Running")
+	// ReaperProgressRunning is Reaper's status when Reaper is up and running.
+	ReaperProgressRunning = ReaperProgress("Running")
 )
 
 type ReaperConditionType string
