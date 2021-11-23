@@ -41,6 +41,7 @@ var (
 		operatorDeploymentReady pollingConfig
 		k8ssandraClusterStatus  pollingConfig
 		stargateReady           pollingConfig
+		reaperReady             pollingConfig
 	}
 
 	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
@@ -59,6 +60,8 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
+	t.Run("CreateSingleReaper", e2eTest(ctx, "single-dc-reaper", false, createSingleReaper))
+	t.Run("CreateMultiReaper", e2eTest(ctx, "multi-dc-reaper", false, createMultiReaper))
 }
 
 func beforeSuite(t *testing.T) {
@@ -227,6 +230,9 @@ func applyPollingDefaults() {
 
 	polling.stargateReady.timeout = 5 * time.Minute
 	polling.stargateReady.interval = 5 * time.Second
+
+	polling.reaperReady.timeout = 5 * time.Minute
+	polling.reaperReady.interval = 5 * time.Second
 }
 
 func afterTest(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) {
@@ -246,12 +252,12 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTr
 	}
 
 	if err := f.DeleteK8ssandraClusters(namespace); err != nil {
-		return err
+		t.Logf("failed to delete K8ssandra clusters: %v", err)
 	}
 
 	if deployTraefik {
 		if err := f.UndeployTraefik(t, namespace); err != nil {
-			return err
+			t.Logf("failed to undeploy Traefik: %v", err)
 		}
 	}
 
@@ -259,19 +265,23 @@ func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTr
 	interval := 10 * time.Second
 
 	if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
-		return err
+		t.Logf("failed to delete Stargates: %v", err)
+	}
+
+	if err := f.DeleteReapers(namespace, timeout, interval); err != nil {
+		t.Logf("failed to delete Reapers: %v", err)
 	}
 
 	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-		return err
+		t.Logf("failed to delete datacenters: %v", err)
 	}
 
 	if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
-		return err
+		t.Logf("failed to delete replicated secrets: %v", err)
 	}
 
 	if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
-		return err
+		t.Logf("failed to delete namespace: %v", err)
 	}
 
 	return nil
@@ -391,11 +401,11 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("retrieve database credentials")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
+	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
@@ -417,11 +427,11 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate s1 to become ready")
 
 	t.Log("retrieve database credentials")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
+	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 
 	replication := map[string]int{"dc1": 3}
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
@@ -631,15 +641,15 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("retrieve database credentials")
-	username, password := retrieveDatabaseCredentials(t, f, ctx, namespace, "test")
+	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-0", namespace)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-1")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service", username, password)
-	defer f.UndeployStargateIngresses(t, "kind-k8ssandra-1", namespace)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 

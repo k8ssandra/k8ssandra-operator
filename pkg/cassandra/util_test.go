@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -98,6 +99,59 @@ func TestComputeSystemReplication(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.got = ComputeSystemReplication(tc.kluster)
 			require.Equal(t, tc.want, tc.got)
+		})
+	}
+}
+
+func TestComputeReplication(t *testing.T) {
+	tests := []struct {
+		name     string
+		dcs      []api.CassandraDatacenterTemplate
+		expected map[string]int
+	}{
+		{"one dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+		}, map[string]int{"dc1": 3}},
+		{"small dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 1},
+		}, map[string]int{"dc1": 1}},
+		{"large dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 10},
+		}, map[string]int{"dc1": 3}},
+		{"many dcs", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, Size: 1},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, Size: 10},
+		}, map[string]int{"dc1": 3, "dc2": 1, "dc3": 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ComputeReplication(3, tt.dcs...)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestCompareReplications(t *testing.T) {
+	tests := []struct {
+		name     string
+		actual   map[string]string
+		desired  map[string]int
+		expected bool
+	}{
+		{"nil", nil, map[string]int{"dc1": 3}, false},
+		{"empty", map[string]string{}, map[string]int{"dc1": 3}, false},
+		{"wrong class", map[string]string{"class": "wrong"}, map[string]int{"dc1": 3}, false},
+		{"wrong length", map[string]string{"class": networkTopology, "dc1": "3", "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"missing dc", map[string]string{"class": networkTopology, "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"invalid rf", map[string]string{"class": networkTopology, "dc1": "not a number"}, map[string]int{"dc1": 3}, false},
+		{"wrong rf", map[string]string{"class": networkTopology, "dc1": "1"}, map[string]int{"dc1": 3}, false},
+		{"success", map[string]string{"class": networkTopology, "dc1": "1", "dc2": "3"}, map[string]int{"dc1": 1, "dc2": 3}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CompareReplications(tt.actual, tt.desired)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

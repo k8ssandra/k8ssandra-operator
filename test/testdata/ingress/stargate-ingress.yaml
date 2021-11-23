@@ -6,7 +6,7 @@ metadata:
   namespace: default # actual namespace will be kustomized
 spec:
   entryPoints:
-    - stargate-http
+    - web-http
   routes:
     - match: Host(`stargate.127.0.0.1.nip.io`) && PathPrefix(`/v1/auth`)
       kind: Rule

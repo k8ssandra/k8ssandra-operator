@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"math/big"
 	"reflect"
@@ -22,8 +23,11 @@ import (
 )
 
 const (
-	passwordCharacters = "!#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+	passwordCharacters = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	usernameCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+	// OrphanResourceAnnotation when set to true prevents the deletion of secret from target clusters even if matching ReplicatedSecret is removed
+	OrphanResourceAnnotation = "replicatedresource.k8ssandra.io/orphan"
 )
 
 func generateRandomString(charset string, length int) ([]byte, error) {
@@ -48,8 +52,9 @@ func DefaultSuperuserSecretName(clusterName string) string {
 	return secretName
 }
 
-// ReconcileSuperuserSecret creates the superUserSecret with proper annotations
-func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
+// ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such
+// annotations.
+func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
@@ -79,7 +84,12 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName, 
 		}
 	}
 
-	// It exists or was created, we won't modify it anymore
+	// It exists or was created: ensure it has proper annotations
+	if !utils.IsManagedBy(currentSec, clusterName) {
+		utils.SetManagedBy(currentSec, clusterName)
+		utils.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
+		return c.Update(ctx, currentSec)
+	}
 	return nil
 }
 
@@ -92,17 +102,17 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 		}
 	}
 
-	targetRepSec := generateReplicatedSecret(kc.Spec.Cassandra.Cluster, kc.Namespace, replicationTargets)
+	targetRepSec := generateReplicatedSecret(kc.Name, kc.Namespace, replicationTargets)
 	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
 	repSec := &replicationapi.ReplicatedSecret{}
 
 	err := controllerutil.SetControllerReference(kc, targetRepSec, scheme)
 	if err != nil {
-		logger.Error(err, "Failed to set owner reference on ReplicatedSecret", "ReplicatedSect", key)
+		logger.Error(err, "Failed to set owner reference on ReplicatedSecret", "ReplicatedSecret", key)
 		return err
 	}
 
-	err = c.Get(ctx, types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}, repSec)
+	err = c.Get(ctx, types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("Creating ReplicatedSecret", "ReplicatedSecret", key)
@@ -160,10 +170,7 @@ func generateReplicatedSecret(clusterName, namespace string, targetContexts []st
 		ObjectMeta: getManagedObjectMeta(clusterName, namespace, clusterName),
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					api.ManagedByLabel:        api.NameLabelValue,
-					api.K8ssandraClusterLabel: clusterName,
-				},
+				MatchLabels: utils.ManagedByLabels(clusterName),
 			},
 			ReplicationTargets: replicationTargets,
 		},
@@ -202,12 +209,7 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 }
 
 func getManagedObjectMeta(name, namespace, clusterName string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
-		Labels: map[string]string{
-			api.ManagedByLabel:        api.NameLabelValue,
-			api.K8ssandraClusterLabel: clusterName,
-		},
-	}
+	meta := metav1.ObjectMeta{Name: name, Namespace: namespace}
+	utils.SetManagedBy(&meta, clusterName)
+	return meta
 }

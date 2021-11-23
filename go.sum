@@ -469,8 +469,8 @@ github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
 github.com/k8ssandra/cass-operator v1.8.0-rc.2.0.20211104092550-4d5f19c977b6 h1:rTXou7DdQRtr7+9jDPLGmlVu4r2bKDVeGykESz8Q3kA=
 github.com/k8ssandra/cass-operator v1.8.0-rc.2.0.20211104092550-4d5f19c977b6/go.mod h1:Su27TRowgMMbVD28AUus2+2YHCAQd+0uqiLcgHY6tUA=
-github.com/k8ssandra/cass-operator v1.8.0 h1:QFsuxr//BOGY0qmUDo6ZVMqKJbYyNKiboXBQej3WIuM=
-github.com/k8ssandra/cass-operator v1.8.0/go.mod h1:Su27TRowgMMbVD28AUus2+2YHCAQd+0uqiLcgHY6tUA=
+github.com/k8ssandra/reaper-client-go v0.3.0 h1:77F37hIJrP/YrwIYbJ1LOucJ7CwKWLAt8OM7TD0mDBk=
+github.com/k8ssandra/reaper-client-go v0.3.0/go.mod h1:1yol6YTcKcLOmPH9CfAdeFnVg/KCCTSbIUXMsF1cKII=
 github.com/karrick/godirwalk v1.16.1/go.mod h1:j4mkqPuvaLI8mp1DroR3P6ad7cyYd4c1qeJ3RV7ULlk=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=

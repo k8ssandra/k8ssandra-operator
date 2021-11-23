@@ -9,3 +9,4 @@ To install Mockery on macOS:
 If necessary, mocks can be regenerated with:
 
     mockery --dir=./pkg/cassandra --output=./pkg/mocks --name=ManagementApiFacade
+    mockery --dir=./pkg/reaper --output=./pkg/mocks --name=Manager  --filename=reaper_manager.go --structname=ReaperManager

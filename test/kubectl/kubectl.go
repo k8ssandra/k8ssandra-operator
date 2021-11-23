@@ -10,8 +10,9 @@ import (
 )
 
 type Options struct {
-	Namespace string
-	Context   string
+	Namespace  string
+	Context    string
+	ServerSide bool
 }
 
 var logOutput = false
@@ -31,7 +32,13 @@ func Apply(opts Options, arg interface{}) error {
 		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
 	}
 
-	cmd.Args = append(cmd.Args, "apply", "-f")
+	cmd.Args = append(cmd.Args, "apply")
+
+	if opts.ServerSide {
+		cmd.Args = append(cmd.Args, "--server-side", "--force-conflicts")
+	}
+
+	cmd.Args = append(cmd.Args, "-f")
 
 	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf

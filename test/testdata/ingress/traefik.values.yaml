@@ -32,7 +32,7 @@ ports:
     expose: true
     port: 30090
     nodePort: 30090
-  stargate-http:
+  web-http:
     expose: true
     port: 30080
     nodePort: 30080

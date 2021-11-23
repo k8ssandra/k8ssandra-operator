@@ -147,21 +147,21 @@ kind-load-image:
 kind-e2e-test: multi-up e2e-test
 
 single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
 
 single-reload: build manifests kustomize docker-build kind-load-image cert-manager
 	kubectl config use-context kind-k8ssandra-0
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
 	kubectl delete pod -l control-plane=k8ssandra-operator
 	kubectl rollout status deployment k8ssandra-operator
 
 multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
 ## install the data plane
 	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
 ## Create a client config
 	make create-client-config
 ## Restart the control plane
@@ -172,12 +172,12 @@ multi-up: cleanup build manifests kustomize docker-build create-kind-multicluste
 multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
 # Reload the operator on the control-plane
 	kubectl config use-context kind-k8ssandra-0
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 # Reload the operator on the data-plane
 	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 
@@ -206,14 +206,14 @@ kind-load-image-multi:
 ##@ Deployment
 
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply -f -
+	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/deployments/control-plane | kubectl delete -f -

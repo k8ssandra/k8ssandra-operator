@@ -99,6 +99,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
+	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -1093,7 +1094,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
 
 	t.Logf("update stargate sg1 status to ready")
-	err = f.PatchStagateStatus(ctx, sg1Key, func(sg *stargateapi.Stargate) {
+	err = f.PatchStargateStatus(ctx, sg1Key, func(sg *stargateapi.Stargate) {
 		now := metav1.Now()
 		sg.Status.Progress = stargateapi.StargateProgressRunning
 		sg.Status.AvailableReplicas = 1
@@ -1132,7 +1133,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	// require.NoError(err, "timed out waiting for remote seeds to be updated on dc1")
 
 	t.Logf("update stargate sg2 status to ready")
-	err = f.PatchStagateStatus(ctx, sg2Key, func(sg *stargateapi.Stargate) {
+	err = f.PatchStargateStatus(ctx, sg2Key, func(sg *stargateapi.Stargate) {
 		now := metav1.Now()
 		sg.Status.Progress = stargateapi.StargateProgressRunning
 		sg.Status.AvailableReplicas = 1
@@ -1270,7 +1271,7 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	t.Log("check ReplicatedSecret reconciled")
 
 	replSecret := &replicationapi.ReplicatedSecret{}
-	replSecretKey := types.NamespacedName{Name: kc.Spec.Cassandra.Cluster, Namespace: kc.Namespace}
+	replSecretKey := types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}
 
 	assert.Eventually(t, func() bool {
 		err := f.Client.Get(ctx, replSecretKey, replSecret)
@@ -1286,7 +1287,7 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	assert.Equal(t, api.NameLabelValue, val)
 	val, exists = replSecret.Labels[api.K8ssandraClusterLabel]
 	assert.True(t, exists)
-	assert.Equal(t, kc.Spec.Cassandra.Cluster, val)
+	assert.Equal(t, kc.Name, val)
 
 	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(replSecret.Spec.ReplicationTargets))
 }
@@ -1322,15 +1323,7 @@ type fakeManagementApiFactory struct {
 
 func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
 	m := new(mocks.ManagementApiFacade)
-	m.On("CreateKeyspaceIfNotExists", stargate.AuthKeyspace, mock.Anything).Return(nil)
-	m.On("ListKeyspaces", stargate.AuthKeyspace).Return([]string{stargate.AuthKeyspace}, nil)
-	m.On("AlterKeyspace", stargate.AuthKeyspace, mock.Anything).Return(nil)
-	m.On("GetKeyspaceReplication", stargate.AuthKeyspace).Return(
-		map[string]string{
-			"class": "org.apache.cassandra.locator.NetworkTopologyStrategy",
-			"dc1":   "1",
-		},
-		nil)
+	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
 	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
 	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
 		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable

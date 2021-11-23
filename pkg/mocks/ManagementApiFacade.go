@@ -54,6 +54,20 @@ func (_m *ManagementApiFacade) CreateTable(definition *httphelper.TableDefinitio
 	return r0
 }
 
+// EnsureKeyspaceReplication provides a mock function with given fields: keyspaceName, replication
+func (_m *ManagementApiFacade) EnsureKeyspaceReplication(keyspaceName string, replication map[string]int) error {
+	ret := _m.Called(keyspaceName, replication)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, map[string]int) error); ok {
+		r0 = rf(keyspaceName, replication)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetKeyspaceReplication provides a mock function with given fields: keyspaceName
 func (_m *ManagementApiFacade) GetKeyspaceReplication(keyspaceName string) (map[string]string, error) {
 	ret := _m.Called(keyspaceName)

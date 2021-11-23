@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"math"
+	"strconv"
 	"time"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -42,4 +43,35 @@ func ComputeSystemReplication(kluster *api.K8ssandraCluster) SystemReplication {
 	}
 
 	return SystemReplication{Datacenters: dcNames, ReplicationFactor: int(rf)}
+}
+
+func ComputeReplication(maxReplicationPerDc int, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
+	desiredReplication := make(map[string]int, len(datacenters))
+	for _, dcTemplate := range datacenters {
+		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Size)))
+		desiredReplication[dcTemplate.Meta.Name] = replicationFactor
+	}
+	return desiredReplication
+}
+
+const networkTopology = "org.apache.cassandra.locator.NetworkTopologyStrategy"
+
+func CompareReplications(actualReplication map[string]string, desiredReplication map[string]int) bool {
+	if len(actualReplication) == 0 {
+		return false
+	} else if class := actualReplication["class"]; class != networkTopology {
+		return false
+	} else if len(actualReplication) != len(desiredReplication)+1 {
+		return false
+	}
+	for dcName, desiredRf := range desiredReplication {
+		if actualRf, ok := actualReplication[dcName]; !ok {
+			return false
+		} else if rf, err := strconv.Atoi(actualRf); err != nil {
+			return false
+		} else if rf != desiredRf {
+			return false
+		}
+	}
+	return true
 }

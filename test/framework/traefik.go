@@ -71,12 +71,11 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
 	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetBody(body)
-		response, err := request.Post(url)
+		response, err := request.Post(stargateHttp)
 		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
 	require.Eventually(t, func() bool {
@@ -90,7 +89,30 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 
-func (f *E2eFramework) UndeployStargateIngresses(t *testing.T, k8sContext, namespace string) {
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, reaperServiceName string) {
+	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
+	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
+	dest := filepath.Join(dir, "reaper-ingress.yaml")
+	err := os.MkdirAll(dir, 0755)
+	require.NoError(t, err)
+	buf, err := ioutil.ReadFile(src)
+	require.NoError(t, err)
+	err = ioutil.WriteFile(dest, buf, 0644)
+	require.NoError(t, err)
+	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName)
+	require.NoError(t, err)
+	err = f.kustomizeAndApply(dir, namespace, k8sContext)
+	assert.NoError(t, err)
+	reaperHttp := fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%v080/cluster", k8sContextIdx)
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	require.Eventually(t, func() bool {
+		response, err := resty.NewRequest().Get(reaperHttp)
+		return err == nil && response.StatusCode() == http.StatusOK
+	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
+}
+
+func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	err := kubectl.DeleteAllOf(options, "IngressRoute")
 	assert.NoError(t, err)
@@ -143,6 +165,37 @@ patchesJson6902:
       group: traefik.containo.us
       version: v1alpha1
       kind: IngressRouteTCP
+      name: .*
+    patch: |-
+      - op: replace
+        path: /spec/routes/0/services/0/name
+        value: "` + serviceName + `"
+`
+	k := Kustomization{Namespace: namespace}
+	return generateKustomizationFile("ingress/"+k8sContext, k, tmpl)
+}
+
+func generateReaperIngressKustomization(k8sContext, namespace, serviceName string) error {
+	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- reaper-ingress.yaml
+namespace: {{ .Namespace }}
+patches:
+- target:	
+    group: traefik.containo.us
+    version: v1alpha1
+    kind: IngressRoute
+    name: test-dc1-reaper-service-http-ingress
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: "` + serviceName + `-http-ingress"
+patchesJson6902:
+  - target:
+      group: traefik.containo.us
+      version: v1alpha1
+      kind: IngressRoute
       name: .*
     patch: |-
       - op: replace

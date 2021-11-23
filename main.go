@@ -25,6 +25,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -41,12 +42,14 @@ import (
 
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraiov1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
+	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
-	//+kubebuilder:scaffold:imports
+	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -62,7 +65,8 @@ func init() {
 	utilruntime.Must(replicationapi.AddToScheme(scheme))
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	utilruntime.Must(reaperapi.AddToScheme(scheme))
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -193,7 +197,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	//+kubebuilder:scaffold:builder
+	if err = (&reaperctrl.ReaperReconciler{
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		NewManager:       reaper.NewManager,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Reaper")
+		os.Exit(1)
+	}
+
+	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
