@@ -227,6 +227,10 @@ type CassandraDatacenterTemplate struct {
 	// deploying Reaper in this datacenter.
 	// +optional
 	Reaper *reaperapi.ReaperDatacenterTemplate `json:"reaper,omitempty"`
+	// MgmtAPIHeap defines the amount of memory (in java format - i.e. an int followed by a G or M) devoted to the management
+	// api heap.
+	// +optional
+	MgmtAPIHeap string `json:"mgmtAPIHeap,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
