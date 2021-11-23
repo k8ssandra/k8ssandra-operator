@@ -6826,10 +6826,12 @@ spec:
                   cassandraUserSecretRef:
                     description: 'Defines the username and password that Reaper will
                       use to authenticate CQL connections to Cassandra clusters. These
-                      credentials need to be stored on each Cassandra node. If CQL
-                      authentication is not required, leave this field empty. The
-                      secret must be in the same namespace as Reaper itself and must
-                      contain two keys: "username" and "password".'
+                      credentials will be automatically turned into CQL roles by cass-operator
+                      when bootstrapping the datacenter, then passed to the Reaper
+                      instance, so that it can authenticate against nodes in the datacenter
+                      using CQL. If CQL authentication is not required, leave this
+                      field empty. The secret must be in the same namespace as Reaper
+                      itself and must contain two keys: "username" and "password".'
                     type: string
                   image:
                     default: thelastpickle/cassandra-reaper:3.0.0
@@ -7002,10 +7004,12 @@ spec:
                   jmxUserSecretRef:
                     description: 'Defines the username and password that Reaper will
                       use to authenticate JMX connections to Cassandra clusters. These
-                      credentials need to be stored on each Cassandra node. If JMX
-                      authentication is not required, leave this field empty. The
-                      secret must be in the same namespace as Reaper itself and must
-                      contain two keys: "username" and "password".'
+                      credentials will be automatically passed to each Cassandra node
+                      in the datacenter, as well as to the Reaper instance, so that
+                      the latter can authenticate against the former. If JMX authentication
+                      is not required, leave this field empty. The secret must be
+                      in the same namespace as Reaper itself and must contain two
+                      keys: "username" and "password".'
                     type: string
                   keyspace:
                     default: reaper_db
