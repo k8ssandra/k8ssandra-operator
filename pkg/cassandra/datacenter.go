@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"os"
 )
 
 // SystemReplication represents the replication factor of the system_auth, system_traces,
@@ -44,6 +45,10 @@ type DatacenterConfig struct {
 	PodTemplateSpec     *corev1.PodTemplateSpec
 	MgmtAPIHeap         *resource.Quantity
 }
+
+const (
+	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
+)
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
@@ -100,31 +105,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	return dc, nil
-}
-
-// SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
-func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
-	if dc.Spec.PodTemplateSpec == nil {
-		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
-		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{{Name: "cassandra"}}
-	}
-	var cassIndex int
-	for i, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-		if container.Name == "cassandra" {
-			cassIndex = i
-			break
-		}
-	}
-	heapSize.Format = resource.Format(resource.DecimalSI)
-	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
-		dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env,
-		corev1.EnvVar{
-			Name:  "MGMT_API_HEAP_SIZE",
-			Value: string(heapSize.String()),
-		},
-	)
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is

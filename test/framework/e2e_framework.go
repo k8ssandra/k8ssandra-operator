@@ -182,6 +182,9 @@ kind: Kustomization
 
 resources:
 - ../../../../config/deployments/control-plane-cluster-scope
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
 `
 
 		dataPlaneTmpl = `
@@ -190,6 +193,9 @@ kind: Kustomization
 
 resources:
 - ../../../../config/deployments/data-plane-cluster-scope
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
 `
 	} else {
 		controlPlaneDir = "control-plane"
@@ -203,6 +209,9 @@ namespace: {{ .Namespace }}
 
 resources:
 - ../../../../config/deployments/control-plane
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
 `
 
 		dataPlaneTmpl = `
@@ -213,6 +222,9 @@ namespace: {{ .Namespace }}
 
 resources:
 - ../../../../config/deployments/data-plane
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
 `
 	}
 
