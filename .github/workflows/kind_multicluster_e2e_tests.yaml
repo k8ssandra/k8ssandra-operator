@@ -54,6 +54,7 @@ jobs:
           - CreateMultiDatacenterCluster
           - CheckStargateApisWithMultiDcCluster
           - CreateMultiReaper
+          - ClusterScoped/MultiDcMultiCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
