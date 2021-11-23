@@ -15,8 +15,9 @@ var commonLabels = map[string]string{
 
 func createResourceLabels(kc *k8ssandraapi.K8ssandraCluster) map[string]string {
 	labels := map[string]string{
-		k8ssandraapi.K8ssandraClusterLabel: kc.Name,
-		k8ssandraapi.CreatedByLabel:        k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+		k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
+		k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
+		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
 	return utils.MergeMap(labels, commonLabels)
 }
@@ -26,8 +27,14 @@ func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
 		reaperapi.ReaperLabel:       r.Name,
 		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
 	}
-	if klusterName, found := r.Labels[k8ssandraapi.K8ssandraClusterLabel]; found {
-		labels[k8ssandraapi.K8ssandraClusterLabel] = klusterName
+
+	kcName, nameFound := r.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
+	kcNamespace, namespaceFound := r.Labels[k8ssandraapi.K8ssandraClusterNamespaceLabel]
+
+	if nameFound && namespaceFound {
+		labels[k8ssandraapi.K8ssandraClusterNameLabel] = kcName
+		labels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = kcNamespace
 	}
+
 	return utils.MergeMap(labels, commonLabels)
 }

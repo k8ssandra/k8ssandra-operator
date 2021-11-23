@@ -52,8 +52,8 @@ func DefaultSuperuserSecretName(clusterName string) string {
 	return secretName
 }
 
-// ReconcileSuperuserSecret creates the superUserSecret with proper annotations
-func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName string, kcKey client.ObjectKey) error {
+// ReconcileSecret creates the superUserSecret with proper annotations
+func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kcKey client.ObjectKey) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
@@ -84,8 +84,8 @@ func ReconcileSuperuserSecret(ctx context.Context, c client.Client, secretName s
 	}
 
 	// It exists or was created: ensure it has proper annotations
-	if !utils.IsManagedBy(currentSec, clusterName) {
-		utils.SetManagedBy(currentSec, clusterName)
+	if !utils.IsManagedBy(currentSec, kcKey) {
+		utils.SetManagedBy(currentSec, kcKey)
 		utils.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}

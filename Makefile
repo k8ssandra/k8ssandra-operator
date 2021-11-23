@@ -167,7 +167,11 @@ else
 endif
 ## install the data plane
 	kubectl config use-context kind-k8ssandra-1
+ifeq ($(CLUSTER_SCOPE),true)
+	$(KUSTOMIZE) build config/deployments/data-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
+else
 	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
+endif
 ## Create a client config
 	make create-client-config
 ## Restart the control plane

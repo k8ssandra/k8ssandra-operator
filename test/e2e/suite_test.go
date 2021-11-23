@@ -74,9 +74,14 @@ func TestOperator(t *testing.T) {
 		fixture:       "multi-dc-stargate",
 		deployTraefik: true,
 	}))
-
-	t.Run("CreateSingleReaper", e2eTest(ctx, "single-dc-reaper", false, createSingleReaper))
-	t.Run("CreateMultiReaper", e2eTest(ctx, "multi-dc-reaper", false, createMultiReaper))
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleReaper,
+		fixture:  "single-dc-reaper",
+	}))
+	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiReaper,
+		fixture:  "multi-dc-reaper",
+	}))
 
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
@@ -347,33 +352,31 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 			return err
 		}
 
-	if deployTraefik {
-		if err := f.UndeployTraefik(t, namespace); err != nil {
-			t.Logf("failed to undeploy Traefik: %v", err)
+		if opts.deployTraefik {
+			if err := f.UndeployTraefik(t, namespace); err != nil {
+				t.Logf("failed to undeploy Traefik: %v", err)
+			}
 		}
-	}
 
-	timeout := 3 * time.Minute
-	interval := 10 * time.Second
+		if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete Stargates: %v", err)
+		}
 
-	if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete Stargates: %v", err)
-	}
+		if err := f.DeleteReapers(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete Reapers: %v", err)
+		}
 
-	if err := f.DeleteReapers(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete Reapers: %v", err)
-	}
+		if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete datacenters: %v", err)
+		}
 
-	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete datacenters: %v", err)
-	}
+		if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete replicated secrets: %v", err)
+		}
 
-	if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete replicated secrets: %v", err)
-	}
-
-	if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete namespace: %v", err)
+		if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete namespace: %v", err)
+		}
 	}
 
 	return nil

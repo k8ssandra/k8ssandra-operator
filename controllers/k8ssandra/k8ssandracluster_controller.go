@@ -138,7 +138,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				hasErrors = true
 			}
 
-			selector := utils.CreatedByK8ssandraControllerLabels(kc.Name)
+			selector := utils.CreatedByK8ssandraControllerLabels(kcKey)
 			stargateList := &stargateapi.StargateList{}
 			options := client.ListOptions{
 				Namespace:     namespace,
@@ -205,7 +205,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
-	if err := secret.ReconcileSuperuserSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kcKey); err != nil {
+	if err := secret.ReconcileSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kcKey); err != nil {
 		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
 		return ctrl.Result{}, err
 	}
@@ -428,6 +428,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
 
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -487,7 +488,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
 				return ctrl.Result{}, err
 			}
-		} else if utils.IsCreatedByK8ssandraController(actualStargate, kc.Name) {
+		} else if utils.IsCreatedByK8ssandraController(actualStargate, kcKey) {
 			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
 				logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
 				return ctrl.Result{}, err
@@ -622,13 +623,12 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
-		
-		// k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
-		labels := mapObj.GetLabels()
-		cluster, nameFound := labels[api.K8ssandraClusterNameLabel]
-		namespace, namespaceFound := labels[api.K8ssandraClusterNamespaceLabel]
-		if nameFound && namespaceFound {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: cluster}})
+
+		kcName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		kcNamespace := utils.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
+
+		if kcName != "" && kcNamespace != "" {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})
 		}
 		return requests
 	}
