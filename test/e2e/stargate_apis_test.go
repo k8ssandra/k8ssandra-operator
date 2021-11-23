@@ -150,19 +150,19 @@ func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContextIdx int
 }
 
 func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace string, replication map[string]int) string {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces", k8sContextIdx)
+	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/additionalNamespaces", k8sContextIdx)
 	documentNamespaceJson := fmt.Sprintf(`{"name":"%s","datacenters":%v}`, documentNamespace, formatReplicationForRestApi(replication))
 	request := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-Cassandra-Token", token).
 		SetBody(documentNamespaceJson)
 	response, err := request.Post(url)
-	require.NoError(t, err, "Failed creating Stargate document namespace")
-	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create namespace request to return 201")
+	require.NoError(t, err, "Failed creating Stargate document operatorNamespace")
+	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create operatorNamespace request to return 201")
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
 	require.Eventually(t, func() bool {
-		url = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces/%v", k8sContextIdx, documentNamespace)
+		url = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/additionalNamespaces/%v", k8sContextIdx, documentNamespace)
 		request = restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
@@ -178,7 +178,7 @@ const (
 )
 
 func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace, documentId string) string {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/namespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
+	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/additionalNamespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
 	awesomeMovieDocument := map[string]string{"Director": awesomeMovieDirector, "Name": awesomeMovieName}
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
@@ -193,7 +193,7 @@ func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, to
 }
 
 func readDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace, documentId string) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/namespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
+	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/additionalNamespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-Cassandra-Token", token).

@@ -14,9 +14,10 @@ func TestLabelIsSet(t *testing.T) {
 	kcKey := client.ObjectKey{Namespace: "namespace", Name: "name"}
 	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
 	repSec := generateReplicatedSecret(kcKey, targets)
-	val, exists := repSec.Labels[api.ManagedByLabel]
-	require.True(t, exists)
-	require.Equal(t, api.NameLabelValue, val)
+
+	assert.Equal(t, api.NameLabelValue, repSec.Labels[api.ManagedByLabel])
+	assert.Equal(t, repSec.Labels[api.K8ssandraClusterNamespaceLabel], kcKey.Namespace)
+	assert.Equal(t, repSec.Labels[api.K8ssandraClusterNameLabel], kcKey.Name)
 }
 
 func TestRandomPasswordGen(t *testing.T) {

@@ -131,7 +131,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
-	completeSecretReplication(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
@@ -290,7 +290,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 
 	verifySuperUserSecretCreated(ctx, t, f, kluster)
 
-	completeSecretReplication(ctx, t, f, kluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -448,7 +448,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	verifySuperUserSecretCreated(ctx, t, f, kluster)
 
-	completeSecretReplication(ctx, t, f, kluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -599,7 +599,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 	verifySuperUserSecretCreated(ctx, t, f, kluster)
 
-	completeSecretReplication(ctx, t, f, kluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -740,7 +740,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	verifySuperUserSecretCreated(ctx, t, f, cluster)
 
-	completeSecretReplication(ctx, t, f, cluster)
+	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -912,7 +912,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
-	completeSecretReplication(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1178,36 +1178,25 @@ func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Fr
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	t.Log("check ReplicatedSecret reconciled")
 
-	replSecret := &replicationapi.ReplicatedSecret{}
+	rsec := &replicationapi.ReplicatedSecret{}
 	replSecretKey := types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}
 
 	assert.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, replSecretKey, replSecret)
+		err := f.Client.Get(ctx, replSecretKey, rsec)
 		return err == nil
 	}, timeout, interval, "failed to get ReplicatedSecret")
 
-	if replSecret == nil {
-		return
-	}
-
-	val, exists := replSecret.Labels[api.ManagedByLabel]
+	val, exists := rsec.Labels[api.ManagedByLabel]
 	assert.True(t, exists)
 	assert.Equal(t, api.NameLabelValue, val)
-	val, exists = replSecret.Labels[api.K8ssandraClusterNameLabel]
+	val, exists = rsec.Labels[api.K8ssandraClusterNameLabel]
 	assert.True(t, exists)
 	assert.Equal(t, kc.Name, val)
+	val, exists = rsec.Labels[api.K8ssandraClusterNamespaceLabel]
+	assert.True(t, exists)
+	assert.Equal(t, kc.Namespace, val)
 
-	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(replSecret.Spec.ReplicationTargets))
-}
-
-func completeSecretReplication(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
-	rsec := &replicationapi.ReplicatedSecret{}
-	require.Eventually(t, func() bool {
-		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: kluster.Namespace, Name: kluster.Name}, rsec); err != nil {
-			return false
-		}
-		return true
-	}, timeout, interval)
+	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(rsec.Spec.ReplicationTargets))
 
 	conditions := make([]replicationapi.ReplicationCondition, 0)
 	now := metav1.Now()
