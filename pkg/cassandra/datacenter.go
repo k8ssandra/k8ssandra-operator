@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -105,6 +106,14 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	return dc, nil
+}
+
+func getMgmtApiHeapSize() string {
+	val, found := os.LookupEnv(mgmtApiHeapSizeEnvVar)
+	if found {
+		return val
+	}
+	return ""
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
