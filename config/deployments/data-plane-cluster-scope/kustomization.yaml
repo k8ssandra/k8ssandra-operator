@@ -8,6 +8,6 @@ resources:
   - ../../default
 
 components:
-  - ../../components/clusterscope
-  - ../../components/dataplane
+  - ../../components/cluster-scope
+  - ../../components/data-plane
   - ../../components/namespace

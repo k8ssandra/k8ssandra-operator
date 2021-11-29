@@ -316,11 +316,11 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	return nil
 }
 
-// DeployK8ssandraOperator Deploys k8ssandra-operator both in the control plane cluster.
-// Note that the control plane cluster can also be one of the data plane clusters. It then
-// deploys the operator in the data plane clusters with the K8ssandraCluster controller
-// disabled. When clusterScoped is true the operator is configured to watch all namespaces
-// and is deployed in the k8ssandra-operator namespace.
+// DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
+// in the data plane cluster(s). Note that the control plane cluster can also be one of the
+// data plane clusters. It then deploys the operator in the data plane clusters with the
+// K8ssandraCluster controller disabled. When clusterScoped is true the operator is
+// configured to watch all namespaces and is deployed in the k8ssandra-operator namespace.
 func (f *E2eFramework) DeployK8ssandraOperator(namespace string, clusterScoped bool) error {
 	if err := generateK8ssandraOperatorKustomization(namespace, clusterScoped); err != nil {
 		return err

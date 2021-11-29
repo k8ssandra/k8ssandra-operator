@@ -52,7 +52,8 @@ func DefaultSuperuserSecretName(clusterName string) string {
 	return secretName
 }
 
-// ReconcileSecret creates the superUserSecret with proper annotations
+// ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such
+// annotations.
 func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kcKey client.ObjectKey) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
@@ -161,11 +162,7 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 		ObjectMeta: getManagedObjectMeta(kcKey.Name, kcKey),
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					api.ManagedByLabel:                 api.NameLabelValue,
-					api.K8ssandraClusterNameLabel:      kcKey.Name,
-					api.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
-				},
+				MatchLabels: utils.ManagedByLabels(kcKey),
 			},
 			ReplicationTargets: replicationTargets,
 		},
@@ -207,10 +204,6 @@ func getManagedObjectMeta(name string, kcKey client.ObjectKey) metav1.ObjectMeta
 	return metav1.ObjectMeta{
 		Name:      name,
 		Namespace: kcKey.Namespace,
-		Labels: map[string]string{
-			api.ManagedByLabel:                 api.NameLabelValue,
-			api.K8ssandraClusterNameLabel:      kcKey.Name,
-			api.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
-		},
+		Labels:    utils.ManagedByLabels(kcKey),
 	}
 }

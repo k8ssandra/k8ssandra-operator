@@ -7,4 +7,4 @@ resources:
   - ../control-plane
 
 components:
-  - ../../components/dataplane
+  - ../../components/data-plane

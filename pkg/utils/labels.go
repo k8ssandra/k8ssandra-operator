@@ -44,6 +44,16 @@ func IsManagedBy(component Labeled, klusterKey client.ObjectKey) bool {
 		HasLabelWithValue(component, api.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
 }
 
+// ManagedByLabels returns the labels used to identify a component managed by K8ssandra.
+// klusterKey specifies the namespace and name of the K8ssandraCluster.
+func ManagedByLabels(klusterKey client.ObjectKey) map[string]string {
+	return map[string]string{
+		api.ManagedByLabel:                 api.NameLabelValue,
+		api.K8ssandraClusterNameLabel:      klusterKey.Name,
+		api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+	}
+}
+
 // IsCreatedByK8ssandraController returns true if this component was created by the k8ssandra-cluster controller, and
 // belongs to the K8ssandraCluster resource specified by klusterKey. klusterKey referns to the namespace and
 // name of the K8ssandraCluster.

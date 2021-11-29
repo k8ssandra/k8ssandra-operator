@@ -265,9 +265,9 @@ func generateSecrets(namespace string) []*corev1.Secret {
 				Namespace: namespace,
 				Name:      "test-secret-first",
 				Labels: map[string]string{
-					"secret-controller": "test",
-					"cluster-namespace": namespace,
-					"cluster-name":      "k8ssandra",
+					"secret-controller":                    "test",
+					coreapi.K8ssandraClusterNamespaceLabel: namespace,
+					coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
 				},
 			},
 			Type: "Opaque",
@@ -300,9 +300,9 @@ func generateReplicatedSecret(namespace string) *api.ReplicatedSecret {
 		Spec: api.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"secret-controller": "test",
-					"cluster-namespace": namespace,
-					"cluster-name":      "k8ssandra",
+					"secret-controller":                    "test",
+					coreapi.K8ssandraClusterNamespaceLabel: namespace,
+					coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
 				},
 			},
 			ReplicationTargets: []api.ReplicationTarget{

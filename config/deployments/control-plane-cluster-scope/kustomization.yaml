@@ -9,5 +9,5 @@ resources:
   - ../../default
 
 components:
-  - ../../components/clusterscope
+  - ../../components/cluster-scope
   - ../../components/namespace

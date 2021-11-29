@@ -213,10 +213,9 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 	return filepath.Abs(path)
 }
 
-// beforeTest Creates the test operatorNamespace, deploys k8ssandra-operator, and then deploys the
+// beforeTest Creates the test namespace, deploys k8ssandra-operator, and then deploys the
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
 // required by both operators.
-//func beforeTest(t *testing.T, operatorNamespace, fixtureDir string, f *framework.E2eFramework, clusterScoped, deployTraefik bool) error {
 func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts *e2eTestOpts) error {
 	namespaces := make([]string, 0)
 
@@ -336,6 +335,7 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 
 	namespaces := make([]string, 0)
 	namespaces = append(namespaces, opts.operatorNamespace)
+	namespaces = append(namespaces, opts.sutNamespace)
 	if len(opts.additionalNamespaces) > 0 {
 		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
@@ -356,22 +356,6 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 			if err := f.UndeployTraefik(t, namespace); err != nil {
 				t.Logf("failed to undeploy Traefik: %v", err)
 			}
-		}
-
-		if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
-			t.Logf("failed to delete Stargates: %v", err)
-		}
-
-		if err := f.DeleteReapers(namespace, timeout, interval); err != nil {
-			t.Logf("failed to delete Reapers: %v", err)
-		}
-
-		if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-			t.Logf("failed to delete datacenters: %v", err)
-		}
-
-		if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
-			t.Logf("failed to delete replicated secrets: %v", err)
 		}
 
 		if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
@@ -422,7 +406,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("check that if Stargate is deleted directly it gets re-created")
 	stargate := &stargateapi.Stargate{}
 	err = f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
-	require.NoError(err, "failed to get Stargate in operatorNamespace %s", namespace)
+	require.NoError(err, "failed to get Stargate in namespace %s", namespace)
 	err = f.Client.Delete(ctx, stargate)
 	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -434,7 +418,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
 	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 
 	t.Log("check Stargate deleted")
 	require.Eventually(func() bool {
@@ -459,8 +443,12 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
 	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
-	checkStargateReady(t, f, ctx, stargateKey)
+	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
+
+	t.Log("check that Stargate test-dc1-stargate is ready")
+	require.Eventually(withStargate(func(stargate *stargateapi.Stargate) bool {
+		return stargate.Status.IsReady()
+	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
 
 	t.Log("retrieve database credentials")
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
@@ -502,7 +490,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in operatorNamespace %s", namespace)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
@@ -570,7 +558,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in operatorNamespace %s", namespace)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)

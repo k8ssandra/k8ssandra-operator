@@ -1,7 +1,12 @@
 package cassandra
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -303,87 +308,5 @@ func TestCoalesce(t *testing.T) {
 			tc.got = Coalesce(tc.clusterTemplate, tc.dcTemplate)
 			require.Equal(t, tc.want, tc.got)
 		})
-	}
-}
-
-// TestNewDatacenter_MgmtAPIHeapSize_Set tests that the podTemplateSpec is populated with a `cassandra` container and associated environment variables
-// when a management API heap size is set.
-func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
-	template := GetDatacenterConfig()
-	mgmtAPIHeap := resource.MustParse("999M")
-	template.MgmtAPIHeap = &mgmtAPIHeap
-	dc, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999M")
-}
-
-// TestNewDatacenter_MgmtAPIHeapSize_Unset tests that the podTemplateSpec remains empty when no management API heap size is set.
-func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
-	template := GetDatacenterConfig()
-	dc, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
-	assert.Equal(t, err, nil)
-	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
-}
-
-// TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
-func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
-	template := GetDatacenterConfig()
-	template.StorageConfig = nil
-	_, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
-	assert.IsType(t, DCConfigIncomplete{}, err)
-}
-
-func TestNewDatacenter_Fail_NoCassandraConfig(t *testing.T) {
-	template := GetDatacenterConfig()
-	template.CassandraConfig = nil
-	_, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
-	assert.IsType(t, DCConfigIncomplete{}, err)
-}
-
-// GetDatacenterConfig returns a minimum viable DataCenterConfig.
-func GetDatacenterConfig() DatacenterConfig {
-	storageClass := "default"
-	return DatacenterConfig{
-		Cluster: "k8ssandra",
-		Meta: api.EmbeddedObjectMeta{
-			Namespace: "k8ssandra",
-			Name:      "dc1",
-			Labels: map[string]string{
-				"env": "dev",
-			},
-		},
-		SuperUserSecretName: "test-superuser",
-		Size:                3,
-		CassandraConfig: &api.CassandraConfig{
-			JvmOptions: &api.JvmOptions{
-				HeapSize: parseResource("1024Mi"),
-				AdditionalOptions: []string{
-					systemReplicationDcNames + "=dc1",
-					systemReplicationFactor + "=3",
-				},
-			},
-		},
-		StorageConfig: &cassdcapi.StorageConfig{
-			CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &storageClass,
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse("4Ti"),
-					},
-				},
-			},
-		},
 	}
 }

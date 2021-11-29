@@ -108,6 +108,15 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	return dc, nil
 }
 
+func getCassandraContainer(containers []corev1.Container) *corev1.Container {
+	for _, container := range containers {
+		if container.Name == reconciliation.CassandraContainerName {
+			return &container
+		}
+	}
+	return nil
+}
+
 func getMgmtApiHeapSize() string {
 	val, found := os.LookupEnv(mgmtApiHeapSizeEnvVar)
 	if found {
