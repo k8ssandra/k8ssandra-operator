@@ -41,7 +41,7 @@ func isCassandra4(version string) bool {
 }
 
 func (c config) MarshalJSON() ([]byte, error) {
-	config := make(map[string]interface{}, 0)
+	config := make(map[string]interface{})
 
 	if c.CassandraYaml != nil {
 		if isCassandra4(c.cassandraVersion) {
@@ -75,32 +75,36 @@ func (c config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&config)
 }
 
-func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) config {
-	config := config{cassandraVersion: cassandraVersion}
+func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) (config, error) {
+	cfg := config{cassandraVersion: cassandraVersion}
+
+	if apiConfig == nil {
+		return config{}, DCConfigIncomplete{"CassandraConfig"}
+	}
 
 	if apiConfig.CassandraYaml == nil {
-		config.CassandraYaml = &api.CassandraYaml{}
+		cfg.CassandraYaml = &api.CassandraYaml{}
 	} else {
-		config.CassandraYaml = apiConfig.CassandraYaml
+		cfg.CassandraYaml = apiConfig.CassandraYaml
 	}
 
 	if apiConfig.JvmOptions != nil {
-		config.JvmOptions = &jvmOptions{}
+		cfg.JvmOptions = &jvmOptions{}
 		if apiConfig.JvmOptions.HeapSize != nil {
 			heapSize := apiConfig.JvmOptions.HeapSize.Value()
-			config.JvmOptions.InitialHeapSize = &heapSize
-			config.JvmOptions.MaxHeapSize = &heapSize
+			cfg.JvmOptions.InitialHeapSize = &heapSize
+			cfg.JvmOptions.MaxHeapSize = &heapSize
 		}
 
 		if apiConfig.JvmOptions.HeapNewGenSize != nil {
 			newGenSize := apiConfig.JvmOptions.HeapNewGenSize.Value()
-			config.JvmOptions.HeapNewGenSize = &newGenSize
+			cfg.JvmOptions.HeapNewGenSize = &newGenSize
 		}
 
-		config.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
+		cfg.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
 	}
 
-	return config
+	return cfg, nil
 }
 
 // ApplySystemReplication adds system properties to configure replication of system
@@ -156,6 +160,9 @@ func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 
 // CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string.
 func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]byte, error) {
-	cfg := newConfig(config, cassandraVersion)
+	cfg, err := newConfig(config, cassandraVersion)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(cfg)
 }

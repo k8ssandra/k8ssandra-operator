@@ -241,3 +241,61 @@ func TestCoalesce(t *testing.T) {
 		})
 	}
 }
+
+
+// TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
+func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.StorageConfig = nil
+	_, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.IsType(t, DCConfigIncomplete{}, err)
+}
+
+func TestNewDatacenter_Fail_NoCassandraConfig(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.CassandraConfig = nil
+	_, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.IsType(t, DCConfigIncomplete{}, err)
+}
+
+// GetDatacenterConfig returns a minimum viable DataCenterConfig.
+func GetDatacenterConfig() DatacenterConfig {
+	storageClass := "default"
+	return DatacenterConfig{
+		Cluster: "k8ssandra",
+		Meta: api.EmbeddedObjectMeta{
+			Namespace: "k8ssandra",
+			Name:      "dc1",
+			Labels: map[string]string{
+				"env": "dev",
+			},
+		},
+		SuperUserSecretName: "test-superuser",
+		Size:                3,
+		CassandraConfig: &api.CassandraConfig{
+			JvmOptions: &api.JvmOptions{
+				HeapSize: parseResource("1024Mi"),
+				AdditionalOptions: []string{
+					systemReplicationDcNames + "=dc1",
+					systemReplicationFactor + "=3",
+				},
+			},
+		},
+		StorageConfig: &cassdcapi.StorageConfig{
+			CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &storageClass,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("4Ti"),
+					},
+				},
+			},
+		},
+	}
+}

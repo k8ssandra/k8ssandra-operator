@@ -54,6 +54,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, err
 	}
 
+	if template.StorageConfig == nil {
+		return nil, DCConfigIncomplete{"template.StorageConfig"}
+	}
+
 	dc := &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
