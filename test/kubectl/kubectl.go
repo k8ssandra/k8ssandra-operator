@@ -53,7 +53,7 @@ func Apply(opts Options, arg interface{}) error {
 
 	output, err := cmd.CombinedOutput()
 
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 
@@ -86,7 +86,7 @@ func Delete(opts Options, arg interface{}) error {
 
 	output, err := cmd.CombinedOutput()
 
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 
@@ -107,7 +107,7 @@ func DeleteByName(opts Options, kind, name string, ignoreNotFound bool) error {
 	}
 	fmt.Println(cmd)
 	output, err := cmd.CombinedOutput()
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 	return err
@@ -126,7 +126,7 @@ func DeleteAllOf(opts Options, kind string) error {
 	cmd.Args = append(cmd.Args, "delete", kind, "--all")
 	fmt.Println(cmd)
 	output, err := cmd.CombinedOutput()
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 	return err
@@ -140,7 +140,7 @@ func WaitForCondition(condition string, args ...string) error {
 
 	output, err := cmd.CombinedOutput()
 
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 
@@ -205,7 +205,7 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 
 	output, err := cmd.CombinedOutput()
 
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(string(output))
 	}
 
