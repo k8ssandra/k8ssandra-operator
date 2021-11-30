@@ -41,6 +41,7 @@ type DatacenterConfig struct {
 	Networking          *cassdcapi.NetworkingConfig
 	Users               []cassdcapi.CassandraUser
 	PodTemplateSpec     *corev1.PodTemplateSpec
+	MgmtAPIHeap         string
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -92,7 +93,39 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.Resources = *template.Resources
 	}
 
+	if len(template.MgmtAPIHeap) != 0 {
+		if err := SetMgmtAPIHeap(dc, template.MgmtAPIHeap); err != nil {
+			return nil, err
+		}
+	}
+
 	return dc, nil
+}
+
+// SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
+func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) error {
+	// TODO: it would be nice to have a generic `StrategicMergePatch` method which produces merged API objects instead
+	// of this ad hoc append logic here or the `Patch` types produced by `StrategicMergeFrom`.
+	if dc.Spec.PodTemplateSpec == nil {
+		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
+		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{{Name: "cassandra"}}
+	}
+	var cassIndex int
+	for i, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
+		if container.Name == "cassandra" {
+			cassIndex = i
+		}
+	}
+	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
+		dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env,
+		corev1.EnvVar{
+			Name:  "MGMT_API_HEAP_SIZE",
+			Value: heapSize,
+		},
+	)
+	return nil
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
@@ -150,6 +183,10 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 		dcConfig.CassandraConfig = clusterTemplate.CassandraConfig
 	} else {
 		dcConfig.CassandraConfig = dcTemplate.CassandraConfig
+	}
+
+	if len(dcTemplate.MgmtAPIHeap) != 0 {
+		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
 	}
 
 	return dcConfig

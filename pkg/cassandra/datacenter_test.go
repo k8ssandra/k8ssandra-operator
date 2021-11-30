@@ -3,12 +3,13 @@ package cassandra
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestCoalesce(t *testing.T) {
@@ -232,6 +233,37 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "set management api heap size",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				Cluster:             "k8ssandra",
+				SuperuserSecretName: "test-superuser",
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				Meta: api.EmbeddedObjectMeta{
+					Namespace: "k8ssandra",
+					Name:      "dc1",
+					Labels: map[string]string{
+						"env": "dev",
+					},
+				},
+				Size:        3,
+				MgmtAPIHeap: "999M",
+			},
+			want: &DatacenterConfig{
+				Cluster: "k8ssandra",
+				Meta: api.EmbeddedObjectMeta{
+					Namespace: "k8ssandra",
+					Name:      "dc1",
+					Labels: map[string]string{
+						"env": "dev",
+					},
+				},
+				SuperUserSecretName: "test-superuser",
+				Size:                3,
+				MgmtAPIHeap:         "999M",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -242,6 +274,29 @@ func TestCoalesce(t *testing.T) {
 	}
 }
 
+// TestNewDatacenter_MgmtAPIHeapSize_Set tests that the podTemplateSpec is populated with a `cassandra` container and associated environment variables
+// when a management API heap size is set.
+func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.MgmtAPIHeap = "999M"
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999M")
+}
+
+// TestNewDatacenter_MgmtAPIHeapSize_Unset tests that the podTemplateSpec remains empty when no management API heap size is set.
+func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
+	template := GetDatacenterConfig()
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
+}
 
 // TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
 func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
