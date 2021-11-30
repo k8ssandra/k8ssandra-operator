@@ -94,16 +94,14 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	if len(template.MgmtAPIHeap) != 0 {
-		if err := SetMgmtAPIHeap(dc, template.MgmtAPIHeap); err != nil {
-			return nil, err
-		}
+		SetMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
 	return dc, nil
 }
 
 // SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
-func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) error {
+func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) {
 	// TODO: it would be nice to have a generic `StrategicMergePatch` method which produces merged API objects instead
 	// of this ad hoc append logic here or the `Patch` types produced by `StrategicMergeFrom`.
 	if dc.Spec.PodTemplateSpec == nil {
@@ -116,6 +114,7 @@ func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) error {
 	for i, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
 		if container.Name == "cassandra" {
 			cassIndex = i
+			break
 		}
 	}
 	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
@@ -125,7 +124,6 @@ func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) error {
 			Value: heapSize,
 		},
 	)
-	return nil
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
