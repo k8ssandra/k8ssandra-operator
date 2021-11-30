@@ -202,6 +202,11 @@ spec:
                           required:
                           - name
                           type: object
+                        mgmtAPIHeap:
+                          description: MgmtAPIHeap defines the amount of memory (in
+                            java format - i.e. an int followed by a G or M) devoted
+                            to the management api heap.
+                          type: string
                         networking:
                           description: Networking enables host networking and configures
                             a NodePort ports.
