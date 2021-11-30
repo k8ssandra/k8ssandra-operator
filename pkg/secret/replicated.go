@@ -142,6 +142,10 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 }
 
 func HasReplicatedSecrets(ctx context.Context, c client.Client, kcKey client.ObjectKey, targetContext string) bool {
+	if targetContext == "" {
+		return true
+	}
+
 	repSec := &replicationapi.ReplicatedSecret{}
 	err := c.Get(ctx, types.NamespacedName{Name: kcKey.Name, Namespace: kcKey.Namespace}, repSec)
 	if err != nil {
