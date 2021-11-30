@@ -60,11 +60,16 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	reaper1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-reaper"}}
+	stargate1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargate2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
 
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
+	checkStargateReady(t, f, ctx, stargate1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
+
+	checkStargateReady(t, f, ctx, stargate2Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
@@ -123,7 +128,7 @@ func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Cont
 }
 
 func checkReaperReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {
-	t.Log("check Reaper status updated to ready")
+	t.Logf("check that Reaper %s in cluster %s is ready", reaperKey.Name, reaperKey.K8sContext)
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 	require.Eventually(t, withReaper(func(reaper *reaperapi.Reaper) bool {
 		return reaper.Status.Progress == reaperapi.ReaperProgressRunning && reaper.Status.IsReady()
