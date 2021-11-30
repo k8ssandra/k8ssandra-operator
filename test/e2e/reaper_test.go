@@ -39,7 +39,10 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 
-	testReaperApi(t, ctx, 0, "reaper_db")
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context kind-k8ssandra-0")
+		testReaperApi(t, ctx, 0, "reaper_db")
+	})
 }
 
 func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -77,8 +80,14 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
-	testReaperApi(t, ctx, 0, "reaper_ks")
-	testReaperApi(t, ctx, 1, "reaper_ks")
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context kind-k8ssandra-0")
+		testReaperApi(t, ctx, 0, "reaper_ks")
+	})
+	t.Run("TestReaperApi[1]", func(t *testing.T) {
+		t.Log("test Reaper API in context kind-k8ssandra-1")
+		testReaperApi(t, ctx, 1, "reaper_ks")
+	})
 }
 
 func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -99,7 +108,10 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "reaper1-service")
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 
-	testReaperApi(t, ctx, 0, "reaper_db")
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context kind-k8ssandra-0")
+		testReaperApi(t, ctx, 0, "reaper_db")
+	})
 }
 
 func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
