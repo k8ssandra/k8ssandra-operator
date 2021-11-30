@@ -445,6 +445,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
 
 			if err == nil || !apierrors.IsNotFound(err) {
+				f.logger.Info("waiting for namespace deletion", "error", err)
 				return false, nil
 			}
 		}

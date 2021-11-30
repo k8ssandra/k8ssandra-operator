@@ -61,9 +61,20 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createStargateAndDatacenter,
+		fixture: "stargate",
+		deployTraefik: true,
+		skipK8ssandraClusterCleanup: true,
+		doCassandraDatacenterCleanup: true,
+	}))
+	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createStargateAndDatacenter,
 		fixture:       "multi-stargate",
 		deployTraefik: true,
+	}))
+	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterCluster,
+		fixture: "multi-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
@@ -160,6 +171,15 @@ type e2eTestOpts struct {
 	// namespace should be specified by sutNamespace and the CassandraDatacenter namespaces
 	// should be specified here.
 	additionalNamespaces []string
+
+	// skipK8ssandraClusterCleanup is a flag that lets the framework know if deleting the
+	// K8ssandraCluster should be skipped as would be the case for test that only involve
+	// other components like Stargate and Reaper.
+	skipK8ssandraClusterCleanup bool
+
+	// doCassandraDatacenterCleanup is a flag that lets the framework know it should perform
+	// deletions of CassandraDatacenters that are not part of a K8ssandraCluster.
+	doCassandraDatacenterCleanup bool
 }
 
 // A TestFixture specifies the name of a subdirectory under the test/testdata/fixtures
@@ -347,17 +367,26 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 	timeout := 3 * time.Minute
 	interval := 10 * time.Second
 
-	for _, namespace := range namespaces {
-		if err := f.DeleteK8ssandraClusters(namespace); err != nil {
+	if !opts.skipK8ssandraClusterCleanup {
+		if err := f.DeleteK8ssandraClusters(opts.sutNamespace, timeout, interval); err != nil {
+			t.Logf("failed to delete K8sandraCluster: %v", err)
 			return err
 		}
+	}
 
-		if opts.deployTraefik {
-			if err := f.UndeployTraefik(t, namespace); err != nil {
-				t.Logf("failed to undeploy Traefik: %v", err)
-			}
+	if opts.doCassandraDatacenterCleanup {
+		if err := f.DeleteCassandraDatacenters(opts.sutNamespace, timeout, interval); err != nil {
+			t.Logf("failed to delete CassandraDatacenter: %v", err)
 		}
+	}
 
+	if opts.deployTraefik {
+		if err := f.UndeployTraefik(t, opts.operatorNamespace); err != nil {
+			t.Logf("failed to undeploy Traefik: %v", err)
+		}
+	}
+
+	for _, namespace := range namespaces {
 		if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
 			t.Logf("failed to delete namespace: %v", err)
 		}
