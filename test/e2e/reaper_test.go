@@ -81,6 +81,28 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	testReaperApi(t, ctx, 1, "reaper_ks")
 }
 
+func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+
+	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	reaperKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
+
+	checkDatacenterReady(t, ctx, dcKey, f)
+
+	f.ExecuteCql(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0",
+		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3} ")
+
+	checkReaperReady(t, f, ctx, reaperKey)
+
+	t.Log("check reaper keyspace created")
+	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "reaper_db")
+
+	t.Log("deploying Reaper ingress routes in kind-k8ssandra-0")
+	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "reaper1-service")
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+
+	testReaperApi(t, ctx, 0, "reaper_db")
+}
+
 func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
 	secret := &corev1.Secret{}
 	require.Eventually(t, func() bool {
