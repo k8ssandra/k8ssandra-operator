@@ -1,0 +1,7 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: CassandraBackup
+metadata:
+  name: cassandrabackup-sample
+spec:
+  # Add fields here
+  foo: bar

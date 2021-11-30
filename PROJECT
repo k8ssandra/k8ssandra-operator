@@ -50,4 +50,22 @@ resources:
   kind: Reaper
   path: github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: CassandraBackup
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: CassandraRestore
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
 version: "3"

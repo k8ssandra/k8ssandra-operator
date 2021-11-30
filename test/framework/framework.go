@@ -3,10 +3,11 @@ package framework
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"testing"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
@@ -21,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -326,7 +327,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
-			if !errors.IsNotFound(err) {
+			if !k8serrors.IsNotFound(err) {
 				// We won't log the error if its not found because that is expected and it helps cut
 				// down on the verbosity of the test output.
 				f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
@@ -413,4 +414,52 @@ type terratestLoggerBridge struct {
 func (c *terratestLoggerBridge) Logf(t terratesttesting.TestingT, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	c.logger.Info(msg)
+}
+
+func (f *Framework) ContainerHasVolumeMount(dc *cassdcapi.CassandraDatacenter, containerName, volumeName, volumePath string) bool {
+	container := f.GetContainer(dc, containerName, true)
+	if container == nil {
+		return false
+	}
+
+	for _, volume := range container.VolumeMounts {
+		if volume.Name == volumeName && volume.MountPath == volumePath {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *Framework) ContainerHasEnvVar(dc *cassdcapi.CassandraDatacenter, containerName, envVarName, envVarValue string) bool {
+	container := f.GetContainer(dc, containerName, true)
+	if container == nil {
+		return false
+	}
+
+	for _, envVar := range container.Env {
+		if envVar.Name == envVarName && (envVar.Value == envVarValue || envVarValue == "") {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *Framework) GetContainer(dc *cassdcapi.CassandraDatacenter, containerName string, initContainer bool) *corev1.Container {
+	for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
+		if container.Name == containerName {
+			return &container
+		}
+	}
+	if initContainer {
+		for _, container := range dc.Spec.PodTemplateSpec.Spec.InitContainers {
+			if container.Name == containerName {
+				return &container
+			}
+		}
+	}
+	return nil
+}
+
+func (f *Framework) ContainerExists(dc *cassdcapi.CassandraDatacenter, name string, initContainer bool) bool {
+	return f.GetContainer(dc, name, initContainer) != nil
 }

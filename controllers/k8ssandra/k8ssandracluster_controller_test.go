@@ -4,6 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+	"time"
+
+	"reflect"
+
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
@@ -11,9 +20,6 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"reflect"
-	"testing"
-	"time"
 
 	"github.com/Jeffail/gabs"
 	"github.com/go-logr/logr"
@@ -95,6 +101,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
+	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the

@@ -29,6 +29,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
@@ -313,6 +314,10 @@ func registerApis() error {
 	}
 
 	if err := promapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := medusaapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 
