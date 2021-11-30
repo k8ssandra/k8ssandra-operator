@@ -29,7 +29,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
-	t.Log("check reaper keyspace created")
+	t.Log("check Reaper keyspace created")
 	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_db")
 
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
@@ -67,7 +67,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 
-	t.Log("check reaper keyspace created")
+	t.Log("check Reaper keyspace created")
 	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_ks")
 	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", "reaper_ks")
 
@@ -88,13 +88,12 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 
+	t.Log("create Reaper keyspace")
 	f.ExecuteCql(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0",
 		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3} ")
+	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "reaper_db")
 
 	checkReaperReady(t, f, ctx, reaperKey)
-
-	t.Log("check reaper keyspace created")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "reaper_db")
 
 	t.Log("deploying Reaper ingress routes in kind-k8ssandra-0")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "reaper1-service")
