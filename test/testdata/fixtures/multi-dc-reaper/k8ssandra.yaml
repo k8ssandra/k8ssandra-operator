@@ -1,12 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-cql-secret
+data:
+  # username: reaper-cql
+  username: cmVhcGVyLWNxbA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: test
 spec:
   reaper:
-    keyspace: reaper_ks
-    cassandraUserSecretRef: reaper-cql-secret
-    jmxUserSecretRef: reaper-jmx-secret
+    keyspace: reaper_ks # custom name
+    cassandraUserSecretRef: reaper-cql-secret # pre-existing secret
+    jmxUserSecretRef: reaper-jmx-secret # will be created with non-default name
   cassandra:
     cluster: test
     serverVersion: "4.0.1"
@@ -62,13 +72,13 @@ spec:
       limits:
         memory: 512Mi
     livenessProbe:
-      initialDelaySeconds: 100
+      initialDelaySeconds: 60
       periodSeconds: 10
       failureThreshold: 20
       successThreshold: 1
       timeoutSeconds: 20
     readinessProbe:
-      initialDelaySeconds: 100
+      initialDelaySeconds: 30
       periodSeconds: 10
       failureThreshold: 20
       successThreshold: 1

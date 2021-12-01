@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
@@ -66,22 +67,35 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
-	checkStargateReady(t, f, ctx, stargate1Key)
-	checkReaperReady(t, f, ctx, reaper1Key)
+	t.Log("check Stargate auth keyspace created in both clusters")
+	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", stargate.AuthKeyspace)
+	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", stargate.AuthKeyspace)
 
-	checkStargateReady(t, f, ctx, stargate2Key)
-	checkReaperReady(t, f, ctx, reaper2Key)
-
-	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
-	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
-
-	t.Log("check Reaper keyspace created")
+	t.Log("check Reaper custom keyspace created in both clusters")
 	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_ks")
 	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", "reaper_ks")
 
-	t.Log("deploying Reaper ingress routes in kind-k8ssandra-0 and kind-k8ssandra-1")
+	checkStargateReady(t, f, ctx, stargate1Key)
+	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
+
+	checkReaperReady(t, f, ctx, reaper1Key)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
+
+	checkStargateReady(t, f, ctx, stargate2Key)
+	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
+
+	checkReaperReady(t, f, ctx, reaper2Key)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
+
+	t.Log("retrieving database credentials")
+	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
+
+	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-1", 1, namespace, "test-dc2-reaper-service")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "test-dc2-stargate-service", username, password)
+
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
@@ -92,6 +106,17 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	t.Run("TestReaperApi[1]", func(t *testing.T) {
 		t.Log("test Reaper API in context kind-k8ssandra-1")
 		testReaperApi(t, ctx, 1, "reaper_ks")
+	})
+
+	replication := map[string]int{"dc1": 1, "dc2": 1}
+
+	t.Run("TestStargateApi[0]", func(t *testing.T) {
+		t.Log("test Stargate API in context kind-k8ssandra-0")
+		testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+	})
+	t.Run("TestStargateApi[1]", func(t *testing.T) {
+		t.Log("test Stargate API in context kind-k8ssandra-1")
+		testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
 	})
 }
 
