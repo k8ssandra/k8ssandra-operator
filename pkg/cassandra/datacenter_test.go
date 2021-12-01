@@ -14,6 +14,7 @@ import (
 
 func TestCoalesce(t *testing.T) {
 	storageClass := "default"
+	mgmtAPIHeap := resource.MustParse("999M")
 
 	type test struct {
 		name string
@@ -234,7 +235,7 @@ func TestCoalesce(t *testing.T) {
 			},
 		},
 		{
-			name: "set management api heap size",
+			name: "set management api heap size from DatacenterTemplate",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				Cluster:             "k8ssandra",
 				SuperuserSecretName: "test-superuser",
@@ -248,7 +249,7 @@ func TestCoalesce(t *testing.T) {
 					},
 				},
 				Size:        3,
-				MgmtAPIHeap: "999M",
+				MgmtAPIHeap: &mgmtAPIHeap,
 			},
 			want: &DatacenterConfig{
 				Cluster: "k8ssandra",
@@ -261,7 +262,38 @@ func TestCoalesce(t *testing.T) {
 				},
 				SuperUserSecretName: "test-superuser",
 				Size:                3,
-				MgmtAPIHeap:         "999M",
+				MgmtAPIHeap:         &mgmtAPIHeap,
+			},
+		},
+		{
+			name: "set management api heap size from CassandraClusterTemplate",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				Cluster:             "k8ssandra",
+				SuperuserSecretName: "test-superuser",
+				MgmtAPIHeap:         &mgmtAPIHeap,
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				Meta: api.EmbeddedObjectMeta{
+					Namespace: "k8ssandra",
+					Name:      "dc1",
+					Labels: map[string]string{
+						"env": "dev",
+					},
+				},
+				Size: 3,
+			},
+			want: &DatacenterConfig{
+				Cluster: "k8ssandra",
+				Meta: api.EmbeddedObjectMeta{
+					Namespace: "k8ssandra",
+					Name:      "dc1",
+					Labels: map[string]string{
+						"env": "dev",
+					},
+				},
+				SuperUserSecretName: "test-superuser",
+				Size:                3,
+				MgmtAPIHeap:         &mgmtAPIHeap,
 			},
 		},
 	}
@@ -278,7 +310,8 @@ func TestCoalesce(t *testing.T) {
 // when a management API heap size is set.
 func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
 	template := GetDatacenterConfig()
-	template.MgmtAPIHeap = "999M"
+	mgmtAPIHeap := resource.MustParse("999M")
+	template.MgmtAPIHeap = &mgmtAPIHeap
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,

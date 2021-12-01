@@ -171,6 +171,11 @@ type CassandraClusterTemplate struct {
 	// Datacenters a list of the DCs in the cluster.
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
+
+	// MgmtAPIHeap defines the amount of memory devoted to the management
+	// api heap.
+	// +optional
+	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
@@ -227,10 +232,10 @@ type CassandraDatacenterTemplate struct {
 	// deploying Reaper in this datacenter.
 	// +optional
 	Reaper *reaperapi.ReaperDatacenterTemplate `json:"reaper,omitempty"`
-	// MgmtAPIHeap defines the amount of memory (in java format - i.e. an int followed by a G or M) devoted to the management
+	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
 	// +optional
-	MgmtAPIHeap string `json:"mgmtAPIHeap,omitempty"`
+	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

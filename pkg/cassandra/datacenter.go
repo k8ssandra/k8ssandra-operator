@@ -4,6 +4,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -41,7 +42,7 @@ type DatacenterConfig struct {
 	Networking          *cassdcapi.NetworkingConfig
 	Users               []cassdcapi.CassandraUser
 	PodTemplateSpec     *corev1.PodTemplateSpec
-	MgmtAPIHeap         string
+	MgmtAPIHeap         *resource.Quantity
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -93,7 +94,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.Resources = *template.Resources
 	}
 
-	if len(template.MgmtAPIHeap) != 0 {
+	if template.MgmtAPIHeap != nil {
 		SetMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
@@ -101,9 +102,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 }
 
 // SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
-func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) {
-	// TODO: it would be nice to have a generic `StrategicMergePatch` method which produces merged API objects instead
-	// of this ad hoc append logic here or the `Patch` types produced by `StrategicMergeFrom`.
+func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
 	if dc.Spec.PodTemplateSpec == nil {
 		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
@@ -117,11 +116,12 @@ func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize string) {
 			break
 		}
 	}
+	heapSize.Format = resource.Format(resource.DecimalSI)
 	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
 		dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env,
 		corev1.EnvVar{
 			Name:  "MGMT_API_HEAP_SIZE",
-			Value: heapSize,
+			Value: string(heapSize.String()),
 		},
 	)
 }
@@ -183,7 +183,9 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 		dcConfig.CassandraConfig = dcTemplate.CassandraConfig
 	}
 
-	if len(dcTemplate.MgmtAPIHeap) != 0 {
+	if dcTemplate.MgmtAPIHeap == nil {
+		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
+	} else if dcTemplate.MgmtAPIHeap != nil {
 		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
 	}
 
