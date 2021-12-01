@@ -100,22 +100,18 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
-		t.Log("test Reaper API in context kind-k8ssandra-0")
 		testReaperApi(t, ctx, 0, "reaper_ks")
 	})
 	t.Run("TestReaperApi[1]", func(t *testing.T) {
-		t.Log("test Reaper API in context kind-k8ssandra-1")
 		testReaperApi(t, ctx, 1, "reaper_ks")
 	})
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
 	t.Run("TestStargateApi[0]", func(t *testing.T) {
-		t.Log("test Stargate API in context kind-k8ssandra-0")
 		testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 	})
 	t.Run("TestStargateApi[1]", func(t *testing.T) {
-		t.Log("test Stargate API in context kind-k8ssandra-1")
 		testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
 	})
 }
