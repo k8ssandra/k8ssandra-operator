@@ -81,7 +81,6 @@ func TestK8ssandraCluster(t *testing.T) {
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
-			SeedsResolver:    seedsResolver,
 			ManagementApi:    managementApi,
 		}).SetupWithManager(mgr, clusters)
 		return err
@@ -693,7 +692,6 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 // k8s clusters. It also verifies that status updates are made to the K8ssandraCluster.
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	//assert := assert.New(t)
 
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"

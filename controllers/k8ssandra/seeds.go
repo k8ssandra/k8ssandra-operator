@@ -51,7 +51,7 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 // newEndpoints returns an Endpoints object who is named after the additional seeds service
 // of dc.
 func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1.Endpoints {
-	ep := corev1.Endpoints{
+	ep := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   dc.Namespace,
 			Name:        dc.GetAdditionalSeedsServiceName(),
@@ -73,7 +73,7 @@ func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1
 		},
 	}
 
-	ep.Annotations[api.ResourceHashAnnotation] = utils.DeepHashString(ep)
+	utils.AddHashAnnotation(ep, api.ResourceHashAnnotation)
 
-	return &ep
+	return ep
 }

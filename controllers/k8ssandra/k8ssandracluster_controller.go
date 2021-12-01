@@ -61,7 +61,6 @@ type K8ssandraClusterReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
-	SeedsResolver cassandra.RemoteSeedsResolver
 	ManagementApi cassandra.ManagementApiFactory
 }
 
@@ -254,7 +253,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		}
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
 
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
@@ -279,45 +278,55 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		//
 		// TODO Refactor the if block into a separate method/function.
 		// Note: Some other refactoring needs to be done first so that this can be done cleanly.
-		if len(seeds) > 0 {
-			desiredEndpoints := newEndpoints(desiredDc, seeds)
-			actualEndpoints := &corev1.Endpoints{}
-			endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
+		logger.Info("Reconciling seeds")
+		desiredEndpoints := newEndpoints(desiredDc, seeds)
+		actualEndpoints := &corev1.Endpoints{}
+		endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
 
-			if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
-				if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
-					logger.Info("Updating Endpoints", "K8SContext", dcTemplate.K8sContext, "CassandraDatacenter", dcKey, "Endpoints", endpointsKey)
+		if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
+			// If we already an Endpoints object but no seeds then it probably means all
+			// Cassandra pods are down or not ready for some reason. In this case we will
+			// delete the Endpoints and let it get recreated once we have seed nodes.
+			if len(seeds) == 0 {
+				logger.Info("Deleting endpoints")
+				if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
+					logger.Error(err, "Failed to delete endpoints")
+					return ctrl.Result{}, err
+				}
+			} else {
+				if !utils.CompareAnnotations(actualEndpoints, desiredEndpoints, api.ResourceHashAnnotation) {
+					logger.Info("Updating endpoints", "Endpoints", endpointsKey)
 					actualEndpoints := actualEndpoints.DeepCopy()
 					resourceVersion := actualEndpoints.GetResourceVersion()
 					desiredEndpoints.DeepCopyInto(actualEndpoints)
 					actualEndpoints.SetResourceVersion(resourceVersion)
 					if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
-						logger.Error(err, "Failed to update Endpoints",
-							"K8SContext", dcTemplate.K8sContext,
-							"CassandraDatacenter", dcKey,
-							"Endpoints", endpointsKey)
+						logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		} else {
+			if errors.IsNotFound(err) {
+				// If we have seeds then we want to go ahead and create the Endpoints. But
+				// if we don't have seeds, then we don't need to do anything for a couple
+				// of reasons. First, no seeds means that cass-operator has not labeled any
+				// pods as seeds which would be the case when the CassandraDatacenter is f
+				// first created and no pods have reached the ready state. Secondly, you
+				// cannot create an Endpoints object that has both empty Addresses and
+				// empty NotReadyAddresses.
+				if len(seeds) > 0 {
+					logger.Info("Creating endpoints", "Endpoints", endpointsKey)
+					if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
+						logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
 						return ctrl.Result{}, err
 					}
 				}
 			} else {
-				if errors.IsNotFound(err) {
-					if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
-						logger.Error(err, "Failed to create Endpoints",
-							"K8SContext", dcTemplate.K8sContext,
-							"CassandraDatacenter", dcKey,
-							"Endpoints", endpointsKey)
-						return ctrl.Result{}, err
-					}
-				} else {
-					logger.Error(err, "Failed to get Endpoints",
-						"K8SContext", dcTemplate.K8sContext,
-						"CassandraDatacenter", dcKey,
-						"Endpoints", endpointsKey)
-					return ctrl.Result{}, err
-				}
+				logger.Error(err, "Failed to get endpoints", "Endpoints", endpointsKey)
+				return ctrl.Result{}, err
 			}
 		}
-		// end reconcile seeds
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			// cassdc already exists, we'll update it
