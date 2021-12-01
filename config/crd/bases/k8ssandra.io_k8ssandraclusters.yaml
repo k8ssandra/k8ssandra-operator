@@ -8758,6 +8758,7 @@ spec:
                           enum:
                           - Pending
                           - Deploying
+                          - Configuring
                           - Running
                           type: string
                       required:

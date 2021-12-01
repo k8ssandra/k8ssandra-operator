@@ -284,7 +284,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
 
 	err := f.kustomizeAndApply(controlPlane, namespace, f.ControlPlaneContext)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	dataPlaneContexts := f.getDataPlaneContexts()

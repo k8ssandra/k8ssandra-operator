@@ -43,8 +43,7 @@ func (f *E2eFramework) RetrieveDatabaseCredentials(t *testing.T, ctx context.Con
 func (f *E2eFramework) ExecuteCql(t *testing.T, ctx context.Context, k8sContext, namespace, k8cName, pod, query string) string {
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, k8cName)
 	options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-	output, _ := kubectl.Exec(options, pod,
-		"--",
+	output, err := kubectl.Exec(options, pod,
 		"/opt/cassandra/bin/cqlsh",
 		"--username",
 		username,
@@ -53,6 +52,7 @@ func (f *E2eFramework) ExecuteCql(t *testing.T, ctx context.Context, k8sContext,
 		"-e",
 		query,
 	)
+	require.NoErrorf(t, err, "failed to execute CQL query '%s' on pod %s", query, pod)
 	return output
 }
 

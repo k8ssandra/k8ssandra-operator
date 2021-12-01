@@ -2,7 +2,7 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: test-dc1-reaper-service-http-ingress # actual namespace will be kustomized
+  name: test-dc1-reaper-service-http-ingress # actual name will be kustomized
   namespace: default # actual namespace will be kustomized
 spec:
   entryPoints:

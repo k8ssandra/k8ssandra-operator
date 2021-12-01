@@ -9,11 +9,13 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
+	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -89,7 +91,7 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 
-func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, reaperServiceName string) {
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext string, k8sContextIdx int, namespace, reaperServiceName string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
 	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
 	dest := filepath.Join(dir, "reaper-ingress.yaml")
@@ -103,12 +105,14 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext string, k8
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dir, namespace, k8sContext)
 	assert.NoError(t, err)
-	reaperHttp := fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%v080/cluster", k8sContextIdx)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
+	reaperHttp := fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%v080", k8sContextIdx)
 	require.Eventually(t, func() bool {
-		response, err := resty.NewRequest().Get(reaperHttp)
-		return err == nil && response.StatusCode() == http.StatusOK
+		reaperURL, _ := url.Parse(reaperHttp)
+		reaperClient := reaperclient.NewClient(reaperURL)
+		up, err := reaperClient.IsReaperUp(ctx)
+		return up && err == nil
 	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
 }
 

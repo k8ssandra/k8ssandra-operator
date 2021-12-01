@@ -338,7 +338,6 @@ func (f *Framework) withReaper(ctx context.Context, key ClusterKey, condition fu
 		if err := remoteClient.Get(ctx, key.NamespacedName, reaper); err == nil {
 			return condition(reaper)
 		} else {
-			f.logger.Error(err, "failed to get Reaper", "key", key)
 			return false
 		}
 	}

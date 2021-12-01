@@ -5,7 +5,7 @@ metadata:
 spec:
   reaper:
     autoScheduling:
-      enabled: true
+      enabled: false
   cassandra:
     cluster: test
     serverVersion: "3.11.11"

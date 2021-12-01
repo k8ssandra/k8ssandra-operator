@@ -1,11 +1,25 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-cql-secret
+data:
+  # username: reaper-cql
+  username: cmVhcGVyLWNxbA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  reaper:
+    keyspace: reaper_ks # custom name
+    cassandraUserSecretRef: reaper-cql-secret # pre-existing secret
+    jmxUserSecretRef: reaper-jmx-secret # will be created with non-default name
   cassandra:
     cluster: test
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
@@ -27,6 +41,8 @@ spec:
         reaper:
           autoScheduling:
             enabled: true
+            repairType: ADAPTIVE
+            timeBeforeFirstSchedule: P1D
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
@@ -46,4 +62,24 @@ spec:
           hostNetwork: true
         reaper:
           autoScheduling:
-            enabled: true
+            enabled: false
+  stargate:
+    size: 1
+    heapSize: 384Mi
+    cassandraConfigMapRef:
+      name: cassandra-config
+    resources:
+      limits:
+        memory: 512Mi
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20

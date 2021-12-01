@@ -77,6 +77,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_LOCAL_DC",
 			Value: "dc1",
 		},
+		{
+			Name:  "REAPER_CASS_KEYSPACE",
+			Value: "reaper_db",
+		},
 	})
 
 	assert.Len(t, podSpec.InitContainers, 1)
@@ -109,6 +113,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_LOCAL_DC",
 			Value: "dc1",
 		},
+		{
+			Name:  "REAPER_CASS_KEYSPACE",
+			Value: "reaper_db",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
@@ -125,16 +133,23 @@ func TestNewDeployment(t *testing.T) {
 		ExcludedKeyspaces:          []string{"system.powers"},
 	}
 
+	reaper.Spec.Keyspace = "ks1"
+
 	deployment = NewDeployment(reaper, newTestDatacenter())
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 6)
+	assert.Len(t, container.Env, 7)
+
+	assert.Contains(t, container.Env, corev1.EnvVar{
+		Name:  "REAPER_CASS_KEYSPACE",
+		Value: "ks1",
+	})
 
 	reaper.Spec.AutoScheduling.Enabled = true
 	deployment = NewDeployment(reaper, newTestDatacenter())
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 16)
+	assert.Len(t, container.Env, 17)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",

@@ -233,7 +233,7 @@ type ReaperCondition struct {
 type ReaperStatus struct {
 
 	// Progress is the progress of this Reaper object.
-	// +kubebuilder:validation:Enum=Pending;Deploying;Running
+	// +kubebuilder:validation:Enum=Pending;Deploying;Configuring;Running
 	Progress ReaperProgress `json:"progress"`
 
 	// +optional
