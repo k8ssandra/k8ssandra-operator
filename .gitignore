@@ -27,3 +27,5 @@ build
 clientconfig
 .vscode/
 .devcontainer/
+kind-log*/
+kubeconfig

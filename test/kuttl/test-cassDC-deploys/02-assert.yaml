@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: demo-dc1-default-sts
+  namespace: k8ssandra-operator
+status:
+  readyReplicas: 3
