@@ -7,7 +7,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,7 +18,6 @@ import (
 
 func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	assert := assert.New(t)
 
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
@@ -72,13 +70,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
-
-	dc1PodIps := []string{"10.10.100.1", "10.10.100.2", "10.10.100.3"}
-	dc2PodIps := []string{"10.11.100.1", "10.11.100.2", "10.11.100.3"}
-
-	allPodIps := make([]string, 0, 6)
-	allPodIps = append(allPodIps, dc1PodIps...)
-	allPodIps = append(allPodIps, dc2PodIps...)
 
 	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
 
@@ -139,16 +130,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		if dc.Name == "dc1" {
-			return dc1PodIps, nil
-		}
-		if dc.Name == "dc2" {
-			return dc2PodIps, nil
-		}
-		return nil, fmt.Errorf("unknown datacenter: %s", dc.Name)
-	}
-
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
@@ -167,8 +148,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	dc2 = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
-
-	assert.Equal(dc1PodIps, dc2.Spec.AdditionalSeeds, "The AdditionalSeeds property for dc2 is wrong")
 
 	reaper2Key := framework.ClusterKey{
 		K8sContext: k8sCtx1,
