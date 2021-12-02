@@ -53,6 +53,7 @@ jobs:
         e2e_test:
           - CreateMultiDatacenterCluster
           - CheckStargateApisWithMultiDcCluster
+          - CreateMultiStargateAndDatacenter
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
       fail-fast: false

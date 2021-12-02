@@ -154,7 +154,8 @@ func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 	dcConfig.CassandraConfig = config
 }
 
-// CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string.
+// CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string. If config is nil
+// then nil, nil is returned
 func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]byte, error) {
 	if config == nil {
 		return nil, nil

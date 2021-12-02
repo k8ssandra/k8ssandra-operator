@@ -79,21 +79,30 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
 		fixture:  "multi-dc",
+		deployTraefik: true,
 	}))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      checkStargateApisWithMultiDcCluster,
-		fixture:       "multi-dc-stargate",
+		testFunc: checkStargateApisWithMultiDcCluster,
+		fixture: "multi-dc-stargate",
 		deployTraefik: true,
 	}))
 	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaper,
 		fixture:  "single-dc-reaper",
+		deployTraefik: true,
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiReaper,
 		fixture:  "multi-dc-reaper",
+		deployTraefik: true,
 	}))
-
+	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createReaperAndDatacenter,
+		fixture: "reaper",
+		deployTraefik: true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,

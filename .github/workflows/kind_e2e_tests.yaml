@@ -54,6 +54,7 @@ jobs:
           - CreateSingleDatacenterCluster
           - CreateStargateAndDatacenter
           - CreateSingleReaper
+          - CreateReaperAndDatacenter
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
