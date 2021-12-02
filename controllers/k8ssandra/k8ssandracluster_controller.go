@@ -61,7 +61,6 @@ type K8ssandraClusterReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
-	SeedsResolver cassandra.RemoteSeedsResolver
 	ManagementApi cassandra.ManagementApiFactory
 }
 
@@ -73,6 +72,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints,verbs=get;list;watch;create;update;patch;delete
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("K8ssandraCluster", req.NamespacedName)
@@ -196,8 +196,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return ctrl.Result{}, nil
 	}
 
-	var seeds []string
-
 	// Reconcile the ReplicatedSecret and superuserSecret first (otherwise CassandraDatacenter will not start)
 	if kc.Spec.Cassandra.SuperuserSecretName == "" {
 		// Note that we do not persist this change because doing so would prevent us from
@@ -224,6 +222,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	systemReplication := cassandra.ComputeSystemReplication(kc)
 
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+
+	seeds, err := r.findSeeds(ctx, kc, kcLogger)
+	if err != nil {
+		kcLogger.Error(err, "Failed to find seed nodes")
+		return ctrl.Result{}, err
+	}
+
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
@@ -242,14 +247,13 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
-		dcConfig.AdditionalSeeds = seeds
 		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 		if reaperTemplate != nil {
 			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig)
 		}
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := kcLogger.WithValues("CassandraDatacenter", dcKey)
+		logger := kcLogger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
 
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
@@ -264,6 +268,64 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+
+		// reconcile seeds
+		//
+		// The following if block was basically taken straight out of cass-operator. See
+		// https://github.com/k8ssandra/k8ssandra-operator/issues/210 for a detailed
+		// explanation of why this is being done.
+		//
+		// TODO Refactor the if block into a separate method/function.
+		// Note: Some other refactoring needs to be done first so that this can be done cleanly.
+		logger.Info("Reconciling seeds")
+		desiredEndpoints := newEndpoints(desiredDc, seeds)
+		actualEndpoints := &corev1.Endpoints{}
+		endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
+
+		if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
+			// If we already have an Endpoints object but no seeds then it probably means all
+			// Cassandra pods are down or not ready for some reason. In this case we will
+			// delete the Endpoints and let it get recreated once we have seed nodes.
+			if len(seeds) == 0 {
+				logger.Info("Deleting endpoints")
+				if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
+					logger.Error(err, "Failed to delete endpoints")
+					return ctrl.Result{}, err
+				}
+			} else {
+				if !utils.CompareAnnotations(actualEndpoints, desiredEndpoints, api.ResourceHashAnnotation) {
+					logger.Info("Updating endpoints", "Endpoints", endpointsKey)
+					actualEndpoints := actualEndpoints.DeepCopy()
+					resourceVersion := actualEndpoints.GetResourceVersion()
+					desiredEndpoints.DeepCopyInto(actualEndpoints)
+					actualEndpoints.SetResourceVersion(resourceVersion)
+					if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
+						logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		} else {
+			if errors.IsNotFound(err) {
+				// If we have seeds then we want to go ahead and create the Endpoints. But
+				// if we don't have seeds, then we don't need to do anything for a couple
+				// of reasons. First, no seeds means that cass-operator has not labeled any
+				// pods as seeds which would be the case when the CassandraDatacenter is f
+				// first created and no pods have reached the ready state. Secondly, you
+				// cannot create an Endpoints object that has both empty Addresses and
+				// empty NotReadyAddresses.
+				if len(seeds) > 0 {
+					logger.Info("Creating endpoints", "Endpoints", endpointsKey)
+					if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
+						logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
+						return ctrl.Result{}, err
+					}
+				}
+			} else {
+				logger.Error(err, "Failed to get endpoints", "Endpoints", endpointsKey)
+				return ctrl.Result{}, err
+			}
 		}
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
@@ -300,26 +362,6 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 			logger.Info("The datacenter is ready")
 
-			endpoints, err := r.SeedsResolver.ResolveSeedEndpoints(ctx, actualDc, remoteClient)
-			if err != nil {
-				logger.Error(err, "Failed to resolve seed endpoints")
-				return ctrl.Result{}, err
-			}
-
-			// The following code will update the AdditionalSeeds property for the
-			// datacenters. We will wind up having endpoints from every DC listed in
-			// the AdditionalSeeds property. We really want to exclude the seeds from
-			// the current DC. It is not a major concern right now as this is a short-term
-			// solution for handling seed addresses.
-			seeds = addSeedEndpoints(seeds, endpoints...)
-
-			// Temporarily do not update seeds on existing dcs. SEE
-			// https://github.com/k8ssandra/k8ssandra-operator/issues/67.
-			// logger.Info("Updating seeds", "Seeds", seeds)
-			// if err = r.updateAdditionalSeeds(ctx, kc, seeds, 0, i); err != nil {
-			//	logger.Error(err, "Failed to update seeds")
-			//	return ctrl.Result{}, err
-			// }
 			actualDcs = append(actualDcs, actualDc)
 		} else {
 			if errors.IsNotFound(err) {
