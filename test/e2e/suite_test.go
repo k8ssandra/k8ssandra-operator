@@ -56,7 +56,7 @@ func TestOperator(t *testing.T) {
 	applyPollingDefaults()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleDatacenterCluster,
+		testFunc:     createSingleDatacenterCluster,
 		fixture:       "single-dc",
 		deployTraefik: true,
 	}))
@@ -66,11 +66,6 @@ func TestOperator(t *testing.T) {
 		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
-	}))
-	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createStargateAndDatacenter,
-		fixture:       "multi-stargate",
-		deployTraefik: true,
 	}))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
