@@ -202,6 +202,14 @@ spec:
                           required:
                           - name
                           type: object
+                        mgmtAPIHeap:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: MgmtAPIHeap defines the amount of memory devoted
+                            to the management api heap.
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
                         networking:
                           description: Networking enables host networking and configures
                             a NodePort ports.
@@ -5396,6 +5404,14 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  mgmtAPIHeap:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: MgmtAPIHeap defines the amount of memory devoted
+                      to the management api heap.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   networking:
                     description: Networking enables host networking and configures
                       a NodePort ports.

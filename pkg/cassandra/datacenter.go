@@ -4,6 +4,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -41,6 +42,7 @@ type DatacenterConfig struct {
 	Networking          *cassdcapi.NetworkingConfig
 	Users               []cassdcapi.CassandraUser
 	PodTemplateSpec     *corev1.PodTemplateSpec
+	MgmtAPIHeap         *resource.Quantity
 }
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -52,6 +54,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	rawConfig, err := CreateJsonConfig(template.CassandraConfig, template.ServerVersion)
 	if err != nil {
 		return nil, err
+	}
+
+	if template.StorageConfig == nil {
+		return nil, DCConfigIncomplete{"template.StorageConfig"}
 	}
 
 	dc := &cassdcapi.CassandraDatacenter{
@@ -88,7 +94,36 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.Resources = *template.Resources
 	}
 
+	if template.MgmtAPIHeap != nil {
+		SetMgmtAPIHeap(dc, template.MgmtAPIHeap)
+	}
+
 	return dc, nil
+}
+
+// SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
+func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
+	if dc.Spec.PodTemplateSpec == nil {
+		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
+		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{{Name: "cassandra"}}
+	}
+	var cassIndex int
+	for i, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
+		if container.Name == "cassandra" {
+			cassIndex = i
+			break
+		}
+	}
+	heapSize.Format = resource.Format(resource.DecimalSI)
+	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
+		dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env,
+		corev1.EnvVar{
+			Name:  "MGMT_API_HEAP_SIZE",
+			Value: string(heapSize.String()),
+		},
+	)
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
@@ -146,6 +181,12 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 		dcConfig.CassandraConfig = clusterTemplate.CassandraConfig
 	} else {
 		dcConfig.CassandraConfig = dcTemplate.CassandraConfig
+	}
+
+	if dcTemplate.MgmtAPIHeap == nil {
+		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
+	} else if dcTemplate.MgmtAPIHeap != nil {
+		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
 	}
 
 	return dcConfig
