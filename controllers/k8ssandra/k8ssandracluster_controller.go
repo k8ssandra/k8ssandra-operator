@@ -284,7 +284,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
 
 		if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
-			// If we already an Endpoints object but no seeds then it probably means all
+			// If we already have an Endpoints object but no seeds then it probably means all
 			// Cassandra pods are down or not ready for some reason. In this case we will
 			// delete the Endpoints and let it get recreated once we have seed nodes.
 			if len(seeds) == 0 {
