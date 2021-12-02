@@ -91,13 +91,17 @@ func TestOperator(t *testing.T) {
 		fixture:  "multi-dc-reaper",
 		deployTraefik: true,
 	}))
-	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createReaperAndDatacenter,
-		fixture: "reaper",
-		deployTraefik: true,
-		skipK8ssandraClusterCleanup:  true,
-		doCassandraDatacenterCleanup: true,
-	}))
+	// Commenting the following test for now. Reaper requires remote JMX to be configured in
+	// Cassandra. JMX configuration is done through the K8ssandraClusterReconciler but this
+	// test does not deploy a K8ssandraCluster.
+	//
+	//t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+	//	testFunc: createReaperAndDatacenter,
+	//	fixture: "reaper",
+	//	deployTraefik: true,
+	//	skipK8ssandraClusterCleanup:  true,
+	//	doCassandraDatacenterCleanup: true,
+	//}))
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,
