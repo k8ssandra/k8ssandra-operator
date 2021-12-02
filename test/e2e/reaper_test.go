@@ -50,13 +50,13 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
 	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
-
-	checkSecretExists(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: jmxSecretKey})
-
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: cqlSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: cqlSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: jmxSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: jmxSecretKey})
+
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	reaper1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
@@ -140,12 +140,12 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	})
 }
 
-func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
+func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
 	secret := &corev1.Secret{}
 	require.Eventually(t, func() bool {
 		return f.Get(ctx, secretKey, secret) == nil
 	}, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval)
-	assert.True(t, utils.IsManagedBy(secret, "test"), "secret is not managed by k8c")
+	assert.True(t, utils.IsManagedBy(secret, kcKey), "secret is not managed by k8c")
 }
 
 func checkReaperReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {

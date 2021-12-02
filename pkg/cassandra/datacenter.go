@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -8,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
 )
 
 // SystemReplication represents the replication factor of the system_auth, system_traces,
@@ -102,27 +102,48 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	if template.MgmtAPIHeap != nil {
-		SetMgmtAPIHeap(dc, template.MgmtAPIHeap)
+		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
 	return dc, nil
 }
 
-func getCassandraContainer(containers []corev1.Container) *corev1.Container {
-	for _, container := range containers {
-		if container.Name == reconciliation.CassandraContainerName {
-			return &container
-		}
+// setMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
+func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
+	if dc.Spec.PodTemplateSpec == nil {
+		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	return nil
+
+	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
+		heapSizeInBytes := heapSize.Value()
+		c.Env = append(c.Env, corev1.EnvVar{Name: mgmtApiHeapSizeEnvVar, Value: fmt.Sprintf("%v", heapSizeInBytes)})
+	})
 }
 
-func getMgmtApiHeapSize() string {
-	val, found := os.LookupEnv(mgmtApiHeapSizeEnvVar)
-	if found {
-		return val
+// UpdateCassandraContainer finds the cassandra container, passes it to f, and then adds it
+// back to the PodTemplateSpec. The Container object is created if necessary before calling
+// f. Only the Name field is initialized.
+func UpdateCassandraContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
+	idx := -1
+	container := &corev1.Container{}
+
+	for i, c := range p.Spec.Containers {
+		if c.Name == reconciliation.CassandraContainerName {
+			idx = i
+			break
+		}
 	}
-	return ""
+
+	if idx == -1 {
+		idx = 0
+		container.Name = reconciliation.CassandraContainerName
+		p.Spec.Containers = make([]corev1.Container, 1)
+	} else {
+		container = &p.Spec.Containers[idx]
+	}
+
+	f(container)
+	p.Spec.Containers[idx] = *container
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is

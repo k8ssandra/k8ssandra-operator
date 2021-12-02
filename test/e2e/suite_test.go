@@ -61,10 +61,10 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createStargateAndDatacenter,
-		fixture: "stargate",
-		deployTraefik: true,
-		skipK8ssandraClusterCleanup: true,
+		testFunc:                     createStargateAndDatacenter,
+		fixture:                      "stargate",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
@@ -74,7 +74,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
-		fixture: "multi-dc",
+		fixture:  "multi-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
@@ -473,11 +473,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
 	err = f.Client.Patch(ctx, k8ssandra, patch)
 	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
-
-	t.Log("check that Stargate test-dc1-stargate is ready")
-	require.Eventually(withStargate(func(stargate *stargateapi.Stargate) bool {
-		return stargate.Status.IsReady()
-	}), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate test-dc1-stargate to become ready")
+	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
 	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
