@@ -56,7 +56,7 @@ func TestOperator(t *testing.T) {
 	applyPollingDefaults()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:     createSingleDatacenterCluster,
+		testFunc:      createSingleDatacenterCluster,
 		fixture:       "single-dc",
 		deployTraefik: true,
 	}))
@@ -72,36 +72,32 @@ func TestOperator(t *testing.T) {
 		fixture:  "multi-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createMultiDatacenterCluster,
-		fixture:  "multi-dc",
+		testFunc:      createMultiDatacenterCluster,
+		fixture:       "multi-dc",
 		deployTraefik: true,
 	}))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc: checkStargateApisWithMultiDcCluster,
-		fixture: "multi-dc-stargate",
+		testFunc:      checkStargateApisWithMultiDcCluster,
+		fixture:       "multi-dc-stargate",
 		deployTraefik: true,
 	}))
 	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleReaper,
-		fixture:  "single-dc-reaper",
+		testFunc:      createSingleReaper,
+		fixture:       "single-dc-reaper",
 		deployTraefik: true,
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createMultiReaper,
-		fixture:  "multi-dc-reaper",
+		testFunc:      createMultiReaper,
+		fixture:       "multi-dc-reaper",
 		deployTraefik: true,
 	}))
-	// Commenting the following test for now. Reaper requires remote JMX to be configured in
-	// Cassandra. JMX configuration is done through the K8ssandraClusterReconciler but this
-	// test does not deploy a K8ssandraCluster.
-	//
-	//t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc: createReaperAndDatacenter,
-	//	fixture: "reaper",
-	//	deployTraefik: true,
-	//	skipK8ssandraClusterCleanup:  true,
-	//	doCassandraDatacenterCleanup: true,
-	//}))
+	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createReaperAndDatacenter,
+		fixture:                      "reaper",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,
