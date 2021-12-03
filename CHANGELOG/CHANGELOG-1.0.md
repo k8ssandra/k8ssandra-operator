@@ -20,9 +20,11 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [FEATURE] [#4](https://github.com/k8ssandra/k8ssandra-operator/issues/4) Add support for Reaper
 * [FEATURE] [#15](https://github.com/k8ssandra/k8ssandra-operator/pull/15) Add finalizer for K8ssandraCluster
-* [FEAUTRE] [#95](https://github.com/k8ssandra/k8ssandra-operator/issues/95) Cluster-scoped deployments
+* [FEATURE] [#95](https://github.com/k8ssandra/k8ssandra-operator/issues/95) Cluster-scoped deployments
 * [FEATURE] [#212](https://github.com/k8ssandra/k8ssandra-operator/issues/212) Allow management API heap size to be configured
 * [ENHANCEMENT] [#210](https://github.com/k8ssandra/k8ssandra-operator/issues/210) Improve seeds handling
+* [ENHANCEMENT] [#27](https://github.com/k8ssandra/k8ssandra-operator/issues/27) Make Reaper readiness and liveness 
+  probes configurable
 * [BUGFIX] [#203](https://github.com/k8ssandra/k8ssandra-operator/issues/203) Superuser secret name not set on CassandraDatacenters
 * [BUGFIX] [#156](https://github.com/k8ssandra/k8ssandra-operator/issues/156) Stargate auth table creation may trigger a table ID mismatch
 
