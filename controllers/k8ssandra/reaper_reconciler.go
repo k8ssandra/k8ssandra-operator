@@ -41,6 +41,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 ) error {
 	logger.Info("Reconciling Reaper user secrets")
 	if kc.Spec.Reaper != nil {
+		kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 		cassandraUserSecretRef := kc.Spec.Reaper.CassandraUserSecretRef
 		jmxUserSecretRef := kc.Spec.Reaper.JmxUserSecretRef
 		if cassandraUserSecretRef == "" {
@@ -55,11 +56,11 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(
 			"ReaperJmxUserSecretRef",
 			jmxUserSecretRef,
 		)
-		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kc.Name, kc.Namespace); err != nil {
+		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kcKey); err != nil {
 			logger.Error(err, "Failed to reconcile Reaper CQL user secret")
 			return err
 		}
-		if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef, kc.Name, kc.Namespace); err != nil {
+		if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef, kcKey); err != nil {
 			logger.Error(err, "Failed to reconcile Reaper JMX user secret")
 			return err
 		}
@@ -98,6 +99,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
 
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -166,7 +168,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 				logger.Error(err, "Failed to get Reaper resource")
 				return ctrl.Result{}, err
 			}
-		} else if utils.IsCreatedByK8ssandraController(actualReaper, kc.Name) {
+		} else if utils.IsCreatedByK8ssandraController(actualReaper, kcKey) {
 			if err = remoteClient.Delete(ctx, actualReaper); err != nil {
 				logger.Error(err, "Failed to delete Reaper resource")
 				return ctrl.Result{}, err
@@ -189,7 +191,7 @@ func (r *K8ssandraClusterReconciler) deleteReapers(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := utils.CreatedByK8ssandraControllerLabels(kc.Name)
+	selector := utils.CreatedByK8ssandraControllerLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	reaperList := &reaperapi.ReaperList{}
 	options := client.ListOptions{
 		Namespace:     namespace,

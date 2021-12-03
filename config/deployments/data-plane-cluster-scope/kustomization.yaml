@@ -4,7 +4,10 @@ kind: Kustomization
 namespace: k8ssandra-operator
 
 resources:
-  - ../control-plane
+  - ../../cass-operator-cluster-scope
+  - ../../default
 
 components:
+  - ../../components/cluster-scope
   - ../../components/data-plane
+  - ../../components/namespace

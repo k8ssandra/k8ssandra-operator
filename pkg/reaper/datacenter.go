@@ -2,7 +2,6 @@ package reaper
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +13,9 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate
 		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
 	addInitContainer(reaperTemplate, dcConfig)
-	modifyMainContainer(dcConfig)
+	cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {
+		c.Env = append(c.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
+	})
 }
 
 func addUser(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
@@ -66,19 +67,5 @@ func addInitContainer(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig 
 			Name:      "server-config",
 			MountPath: "/config",
 		}},
-	})
-}
-
-func modifyMainContainer(dcConfig *cassandra.DatacenterConfig) {
-	for i, container := range dcConfig.PodTemplateSpec.Spec.Containers {
-		if container.Name == reconciliation.CassandraContainerName {
-			container.Env = append(container.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
-			dcConfig.PodTemplateSpec.Spec.Containers[i] = container
-			return
-		}
-	}
-	dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, corev1.Container{
-		Name: reconciliation.CassandraContainerName,
-		Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
 	})
 }

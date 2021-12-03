@@ -166,29 +166,76 @@ namespace: {{ .Namespace }}
 	return ioutil.WriteFile(dest, buf, 0644)
 }
 
-func generateK8ssandraOperatorKustomization(namespace string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+func generateK8ssandraOperatorKustomization(namespace string, clusterScoped bool) error {
+	controlPlaneDir := ""
+	dataPlaneDir := ""
+	controlPlaneTmpl := ""
+	dataPlaneTmpl := ""
+
+	if clusterScoped {
+		controlPlaneDir = "control-plane-cluster-scope"
+		dataPlaneDir = "data-plane-cluster-scope"
+
+		controlPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../../../config/deployments/control-plane
-namespace: {{ .Namespace }}
+- ../../../../config/deployments/control-plane-cluster-scope
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
 `
+
+		dataPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../../../config/deployments/data-plane-cluster-scope
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
+`
+	} else {
+		controlPlaneDir = "control-plane"
+		dataPlaneDir = "data-plane"
+
+		controlPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: {{ .Namespace }}
+
+resources:
+- ../../../../config/deployments/control-plane
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
+`
+
+		dataPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: {{ .Namespace }}
+
+resources:
+- ../../../../config/deployments/data-plane
+
+components:
+- ../../../../config/components/mgmt-api-heap-size
+`
+	}
+
 	k := Kustomization{Namespace: namespace}
 
-	err := generateKustomizationFile("k8ssandra-operator/control-plane", k, tmpl)
+	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), k, controlPlaneTmpl)
 	if err != nil {
 		return err
 	}
 
-	tmpl = `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- ../../../../config/deployments/data-plane
-namespace: {{ .Namespace }}
-`
-	return generateKustomizationFile("k8ssandra-operator/data-plane", k, tmpl)
+	return generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", dataPlaneDir), k, dataPlaneTmpl)
 }
 
 // generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
@@ -269,18 +316,27 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	return nil
 }
 
-// DeployK8ssandraOperator Deploys k8ssandra-operator in the control plane cluster. Note
-// that the control plane cluster can also be one of the data plane clusters. It then
-// deploys the operator in the data plane clusters with the K8ssandraCluster controller
-// disabled.
-func (f *E2eFramework) DeployK8ssandraOperator(namespace string) error {
-	if err := generateK8ssandraOperatorKustomization(namespace); err != nil {
+// DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
+// in the data plane cluster(s). Note that the control plane cluster can also be one of the
+// data plane clusters. It then deploys the operator in the data plane clusters with the
+// K8ssandraCluster controller disabled. When clusterScoped is true the operator is
+// configured to watch all namespaces and is deployed in the k8ssandra-operator namespace.
+func (f *E2eFramework) DeployK8ssandraOperator(namespace string, clusterScoped bool) error {
+	if err := generateK8ssandraOperatorKustomization(namespace, clusterScoped); err != nil {
 		return err
 	}
 
 	baseDir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
-	controlPlane := filepath.Join(baseDir, "control-plane")
-	dataPlane := filepath.Join(baseDir, "data-plane")
+	controlPlane := ""
+	dataPlane := ""
+
+	if clusterScoped {
+		controlPlane = filepath.Join(baseDir, "control-plane-cluster-scope")
+		dataPlane = filepath.Join(baseDir, "data-plane-cluster-scope")
+	} else {
+		controlPlane = filepath.Join(baseDir, "control-plane")
+		dataPlane = filepath.Join(baseDir, "data-plane")
+	}
 
 	err := f.kustomizeAndApply(controlPlane, namespace, f.ControlPlaneContext)
 	if err != nil {
@@ -389,6 +445,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
 
 			if err == nil || !apierrors.IsNotFound(err) {
+				f.logger.Info("waiting for namespace deletion", "error", err)
 				return false, nil
 			}
 		}
@@ -442,7 +499,7 @@ func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, i
 
 // DumpClusterInfo Executes `kubectl cluster-info dump -o yaml` on each cluster. The output
 // is stored under <project-root>/build/test.
-func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
+func (f *E2eFramework) DumpClusterInfo(test string, namespace ...string) error {
 	f.logger.Info("dumping cluster info")
 
 	now := time.Now()
@@ -457,7 +514,13 @@ func (f *E2eFramework) DumpClusterInfo(test, namespace string) error {
 			return err
 		}
 
-		opts := kubectl.ClusterInfoOptions{Options: kubectl.Options{Namespace: namespace, Context: ctx}, OutputDirectory: outputDir}
+		opts := kubectl.ClusterInfoOptions{Options: kubectl.Options{Context: ctx}, OutputDirectory: outputDir}
+		if len(namespace) == 1 {
+			opts.Namespace = namespace[0]
+		} else {
+			opts.Namespaces = namespace
+		}
+
 		if err := kubectl.DumpClusterInfo(opts); err != nil {
 			errs = append(errs, fmt.Errorf("failed to dump cluster info for cluster %s: %w", ctx, err))
 		}

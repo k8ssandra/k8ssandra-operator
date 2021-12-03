@@ -54,12 +54,12 @@ func DefaultSuperuserSecretName(clusterName string) string {
 
 // ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such
 // annotations.
-func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterName, namespace string) error {
+func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kcKey client.ObjectKey) error {
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
 	currentSec := &corev1.Secret{}
-	err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, currentSec)
+	err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: kcKey.Namespace}, currentSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			password, err := generateRandomString(passwordCharacters, 20)
@@ -68,7 +68,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterNa
 			}
 
 			sec := &corev1.Secret{
-				ObjectMeta: getManagedObjectMeta(secretName, namespace, clusterName),
+				ObjectMeta: getManagedObjectMeta(secretName, kcKey),
 				Type:       "Opaque",
 				// Immutable feature is only available from 1.21 and up (beta in 1.19 and up)
 				// Immutable:  true,
@@ -85,8 +85,8 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterNa
 	}
 
 	// It exists or was created: ensure it has proper annotations
-	if !utils.IsManagedBy(currentSec, clusterName) {
-		utils.SetManagedBy(currentSec, clusterName)
+	if !utils.IsManagedBy(currentSec, kcKey) {
+		utils.SetManagedBy(currentSec, kcKey)
 		utils.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}
@@ -95,14 +95,17 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName, clusterNa
 
 // ReconcileReplicatedSecret ensures that the correct replicatedSecret for all managed secrets is created
 func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
-	replicationTargets := make([]string, 0, len(kc.Spec.Cassandra.Datacenters))
+	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.K8sContext != "" {
-			replicationTargets = append(replicationTargets, dcTemplate.K8sContext)
+		if dcTemplate.K8sContext != "" || dcTemplate.Meta.Namespace != "" {
+			replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
+				K8sContextName: dcTemplate.K8sContext,
+				Namespace:      dcTemplate.Meta.Namespace,
+			})
 		}
 	}
 
-	targetRepSec := generateReplicatedSecret(kc.Name, kc.Namespace, replicationTargets)
+	targetRepSec := generateReplicatedSecret(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, replicationTargets)
 	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
 	repSec := &replicationapi.ReplicatedSecret{}
 
@@ -112,7 +115,7 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 		return err
 	}
 
-	err = c.Get(ctx, types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}, repSec)
+	err = c.Get(ctx, key, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("Creating ReplicatedSecret", "ReplicatedSecret", key)
@@ -138,13 +141,13 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 	return nil
 }
 
-func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, namespace, targetContext string) bool {
+func HasReplicatedSecrets(ctx context.Context, c client.Client, kcKey client.ObjectKey, targetContext string) bool {
 	if targetContext == "" {
 		return true
 	}
 
 	repSec := &replicationapi.ReplicatedSecret{}
-	err := c.Get(ctx, types.NamespacedName{Name: clusterName, Namespace: namespace}, repSec)
+	err := c.Get(ctx, types.NamespacedName{Name: kcKey.Name, Namespace: kcKey.Namespace}, repSec)
 	if err != nil {
 		return false
 	}
@@ -158,19 +161,12 @@ func HasReplicatedSecrets(ctx context.Context, c client.Client, clusterName, nam
 	return false
 }
 
-func generateReplicatedSecret(clusterName, namespace string, targetContexts []string) *replicationapi.ReplicatedSecret {
-	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(targetContexts))
-	for _, ctx := range targetContexts {
-		replicationTargets = append(replicationTargets, replicationapi.ReplicationTarget{
-			K8sContextName: ctx,
-		})
-	}
-
+func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []replicationapi.ReplicationTarget) *replicationapi.ReplicatedSecret {
 	return &replicationapi.ReplicatedSecret{
-		ObjectMeta: getManagedObjectMeta(clusterName, namespace, clusterName),
+		ObjectMeta: getManagedObjectMeta(kcKey.Name, kcKey),
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: utils.ManagedByLabels(clusterName),
+				MatchLabels: utils.ManagedByLabels(kcKey),
 			},
 			ReplicationTargets: replicationTargets,
 		},
@@ -208,8 +204,10 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 	return false
 }
 
-func getManagedObjectMeta(name, namespace, clusterName string) metav1.ObjectMeta {
-	meta := metav1.ObjectMeta{Name: name, Namespace: namespace}
-	utils.SetManagedBy(&meta, clusterName)
-	return meta
+func getManagedObjectMeta(name string, kcKey client.ObjectKey) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      name,
+		Namespace: kcKey.Namespace,
+		Labels:    utils.ManagedByLabels(kcKey),
+	}
 }

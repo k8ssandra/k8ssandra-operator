@@ -33,3 +33,6 @@ patchesJson6902:
     - op: replace
       path: /kind
       value: ClusterRoleBinding
+    - op: replace
+      path: /subjects/0/name
+      value: k8ssandra-operator

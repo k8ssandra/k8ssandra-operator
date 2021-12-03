@@ -71,7 +71,9 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperUserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}

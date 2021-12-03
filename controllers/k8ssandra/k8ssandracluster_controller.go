@@ -138,7 +138,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 				hasErrors = true
 			}
 
-			selector := utils.CreatedByK8ssandraControllerLabels(kc.Name)
+			selector := utils.CreatedByK8ssandraControllerLabels(kcKey)
 			stargateList := &stargateapi.StargateList{}
 			options := client.ListOptions{
 				Namespace:     namespace,
@@ -205,7 +205,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		kcLogger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretName)
 	}
 
-	if err := secret.ReconcileSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kc.Name, kc.Namespace); err != nil {
+	if err := secret.ReconcileSecret(ctx, r.Client, kc.Spec.Cassandra.SuperuserSecretName, kcKey); err != nil {
 		kcLogger.Error(err, "Failed to verify existence of superuserSecret")
 		return ctrl.Result{}, err
 	}
@@ -232,9 +232,9 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
-		if !secret.HasReplicatedSecrets(ctx, r.Client, kc.Name, kc.Namespace, dcTemplate.K8sContext) {
+		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
-			kcLogger.Info("Waiting for secret replication")
+			kcLogger.Info("Waiting for replication to complete")
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
 		}
 
@@ -428,6 +428,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
 
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -487,7 +488,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate resource", "Stargate", stargateKey)
 				return ctrl.Result{}, err
 			}
-		} else if utils.IsCreatedByK8ssandraController(actualStargate, kc.Name) {
+		} else if utils.IsCreatedByK8ssandraController(actualStargate, kcKey) {
 			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
 				logger.Error(err, "Failed to delete Stargate resource", "Stargate", stargateKey)
 				return ctrl.Result{}, err
@@ -509,11 +510,12 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 			Name:        stargateKey.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.NameLabel:             api.NameLabelValue,
-				api.PartOfLabel:           api.PartOfLabelValue,
-				api.ComponentLabel:        api.ComponentLabelValueStargate,
-				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterLabel: kc.Name,
+				api.NameLabel:                      api.NameLabelValue,
+				api.PartOfLabel:                    api.PartOfLabelValue,
+				api.ComponentLabel:                 api.ComponentLabelValueStargate,
+				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel:      kc.Name,
+				api.K8ssandraClusterNamespaceLabel: kc.Namespace,
 			},
 		},
 		Spec: stargateapi.StargateSpec{
@@ -621,9 +623,12 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
-		k8cName := utils.GetLabel(mapObj, api.K8ssandraClusterLabel)
-		if k8cName != "" {
-			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: mapObj.GetNamespace(), Name: k8cName}})
+
+		kcName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		kcNamespace := utils.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
+
+		if kcName != "" && kcNamespace != "" {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})
 		}
 		return requests
 	}

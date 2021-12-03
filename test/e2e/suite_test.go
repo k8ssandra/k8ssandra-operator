@@ -55,14 +55,62 @@ func TestOperator(t *testing.T) {
 
 	applyPollingDefaults()
 
-	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, "single-dc", true, createSingleDatacenterCluster))
-	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, "stargate", true, createStargateAndDatacenter))
-	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, "multi-stargate", true, createStargateAndDatacenter))
-	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, "multi-dc", false, createMultiDatacenterCluster))
-	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, "multi-dc-stargate", true, checkStargateApisWithMultiDcCluster))
-	t.Run("CreateSingleReaper", e2eTest(ctx, "single-dc-reaper", true, createSingleReaper))
-	t.Run("CreateMultiReaper", e2eTest(ctx, "multi-dc-reaper", true, createMultiReaper))
-	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, "reaper", true, createReaperAndDatacenter))
+	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc:     createSingleDatacenterCluster,
+		fixture:       "single-dc",
+		deployTraefik: true,
+	}))
+	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createStargateAndDatacenter,
+		fixture:                      "stargate",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
+	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterCluster,
+		fixture:  "multi-dc",
+	}))
+	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterCluster,
+		fixture:  "multi-dc",
+		deployTraefik: true,
+	}))
+	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: checkStargateApisWithMultiDcCluster,
+		fixture: "multi-dc-stargate",
+		deployTraefik: true,
+	}))
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleReaper,
+		fixture:  "single-dc-reaper",
+		deployTraefik: true,
+	}))
+	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiReaper,
+		fixture:  "multi-dc-reaper",
+		deployTraefik: true,
+	}))
+	// Commenting the following test for now. Reaper requires remote JMX to be configured in
+	// Cassandra. JMX configuration is done through the K8ssandraClusterReconciler but this
+	// test does not deploy a K8ssandraCluster.
+	//
+	//t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+	//	testFunc: createReaperAndDatacenter,
+	//	fixture: "reaper",
+	//	deployTraefik: true,
+	//	skipK8ssandraClusterCleanup:  true,
+	//	doCassandraDatacenterCleanup: true,
+	//}))
+	t.Run("ClusterScoped", func(t *testing.T) {
+		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
+			testFunc:             multiDcMultiCluster,
+			fixture:              "multi-dc-cluster-scope",
+			clusterScoped:        true,
+			sutNamespace:         "test-0",
+			additionalNamespaces: []string{"test-1", "test-2"},
+		}))
+	})
 }
 
 func beforeSuite(t *testing.T) {
@@ -96,39 +144,96 @@ func beforeSuite(t *testing.T) {
 	configureZeroLog()
 }
 
+// e2eTestOpts configures an e2e test for execution.
+type e2eTestOpts struct {
+	// testFunc is the test function to be executed.
+	testFunc e2eTestFunc
+
+	// fixture specifies name of a directory containing test manifests to deploy. Only the
+	// basename of the directory needs to be specified. It will be interpreted as a
+	// subdirectory of the test/testdata/fixtures directory.
+	fixture TestFixture
+
+	// clusterScoped specifies whether the operator is configured to watch all namespaces.
+	clusterScoped bool
+
+	// deployTraefik specifies whether to deploy Traefik.
+	deployTraefik bool
+
+	// operatorNamespace is the namespace in which k8ssandra-operator is deployed. When the
+	// operator is configured to only watch a single namespace, the test framework will
+	// configure this to be the same as sutNamespace. When the operator is configured
+	// to watch multiple namespaces, the test framework will configure this to be
+	// k8ssandra-operator.
+	operatorNamespace string
+
+	// sutNamespace is the namespace in which the system under test (typically a
+	// K8ssandraCluster) is deployed. When the operator is configured to watch a single
+	// namespace, it will automatically set based on the fixture name. When the operator
+	// is cluster-scoped, this needs to be explicitly set.
+	sutNamespace string
+
+	// additionalNamespaces provides an optional set of namespaces for use in tests where
+	// the operator is cluster-scoped. For example, the K8ssandraCluster and each of its
+	// CassandraDatacenters can be deployed in different namespaces. The K8ssandraCluster
+	// namespace should be specified by sutNamespace and the CassandraDatacenter namespaces
+	// should be specified here.
+	additionalNamespaces []string
+
+	// skipK8ssandraClusterCleanup is a flag that lets the framework know if deleting the
+	// K8ssandraCluster should be skipped as would be the case for test that only involve
+	// other components like Stargate and Reaper.
+	skipK8ssandraClusterCleanup bool
+
+	// doCassandraDatacenterCleanup is a flag that lets the framework know it should perform
+	// deletions of CassandraDatacenters that are not part of a K8ssandraCluster.
+	doCassandraDatacenterCleanup bool
+}
+
 // A TestFixture specifies the name of a subdirectory under the test/testdata/fixtures
-// directory. It should consist of one or more yaml manifests.
+// directory. It should consist of one or more yaml manifests, typically a manifest for a
+// K8ssandraCluster.
 type TestFixture string
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
 
-func e2eTest(ctx context.Context, fixture TestFixture, deployTraefik bool, test e2eTestFunc) func(*testing.T) {
+func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 		f, err := framework.NewE2eFramework()
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
 
-		namespace := getTestNamespace(fixture)
-		fixtureDir, err := getTestFixtureDir(fixture)
+		setTestNamespaceNames(opts)
 
+		fixtureDir, err := getTestFixtureDir(opts.fixture)
 		if err != nil {
-			t.Fatalf("failed to get fixture directory for %s: %v", fixture, err)
+			t.Fatalf("failed to get fixture directory for %s: %v", opts.fixture, err)
 		}
 
-		err = beforeTest(t, namespace, fixtureDir, f, deployTraefik)
-		defer afterTest(t, namespace, f, deployTraefik)
+		err = beforeTest(t, f, fixtureDir, opts)
+		defer afterTest(t, f, opts)
 
 		if err == nil {
-			test(t, ctx, namespace, f)
+			opts.testFunc(t, ctx, opts.sutNamespace, f)
 		} else {
 			t.Errorf("before test setup failed: %v", err)
 		}
 	}
 }
 
-func getTestNamespace(fixture TestFixture) string {
-	return string(fixture) + "-" + rand.String(6)
+// setTestNamespaceNames initializes the operatorNamespace and sutNamespace fields. When
+// the operator is cluster-scoped, it is always deployed in the k8ssandra-operator
+// namespace. sutNamespace is not set because the K8ssadraCluster can be deployed in any
+// namespace. When the operator is namespace-scoped both operatorNamespace and sutNamespace
+// are set to the same value which is the fixture name plus a random suffix.
+func setTestNamespaceNames(opts *e2eTestOpts) {
+	if opts.clusterScoped {
+		opts.operatorNamespace = "k8ssandra-operator"
+	} else {
+		opts.operatorNamespace = string(opts.fixture) + "-" + rand.String(6)
+		opts.sutNamespace = opts.operatorNamespace
+	}
 }
 
 func getTestFixtureDir(fixture TestFixture) (string, error) {
@@ -139,10 +244,29 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 // beforeTest Creates the test namespace, deploys k8ssandra-operator, and then deploys the
 // test fixture. Deploying k8ssandra-operator includes cass-operator and all of the CRDs
 // required by both operators.
-func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFramework, deployTraefik bool) error {
-	if err := f.CreateNamespace(namespace); err != nil {
-		t.Log("failed to create namespace")
-		return err
+func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts *e2eTestOpts) error {
+	namespaces := make([]string, 0)
+
+	if opts.clusterScoped {
+		namespaces = append(namespaces, opts.sutNamespace)
+	}
+
+	namespaces = append(namespaces, opts.operatorNamespace)
+
+	if len(opts.additionalNamespaces) > 0 {
+		namespaces = append(namespaces, opts.additionalNamespaces...)
+	}
+
+	for _, namespace := range namespaces {
+		if err := f.CreateNamespace(namespace); err != nil {
+			t.Logf("failed to create namespace %s", namespace)
+			return err
+		}
+
+		if err := f.DeployCassandraConfigMap(namespace); err != nil {
+			t.Log("failed to deploy cassandra configmap")
+			return err
+		}
 	}
 
 	if err := f.DeployCertManager(); err != nil {
@@ -155,17 +279,12 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := f.DeployCassandraConfigMap(namespace); err != nil {
-		t.Log("failed to deploy cassandra configmap")
-		return err
-	}
-
-	if err := f.DeployK8sContextsSecret(namespace); err != nil {
+	if err := f.DeployK8sContextsSecret(opts.operatorNamespace); err != nil {
 		t.Logf("failed to deploy k8s contexts secret")
 		return err
 	}
 
-	if err := f.DeployK8ssandraOperator(namespace); err != nil {
+	if err := f.DeployK8ssandraOperator(opts.operatorNamespace, opts.clusterScoped); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
 		return err
 	}
@@ -175,29 +294,29 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := f.DeployK8sClientConfigs(namespace); err != nil {
+	if err := f.DeployK8sClientConfigs(opts.operatorNamespace); err != nil {
 		t.Logf("failed to deploy client configs to point to secret")
 		return err
 	}
 
 	// Kill K8ssandraOperator pod to cause restart and load the client configs
-	if err := f.DeleteK8ssandraOperatorPods(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+	if err := f.DeleteK8ssandraOperatorPods(opts.operatorNamespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
 		t.Logf("failed to restart k8ssandra-operator")
 		return err
 	}
 
-	if err := f.WaitForCassOperatorToBeReady(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+	if err := f.WaitForCassOperatorToBeReady(opts.operatorNamespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
 		return err
 	}
 
-	if err := f.WaitForK8ssandraOperatorToBeReady(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+	if err := f.WaitForK8ssandraOperatorToBeReady(opts.operatorNamespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
 		t.Log("failed waiting for k8ssandra-operator to be ready")
 		return err
 	}
 
-	if deployTraefik {
-		if err := f.DeployTraefik(t, namespace); err != nil {
+	if opts.deployTraefik {
+		if err := f.DeployTraefik(t, opts.operatorNamespace); err != nil {
 			t.Logf("failed to deploy Traefik")
 			return err
 		}
@@ -208,7 +327,7 @@ func beforeTest(t *testing.T, namespace, fixtureDir string, f *framework.E2eFram
 		return err
 	}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: namespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
+	if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
 		t.Log("kubectl apply failed")
 		return err
 	}
@@ -236,53 +355,49 @@ func applyPollingDefaults() {
 	polling.reaperReady.interval = 5 * time.Second
 }
 
-func afterTest(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) {
-	assert.NoError(t, cleanUp(t, namespace, f, deployTraefik), "after test cleanup failed")
+func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {
+	assert.NoError(t, cleanUp(t, f, opts), "after test cleanup failed")
 }
 
-func cleanUp(t *testing.T, namespace string, f *framework.E2eFramework, deployTraefik bool) error {
+func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 
-	if t.Failed() {
-		f.DumpOperatorLogs(namespace)
-		f.DumpCassandraLogs(namespace)
-		f.DumpStargateLogs(namespace)
+	namespaces := make([]string, 0)
+	namespaces = append(namespaces, opts.operatorNamespace)
+	namespaces = append(namespaces, opts.sutNamespace)
+	if len(opts.additionalNamespaces) > 0 {
+		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
 
-	if err := f.DumpClusterInfo(t.Name(), namespace); err != nil {
+	if err := f.DumpClusterInfo(t.Name(), namespaces...); err != nil {
 		t.Logf("failed to dump cluster info: %v", err)
-	}
-
-	if err := f.DeleteK8ssandraClusters(namespace); err != nil {
-		t.Logf("failed to delete K8ssandra clusters: %v", err)
-	}
-
-	if deployTraefik {
-		if err := f.UndeployTraefik(t, namespace); err != nil {
-			t.Logf("failed to undeploy Traefik: %v", err)
-		}
 	}
 
 	timeout := 3 * time.Minute
 	interval := 10 * time.Second
 
-	if err := f.DeleteStargates(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete Stargates: %v", err)
+	if !opts.skipK8ssandraClusterCleanup {
+		if err := f.DeleteK8ssandraClusters(opts.sutNamespace, timeout, interval); err != nil {
+			t.Logf("failed to delete K8sandraCluster: %v", err)
+			return err
+		}
 	}
 
-	if err := f.DeleteReapers(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete Reapers: %v", err)
+	if opts.doCassandraDatacenterCleanup {
+		if err := f.DeleteCassandraDatacenters(opts.sutNamespace, timeout, interval); err != nil {
+			t.Logf("failed to delete CassandraDatacenter: %v", err)
+		}
 	}
 
-	if err := f.DeleteDatacenters(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete datacenters: %v", err)
+	if opts.deployTraefik {
+		if err := f.UndeployTraefik(t, opts.operatorNamespace); err != nil {
+			t.Logf("failed to undeploy Traefik: %v", err)
+		}
 	}
 
-	if err := f.DeleteReplicatedSecrets(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete replicated secrets: %v", err)
-	}
-
-	if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
-		t.Logf("failed to delete namespace: %v", err)
+	for _, namespace := range namespaces {
+		if err := f.DeleteNamespace(namespace, timeout, interval); err != nil {
+			t.Logf("failed to delete namespace: %v", err)
+		}
 	}
 
 	return nil
@@ -365,7 +480,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
 	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")

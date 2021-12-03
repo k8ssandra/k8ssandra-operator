@@ -1,7 +1,9 @@
 package cassandra
 
 import (
+	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -45,6 +47,10 @@ type DatacenterConfig struct {
 	MgmtAPIHeap         *resource.Quantity
 }
 
+const (
+	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
+)
+
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
@@ -66,11 +72,12 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.NameLabel:             api.NameLabelValue,
-				api.PartOfLabel:           api.PartOfLabelValue,
-				api.ComponentLabel:        api.ComponentLabelValueCassandra,
-				api.CreatedByLabel:        api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterLabel: klusterKey.Name,
+				api.NameLabel:                      api.NameLabelValue,
+				api.PartOfLabel:                    api.PartOfLabelValue,
+				api.ComponentLabel:                 api.ComponentLabelValueCassandra,
+				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel:      klusterKey.Name,
+				api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
@@ -95,35 +102,48 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	if template.MgmtAPIHeap != nil {
-		SetMgmtAPIHeap(dc, template.MgmtAPIHeap)
+		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
 	return dc, nil
 }
 
-// SetMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
-func SetMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
+// setMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
+func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
 	if dc.Spec.PodTemplateSpec == nil {
 		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
-		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{{Name: "cassandra"}}
-	}
-	var cassIndex int
-	for i, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-		if container.Name == "cassandra" {
-			cassIndex = i
+
+	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
+		heapSizeInBytes := heapSize.Value()
+		c.Env = append(c.Env, corev1.EnvVar{Name: mgmtApiHeapSizeEnvVar, Value: fmt.Sprintf("%v", heapSizeInBytes)})
+	})
+}
+
+// UpdateCassandraContainer finds the cassandra container, passes it to f, and then adds it
+// back to the PodTemplateSpec. The Container object is created if necessary before calling
+// f. Only the Name field is initialized.
+func UpdateCassandraContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
+	idx := -1
+	container := &corev1.Container{}
+
+	for i, c := range p.Spec.Containers {
+		if c.Name == reconciliation.CassandraContainerName {
+			idx = i
 			break
 		}
 	}
-	heapSize.Format = resource.Format(resource.DecimalSI)
-	dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env = append(
-		dc.Spec.PodTemplateSpec.Spec.Containers[cassIndex].Env,
-		corev1.EnvVar{
-			Name:  "MGMT_API_HEAP_SIZE",
-			Value: string(heapSize.String()),
-		},
-	)
+
+	if idx == -1 {
+		idx = 0
+		container.Name = reconciliation.CassandraContainerName
+		p.Spec.Containers = make([]corev1.Container, 1)
+	} else {
+		container = &p.Spec.Containers[idx]
+	}
+
+	f(container)
+	p.Spec.Containers[idx] = *container
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is

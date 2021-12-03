@@ -56,6 +56,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	localClient := s.ClientCache.GetLocalClient()
 
+	logger.Info("Starting reconciliation", "key", req.NamespacedName)
+
 	rsec := &api.ReplicatedSecret{}
 	if err := localClient.Get(ctx, req.NamespacedName, rsec); err != nil {
 		if errors.IsNotFound(err) {
@@ -67,6 +69,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Deletion and finalizer logic
 	if rsec.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(rsec, replicatedResourceFinalizer) {
+			logger.Info("Starting cleanup")
 
 			// Fetch all secrets from managed cluster.
 			// Remove only those secrets which are not matched by any other ReplicatedSecret and do not have the orphan annotation
@@ -78,7 +81,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					return reconcile.Result{}, err
 				}
 
-				secrets, err := s.fetchAllMatchingSecrets(rsec.Namespace, selector)
+				secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
 				if err != nil {
 					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
@@ -90,8 +93,11 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			SecretsToCheck:
 				for _, sec := range secrets {
+					key := client.ObjectKey{Namespace: sec.Namespace, Name: sec.Name}
+					logger.Info("Checking secret", "key", key)
 					for k, v := range s.selectors {
 						if k.Namespace != sec.Namespace {
+							logger.Info("Skipping secret", "key", key, "namespace", k.Namespace)
 							continue
 						}
 						if k == req.NamespacedName {
@@ -106,15 +112,19 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 						if v.Matches(labels.Set(sec.GetLabels())) {
 							// Another Replication rule is matching this secret, do not delete it
+							logger.Info("Another replication rule matches secret", "key", key)
 							continue SecretsToCheck
 						}
 					}
+					logger.Info("Preparing to delete secret", "key", key)
 					secretsToDelete = append(secretsToDelete, &sec)
 				}
 
 				s.selectorMutex.RUnlock()
 
 				for _, target := range rsec.Spec.ReplicationTargets {
+					logger.Info("Deleting secrets for ReplicationTarget", "Target", target)
+
 					// Only replicate to clusters that are in the ReplicatedSecret's context
 					remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
 					if err != nil {
@@ -122,6 +132,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 						return ctrl.Result{}, err
 					}
 					for _, deleteKey := range secretsToDelete {
+						logger.Info("Deleting secret", "key", client.ObjectKey{Namespace: deleteKey.Namespace, Name: deleteKey.Name},
+							"Cluster", target.K8sContextName)
 						err = remoteClient.Delete(ctx, deleteKey)
 						if err != nil && !errors.IsNotFound(err) {
 							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
@@ -164,7 +176,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	s.selectorMutex.Unlock()
 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
-	secrets, err := s.fetchAllMatchingSecrets(req.Namespace, selector)
+	secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
 	if err != nil {
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
 		return reconcile.Result{Requeue: true}, err
@@ -186,10 +198,15 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	for _, target := range rsec.Spec.ReplicationTargets {
 		// Even if ReplicationTarget includes local client - remove it (it will cause errors)
 		// Only replicate to clusters that are in the ReplicatedSecret's context
-		remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
-		if err != nil {
-			logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
-			return ctrl.Result{Requeue: true}, err
+		var remoteClient client.Client
+		if target.K8sContextName == "" {
+			remoteClient = localClient
+		} else {
+			remoteClient, err = s.ClientCache.GetRemoteClient(target.K8sContextName)
+			if err != nil {
+				logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
+				return ctrl.Result{Requeue: true}, err
+			}
 		}
 
 		cond := api.ReplicationCondition{
@@ -201,12 +218,19 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Iterate all the matching secrets
 		for i := range secrets {
 			sec := &secrets[i]
+			namespace := ""
+			if target.Namespace == "" {
+				namespace = sec.Namespace
+			} else {
+				namespace = target.Namespace
+			}
 			fetchedSecret := &corev1.Secret{}
-			if err = remoteClient.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: sec.Namespace}, fetchedSecret); err != nil {
+			if err = remoteClient.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: namespace}, fetchedSecret); err != nil {
 				if errors.IsNotFound(err) {
 					logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
 					// Create it
 					copiedSecret := sec.DeepCopy()
+					copiedSecret.Namespace = namespace
 					copiedSecret.ResourceVersion = ""
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
@@ -333,12 +357,12 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	return nil
 }
 
-func (s *SecretSyncController) fetchAllMatchingSecrets(namespace string, selector labels.Selector) ([]corev1.Secret, error) {
+func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector) ([]corev1.Secret, error) {
 	secrets := &corev1.SecretList{}
 	listOption := client.ListOptions{
 		LabelSelector: selector,
 	}
-	err := s.ClientCache.GetLocalClient().List(context.TODO(), secrets, &listOption, client.InNamespace(namespace))
+	err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +381,7 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 		requests := []reconcile.Request{}
 		s.selectorMutex.RLock()
 		for k, v := range s.selectors {
-			if secret.GetNamespace() == k.Namespace && v.Matches(labels.Set(secret.GetLabels())) {
+			if v.Matches(labels.Set(secret.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: k})
 			}
 		}

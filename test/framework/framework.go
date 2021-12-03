@@ -241,13 +241,43 @@ func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.Objec
 	return f.Client.Delete(ctx, kc)
 }
 
-func (f *Framework) DeleteK8ssandraClusters(namespace string) error {
-	// TODO This will need to be updated when we add a finalizer in K8ssandraCluster
-	// We will want to block until that finalizer is removed.
-
-	f.logger.Info("deleting all K8ssandraClusters", "Namespace", namespace)
+func (f *Framework) DeleteK8ssandraClusters(namespace string, interval, timeout time.Duration) error {
+	f.logger.Info("Deleting K8ssandraClusters", "Namespace", namespace)
 	k8ssandra := &api.K8ssandraCluster{}
-	return f.Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace))
+
+	if err := f.Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace)); err != nil {
+		f.logger.Error(err, "Failed to delete K8ssandraClusters")
+		return err
+	}
+
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		list := &api.K8ssandraClusterList{}
+		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
+		if err != nil {
+			f.logger.Info("Waiting for k8ssandracluster deletion", "error", err)
+			return false, nil
+		}
+		return len(list.Items) == 0, nil
+	})
+}
+
+func (f *Framework) DeleteCassandraDatacenters(namespace string, interval, timeout time.Duration) error {
+	f.logger.Info("Deleting CassandraDatacenters", "Namespace", namespace)
+	dc := &cassdcapi.CassandraDatacenter{}
+
+	if err := f.Client.DeleteAllOf(context.Background(), dc, client.InNamespace(namespace)); err != nil {
+		f.logger.Error(err, "Failed to delete CassandraDatacenters")
+	}
+
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		list := &cassdcapi.CassandraDatacenterList{}
+		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
+		if err != nil {
+			f.logger.Info("Waiting for CassandraDatacenter deletion", "error", err)
+			return false, nil
+		}
+		return len(list.Items) == 0, nil
+	})
 }
 
 // NewWithDatacenter is a function generator for withDatacenter that is bound to ctx, and key.

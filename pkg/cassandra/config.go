@@ -75,12 +75,8 @@ func (c config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&config)
 }
 
-func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) (config, error) {
+func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) config {
 	cfg := config{cassandraVersion: cassandraVersion}
-
-	if apiConfig == nil {
-		return config{}, DCConfigIncomplete{"CassandraConfig"}
-	}
 
 	if apiConfig.CassandraYaml == nil {
 		cfg.CassandraYaml = &api.CassandraYaml{}
@@ -104,7 +100,7 @@ func newConfig(apiConfig *api.CassandraConfig, cassandraVersion string) (config,
 		cfg.JvmOptions.AdditionalOptions = apiConfig.JvmOptions.AdditionalOptions
 	}
 
-	return cfg, nil
+	return cfg
 }
 
 // ApplySystemReplication adds system properties to configure replication of system
@@ -158,11 +154,12 @@ func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 	dcConfig.CassandraConfig = config
 }
 
-// CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string.
+// CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string. If config is nil
+// then nil, nil is returned
 func CreateJsonConfig(config *api.CassandraConfig, cassandraVersion string) ([]byte, error) {
-	cfg, err := newConfig(config, cassandraVersion)
-	if err != nil {
-		return nil, err
+	if config == nil {
+		return nil, nil
 	}
+	cfg := newConfig(config, cassandraVersion)
 	return json.Marshal(cfg)
 }

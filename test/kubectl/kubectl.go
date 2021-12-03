@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -180,6 +181,8 @@ func Exec(opts Options, pod string, args ...string) (string, error) {
 type ClusterInfoOptions struct {
 	Options
 
+	Namespaces []string
+
 	OutputDirectory string
 }
 
@@ -188,6 +191,10 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 
 	if len(opts.Context) > 0 {
 		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+
+	if len(opts.Namespaces) > 0 {
+		cmd.Args = append(cmd.Args, "--namespaces", strings.Join(opts.Namespaces, ","))
 	}
 
 	if len(opts.Namespace) > 0 {
