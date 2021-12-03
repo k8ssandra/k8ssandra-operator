@@ -4,5 +4,7 @@ metadata:
   name: reaper1
 spec:
   datacenterRef:
-    name: dc1
     # TODO check multi-namespace when cluster-scope is ready
+    name: dc1
+  cassandraUserSecretRef: reaper-cql-secret
+  jmxUserSecretRef: reaper-jmx-secret
