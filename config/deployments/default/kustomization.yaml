@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: k8ssandra-operator
+
+resources:
+  - ../../default
+
+images:
+  - name: k8ssandra/k8ssandra-operator
+    newTag: latest
+
