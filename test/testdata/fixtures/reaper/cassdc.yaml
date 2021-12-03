@@ -53,3 +53,31 @@ spec:
         requests:
           storage: 5Gi
       storageClassName: standard
+  podTemplateSpec:
+    spec:
+      initContainers:
+        - name: reaper-jmx-credentials
+          image: "docker.io/busybox:1.33.1"
+          env:
+            - name: "REAPER_JMX_USERNAME"
+              valueFrom:
+                secretKeyRef:
+                  name: reaper-jmx-secret
+                  key: "username"
+            - name: "REAPER_JMX_PASSWORD"
+              valueFrom:
+                secretKeyRef:
+                  name: reaper-jmx-secret
+                  key: "password"
+          args:
+            - "/bin/sh"
+            - "-c"
+            - "echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" > /config/jmxremote.password"
+          volumeMounts:
+            - name: "server-config"
+              mountPath: "/config"
+      containers:
+        - name: cassandra
+          env:
+            - name: "LOCAL_JMX"
+              value: "no"
