@@ -83,6 +83,7 @@ type K8ssandraClusterCondition struct {
 // K8ssandraStatus defines the observed of a k8ssandra instance
 type K8ssandraStatus struct {
 	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
+	CassandraTelemetry *telemetryapi.TelemetryStatus `json:"cassandra,omitempty"`
 	Stargate  *stargateapi.StargateStatus          `json:"stargate,omitempty"`
 	Reaper    *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
@@ -196,7 +197,7 @@ type CassandraClusterTemplate struct {
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 
-	// Telemetry defines the desired state for telemetry resources in this K8ssandraCluster.
+	// CassandraTelemetry defines the desired state for telemetry resources in this K8ssandraCluster.
 	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
