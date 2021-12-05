@@ -65,39 +65,41 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) checkReaperSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
-	if kc.HasReapers() {
-		logger.Info("Reconciling Reaper schema")
-		dcTemplate := kc.Spec.Cassandra.Datacenters[0]
-		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
-			logger.Error(err, "Failed to get remote client")
-			return result.Error(err)
-		} else if err := r.reconcileReaperSchema(ctx, kc, dcs[0], remoteClient, logger); err != nil {
+func (r *K8ssandraClusterReconciler) recocileReaperSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	if !kc.HasReapers() {
+		return result.Continue()
+	}
+
+	logger.Info("Reconciling Reaper schema")
+	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
+
+	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
+		logger.Error(err, "Failed to get remote client")
+		return result.Error(err)
+	} else {
+		dc := dcs[0]
+		managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+		if err != nil {
+			logger.Error(err, "Failed to create ManagementApiFacade")
 			return result.Error(err)
 		}
-	}
-	return result.Continue()
-}
+		keyspace := reaperapi.DefaultKeyspace
 
-func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
-	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	actualDc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
-	logger logr.Logger,
-) error {
-	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger)
-	if err != nil {
-		return err
+		if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
+			keyspace = kc.Spec.Reaper.Keyspace
+		}
+
+		err = managementApiFacade.EnsureKeyspaceReplication(
+			keyspace,
+			cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...),
+		)
+		if err != nil {
+			logger.Error(err, "Failed to ensure keyspace replication")
+			return result.Error(err)
+		}
+
+		return result.Continue()
 	}
-	keyspace := reaperapi.DefaultKeyspace
-	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
-		keyspace = kc.Spec.Reaper.Keyspace
-	}
-	return managementApiFacade.EnsureKeyspaceReplication(
-		keyspace,
-		cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...),
-	)
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaper(
