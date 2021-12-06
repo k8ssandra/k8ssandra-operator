@@ -13,6 +13,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## Unreleased
+* [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
 
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
 
