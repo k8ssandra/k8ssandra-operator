@@ -8,7 +8,7 @@ import (
 )
 
 type TelemetrySpec struct {
-	Prometheus PrometheusTelemetrySpec `json:"prometheus,omitempty"`
+	Prometheus *PrometheusTelemetrySpec `json:"prometheus,omitempty"`
 }
 type PrometheusTelemetrySpec struct {
 	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra or Stargate).
