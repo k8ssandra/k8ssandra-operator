@@ -82,10 +82,10 @@ type K8ssandraClusterCondition struct {
 
 // K8ssandraStatus defines the observed of a k8ssandra instance
 type K8ssandraStatus struct {
-	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	CassandraTelemetry *telemetryapi.TelemetryStatus `json:"cassandra,omitempty"`
-	Stargate  *stargateapi.StargateStatus          `json:"stargate,omitempty"`
-	Reaper    *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
+	Cassandra          *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
+	CassandraTelemetry *telemetryapi.TelemetryStatus        `json:"cassandra,omitempty"`
+	Stargate           *stargateapi.StargateStatus          `json:"stargate,omitempty"`
+	Reaper             *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
 
 // +kubebuilder:object:root=true
