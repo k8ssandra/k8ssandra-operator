@@ -1,4 +1,5 @@
 // Types in this package are instantiated in the other types in k8ssandra-operator, especially Stargate types and Cassandra types.
+//+kubebuilder:object:generate=true
 package v1alpha1
 
 import (
@@ -6,15 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type Telemetry struct {
-	TelemetrySpec   `json:"status,omitempty"`
-	TelemetryStatus `json:"status,omitempty"`
-}
-
 type TelemetrySpec struct {
 	Prometheus PrometheusTelemetrySpec `json:"prometheus,omitempty"`
 }
-
 type PrometheusTelemetrySpec struct {
 	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra or Stargate).
 	Enabled *bool `json:"enabled,omitempty"`
@@ -23,12 +18,6 @@ type PrometheusTelemetrySpec struct {
 	// Telemetry namespace is the namespace you want the ServiceMonitors to be created in.
 	TelemetryNamespace *string `json:"telemetryNamespace,omitempty"`
 }
-type TelemetryConditionType string
-
-const (
-	TelemetryReady  TelemetryConditionType = "Ready"
-	DependancyError TelemetryConditionType = "DependancyError"
-)
 
 type TelemetryStatus struct {
 	// +optional
@@ -41,3 +30,10 @@ type TelemetryCondition struct {
 	// +optional
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
 }
+
+type TelemetryConditionType string
+
+const (
+	TelemetryReady  TelemetryConditionType = "Ready"
+	DependancyError TelemetryConditionType = "DependancyError"
+)

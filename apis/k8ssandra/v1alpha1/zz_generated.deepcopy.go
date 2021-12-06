@@ -24,6 +24,7 @@ import (
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargatev1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -94,6 +95,11 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.CassandraTelemetry != nil {
+		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
+		*out = new(telemetryv1alpha1.TelemetrySpec)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.MgmtAPIHeap != nil {
 		in, out := &in.MgmtAPIHeap, &out.MgmtAPIHeap
@@ -187,6 +193,11 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		in, out := &in.MgmtAPIHeap, &out.MgmtAPIHeap
 		x := (*in).DeepCopy()
 		*out = &x
+	}
+	if in.CassandraTelemetry != nil {
+		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
+		*out = new(telemetryv1alpha1.TelemetrySpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -512,6 +523,11 @@ func (in *K8ssandraStatus) DeepCopyInto(out *K8ssandraStatus) {
 	if in.Cassandra != nil {
 		in, out := &in.Cassandra, &out.Cassandra
 		*out = new(v1beta1.CassandraDatacenterStatus)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.CassandraTelemetry != nil {
+		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
+		*out = new(telemetryv1alpha1.TelemetryStatus)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Stargate != nil {
