@@ -735,13 +735,6 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	err := f.Client.Create(ctx, cluster)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	dc1PodIps := []string{"10.10.100.1", "10.10.100.2", "10.10.100.3"}
-	dc2PodIps := []string{"10.11.100.1", "10.11.100.2", "10.11.100.3"}
-
-	allPodIps := make([]string, 0, 6)
-	allPodIps = append(allPodIps, dc1PodIps...)
-	allPodIps = append(allPodIps, dc2PodIps...)
-
 	verifySuperUserSecretCreated(ctx, t, f, cluster)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
@@ -917,13 +910,6 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	dc1PodIps := []string{"10.10.100.1", "10.10.100.2", "10.10.100.3"}
-	dc2PodIps := []string{"10.11.100.1", "10.11.100.2", "10.11.100.3"}
-
-	allPodIps := make([]string, 0, 6)
-	allPodIps = append(allPodIps, dc1PodIps...)
-	allPodIps = append(allPodIps, dc2PodIps...)
-
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
@@ -1004,11 +990,6 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
-	t.Log("check that remote seeds are set on dc2")
-	dc2 = &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc2Key, dc2)
-	require.NoError(err, "failed to get dc2")
-
 	sg2Key := framework.ClusterKey{
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
@@ -1045,6 +1026,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		})
 	})
 	require.NoError(err, "failed to patch stargate status")
+
+	k := &api.K8ssandraCluster{}
+	err = f.Get(ctx, kcKey, k)
+	require.NoError(err)
+	require.NotNil(k.Spec.Cassandra.Datacenters[1].Stargate)
 
 	t.Logf("check that stargate %s has not been created", sg2Key)
 	sg2 := &stargateapi.Stargate{}

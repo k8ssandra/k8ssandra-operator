@@ -135,6 +135,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcLogger.Info("All dcs reconciled")
 
+	if len(kc.Spec.Cassandra.Datacenters) > 1 {
+		kcLogger.Info("DEBUG::TEMPLATE", "DcTemplate", kc.Spec.Cassandra.Datacenters[1])
+	}
+
 	if recResult := r.reconcileStargateAuthSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()
 	}
@@ -180,6 +184,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	logger.Info("DEBUG", "DcTemplate", dcTemplate)
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -189,10 +194,10 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	logger = logger.WithValues("Stargate", stargateKey)
 
 	if stargateTemplate != nil {
+		logger.Info("Reconcile Stargate")
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
-		desiredStargateHash := utils.DeepHashString(desiredStargate)
-		desiredStargate.Annotations[api.ResourceHashAnnotation] = desiredStargateHash
+		utils.AddHashAnnotation(desiredStargate, api.ResourceHashAnnotation)
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
@@ -212,7 +217,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to update status for stargate")
 				return result.Error(err)
 			}
-			if actualStargateHash, found := actualStargate.Annotations[api.ResourceHashAnnotation]; !found || actualStargateHash != desiredStargateHash {
+			if !utils.CompareAnnotations(desiredStargate, actualStargate, api.ResourceHashAnnotation) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)
@@ -231,6 +236,8 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 			logger.Info("Stargate is ready")
 		}
 	} else {
+		logger.Info("Stargate not present")
+
 		// Test if Stargate was removed
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
@@ -490,8 +497,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		desiredDcHash := utils.DeepHashString(desiredDc)
-		desiredDc.Annotations[api.ResourceHashAnnotation] = desiredDcHash
+		utils.AddHashAnnotation(desiredDc, api.ResourceHashAnnotation)
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
@@ -512,7 +518,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 
-			if actualHash, found := actualDc.Annotations[api.ResourceHashAnnotation]; !(found && actualHash == desiredDcHash) {
+			if !utils.CompareAnnotations(actualDc, desiredDc, api.ResourceHashAnnotation) {
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
