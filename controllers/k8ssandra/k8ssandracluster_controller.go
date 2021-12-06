@@ -501,62 +501,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		// reconcile seeds
-		//
-		// The following if block was basically taken straight out of cass-operator. See
-		// https://github.com/k8ssandra/k8ssandra-operator/issues/210 for a detailed
-		// explanation of why this is being done.
-		//
-		// TODO Refactor the if block into a separate method/function.
-		// Note: Some other refactoring needs to be done first so that this can be done cleanly.
-		logger.Info("Reconciling seeds")
-		desiredEndpoints := newEndpoints(desiredDc, seeds)
-		actualEndpoints := &corev1.Endpoints{}
-		endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
-
-		if err = remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
-			// If we already have an Endpoints object but no seeds then it probably means all
-			// Cassandra pods are down or not ready for some reason. In this case we will
-			// delete the Endpoints and let it get recreated once we have seed nodes.
-			if len(seeds) == 0 {
-				logger.Info("Deleting endpoints")
-				if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
-					logger.Error(err, "Failed to delete endpoints")
-					return result.Error(err), actualDcs
-				}
-			} else {
-				if !utils.CompareAnnotations(actualEndpoints, desiredEndpoints, api.ResourceHashAnnotation) {
-					logger.Info("Updating endpoints", "Endpoints", endpointsKey)
-					actualEndpoints := actualEndpoints.DeepCopy()
-					resourceVersion := actualEndpoints.GetResourceVersion()
-					desiredEndpoints.DeepCopyInto(actualEndpoints)
-					actualEndpoints.SetResourceVersion(resourceVersion)
-					if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
-						logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
-						return result.Error(err), actualDcs
-					}
-				}
-			}
-		} else {
-			if errors.IsNotFound(err) {
-				// If we have seeds then we want to go ahead and create the Endpoints. But
-				// if we don't have seeds, then we don't need to do anything for a couple
-				// of reasons. First, no seeds means that cass-operator has not labeled any
-				// pods as seeds which would be the case when the CassandraDatacenter is f
-				// first created and no pods have reached the ready state. Secondly, you
-				// cannot create an Endpoints object that has both empty Addresses and
-				// empty NotReadyAddresses.
-				if len(seeds) > 0 {
-					logger.Info("Creating endpoints", "Endpoints", endpointsKey)
-					if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
-						logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
-						return result.Error(err), actualDcs
-					}
-				}
-			} else {
-				logger.Error(err, "Failed to get endpoints", "Endpoints", endpointsKey)
-				return result.Error(err), actualDcs
-			}
+		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, remoteClient, logger); recResult.Completed() {
+			return recResult, actualDcs
 		}
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
