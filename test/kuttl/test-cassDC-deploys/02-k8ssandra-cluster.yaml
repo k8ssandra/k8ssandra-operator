@@ -1,0 +1,5 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands: 
+- command:  kubectl apply -n $NAMESPACE --server-side --force-conflicts -f ../../testdata/samples/k8ssandra-multi-kind.yaml
+  ignoreFailure: false 

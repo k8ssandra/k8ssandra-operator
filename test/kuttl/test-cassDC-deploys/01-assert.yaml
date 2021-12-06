@@ -1,0 +1,22 @@
+# apiVersion: apiextensions.k8s.io/v1
+# kind: CustomResourceDefinition
+#   name: k8ssandraclusters.k8ssandra.io
+# spec:
+#   group: k8ssandra.io
+#   names:
+#     kind: K8ssandraCluster
+#     listKind: K8ssandraClusterList
+#     plural: k8ssandraclusters
+#     singular: k8ssandracluster
+# ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8ssandra-operator
+  namespace: k8ssandra-operator
+status:
+  conditions:
+  - status: "True"
+    type: Available
+  - status: "True"
+    type: Progressing

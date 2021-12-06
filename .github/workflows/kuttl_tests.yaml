@@ -1,0 +1,90 @@
+name: kuttl tests
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - 'CHANGELOG/**'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - 'CHANGELOG/**'
+jobs:
+  build_image:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-  uses: docker/setup-buildx-action@v1
+      - name: Set git parsed values
+        id: vars
+        run: |
+          echo ::set-output name=sha_short::$(git rev-parse --short=8 ${{ github.sha }})
+      - name: Build Docker image
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          file: Dockerfile
+          context: .
+          push: false
+          tags: k8ssandra/k8ssandra-operator:${{ steps.vars.outputs.sha_short }}, k8ssandra/k8ssandra-operator:latest
+          platforms: linux/amd64
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+          outputs: type=docker,dest=/tmp/k8ssandra-k8ssandra-operator.tar
+      - name: Upload k8ssandra-operator image
+        uses: actions/upload-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp/k8ssandra-k8ssandra-operator.tar
+  run_kuttl_test:
+    runs-on: ubuntu-latest
+    needs: [build_image]
+    name: Run kuttl tests
+    strategy:
+      matrix:
+        k8s_version: ["1.21"]
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Cache Docker layers
+      uses: actions/cache@v2
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-  uses: docker/setup-buildx-action@v1
+    - name: Set git parsed values
+      id: vars
+      run: |
+        echo ::set-output name=sha_short::$(git rev-parse --short=8 ${{ github.sha }})
+    - name: Kind kube-proxy issue workaround
+      run: sudo sysctl net/netfilter/nf_conntrack_max=524288
+    - name: Download k8ssandra-operator image
+      uses: actions/download-artifact@v2
+      with:
+        name: k8ssandra-operator
+        path: /tmp
+    - name: Load Docker images
+      run: |
+        docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
+    - name: install kustomize
+      run: |
+        make kustomize
+    - name: Run kuttl-test
+      run: |
+        # We are running tests against k8s 1.20 - 1.22 currently. 
+        # Additional versions must be added in kind config files under ./test/config/kind
+        make KUTTL_KIND_CFG="./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml" kuttl-test

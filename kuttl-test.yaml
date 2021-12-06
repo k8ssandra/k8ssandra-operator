@@ -1,0 +1,13 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+testDirs:
+- ./test/kuttl
+
+startKIND: true
+kindNodeCache: true
+# we are using a k8s 1.21 as default. Other versions can be run using the --kind-config flag.
+kindConfig: test/kuttl/config/kind/w3k1.21.yaml 
+timeout: 1400
+namespace: k8ssandra-operator
+kindContainers:
+- k8ssandra/k8ssandra-operator:latest
