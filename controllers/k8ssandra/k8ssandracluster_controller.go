@@ -135,6 +135,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcLogger.Info("All dcs reconciled")
 
+	if len(kc.Spec.Cassandra.Datacenters) > 1 {
+		kcLogger.Info("DEBUG::TEMPLATE", "DcTemplate", kc.Spec.Cassandra.Datacenters[1])
+	}
+
 	if recResult := r.reconcileStargateAuthSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()
 	}
@@ -180,6 +184,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	logger.Info("DEBUG", "DcTemplate", dcTemplate)
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
