@@ -48,6 +48,9 @@ type K8ssandraClusterSpec struct {
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
 type K8ssandraClusterStatus struct {
+	// +optional
+	Conditions []K8ssandraClusterCondition `json:"conditions,omitempty"`
+
 	// Datacenters maps the CassandraDatacenter name to a K8ssandraStatus. The
 	// naming is a bit confusing but the mapping makes sense because we have a
 	// CassandraDatacenter and then define other components like Stargate and Reaper
@@ -55,6 +58,25 @@ type K8ssandraClusterStatus struct {
 	//
 	// TODO Figure out how to inline this field
 	Datacenters map[string]K8ssandraStatus `json:"datacenters,omitempty"`
+}
+
+type K8ssandraClusterConditionType string
+
+const (
+	// CassandraInitialized is set to true when the Cassandra cluster becomes ready for
+	// the first time. During the life time of the C* cluster CassandraDatacenters may have
+	// their readiness condition change back and forth. Once set, this condition however
+	// does not change.
+	CassandraInitialized = "CassandraInitialized"
+)
+
+type K8ssandraClusterCondition struct {
+	Type   K8ssandraClusterConditionType `json:"type"`
+	Status corev1.ConditionStatus        `json:"status"`
+
+	// LastTransitionTime is the last time the condition transited from one status to another.
+	// +optional
+	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // K8ssandraStatus defines the observed of a k8ssandra instance
@@ -354,6 +376,25 @@ type JvmOptions struct {
 
 	// +optional
 	AdditionalOptions []string `json:"additionalOptions,omitempty"`
+}
+
+func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {
+	for _, condition := range s.Conditions {
+		if condition.Type == conditionType {
+			return condition.Status
+		}
+	}
+	return corev1.ConditionUnknown
+}
+
+func (s *K8ssandraClusterStatus) SetCondition(condition K8ssandraClusterCondition) {
+	for i, c := range s.Conditions {
+		if c.Type == condition.Type {
+			s.Conditions[i] = condition
+			return
+		}
+	}
+	s.Conditions = append(s.Conditions, condition)
 }
 
 func init() {
