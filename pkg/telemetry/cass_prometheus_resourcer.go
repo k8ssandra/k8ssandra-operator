@@ -15,8 +15,8 @@ import (
 
 type CassPrometheusResourcer struct {
 	CassTelemetryResourcer
-	CommonLabels            map[string]string
-	ServiceMonitorName      string
+	CommonLabels       map[string]string
+	ServiceMonitorName string
 }
 
 // Static configuration for ServiceMonitor's endpoints.
@@ -305,6 +305,7 @@ metricRelabelings:
 - action: labeldrop
   regex: prom_name
 `
+
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
 	return map[string]string{
@@ -312,9 +313,10 @@ func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
 		"app.kubernetes.io/part-of":    "k8ssandra",
 		"k8ssandra.io/cluster":         cfg.ClusterName,
 		"k8ssandra.io/datacenter":      cfg.DataCenterName,
-		"k8ssandra.io/monitors": "cassandra-datacenter",
+		"k8ssandra.io/monitors":        "cassandra-datacenter",
 	}
 }
+
 // NewServiceMonitor returns a Prometheus operator ServiceMonitor resource.
 func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, error) {
 	// validate the object we're being passed.
@@ -387,9 +389,6 @@ func (cfg CassPrometheusResourcer) CreateResources(ctx context.Context, client c
 }
 
 // CleanupResources executes the cleanup of any resources on the cluster, once they are no longer required.
-// Note that there is a complexity here; if the telemetry spec is deleted entirely from the manifest,
-// then resources in other namespaces may not be cleaned up, because we may not know what namespace to find them in.
-// TODO: use some sort of UUID to identify the cluster and label the resources it owns, to avoid this problem.
 func (cfg CassPrometheusResourcer) CleanupResources(ctx context.Context, client client.Client) error {
 	var deleteTargets promapi.ServiceMonitorList
 	if err := client.List(
