@@ -4,11 +4,17 @@ package telemetry
 
 import (
 	"context"
-	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -368,6 +374,7 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, 
 			},
 		},
 	}
+	utils.AddHashAnnotation(&sm, k8ssandraapi.ResourceHashAnnotation)
 	return sm, nil
 }
 
@@ -377,13 +384,43 @@ func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
 }
 
 // CreateResources executes the creation of the desired Prometheus resources on the cluster.
-func (cfg CassPrometheusResourcer) CreateResources(ctx context.Context, client client.Client) error {
-	smResource, err := cfg.NewServiceMonitor()
+func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error {
+	desiredSM, err := cfg.NewServiceMonitor()
 	if err != nil {
 		return err
 	}
-	if err := client.Create(ctx, &smResource); err != nil {
-		return err
+	// Logic to handle case where SM does not exist.
+	var actualSM *promapi.ServiceMonitor
+	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, actualSM); err != nil {
+		if errors.IsNotFound(err) {
+			if err := controllerutil.SetControllerReference(actualSM, &desiredSM, client.Scheme()); err != nil {
+				return err
+			} else if err = client.Create(ctx, &desiredSM); err != nil {
+				if errors.IsAlreadyExists(err) {
+					// the read from the local cache didn't catch that the resource was created already; simply requeue until the cache is up-to-date
+					return nil
+				} else {
+					return err
+				}
+			}
+			return nil
+		} else {
+			return err
+		}
+	}
+	// Logic to handle case where SM exists, but is in the wrong state.
+	actualSM = actualSM.DeepCopy()
+	if !utils.CompareAnnotations(actualSM, &desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+		resourceVersion := actualSM.GetResourceVersion()
+		desiredSM.DeepCopyInto(actualSM)
+		actualSM.SetResourceVersion(resourceVersion)
+		if err := controllerutil.SetControllerReference(owner, actualSM, client.Scheme()); err != nil {
+			return err
+		} else if err := client.Update(ctx, actualSM); err != nil {
+			return err
+		} else {
+			return err
+		}
 	}
 	return nil
 }
