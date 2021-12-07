@@ -70,6 +70,13 @@ TEST_ARGS=
 NS ?= k8ssandra-operator
 
 CLUSTER_SCOPE = false
+DEPLOYMENT =
+
+ifeq ($(DEPLOYMENT), )
+	DEPLOY_TARGET =
+else
+	DEPLOY_TARGET = -$(DEPLOYMENT)
+endif
 
 all: build
 
@@ -149,63 +156,55 @@ kind-load-image:
 kind-e2e-test: multi-up e2e-test
 
 single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 
 single-reload: build manifests kustomize docker-build kind-load-image cert-manager
 	kubectl config use-context kind-k8ssandra-0
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	kubectl delete pod -l control-plane=k8ssandra-operator
 	kubectl rollout status deployment k8ssandra-operator
+ifeq ($(DEPLOYMENT), cass-operator-dev)
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
+endif
 
 multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-endif
-## install the data plane
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
+##install the data plane
 	kubectl config use-context kind-k8ssandra-1
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/data-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 ## Create a client config
 	make create-client-config
 ## Restart the control plane
 	kubectl config use-context kind-k8ssandra-0
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
+ifeq ($(DEPLOYMENT), cass-operator-dev)
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
+endif
 
 multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
 # Reload the operator on the control-plane
 	kubectl config use-context kind-k8ssandra-0
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
+ifeq ($(DEPLOYMENT), cass-operator-dev)
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
+endif
 # Reload the operator on the data-plane
 	kubectl config use-context kind-k8ssandra-1
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/data-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/data-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
+ifeq ($(DEPLOYMENT), cass-operator-dev)
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
+endif
 
 single-deploy:
 	kubectl config use-context kind-k8ssandra-0
@@ -239,18 +238,10 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl apply --server-side --force-conflicts -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-endif
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-ifeq ($(CLUSTER_SCOPE),true)
-	$(KUSTOMIZE) build config/deployments/control-plane-cluster-scope | kubectl delete -f -
-else
-	$(KUSTOMIZE) build config/deployments/control-plane | kubectl delete -f -
-endif
+	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl delete -f -
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
