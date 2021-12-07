@@ -6,12 +6,13 @@ package telemetry
 import (
 	"context"
 
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Resourcer interface {
-	CreateResources(ctx context.Context, client client.Client) error
+	UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error
 	CleanupResources(ctx context.Context, client client.Client) error
 }
 
@@ -23,7 +24,7 @@ type CassTelemetryResourcer struct {
 }
 
 // CreateResources creates the required resources for a Cassandra DC and for the telemetry provider specified in the TelemetrySpec.
-func (cfg CassTelemetryResourcer) CreateResources(ctx context.Context, client client.Client) error {
+func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error {
 	if cfg.TelemetrySpec == nil {
 		return TelemetryConfigIncomplete{"cfg.TelemetrySpec"}
 	}
@@ -35,7 +36,7 @@ func (cfg CassTelemetryResourcer) CreateResources(ctx context.Context, client cl
 				ServiceMonitorName:     GetCassandraPromSMName(cfg),
 				CommonLabels:           cfg.TelemetrySpec.Prometheus.CommonLabels,
 			}
-			if err := promResourcer.CreateResources(ctx, client); err != nil {
+			if err := promResourcer.UpdateResources(ctx, client, owner); err != nil {
 				return err
 			}
 		}
