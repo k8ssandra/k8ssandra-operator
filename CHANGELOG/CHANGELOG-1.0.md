@@ -14,6 +14,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 * [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
+* [CHANGE] [#237](https://github.com/k8ssandra/k8ssandra-operator/issues/237) Add cass-operator dev kustomization deployment
 
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
 

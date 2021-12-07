@@ -4,5 +4,8 @@ kind: Kustomization
 namespace: k8ssandra-operator
 
 resources:
-  - ../default
-  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=v1.9.0
+  - ../control-plane
+
+images:
+  - name: k8ssandra/cass-operator
+    newTag: latest
