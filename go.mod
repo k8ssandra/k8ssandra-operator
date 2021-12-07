@@ -3,24 +3,39 @@ module github.com/k8ssandra/k8ssandra-operator
 go 1.16
 
 require (
+	cloud.google.com/go v0.93.3 // indirect
+	github.com/Azure/go-autorest/autorest v0.11.20 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.15 // indirect
 	github.com/Jeffail/gabs v1.4.0
+	github.com/aws/aws-sdk-go v1.40.37 // indirect
 	github.com/bombsimon/logrusr v1.1.0
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/datastax/go-cassandra-native-protocol v0.0.0-20210829124742-a80a54434112
 	github.com/go-logr/logr v0.4.0
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gruntwork-io/terratest v0.37.7
 	github.com/k8ssandra/cass-operator v1.9.0
 	github.com/k8ssandra/reaper-client-go v0.3.1-0.20210617111910-fe2ba92f8efb
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
+	github.com/prometheus/common v0.32.1 // indirect
 	github.com/rs/zerolog v1.20.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
+	go.uber.org/atomic v1.9.0 // indirect
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
+	golang.org/x/net v0.0.0-20210903162142-ad29c8ab022f // indirect
+	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
+	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34 // indirect
 	gopkg.in/resty.v1 v1.12.0
-	k8s.io/api v0.22.2
-	k8s.io/apimachinery v0.22.2
-	k8s.io/client-go v0.22.2
+	k8s.io/api v0.22.3
+	k8s.io/apimachinery v0.22.3
+	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/component-base v0.22.3 // indirect
 	k8s.io/kubernetes v1.22.2
+	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 	sigs.k8s.io/controller-runtime v0.9.2
 )
 
