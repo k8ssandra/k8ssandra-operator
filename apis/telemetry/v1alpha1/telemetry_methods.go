@@ -23,12 +23,12 @@ func (a *TelemetrySpec) Merge(b *TelemetrySpec) *TelemetrySpec {
 
 // Merge takes an object a and merges another object, b's values into it, overwriting any which conflict.
 func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusTelemetrySpec {
-	// TODO: This method is brittle. It must be updated whenever any field is added to `PrometheusTelemetrySpec``. It
+	// TODO: This method is brittle. It must be updated whenever any field is added to `PrometheusTelemetrySpec`. It
 	// would be best to replace these methods with a generic client side `Merge()` based on the k8s strategic merge
 	// patch logic.
 	out := PrometheusTelemetrySpec{}
 	if a == nil && b == nil {
-		return &out
+		return nil
 	} else if b == nil {
 		return a
 	} else if a == nil {
@@ -46,9 +46,6 @@ func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusT
 	}
 	if b.Enabled == nil {
 		out.Enabled = a.Enabled
-	}
-	if b.TelemetryNamespace == nil {
-		out.TelemetryNamespace = a.TelemetryNamespace
 	}
 	return &out
 
