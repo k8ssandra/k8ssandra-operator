@@ -12,11 +12,10 @@ type TelemetrySpec struct {
 }
 type PrometheusTelemetrySpec struct {
 	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra or Stargate).
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled *bool `json:"enabled,omitempty"` // A bool flag required here to disambiguate when e.g. the cluster should have telemetry turned on but one DC should have it explicitly turned off.
 	// CommonLabels are applied to all serviceMonitors created.
+	// +optional
 	CommonLabels map[string]string `json:"commonLabels,omitempty"`
-	// Telemetry namespace is the namespace you want the ServiceMonitors to be created in.
-	TelemetryNamespace *string `json:"telemetryNamespace,omitempty"`
 }
 
 type TelemetryStatus struct {
@@ -35,5 +34,5 @@ type TelemetryConditionType string
 
 const (
 	TelemetryReady  TelemetryConditionType = "Ready"
-	DependancyError TelemetryConditionType = "DependancyError"
+	DependencyError TelemetryConditionType = "DependencyError"
 )

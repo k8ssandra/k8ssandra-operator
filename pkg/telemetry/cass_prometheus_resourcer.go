@@ -1,20 +1,22 @@
+// This file holds functions and types relating to prometheus telemetry for Cassandra Datacenters.
+
 package telemetry
 
 import (
+	"context"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type CassandraSMConfig struct {
-	CassandraNamespace      *string
-	ServiceMonitorName      *string
-	ServiceMonitorNameSpace *string
-	DataCenterName          *string
+type CassPrometheusResourcer struct {
+	CassTelemetryResourcer
 	CommonLabels            map[string]string
-	ClusterName             *string
+	ServiceMonitorName      string
 }
 
 // Static configuration for ServiceMonitor's endpoints.
@@ -303,12 +305,30 @@ metricRelabelings:
 - action: labeldrop
   regex: prom_name
 `
-
+// mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
+func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/managed-by": "k8ssandra-operator",
+		"app.kubernetes.io/part-of":    "k8ssandra",
+		"k8ssandra.io/cluster":         cfg.ClusterName,
+		"k8ssandra.io/datacenter":      cfg.DataCenterName,
+		"k8ssandra.io/monitors": "cassandra-datacenter",
+	}
+}
 // NewServiceMonitor returns a Prometheus operator ServiceMonitor resource.
-func (cfg CassandraSMConfig) NewServiceMonitor() (promapi.ServiceMonitor, error) {
+func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, error) {
 	// validate the object we're being passed.
-	if cfg.CassandraNamespace == nil || cfg.ServiceMonitorName == nil || cfg.ServiceMonitorNameSpace == nil || cfg.DataCenterName == nil || cfg.ClusterName == nil {
+	if cfg.CassandraNamespace == "" || cfg.ServiceMonitorName == "" || cfg.DataCenterName == "" || cfg.ClusterName == "" {
 		return promapi.ServiceMonitor{}, TelemetryConfigIncomplete{}
+	}
+	// Overwrite any CommonLabels the user has asked for if they conflict with the labels essential for the functioning of the operator.
+	var mergedLabels = map[string]string{}
+	for k, v := range cfg.CommonLabels {
+		mergedLabels[k] = v
+	}
+	mustLabels := cfg.mustLabels()
+	for k, v := range mustLabels {
+		mergedLabels[k] = v
 	}
 	var endpointsObject []promapi.Endpoint
 	err := yaml.NewYAMLOrJSONDecoder(strings.NewReader(endpointsString), 4).Decode(endpointsObject)
@@ -316,13 +336,16 @@ func (cfg CassandraSMConfig) NewServiceMonitor() (promapi.ServiceMonitor, error)
 		return promapi.ServiceMonitor{}, err
 	}
 	sm := promapi.ServiceMonitor{
-		metav1.TypeMeta{},
-		metav1.ObjectMeta{
-			Name:      *cfg.ServiceMonitorName,
-			Namespace: *cfg.ServiceMonitorNameSpace,
-			Labels:    cfg.CommonLabels,
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceMonitor",
+			APIVersion: "v1",
 		},
-		promapi.ServiceMonitorSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.ServiceMonitorName,
+			Namespace: cfg.CassandraNamespace,
+			Labels:    mergedLabels,
+		},
+		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app.kubernetes.io/managed-by": "cass-operator",
@@ -330,12 +353,12 @@ func (cfg CassandraSMConfig) NewServiceMonitor() (promapi.ServiceMonitor, error)
 					//"cassandra.datastax.com/prom-metrics": "true",
 				},
 				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "cassandra.datastax.com/cluster", Operator: "In", Values: []string{*cfg.ClusterName}},
-					{Key: "cassandra.datastax.com/datacenter", Operator: "In", Values: []string{*cfg.DataCenterName}},
+					{Key: "cassandra.datastax.com/cluster", Operator: "In", Values: []string{cfg.ClusterName}},
+					{Key: "cassandra.datastax.com/datacenter", Operator: "In", Values: []string{cfg.DataCenterName}},
 				},
 			},
 			NamespaceSelector: promapi.NamespaceSelector{
-				MatchNames: []string{*cfg.CassandraNamespace},
+				MatchNames: []string{cfg.CassandraNamespace},
 			},
 			TargetLabels: []string{
 				"cassandra.datastax.com/cluster",
@@ -344,5 +367,44 @@ func (cfg CassandraSMConfig) NewServiceMonitor() (promapi.ServiceMonitor, error)
 		},
 	}
 	return sm, nil
+}
 
+// GetCassandraPromSMName gets the name for our ServiceMonitors based on
+func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
+	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "prom-servicemonitor"}, "-")
+}
+
+// CreateResources executes the creation of the desired Prometheus resources on the cluster.
+func (cfg CassPrometheusResourcer) CreateResources(ctx context.Context, client client.Client) error {
+	smResource, err := cfg.NewServiceMonitor()
+	if err != nil {
+		return err
+	}
+	if err := client.Create(ctx, &smResource); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CleanupResources executes the cleanup of any resources on the cluster, once they are no longer required.
+// Note that there is a complexity here; if the telemetry spec is deleted entirely from the manifest,
+// then resources in other namespaces may not be cleaned up, because we may not know what namespace to find them in.
+// TODO: use some sort of UUID to identify the cluster and label the resources it owns, to avoid this problem.
+func (cfg CassPrometheusResourcer) CleanupResources(ctx context.Context, client client.Client) error {
+	var deleteTargets promapi.ServiceMonitorList
+	if err := client.List(
+		ctx,
+		&deleteTargets,
+		runtimeclient.InNamespace(cfg.CassandraNamespace),
+		runtimeclient.MatchingLabels(cfg.mustLabels())); err != nil {
+		return err
+	}
+	if len(deleteTargets.Items) > 0 {
+		for _, i := range deleteTargets.Items {
+			if err := client.Delete(ctx, i); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
