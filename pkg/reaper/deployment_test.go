@@ -12,10 +12,11 @@ import (
 )
 
 func TestNewDeployment(t *testing.T) {
-	image := "test/reaper:latest"
+	mainImage := &reaperapi.ContainerImage{Repository: "test", Name: "reaper", PullPolicy: corev1.PullAlways}
+	initImage := &reaperapi.ContainerImage{Repository: "test", Name: "reaper-init", PullPolicy: corev1.PullNever}
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
-	reaper.Spec.ImagePullPolicy = "Always"
+	reaper.Spec.ContainerImage = mainImage
+	reaper.Spec.InitContainerImage = initImage
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityLocal
@@ -50,7 +51,7 @@ func TestNewDeployment(t *testing.T) {
 
 	container := podSpec.Containers[0]
 
-	assert.Equal(t, image, container.Image)
+	assert.Equal(t, "docker.io/test/reaper:latest", container.Image)
 	assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy)
 	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
 		{
@@ -86,8 +87,8 @@ func TestNewDeployment(t *testing.T) {
 	assert.Len(t, podSpec.InitContainers, 1)
 
 	initContainer := podSpec.InitContainers[0]
-	assert.Equal(t, image, initContainer.Image)
-	assert.Equal(t, corev1.PullAlways, initContainer.ImagePullPolicy)
+	assert.Equal(t, "docker.io/test/reaper-init:latest", initContainer.Image)
+	assert.Equal(t, corev1.PullNever, initContainer.ImagePullPolicy)
 	assert.ElementsMatch(t, initContainer.Env, []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
@@ -253,8 +254,73 @@ func TestLivenessProbe(t *testing.T) {
 	assert.Equal(t, expected, deployment.Spec.Template.Spec.Containers[0].LivenessProbe)
 }
 
+func Test_computeImage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *reaperapi.ContainerImage
+		expected string
+	}{
+		{"nil", nil, DefaultReaperImage},
+		{"non nil with defaults", &reaperapi.ContainerImage{}, "docker.io/thelastpickle/cassandra-reaper:latest"},
+		{"non nil with custom values", &reaperapi.ContainerImage{
+			Registry:   "localhost:5000",
+			Repository: "k8ssandra",
+			Name:       "reaper",
+			Tag:        "1.2.3",
+		}, "localhost:5000/k8ssandra/reaper:1.2.3"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImage(tt.input)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_computeImagePullPolicy(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *reaperapi.ContainerImage
+		expected corev1.PullPolicy
+	}{
+		{"nil", nil, corev1.PullAlways},
+		{"non nil with defaults", &reaperapi.ContainerImage{}, corev1.PullAlways},
+		{"non nil with non-latest", &reaperapi.ContainerImage{Tag: "1.2.3"}, corev1.PullIfNotPresent},
+		{"non nil with custom values", &reaperapi.ContainerImage{PullPolicy: corev1.PullNever}, corev1.PullNever},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImagePullPolicy(tt.input)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_computeImagePullSecrets(t *testing.T) {
+	tests := []struct {
+		name     string
+		main     *reaperapi.ContainerImage
+		init     *reaperapi.ContainerImage
+		expected []corev1.LocalObjectReference
+	}{
+		{"nil", nil, nil, nil},
+		{"non nil with defaults", &reaperapi.ContainerImage{}, &reaperapi.ContainerImage{}, nil},
+		{
+			"non nil with custom values",
+			&reaperapi.ContainerImage{PullSecretRef: &corev1.LocalObjectReference{Name: "my-main-secret"}},
+			&reaperapi.ContainerImage{PullSecretRef: &corev1.LocalObjectReference{Name: "my-init-secret"}},
+			[]corev1.LocalObjectReference{{Name: "my-main-secret"}, {Name: "my-init-secret"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImagePullSecrets(tt.main, tt.init)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestTolerations(t *testing.T) {
-	image := "test/reaper:latest"
 	tolerations := []corev1.Toleration{
 		{
 			Key:      "key1",
@@ -271,7 +337,6 @@ func TestTolerations(t *testing.T) {
 	}
 
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
 	reaper.Spec.Tolerations = tolerations
 
 	deployment := NewDeployment(reaper, newTestDatacenter())
@@ -279,7 +344,6 @@ func TestTolerations(t *testing.T) {
 }
 
 func TestAffinity(t *testing.T) {
-	image := "test/reaper:latest"
 	affinity := &corev1.Affinity{
 		NodeAffinity: &corev1.NodeAffinity{
 			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -298,7 +362,6 @@ func TestAffinity(t *testing.T) {
 		},
 	}
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
 	reaper.Spec.Affinity = affinity
 
 	deployment := NewDeployment(reaper, newTestDatacenter())
@@ -306,13 +369,11 @@ func TestAffinity(t *testing.T) {
 }
 
 func TestContainerSecurityContext(t *testing.T) {
-	image := "test/reaper:latest"
 	readOnlyRootFilesystemOverride := true
 	securityContext := &corev1.SecurityContext{
 		ReadOnlyRootFilesystem: &readOnlyRootFilesystemOverride,
 	}
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
 	reaper.Spec.SecurityContext = securityContext
 
 	deployment := NewDeployment(reaper, newTestDatacenter())
@@ -324,7 +385,6 @@ func TestContainerSecurityContext(t *testing.T) {
 }
 
 func TestSchemaInitContainerSecurityContext(t *testing.T) {
-	image := "test/reaper:latest"
 	readOnlyRootFilesystemOverride := true
 	initContainerSecurityContext := &corev1.SecurityContext{
 		ReadOnlyRootFilesystem: &readOnlyRootFilesystemOverride,
@@ -334,7 +394,6 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 	}
 
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
 	reaper.Spec.SecurityContext = nonInitContainerSecurityContext
 	reaper.Spec.InitContainerSecurityContext = initContainerSecurityContext
 
@@ -347,13 +406,11 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 }
 
 func TestPodSecurityContext(t *testing.T) {
-	image := "test/reaper:latest"
 	runAsUser := int64(8675309)
 	podSecurityContext := &corev1.PodSecurityContext{
 		RunAsUser: &runAsUser,
 	}
 	reaper := newTestReaper()
-	reaper.Spec.Image = image
 	reaper.Spec.PodSecurityContext = podSecurityContext
 
 	deployment := NewDeployment(reaper, newTestDatacenter())

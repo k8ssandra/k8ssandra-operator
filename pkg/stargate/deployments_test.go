@@ -1,6 +1,7 @@
 package stargate
 
 import (
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"strings"
 	"testing"
 
@@ -82,8 +83,8 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	assert.Equal(t, "stargateio/stargate-3_11:v"+api.DefaultStargateVersion, container.Image)
-	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
+	assert.Equal(t, DefaultStargate3Image, container.Image)
+	assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy)
 
 	assert.EqualValues(t, resource.MustParse("200m"), container.Resources.Requests[corev1.ResourceCPU])
 	assert.EqualValues(t, resource.MustParse("512Mi"), container.Resources.Requests[corev1.ResourceMemory])
@@ -550,5 +551,72 @@ func affinityForRack(dc *cassdcapi.CassandraDatacenter, rackName string) *corev1
 	return &corev1.Affinity{
 		NodeAffinity:    computeNodeAffinity(dc, rackName),
 		PodAntiAffinity: computePodAntiAffinity(false, dc, rackName),
+	}
+}
+
+func Test_computeImage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *stargateapi.ContainerImage
+		version  ClusterVersion
+		expected string
+	}{
+		{"nil 3", nil, ClusterVersion3, DefaultStargate3Image},
+		{"nil 4", nil, ClusterVersion4, DefaultStargate4Image},
+		{"non nil with defaults 3", &stargateapi.ContainerImage{}, ClusterVersion3, "docker.io/stargateio/stargate-3_11:latest"},
+		{"non nil with defaults 4", &stargateapi.ContainerImage{}, ClusterVersion4, "docker.io/stargateio/stargate-4_0:latest"},
+		{"non nil with custom values", &stargateapi.ContainerImage{
+			Registry:   "localhost:5000",
+			Repository: "k8ssandra",
+			Name:       "stargate",
+			Tag:        "1.2.3",
+		}, ClusterVersion("irrelevant"), "localhost:5000/k8ssandra/stargate:1.2.3"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImage(tt.input, tt.version)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_computeImagePullPolicy(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *stargateapi.ContainerImage
+		expected corev1.PullPolicy
+	}{
+		{"nil", nil, corev1.PullAlways},
+		{"non nil with defaults", &stargateapi.ContainerImage{}, corev1.PullAlways},
+		{"non nil with non-latest", &stargateapi.ContainerImage{Tag: "1.2.3"}, corev1.PullIfNotPresent},
+		{"non nil with custom values", &stargateapi.ContainerImage{PullPolicy: corev1.PullNever}, corev1.PullNever},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImagePullPolicy(tt.input)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_computeImagePullSecrets(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *stargateapi.ContainerImage
+		expected []corev1.LocalObjectReference
+	}{
+		{"nil", nil, nil},
+		{"non nil with defaults", &stargateapi.ContainerImage{}, nil},
+		{
+			"non nil with custom values",
+			&stargateapi.ContainerImage{PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"}},
+			[]corev1.LocalObjectReference{{Name: "my-secret"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := computeImagePullSecrets(tt.input)
+			assert.Equal(t, tt.expected, actual)
+		})
 	}
 }

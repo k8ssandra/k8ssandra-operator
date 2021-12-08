@@ -8,3 +8,13 @@ spec:
     name: dc1
   cassandraUserSecretRef: reaper-cql-secret
   jmxUserSecretRef: reaper-jmx-secret
+  containerImage:
+    repository: thelastpickle
+    name: cassandra-reaper
+    tag: "3.0.0"
+    pullPolicy: Always
+  initContainerImage:
+    repository: thelastpickle
+    name: cassandra-reaper
+    tag: "3.0.0"
+    pullPolicy: IfNotPresent

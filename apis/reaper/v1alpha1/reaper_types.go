@@ -31,14 +31,15 @@ const (
 
 type ReaperDatacenterTemplate struct {
 
-	// The image to use.
-	// +kubebuilder:default="thelastpickle/cassandra-reaper:3.0.0"
+	// The image to use for the Reaper pod main container.
+	// The default is "thelastpickle/cassandra-reaper:3.0.0".
 	// +optional
-	Image string `json:"image,omitempty"`
+	ContainerImage *ContainerImage `json:"containerImage,omitempty"`
 
-	// +kubebuilder:default="IfNotPresent"
+	// The image to use for tje Reaper pod init container (that performs schema migrations).
+	// The default is "thelastpickle/cassandra-reaper:3.0.0".
 	// +optional
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	InitContainerImage *ContainerImage `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
 	// +optional
@@ -79,6 +80,38 @@ type ReaperDatacenterTemplate struct {
 	// migrations.
 	// +optional
 	InitContainerSecurityContext *corev1.SecurityContext `json:"initContainerSecurityContext,omitempty"`
+}
+
+type ContainerImage struct {
+
+	// The docker registry to use. Defaults to docker.io.
+	// +kubebuilder:default="docker.io"
+	// +optional
+	Registry string `json:"registry,omitempty"`
+
+	// The docker repository to use. Defaults to "thelastpickle".
+	// +kubebuilder:default="thelastpickle"
+	// +optional
+	Repository string `json:"repository,omitempty"`
+
+	// The image name to use. Defaults to "cassandra-reaper".
+	// +kubebuilder:default="cassandra-reaper"
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// The image tag to use. Defaults to "latest".
+	// +kubebuilder:default="latest"
+	// +optional
+	Tag string `json:"tag,omitempty"`
+
+	// The image pull policy to use. Defaults to "Always" if the tag is "latest", otherwise to "IfNotPresent".
+	// +optional
+	// +kubebuilder:validation:Enum:=Always;IfNotPresent;Never
+	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
+
+	// The secret to use when pulling the image from private repositories.
+	// +optional
+	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.
