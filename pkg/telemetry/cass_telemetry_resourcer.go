@@ -6,6 +6,7 @@ package telemetry
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +22,7 @@ type CassTelemetryResourcer struct {
 	DataCenterName     string
 	ClusterName        string
 	TelemetrySpec      *telemetry.TelemetrySpec
+	Logger             logr.Logger
 }
 
 // CreateResources creates the required resources for a Cassandra DC and for the telemetry provider specified in the TelemetrySpec.
@@ -37,6 +39,7 @@ func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client cl
 				CommonLabels:           cfg.TelemetrySpec.Prometheus.CommonLabels,
 			}
 			if err := promResourcer.UpdateResources(ctx, client, owner); err != nil {
+				cfg.Logger.Error(err, "failed to update prometheus resources")
 				return err
 			}
 		}
@@ -53,6 +56,7 @@ func (cfg CassTelemetryResourcer) CleanupResources(ctx context.Context, client c
 		CommonLabels:           cfg.TelemetrySpec.Prometheus.CommonLabels,
 	}
 	if err := promResourcer.CleanupResources(ctx, client); err != nil {
+		cfg.Logger.Error(err, "error cleaning up telemetry resources")
 		return err
 	}
 	return nil

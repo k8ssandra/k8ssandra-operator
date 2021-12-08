@@ -394,37 +394,45 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 	if err != nil {
 		return err
 	}
+	cfg.CassTelemetryResourcer.Logger.Info("checking whether Prometheus ServiceMonitor for Cassandra already exists")
 	// Logic to handle case where SM does not exist.
-	var actualSM *promapi.ServiceMonitor
-	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, actualSM); err != nil {
+	var actualSM promapi.ServiceMonitor
+	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, &actualSM); err != nil {
 		if errors.IsNotFound(err) {
-			if err := controllerutil.SetControllerReference(actualSM, &desiredSM, client.Scheme()); err != nil {
+			cfg.CassTelemetryResourcer.Logger.Info("Prometheus ServiceMonitor for Cassandra not found, creating")
+			if err := controllerutil.SetControllerReference(owner, &desiredSM, client.Scheme()); err != nil {
+				cfg.CassTelemetryResourcer.Logger.Error(err, "could not set controller reference for ServiceMonitor", "owner", owner)
 				return err
 			} else if err = client.Create(ctx, &desiredSM); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created already; simply requeue until the cache is up-to-date
 					return nil
 				} else {
+					cfg.CassTelemetryResourcer.Logger.Error(err, "could not create ServiceMonitor resource", "resource", desiredSM, "owner", owner)
 					return err
 				}
 			}
 			return nil
 		} else {
+			cfg.CassTelemetryResourcer.Logger.Error(err, "could not get ServiceMonitor resource")
 			return err
 		}
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
-	actualSM = actualSM.DeepCopy()
-	if !utils.CompareAnnotations(actualSM, &desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	actualSM = *actualSM.DeepCopy()
+	if !utils.CompareAnnotations(&actualSM, &desiredSM, k8ssandraapi.ResourceHashAnnotation) {
 		resourceVersion := actualSM.GetResourceVersion()
-		desiredSM.DeepCopyInto(actualSM)
+		desiredSM.DeepCopyInto(&actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
-		if err := controllerutil.SetControllerReference(owner, actualSM, client.Scheme()); err != nil {
+		if err := controllerutil.SetControllerReference(owner, &actualSM, client.Scheme()); err != nil {
+			cfg.CassTelemetryResourcer.Logger.Error(err, "could not set controller reference for ServiceMonitor", "resource", desiredSM, "owner", owner)
 			return err
-		} else if err := client.Update(ctx, actualSM); err != nil {
+		} else if err := client.Update(ctx, &actualSM); err != nil {
+			cfg.CassTelemetryResourcer.Logger.Error(err, "could not update ServiceMonitor resource", "resource", desiredSM, "owner", owner)
 			return err
 		} else {
-			return err
+			cfg.CassTelemetryResourcer.Logger.Info("successfully updated the Cassandra ServiceMonitor")
+			return nil
 		}
 	}
 	return nil
