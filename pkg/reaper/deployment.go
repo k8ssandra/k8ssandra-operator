@@ -32,16 +32,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		},
 	}
 
-	healthProbe := &corev1.Probe{
-		Handler: corev1.Handler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path: "/healthcheck",
-				Port: intstr.FromInt(8081),
-			},
-		},
-		InitialDelaySeconds: 45,
-		PeriodSeconds:       15,
-	}
+	readinessProbe := computeProbe(reaper.Spec.ReadinessProbe)
+	livenessProbe := computeProbe(reaper.Spec.LivenessProbe)
 
 	envVars := []corev1.EnvVar{
 		{
@@ -164,8 +156,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 									Protocol:      "TCP",
 								},
 							},
-							LivenessProbe:  healthProbe,
-							ReadinessProbe: healthProbe,
+							ReadinessProbe: readinessProbe,
+							LivenessProbe:  livenessProbe,
 							Env:            envVars,
 						},
 					},
@@ -179,6 +171,26 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 	addAuthEnvVars(deployment, authVars)
 	utils.AddHashAnnotation(deployment, k8ssandraapi.ResourceHashAnnotation)
 	return deployment
+}
+
+func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
+	var probe *corev1.Probe
+	if probeTemplate != nil {
+		probe = probeTemplate.DeepCopy()
+	} else {
+		probe = &corev1.Probe{
+			InitialDelaySeconds: 45,
+			PeriodSeconds:       15,
+		}
+	}
+	// The handler cannot be user-specified, so force it now
+	probe.Handler = corev1.Handler{
+		HTTPGet: &corev1.HTTPGetAction{
+			Path: "/healthcheck",
+			Port: intstr.FromInt(8081),
+		},
+	}
+	return probe
 }
 
 func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {

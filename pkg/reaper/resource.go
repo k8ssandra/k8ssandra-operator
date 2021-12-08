@@ -117,6 +117,18 @@ func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.Reaper
 		coalesced.AutoScheduling = clusterTemplate.AutoScheduling
 	}
 
+	if dcTemplate != nil && dcTemplate.ReadinessProbe != nil {
+		coalesced.ReadinessProbe = dcTemplate.ReadinessProbe
+	} else if clusterTemplate != nil && clusterTemplate.ReadinessProbe != nil {
+		coalesced.ReadinessProbe = clusterTemplate.ReadinessProbe
+	}
+
+	if dcTemplate != nil && dcTemplate.LivenessProbe != nil {
+		coalesced.LivenessProbe = dcTemplate.LivenessProbe
+	} else if clusterTemplate != nil && clusterTemplate.LivenessProbe != nil {
+		coalesced.LivenessProbe = clusterTemplate.LivenessProbe
+	}
+
 	if dcTemplate != nil && dcTemplate.Affinity != nil {
 		coalesced.Affinity = dcTemplate.Affinity
 	} else if clusterTemplate != nil && clusterTemplate.Affinity != nil {

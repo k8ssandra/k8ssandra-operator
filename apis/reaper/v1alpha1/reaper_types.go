@@ -51,6 +51,14 @@ type ReaperDatacenterTemplate struct {
 	// +optional
 	AutoScheduling AutoScheduling `json:"autoScheduling,omitempty"`
 
+	// LivenessProbe sets the Reaper liveness probe. Leave nil to use defaults.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// ReadinessProbe sets the Reaper readiness probe. Leave nil to use defaults.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
 	// Affinity applied to the Reaper pods.
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`

@@ -205,6 +205,54 @@ func TestNewDeployment(t *testing.T) {
 	assert.Equal(t, probe, container.ReadinessProbe)
 }
 
+func TestReadinessProbe(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.ReadinessProbe = &corev1.Probe{
+		Handler: corev1.Handler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/custom",
+				Port: intstr.FromInt(8080),
+			},
+		},
+		InitialDelaySeconds: 123,
+	}
+	deployment := NewDeployment(reaper, newTestDatacenter())
+	expected := &corev1.Probe{
+		Handler: corev1.Handler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/healthcheck",
+				Port: intstr.FromInt(8081),
+			},
+		},
+		InitialDelaySeconds: 123,
+	}
+	assert.Equal(t, expected, deployment.Spec.Template.Spec.Containers[0].ReadinessProbe)
+}
+
+func TestLivenessProbe(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.LivenessProbe = &corev1.Probe{
+		Handler: corev1.Handler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/custom",
+				Port: intstr.FromInt(8080),
+			},
+		},
+		InitialDelaySeconds: 123,
+	}
+	deployment := NewDeployment(reaper, newTestDatacenter())
+	expected := &corev1.Probe{
+		Handler: corev1.Handler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: "/healthcheck",
+				Port: intstr.FromInt(8081),
+			},
+		},
+		InitialDelaySeconds: 123,
+	}
+	assert.Equal(t, expected, deployment.Spec.Template.Spec.Containers[0].LivenessProbe)
+}
+
 func TestTolerations(t *testing.T) {
 	image := "test/reaper:latest"
 	tolerations := []corev1.Toleration{
