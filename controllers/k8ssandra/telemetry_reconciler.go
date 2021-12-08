@@ -28,21 +28,26 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		DataCenterName:     actualDc.Name,
 		ClusterName:        kc.Name,
 	}
+	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name, "datacenter", actualDc.Name)
 	switch {
-	case mergedSpec != nil:
-		logger.Info("non-nil TelemetrySpec found", "datacenter", actualDc.Name)
-		dcCfg.TelemetrySpec = mergedSpec
-		fallthrough
-	case mergedSpec.Prometheus != nil:
-		logger.Info("Prometheus config found", "datacenter", actualDc.Name)
-		fallthrough
-	case mergedSpec.Prometheus.Enabled == nil:
+	case mergedSpec == nil:
 		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
+	case mergedSpec.Prometheus == nil:
+		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
+		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
+			return ctrl.Result{}, err
+		}
+	case mergedSpec.Prometheus.Enabled == nil:
+		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name, "mergedSpec.Prometheus.Enabled", mergedSpec.Prometheus.Enabled)
+		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
+			return ctrl.Result{}, err
+		}
 	case *mergedSpec.Prometheus.Enabled:
-		logger.Info("Prometheus config found", "datacenter", actualDc.Name)
+		logger.Info("Prometheus config found", "datacenter", actualDc.Name, "mergedSpec.Prometheus.Enabled", mergedSpec.Prometheus.Enabled)
+		dcCfg.TelemetrySpec = mergedSpec
 		if err := dcCfg.UpdateResources(ctx, remoteClient, kc); err != nil {
 			return ctrl.Result{}, err
 		}
