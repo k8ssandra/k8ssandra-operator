@@ -21,6 +21,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	logger logr.Logger,
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
+	logger.Info("reconciling telemetry", "cluster", kc.Name, "datacenter", actualDc.Name)
 	mergedSpec := kc.Spec.Cassandra.CassandraTelemetry.Merge(dcTemplate.CassandraTelemetry)
 	dcCfg := telemetry.CassTelemetryResourcer{
 		CassandraNamespace: kc.Namespace,

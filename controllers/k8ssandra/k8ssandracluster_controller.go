@@ -161,10 +161,10 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAndReaper(ctx context.Cont
 		} else if recResult := r.reconcileReaper(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
 		} else if result, err := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); !result.IsZero() || err != nil {
-			return result.Error()
+			return reconcile.Result.Requeue
 		}
-		return result.Continue()
 	}
+	return result.Continue()
 }
 
 // SetupWithManager sets up the controller with the Manager.
