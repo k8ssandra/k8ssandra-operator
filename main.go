@@ -51,6 +51,7 @@ import (
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -68,6 +69,7 @@ func init() {
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
+	utilruntime.Must(promapi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
