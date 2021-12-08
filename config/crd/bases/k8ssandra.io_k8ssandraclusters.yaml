@@ -45,6 +45,27 @@ spec:
                   cluster where each DC should be deployed, node affinity (via racks),
                   individual C* node settings, JVM settings, and more.
                 properties:
+                  cassandraTelemetry:
+                    description: CassandraTelemetry defines the desired state for
+                      telemetry resources in this K8ssandraCluster. If telemetry configurations
+                      are defined, telemetry resources will be deployed to integrate
+                      with a user-provided monitoring solution (at present, only support
+                      for Prometheus is available).
+                    properties:
+                      prometheus:
+                        properties:
+                          commonLabels:
+                            additionalProperties:
+                              type: string
+                            description: CommonLabels are applied to all serviceMonitors
+                              created.
+                            type: object
+                          enabled:
+                            description: Enable the creation of Prometheus serviceMonitors
+                              for this resource (Cassandra or Stargate).
+                            type: boolean
+                        type: object
+                    type: object
                   cluster:
                     description: Cluster is the name of the cluster. This corresponds
                       to cluster_name in cassandra.yaml.
@@ -120,6 +141,27 @@ spec:
                     description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
+                        cassandraTelemetry:
+                          description: Telemetry defines the desired state for telemetry
+                            resources in this datacenter. If telemetry configurations
+                            are defined, telemetry resources will be deployed to integrate
+                            with a user-provided monitoring solution (at present,
+                            only support for Prometheus is available).
+                          properties:
+                            prometheus:
+                              properties:
+                                commonLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: CommonLabels are applied to all serviceMonitors
+                                    created.
+                                  type: object
+                                enabled:
+                                  description: Enable the creation of Prometheus serviceMonitors
+                                    for this resource (Cassandra or Stargate).
+                                  type: boolean
+                              type: object
+                          type: object
                         config:
                           description: CassandraConfig is configuration settings that
                             are applied to cassandra.yaml and jvm-options for 3.11.x
@@ -9308,6 +9350,26 @@ spec:
                             credentials were last upserted to the management API
                           format: date-time
                           type: string
+                      type: object
+                    cassandraTelemetry:
+                      properties:
+                        conditions:
+                          items:
+                            properties:
+                              lastTransitionTime:
+                                description: LastTransitionTime is the last time the
+                                  condition transited from one status to another.
+                                format: date-time
+                                type: string
+                              status:
+                                type: string
+                              type:
+                                type: string
+                            required:
+                            - status
+                            - type
+                            type: object
+                          type: array
                       type: object
                     reaper:
                       description: ReaperStatus defines the observed state of Reaper
