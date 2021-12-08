@@ -27,6 +27,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		CassandraNamespace: kc.Namespace,
 		DataCenterName:     actualDc.Name,
 		ClusterName:        kc.Name,
+		Logger:             logger,
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name, "datacenter", actualDc.Name)
 	switch {
