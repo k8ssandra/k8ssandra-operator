@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -451,7 +452,12 @@ func (r *K8ssandraClusterReconciler) reconcileReplicatedSecret(ctx context.Conte
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
 	kcKey := utils.GetKey(kc)
-	systemReplication := cassandra.ComputeSystemReplication(kc)
+
+	systemReplication, err := r.checkSystemReplication(ctx, kc, logger)
+	if err != nil {
+		logger.Error(err, "System replication check failed")
+		return result.Error(err), nil
+	}
 
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 
@@ -474,7 +480,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
-		cassandra.ApplySystemReplication(dcConfig, systemReplication)
+		cassandra.ApplySystemReplication(dcConfig, *systemReplication)
 		if !cassandra.IsCassandra3(dcConfig.ServerVersion) && kc.HasStargates() {
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
@@ -541,6 +547,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			logger.Info("The datacenter is ready")
 
 			actualDcs = append(actualDcs, actualDc)
+
+			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+				return recResult, actualDcs
+			}
+
 		} else {
 			if errors.IsNotFound(err) {
 				// cassdc doesn't exist, we'll create it
@@ -570,6 +581,63 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+// checkSystemReplication checks for the SystemReplicationAnnotation on kc. If found, the
+// JSON value is unmarshalled and returned. If not found, the SystemReplication is computed
+// and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
+// Lastly, kc is patched so that the changes are persisted,
+func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
+	if val, found := kc.Annotations[api.SystemReplicationAnnotation]; found {
+		replication := &cassandra.SystemReplication{}
+		if err := json.Unmarshal([]byte(val), replication); err == nil {
+			return replication, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	replication := cassandra.ComputeSystemReplication(kc)
+	bytes, err := json.Marshal(replication)
+
+	if err != nil {
+		logger.Error(err, "Failed to marshal SystemReplication", "SystemReplication", replication)
+		return nil, err
+	}
+
+	patch := client.MergeFromWithOptions(kc.DeepCopy())
+	if kc.Annotations == nil {
+		kc.Annotations = make(map[string]string)
+	}
+	kc.Annotations[api.SystemReplicationAnnotation] = string(bytes)
+	if err = r.Patch(ctx, kc, patch); err != nil {
+		logger.Error(err, "Failed to apply "+api.SystemReplicationAnnotation+" patch")
+		return nil, err
+	}
+
+	return &replication, nil
+}
+
+func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(ctx context.Context, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	if err != nil {
+		logger.Error(err, "Failed to create ManagementApiFacade")
+		return result.Error(err)
+	}
+
+	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
+	replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
+
+	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
+
+	for _, ks := range keyspaces {
+		if err := managementApiFacade.EnsureKeyspaceReplication(ks, replication); err != nil {
+			logger.Error(err, "Failed to update replication", "keyspace", ks)
+			return result.Error(err)
+		}
+	}
+
+	return result.Continue()
 }
 
 func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {

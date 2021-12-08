@@ -2,11 +2,13 @@ package k8ssandra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/stretchr/testify/mock"
+	"reflect"
 	"testing"
 	"time"
 
@@ -132,6 +134,8 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
@@ -296,6 +300,8 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
+	verifySystemReplicationAnnotationSet(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -454,6 +460,8 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
+	verifySystemReplicationAnnotationSet(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -605,6 +613,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
 
+	verifySystemReplicationAnnotationSet(ctx, t, f, kluster)
+
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -738,6 +748,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	verifySuperUserSecretCreated(ctx, t, f, cluster)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, cluster)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -913,6 +925,8 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1163,6 +1177,41 @@ func verifySuperUserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 		}
 		return true
 	}, timeout, interval, "failed to verify that the default superuser secret was created")
+}
+
+func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	expectedReplication := cassandra.ComputeSystemReplication(kc)
+
+	assert.Eventually(t, func() bool {
+		kc = &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
+			return false
+		}
+
+		val, found := kc.Annotations[api.SystemReplicationAnnotation]
+		if !found {
+			return false
+		}
+
+		actualReplication := &cassandra.SystemReplication{}
+		if err := json.Unmarshal([]byte(val), actualReplication); err != nil {
+			t.Logf("Failed to unmarshal system replication annotation: %v", err)
+			return false
+		}
+
+		return reflect.DeepEqual(expectedReplication, *actualReplication)
+	}, timeout, interval, "Failed to verify that the system replication annotation was set correctly")
+
+	kc = &api.K8ssandraCluster{}
+	if err := f.Client.Get(ctx, key, kc); err != nil {
+		assert.NoError(t, err, "Failed to check system replication annotation. Could not retrieve the K8ssandraCluster")
+		return
+	}
+
 }
 
 func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {

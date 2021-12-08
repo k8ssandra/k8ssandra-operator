@@ -3,6 +3,12 @@ package v1alpha1
 const (
 	ResourceHashAnnotation = "k8ssandra.io/resource-hash"
 
+	// SystemReplicationAnnotation provides the initial replication of system keyspaces
+	// (system_auth, system_distributed, system_traces) encoded as JSON. This annotation
+	// is set on a K8ssandraCluster when it is first created. The value does not change
+	// regardless of whether the replication of the system keyspaces changes.
+	SystemReplicationAnnotation = "k8ssandra.io/system-replication"
+
 	NameLabel      = "app.kubernetes.io/name"
 	NameLabelValue = "k8ssandra-operator"
 

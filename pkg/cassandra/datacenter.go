@@ -19,8 +19,8 @@ import (
 // Note that when we can configure the replication per DC, this can be changed to a
 // map[string]int.
 type SystemReplication struct {
-	Datacenters       []string
-	ReplicationFactor int
+	Datacenters       []string `json:"datacenters"`
+	ReplicationFactor int      `json:"replicationFactor"`
 }
 
 // DatacenterConfig provides the configuration to be applied to the CassandraDatacenter.
