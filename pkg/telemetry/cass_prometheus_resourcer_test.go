@@ -5,6 +5,7 @@ package telemetry
 import (
 	"testing"
 
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,8 +15,27 @@ func TestCassPrometheusResourcer_UpdateResources_SUCCESS(t *testing.T) {
 }
 
 //TestNewServiceMonitor_SUCCESS tests that a new service monitor is successfully returned.
+
 func TestNewServiceMonitor_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
+	enabled := true
+	cfg := CassPrometheusResourcer{
+		CassTelemetryResourcer: CassTelemetryResourcer{
+			CassandraNamespace: "test-namespace",
+			DataCenterName:     "test-dc-name",
+			ClusterName:        "test-cluster-name",
+			TelemetrySpec: &telemetryapi.TelemetrySpec{
+				Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+					Enabled: &enabled,
+				},
+			},
+		},
+		ServiceMonitorName: "test-servicemonitor",
+	}
+	actualSM, err := cfg.NewServiceMonitor()
+	if err != nil {
+		assert.Fail(t, "error creating new service monitor", err)
+	}
+	assert.Equal(t, "prometheus", actualSM.Spec.Endpoints[0].Port)
 }
 
 // TestCassPrometheusResourcer_CleanupResources_FAIL_Incomplete tests that the correct error type is returned when an incomplete
