@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TelemetrySpec_Merge_test tests that the TelemetrySpec Merge function behaves as expected.
-func TelemetrySpec_Merge_test(t *testing.T) {
+// TestTelemetrySpec_Merge tests that the TelemetrySpec Merge function behaves as expected.
+func TestTelemetrySpec_Merge(t *testing.T) {
 	assert.Fail(t, "not implemented")
 }
-func PrometheusTelemetrySpec_Merge_test(t *testing.T) {
+func TestPrometheusTelemetrySpec_Merge(t *testing.T) {
 	assert.Fail(t, "not implemented")
 }
