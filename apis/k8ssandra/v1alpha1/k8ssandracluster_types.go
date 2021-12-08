@@ -83,7 +83,7 @@ type K8ssandraClusterCondition struct {
 // K8ssandraStatus defines the observed of a k8ssandra instance
 type K8ssandraStatus struct {
 	Cassandra          *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	CassandraTelemetry *telemetryapi.TelemetryStatus        `json:"cassandratelemetry,omitempty"`
+	CassandraTelemetry *telemetryapi.TelemetryStatus        `json:"cassandraTelemetry,omitempty"`
 	Stargate           *stargateapi.StargateStatus          `json:"stargate,omitempty"`
 	Reaper             *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
