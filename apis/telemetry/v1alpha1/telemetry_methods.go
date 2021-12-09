@@ -1,5 +1,17 @@
 package v1alpha1
 
+import (
+	"errors"
+
+	"reflect"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/go-logr/logr"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+)
+
 // Merge takes an object a and merges another object, b's values into it, overwriting any which conflict.
 func (a *TelemetrySpec) Merge(b *TelemetrySpec) *TelemetrySpec {
 	// TODO: This method is brittle. It must be updated whenever any field is added to `TelemetrySpec``. It
@@ -48,5 +60,42 @@ func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusT
 		out.Enabled = a.Enabled
 	}
 	return &out
+}
 
+func (tspec *TelemetrySpec) IsValid(client client.Client, logger logr.Logger) (bool, error) {
+	promInstalled, err := IsPromInstalled(client, logger)
+	if err != nil {
+		return false, err
+	}
+	switch {
+	case tspec == nil:
+		return true, nil
+	case tspec.Prometheus == nil:
+		return true, nil
+	case tspec.Prometheus.Enabled == nil:
+		return true, nil
+	case *tspec.Prometheus.Enabled && !promInstalled:
+		return false, nil
+	case *tspec.Prometheus.Enabled && promInstalled:
+		return true, nil
+	}
+	return false, errors.New("something unexpected happened when determining if telemetry spec was valid")
+}
+
+// IsPromInstalled returns true if Prometheus is installed in the cluster, false otherwise.
+func IsPromInstalled(client client.Client, logger logr.Logger) (bool, error) {
+	promKinds, err := client.RESTMapper().KindsFor(promapi.SchemeGroupVersion.WithResource("servicemonitors"))
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			logger.Info("Prometheus does not appear to be installed, proceeding")
+			return false, nil
+		} else {
+			logger.Error(err, "unable to tell if Prometheus installed", "errtype", reflect.TypeOf(err))
+			return false, err
+		}
+	} else if promKinds != nil {
+		logger.Info("Prometheus appears to be installed, adding to scheme", "promKinds", promKinds)
+		return true, nil
+	}
+	return false, errors.New("something unexpected happened when determining whether prometheus is installed")
 }

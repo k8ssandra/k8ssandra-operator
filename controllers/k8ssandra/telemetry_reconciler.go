@@ -4,6 +4,7 @@ package k8ssandra
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -30,6 +31,15 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		Logger:             logger,
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name, "datacenter", actualDc.Name)
+	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
+	validConfig, err := mergedSpec.IsValid(remoteClient, logger)
+	if err != nil {
+		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
+	}
+	if !validConfig {
+		return ctrl.Result{}, errors.New("Telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it?")
+	}
+	// Determine if we want a cleanup or a resource update.
 	switch {
 	case mergedSpec == nil:
 		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
