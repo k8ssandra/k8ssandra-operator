@@ -12,7 +12,6 @@ import (
 //TestNewServiceMonitor_SUCCESS tests that a new service monitor is successfully returned.
 
 func TestNewServiceMonitor_SUCCESS(t *testing.T) {
-	enabled := true
 	cfg := CassPrometheusResourcer{
 		CassTelemetryResourcer: CassTelemetryResourcer{
 			CassandraNamespace: "test-namespace",
@@ -20,7 +19,7 @@ func TestNewServiceMonitor_SUCCESS(t *testing.T) {
 			ClusterName:        "test-cluster-name",
 			TelemetrySpec: &telemetryapi.TelemetrySpec{
 				Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-					Enabled: &enabled,
+					Enabled: true,
 				},
 			},
 		},

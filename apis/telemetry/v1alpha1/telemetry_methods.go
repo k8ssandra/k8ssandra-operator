@@ -56,7 +56,7 @@ func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusT
 			out.CommonLabels[k] = v
 		}
 	}
-	if b.Enabled == nil {
+	if a.Enabled {
 		out.Enabled = a.Enabled
 	}
 	return &out
@@ -72,11 +72,9 @@ func (tspec *TelemetrySpec) IsValid(client client.Client, logger logr.Logger) (b
 		return true, nil
 	case tspec.Prometheus == nil:
 		return true, nil
-	case tspec.Prometheus.Enabled == nil:
-		return true, nil
-	case *tspec.Prometheus.Enabled && !promInstalled:
+	case tspec.Prometheus.Enabled && !promInstalled:
 		return false, nil
-	case *tspec.Prometheus.Enabled && promInstalled:
+	case tspec.Prometheus.Enabled && promInstalled:
 		return true, nil
 	}
 	return false, errors.New("something unexpected happened when determining if telemetry spec was valid")

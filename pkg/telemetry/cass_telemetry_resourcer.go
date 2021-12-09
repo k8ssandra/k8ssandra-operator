@@ -32,7 +32,7 @@ func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client cl
 	}
 	// Check for Prometheus resources and instantiate if required.
 	if cfg.TelemetrySpec.Prometheus != nil {
-		if *cfg.TelemetrySpec.Prometheus.Enabled {
+		if cfg.TelemetrySpec.Prometheus.Enabled {
 			promResourcer := CassPrometheusResourcer{
 				CassTelemetryResourcer: cfg,
 				ServiceMonitorName:     GetCassandraPromSMName(cfg),
