@@ -50,10 +50,10 @@ func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client cl
 // CleanupResources finds resources created by CassTelemetryResourcer and cleans them up.
 func (cfg CassTelemetryResourcer) CleanupResources(ctx context.Context, client client.Client) error {
 	//Cleanup prometheus resources
+
 	promResourcer := CassPrometheusResourcer{
 		CassTelemetryResourcer: cfg,
 		ServiceMonitorName:     GetCassandraPromSMName(cfg),
-		CommonLabels:           cfg.TelemetrySpec.Prometheus.CommonLabels,
 	}
 	if err := promResourcer.CleanupResources(ctx, client); err != nil {
 		cfg.Logger.Error(err, "error cleaning up telemetry resources")
