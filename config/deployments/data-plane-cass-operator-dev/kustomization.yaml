@@ -4,7 +4,8 @@ kind: Kustomization
 namespace: k8ssandra-operator
 
 resources:
-  - ../control-plane-cass-operator-dev
+  - ../default
+  - ../../../../cass-operator/config/deployments/default
 
 components:
   - ../../components/data-plane

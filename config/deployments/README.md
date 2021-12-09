@@ -26,6 +26,11 @@ cass-operator will be deployed in the `cass-operator` namespace.
 
 ### cass-operator-dev
 
-Configure the cass-operator Deployment to use the `latest` image. This is intended to be used when you want to use a local, dev build of cass-operator.
+This is intended to be used when you want to use a local, dev build 
+of cass-operator.
+
+Requires the cass-operator git repo to be present locally. It is assumed to be in the same directory as the k8ssandra-operator project. 
+ 
+Configures the cass-operator Deployment to use the `latest` image.
 
 Both k8ssandra-operator and cass-operator are deployed in the `k8ssandra-operator` namespace and are namespace-scoped.
