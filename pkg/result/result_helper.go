@@ -32,23 +32,14 @@ func (d done) Output() (ctrl.Result, error) {
 }
 
 type callBackSoon struct {
-<<<<<<< HEAD
 	after time.Duration
-=======
-	secs int
->>>>>>> 9602a8b (start using result.ReconcileResult)
 }
 
 func (c callBackSoon) Completed() bool {
 	return true
 }
 func (c callBackSoon) Output() (ctrl.Result, error) {
-<<<<<<< HEAD
 	return ctrl.Result{Requeue: true, RequeueAfter: c.after}, nil
-=======
-	t := time.Duration(c.secs) * time.Second
-	return ctrl.Result{Requeue: true, RequeueAfter: t}, nil
->>>>>>> 9602a8b (start using result.ReconcileResult)
 }
 
 type errorOut struct {
@@ -70,13 +61,8 @@ func Done() ReconcileResult {
 	return done{}
 }
 
-<<<<<<< HEAD
 func RequeueSoon(after time.Duration) ReconcileResult {
 	return callBackSoon{after: after}
-=======
-func RequeueSoon(secs int) ReconcileResult {
-	return callBackSoon{secs: secs}
->>>>>>> 9602a8b (start using result.ReconcileResult)
 }
 
 func Error(e error) ReconcileResult {
