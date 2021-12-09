@@ -31,14 +31,14 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		ClusterName:        kc.Name,
 		Logger:             logger,
 	}
-	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name, "datacenter", actualDc.Name)
+	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
 	validConfig, err := mergedSpec.IsValid(remoteClient, logger)
 	if err != nil {
 		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
 	}
 	if !validConfig {
-		return ctrl.Result{}, errors.New("Telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it?")
+		return ctrl.Result{}, errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it?")
 	}
 	// If Prometheus not installed bail here.
 	promInstalled, err := telemetryapi.IsPromInstalled(remoteClient, logger)
@@ -51,28 +51,28 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	// Determine if we want a cleanup or a resource update.
 	switch {
 	case mergedSpec == nil:
-		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
+		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 	case mergedSpec.Prometheus == nil:
-		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
+		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 	case mergedSpec.Prometheus.Enabled == nil:
-		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name, "mergedSpec.Prometheus.Enabled", mergedSpec.Prometheus.Enabled)
+		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 	case *mergedSpec.Prometheus.Enabled:
-		logger.Info("Prometheus config found", "datacenter", actualDc.Name, "mergedSpec.Prometheus.Enabled", mergedSpec.Prometheus.Enabled)
+		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
 		dcCfg.TelemetrySpec = mergedSpec
 		if err := dcCfg.UpdateResources(ctx, remoteClient, kc); err != nil {
 			return ctrl.Result{}, err
 		}
 	default:
-		logger.Info("Telemetry not present for CassDC, will delete resources", "datacenter", actualDc.Name)
+		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
