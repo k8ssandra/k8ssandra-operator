@@ -23,11 +23,11 @@ import (
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -134,7 +134,7 @@ func main() {
 
 	// Add Prometheus API to scheme if Prometheus is installed in cluster.
 	// discoveryclient.NewDiscoveryClient()
-	promInstalled, err := telemetry.IsPromInstalled(uncachedClient, setupLog)
+	promInstalled, err := telemetryapi.IsPromInstalled(uncachedClient, setupLog)
 	if err != nil {
 		setupLog.Error(err, "unable to determine if Prometheus installed")
 		os.Exit(1)
