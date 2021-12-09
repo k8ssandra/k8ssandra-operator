@@ -65,7 +65,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) recocileReaperSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) reconcileReaperSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
 	if !kc.HasReapers() {
 		return result.Continue()
 	}

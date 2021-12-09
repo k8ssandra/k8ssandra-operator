@@ -139,7 +139,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
-	if recResult := r.recocileReaperSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
+	if recResult := r.reconcileReaperSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()
 	}
 
