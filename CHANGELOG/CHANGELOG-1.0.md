@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
 
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
+* [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Cassandra Datacenter.
 
 * [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 
