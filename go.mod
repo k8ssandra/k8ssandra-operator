@@ -10,7 +10,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gruntwork-io/terratest v0.37.7
-	github.com/k8ssandra/cass-operator v1.8.0-rc.2.0.20211104092550-4d5f19c977b6
+	github.com/k8ssandra/cass-operator v1.9.0
 	github.com/k8ssandra/reaper-client-go v0.3.1-0.20210617111910-fe2ba92f8efb
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
