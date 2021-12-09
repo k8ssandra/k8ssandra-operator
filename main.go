@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -27,11 +28,13 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -51,7 +54,6 @@ import (
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -69,7 +71,6 @@ func init() {
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
-	utilruntime.Must(promapi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -130,8 +131,22 @@ func main() {
 		setupLog.Error(err, "unable to fetch config connection")
 		os.Exit(1)
 	}
-
 	ctx := ctrl.SetupSignalHandler()
+
+	// Add Prometheus API to scheme if Prometheus is installed in cluster.
+	// discoveryclient.NewDiscoveryClient()
+	promKinds, err := uncachedClient.RESTMapper().KindsFor(promapi.SchemeGroupVersion.WithResource("servicemonitors"))
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			setupLog.Info("Prometheus does not appear to be installed, proceeding")
+		} else {
+			setupLog.Error(err, "unable to tell if Prometheus installed", "errtype", reflect.TypeOf(err))
+			os.Exit(1)
+		}
+	} else if promKinds != nil {
+		setupLog.Info("Prometheus appears to be installed, adding to scheme", "promKinds", promKinds)
+		utilruntime.Must(promapi.AddToScheme(scheme))
+	}
 
 	reconcilerConfig := config.InitConfig()
 
