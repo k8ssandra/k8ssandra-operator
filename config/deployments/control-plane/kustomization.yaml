@@ -4,5 +4,5 @@ kind: Kustomization
 namespace: k8ssandra-operator
 
 resources:
-  - ../../default
+  - ../default
   - github.com/k8ssandra/cass-operator/config/deployments/default?ref=v1.9.0
