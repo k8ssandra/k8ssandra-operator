@@ -133,7 +133,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 					logger.Error(err, "Failed to create Reaper resource")
 					return result.Error(err)
 				} else {
-					return result.RequeueSoon(int(r.DefaultDelay))
+					return result.RequeueSoon(r.DefaultDelay)
 				}
 			} else {
 				logger.Error(err, "failed to retrieve reaper instance")
@@ -157,12 +157,12 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 				logger.Error(err, "Failed to update Reaper resource")
 				return result.Error(err)
 			}
-			return result.RequeueSoon(int(r.DefaultDelay))
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 
 		if !actualReaper.Status.IsReady() {
 			logger.Info("Waiting for Reaper to become ready")
-			return result.RequeueSoon(int(r.DefaultDelay))
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 
 		logger.Info("Reaper is ready")

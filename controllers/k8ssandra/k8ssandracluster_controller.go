@@ -201,7 +201,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 					logger.Error(err, "Failed to create Stargate resource")
 					return result.Error(err)
 				} else {
-					return result.RequeueSoon(int(r.DefaultDelay))
+					return result.RequeueSoon(r.DefaultDelay)
 				}
 			} else {
 				logger.Error(err, "Failed to get Stargate resource")
@@ -218,7 +218,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				desiredStargate.DeepCopyInto(actualStargate)
 				actualStargate.SetResourceVersion(resourceVersion)
 				if err = remoteClient.Update(ctx, actualStargate); err == nil {
-					return result.RequeueSoon(int(r.DefaultDelay))
+					return result.RequeueSoon(r.DefaultDelay)
 				} else {
 					logger.Error(err, "Failed to update Stargate")
 					return result.Error(err)
@@ -226,7 +226,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 			}
 			if !actualStargate.Status.IsReady() {
 				logger.Info("Waiting for Stargate to become ready")
-				return result.RequeueSoon(int(r.DefaultDelay))
+				return result.RequeueSoon(r.DefaultDelay)
 			}
 			logger.Info("Stargate is ready")
 		}
@@ -396,7 +396,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 	}
 
 	if hasErrors {
-		return result.RequeueSoon(int(r.DefaultDelay.Seconds()))
+		return result.RequeueSoon(r.DefaultDelay)
 	}
 
 	patch := client.MergeFrom(kc.DeepCopy())
@@ -467,7 +467,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
-			return result.RequeueSoon(int(r.DefaultDelay.Seconds())), actualDcs
+			return result.RequeueSoon(r.DefaultDelay), actualDcs
 		}
 
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
@@ -535,7 +535,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			if !cassandra.DatacenterReady(actualDc) {
 				logger.Info("Waiting for datacenter to become ready")
-				return result.RequeueSoon(int(r.DefaultDelay)), actualDcs
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
 
 			logger.Info("The datacenter is ready")
@@ -548,7 +548,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					logger.Error(err, "Failed to create datacenter")
 					return result.Error(err), actualDcs
 				}
-				return result.RequeueSoon(int(r.DefaultDelay)), actualDcs
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			} else {
 				logger.Error(err, "Failed to get datacenter")
 				return result.Error(err), actualDcs
