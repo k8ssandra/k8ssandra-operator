@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -28,13 +27,13 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -135,16 +134,12 @@ func main() {
 
 	// Add Prometheus API to scheme if Prometheus is installed in cluster.
 	// discoveryclient.NewDiscoveryClient()
-	promKinds, err := uncachedClient.RESTMapper().KindsFor(promapi.SchemeGroupVersion.WithResource("servicemonitors"))
+	promInstalled, err := telemetry.IsPromInstalled(uncachedClient, setupLog)
 	if err != nil {
-		if meta.IsNoMatchError(err) {
-			setupLog.Info("Prometheus does not appear to be installed, proceeding")
-		} else {
-			setupLog.Error(err, "unable to tell if Prometheus installed", "errtype", reflect.TypeOf(err))
-			os.Exit(1)
-		}
-	} else if promKinds != nil {
-		setupLog.Info("Prometheus appears to be installed, adding to scheme", "promKinds", promKinds)
+		setupLog.Error(err, "unable to determine if Prometheus installed")
+		os.Exit(1)
+	}
+	if promInstalled {
 		utilruntime.Must(promapi.AddToScheme(scheme))
 	}
 
