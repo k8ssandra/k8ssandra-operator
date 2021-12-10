@@ -318,11 +318,13 @@ spec:
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
 	return map[string]string{
-		"app.kubernetes.io/managed-by": "k8ssandra-operator",
-		"app.kubernetes.io/part-of":    "k8ssandra",
-		"k8ssandra.io/cluster":         cfg.ClusterName,
-		"k8ssandra.io/datacenter":      cfg.DataCenterName,
-		"k8ssandra.io/monitors":        "cassandra-datacenter",
+		k8ssandraapi.ManagedByLabel:            k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:               k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.K8ssandraClusterNameLabel: cfg.ClusterName,
+		k8ssandraapi.DatacenterLabel:           cfg.DataCenterName,
+		"k8ssandra.io/monitor-resource":        "cassandra-datacenter",
+		k8ssandraapi.ComponentLabel:            k8ssandraapi.ComponentLabelTelemetry,
+		k8ssandraapi.CreatedByLabel:            k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
 }
 
@@ -385,7 +387,7 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, 
 
 // GetCassandraPromSMName gets the name for our ServiceMonitors based on
 func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
-	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "prom-servicemonitor"}, "-")
+	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "cass-servicemonitor"}, "-")
 }
 
 // CreateResources executes the creation of the desired Prometheus resources on the cluster.
