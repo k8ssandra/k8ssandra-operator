@@ -391,8 +391,8 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 	}
 	cfg.CassTelemetryResourcer.Logger.Info("checking whether Prometheus ServiceMonitor for Cassandra already exists")
 	// Logic to handle case where SM does not exist.
-	var actualSM promapi.ServiceMonitor
-	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, &actualSM); err != nil {
+	actualSM := &promapi.ServiceMonitor{}
+	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, actualSM); err != nil {
 		if errors.IsNotFound(err) {
 			cfg.CassTelemetryResourcer.Logger.Info("Prometheus ServiceMonitor for Cassandra not found, creating")
 			if err := controllerutil.SetControllerReference(owner, desiredSM, client.Scheme()); err != nil {
@@ -414,15 +414,15 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 		}
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
-	actualSM = *actualSM.DeepCopy()
-	if !utils.CompareAnnotations(&actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	actualSM = actualSM.DeepCopy()
+	if !utils.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
 		resourceVersion := actualSM.GetResourceVersion()
-		desiredSM.DeepCopyInto(&actualSM)
+		desiredSM.DeepCopyInto(actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
-		if err := controllerutil.SetControllerReference(owner, &actualSM, client.Scheme()); err != nil {
+		if err := controllerutil.SetControllerReference(owner, actualSM, client.Scheme()); err != nil {
 			cfg.CassTelemetryResourcer.Logger.Error(err, "could not set controller reference for ServiceMonitor", "resource", desiredSM, "owner", owner)
 			return err
-		} else if err := client.Update(ctx, &actualSM); err != nil {
+		} else if err := client.Update(ctx, actualSM); err != nil {
 			cfg.CassTelemetryResourcer.Logger.Error(err, "could not update ServiceMonitor resource", "resource", desiredSM, "owner", owner)
 			return err
 		} else {
