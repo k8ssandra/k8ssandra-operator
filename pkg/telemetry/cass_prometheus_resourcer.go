@@ -329,25 +329,18 @@ func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
 }
 
 // NewServiceMonitor returns a Prometheus operator ServiceMonitor resource.
-func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, error) {
+func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor, error) {
 	// validate the object we're being passed.
 	if cfg.CassandraNamespace == "" || cfg.ServiceMonitorName == "" || cfg.DataCenterName == "" || cfg.ClusterName == "" {
-		return promapi.ServiceMonitor{}, TelemetryConfigIncomplete{}
+		return nil, TelemetryConfigIncomplete{}
 	}
 	// Overwrite any CommonLabels the user has asked for if they conflict with the labels essential for the functioning of the operator.
-	var mergedLabels = map[string]string{}
-	for k, v := range cfg.CommonLabels {
-		mergedLabels[k] = v
-	}
-	mustLabels := cfg.mustLabels()
-	for k, v := range mustLabels {
-		mergedLabels[k] = v
-	}
+	mergedLabels := utils.MergeMap(cfg.CommonLabels, cfg.mustLabels())
 	var endpointHolder promapi.ServiceMonitor
 	decode := scheme.Codecs.UniversalDeserializer().Decode
 	_, _, err := decode([]byte(endpointString), nil, &endpointHolder)
 	if err != nil {
-		return promapi.ServiceMonitor{}, err
+		return nil, err
 	}
 	sm := promapi.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
@@ -382,7 +375,7 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (promapi.ServiceMonitor, 
 		},
 	}
 	utils.AddHashAnnotation(&sm, k8ssandraapi.ResourceHashAnnotation)
-	return sm, nil
+	return &sm, nil
 }
 
 // GetCassandraPromSMName gets the name for our ServiceMonitors based on
@@ -402,10 +395,10 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, &actualSM); err != nil {
 		if errors.IsNotFound(err) {
 			cfg.CassTelemetryResourcer.Logger.Info("Prometheus ServiceMonitor for Cassandra not found, creating")
-			if err := controllerutil.SetControllerReference(owner, &desiredSM, client.Scheme()); err != nil {
+			if err := controllerutil.SetControllerReference(owner, desiredSM, client.Scheme()); err != nil {
 				cfg.CassTelemetryResourcer.Logger.Error(err, "could not set controller reference for ServiceMonitor", "owner", owner)
 				return err
-			} else if err = client.Create(ctx, &desiredSM); err != nil {
+			} else if err = client.Create(ctx, desiredSM); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created already; simply requeue until the cache is up-to-date
 					return nil
@@ -422,7 +415,7 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
 	actualSM = *actualSM.DeepCopy()
-	if !utils.CompareAnnotations(&actualSM, &desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	if !utils.CompareAnnotations(&actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
 		resourceVersion := actualSM.GetResourceVersion()
 		desiredSM.DeepCopyInto(&actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
