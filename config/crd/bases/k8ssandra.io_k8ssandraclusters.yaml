@@ -6406,7 +6406,7 @@ spec:
                       when bootstrapping the datacenter, then passed to the Medusa
                       instances, so that it can authenticate against nodes in the
                       datacenter using CQL. The secret must be in the same namespace
-                      as Reaper itself and must contain two keys: "username" and "password".'
+                      as Cassandra and must contain two keys: "username" and "password".'
                     type: string
                   medusaContainerImage:
                     description: MedusaContainerImage is the image characteristics
@@ -6611,6 +6611,7 @@ spec:
                         description: The name of the bucket to use for the backups.
                         type: string
                       concurrentTransfers:
+                        default: 1
                         description: Number of concurrent uploads. Helps maximizing
                           the speed of uploads but puts more pressure on the network.
                           Defaults to 1.
@@ -6619,14 +6620,17 @@ spec:
                         description: Host to connect to for the storage backend.
                         type: string
                       maxBackupAge:
+                        default: 0
                         description: Maximum backup age that the purge process should
                           observe.
                         type: integer
                       maxBackupCount:
+                        default: 0
                         description: Maximum number of backups to keep (used by the
                           purge process). Default is unlimited.
                         type: integer
                       multiPartUploadThreshold:
+                        default: 104857600
                         description: File size over which cloud specific cli tools
                           are used for transfer. Defaults to 100 MB.
                         type: integer
@@ -6644,9 +6648,15 @@ spec:
                         description: Whether to use SSL for the storage backend.
                         type: boolean
                       storageProvider:
-                        description: The storage backend to use for the backups. Should
-                          be either of "local", "google_storage", "azure_blobs" or
-                          "s3".
+                        description: The storage backend to use for the backups.
+                        enum:
+                        - local
+                        - google_storage
+                        - azure_blobs
+                        - s3
+                        - s3_compatible
+                        - s3_rgw
+                        - ibm_storage
                         type: string
                       storageSecretRef:
                         description: Kubernetes Secret that stores the key file for
@@ -6654,9 +6664,10 @@ spec:
                           value is ignored.
                         type: string
                       transferMaxBandwidth:
+                        default: 50MB/s
                         description: Max upload bandwidth in MB/s. Defaults to 50
                           MB/s.
-                        type: integer
+                        type: string
                     type: object
                 type: object
               reaper:

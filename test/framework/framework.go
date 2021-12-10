@@ -416,12 +416,7 @@ func (c *terratestLoggerBridge) Logf(t terratesttesting.TestingT, format string,
 	c.logger.Info(msg)
 }
 
-func (f *Framework) ContainerHasVolumeMount(dc *cassdcapi.CassandraDatacenter, containerName, volumeName, volumePath string) bool {
-	container := f.GetContainer(dc, containerName, true)
-	if container == nil {
-		return false
-	}
-
+func (f *Framework) ContainerHasVolumeMount(container corev1.Container, volumeName, volumePath string) bool {
 	for _, volume := range container.VolumeMounts {
 		if volume.Name == volumeName && volume.MountPath == volumePath {
 			return true
@@ -430,36 +425,11 @@ func (f *Framework) ContainerHasVolumeMount(dc *cassdcapi.CassandraDatacenter, c
 	return false
 }
 
-func (f *Framework) ContainerHasEnvVar(dc *cassdcapi.CassandraDatacenter, containerName, envVarName, envVarValue string) bool {
-	container := f.GetContainer(dc, containerName, true)
-	if container == nil {
-		return false
-	}
-
+func (f *Framework) ContainerHasEnvVar(container corev1.Container, envVarName, envVarValue string) bool {
 	for _, envVar := range container.Env {
 		if envVar.Name == envVarName && (envVar.Value == envVarValue || envVarValue == "") {
 			return true
 		}
 	}
 	return false
-}
-
-func (f *Framework) GetContainer(dc *cassdcapi.CassandraDatacenter, containerName string, initContainer bool) *corev1.Container {
-	for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-		if container.Name == containerName {
-			return &container
-		}
-	}
-	if initContainer {
-		for _, container := range dc.Spec.PodTemplateSpec.Spec.InitContainers {
-			if container.Name == containerName {
-				return &container
-			}
-		}
-	}
-	return nil
-}
-
-func (f *Framework) ContainerExists(dc *cassdcapi.CassandraDatacenter, name string, initContainer bool) bool {
-	return f.GetContainer(dc, name, initContainer) != nil
 }

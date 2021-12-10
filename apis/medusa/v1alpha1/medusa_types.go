@@ -26,7 +26,7 @@ import (
 
 type Storage struct {
 	// The storage backend to use for the backups.
-	// Should be either of "local", "google_storage", "azure_blobs" or "s3".
+	// +kubebuilder:validation:Enum=local;google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
 	StorageProvider string `json:"storageProvider,omitempty"`
 
 	// Kubernetes Secret that stores the key file for the storage provider's API.
@@ -43,12 +43,12 @@ type Storage struct {
 	Prefix string `json:"prefix,omitempty"`
 
 	// Maximum backup age that the purge process should observe.
-	// +optional
+	// +kubebuilder:default=0
 	MaxBackupAge int `json:"maxBackupAge,omitempty"`
 
 	// Maximum number of backups to keep (used by the purge process).
 	// Default is unlimited.
-	// +optional
+	// +kubebuilder:default=0
 	MaxBackupCount int `json:"maxBackupCount,omitempty"`
 
 	// AWS Profile to use for authentication.
@@ -57,18 +57,18 @@ type Storage struct {
 
 	// Max upload bandwidth in MB/s.
 	// Defaults to 50 MB/s.
-	// +optional
-	TransferMaxBandwidth int `json:"transferMaxBandwidth,omitempty"`
+	// +kubebuilder:default="50MB/s"
+	TransferMaxBandwidth string `json:"transferMaxBandwidth,omitempty"`
 
 	// Number of concurrent uploads.
 	// Helps maximizing the speed of uploads but puts more pressure on the network.
 	// Defaults to 1.
-	// +optional
+	// +kubebuilder:default=1
 	ConcurrentTransfers int `json:"concurrentTransfers,omitempty"`
 
 	// File size over which cloud specific cli tools are used for transfer.
 	// Defaults to 100 MB.
-	// +optional
+	// +kubebuilder:default=104857600
 	MultiPartUploadThreshold int `json:"multiPartUploadThreshold,omitempty"`
 
 	// Host to connect to for the storage backend.
@@ -127,7 +127,7 @@ type MedusaClusterTemplate struct {
 	// Defines the username and password that Medusa will use to authenticate CQL connections to Cassandra clusters.
 	// These credentials will be automatically turned into CQL roles by cass-operator when bootstrapping the datacenter,
 	// then passed to the Medusa instances, so that it can authenticate against nodes in the datacenter using CQL.
-	// The secret must be in the same namespace as Reaper itself and must contain two keys: "username" and "password".
+	// The secret must be in the same namespace as Cassandra and must contain two keys: "username" and "password".
 	// +optional
 	CassandraUserSecretRef string `json:"cassandraUserSecretRef,omitempty"`
 

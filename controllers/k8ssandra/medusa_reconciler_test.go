@@ -8,7 +8,9 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -189,10 +191,6 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		if k8ssandraStatus.Reaper == nil || !k8ssandraStatus.Reaper.IsReady() {
-			t.Logf("k8ssandracluster status check failed: reaper in %s is not ready", dc1Key.Name)
-		}
-
 		k8ssandraStatus, found = kc.Status.Datacenters[dc2Key.Name]
 		if !found {
 			t.Logf("status for datacenter %s not found", dc2Key)
@@ -214,22 +212,32 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 	require := require.New(t)
 
 	// Check containers presence
-	require.True(f.ContainerExists(dc, "medusa-restore", true), "dc1 doesn't have medusa-restore init container")
-	// require.True(f.ContainerExists(dc, "medusa", false), "dc1 doesn't have medusa main container")
+	initContainerIndex, found := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "medusa-restore")
+	require.True(found, fmt.Sprintf("%s doesn't have medusa-restore init container", dc.Name))
+	initContainer := dc.Spec.PodTemplateSpec.Spec.InitContainers[initContainerIndex]
 
-	// Check containers Image
-	require.True(f.GetContainer(dc, "medusa-restore", true).Image == fmt.Sprintf("docker.io/%s:latest", medusaImageRepo), "dc1 doesn't have medusa-restore init container")
+	containerIndex, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "medusa")
+	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc.Name))
+	mainContainer := dc.Spec.PodTemplateSpec.Spec.Containers[containerIndex]
 
-	// Check volume mounts
-	require.True(f.ContainerHasVolumeMount(dc, "medusa-restore", "server-config", "/etc/cassandra"), "Missing Volume Mount for medusa-restore server-config")
-	require.True(f.ContainerHasVolumeMount(dc, "medusa-restore", "server-data", "/var/lib/cassandra"), "Missing Volume Mount for medusa-restore server-data")
-	require.True(f.ContainerHasVolumeMount(dc, "medusa-restore", "podinfo", "/etc/podinfo"), "Missing Volume Mount for medusa-restore podinfo")
-	require.True(f.ContainerHasVolumeMount(dc, "medusa-restore", cassandraUserSecret, "/etc/medusa-secrets"), "Missing Volume Mount for medusa-restore podinfo")
-	require.True(f.ContainerHasVolumeMount(dc, "medusa-restore", fmt.Sprintf("%s-medusa", kc.Spec.Cassandra.Cluster), "/etc/medusa"), "Missing Volume Mount for medusa-restore medusa config")
+	for _, container := range [](corev1.Container){initContainer, mainContainer} {
+		// Check containers Image
+		require.True(container.Image == fmt.Sprintf("docker.io/%s:latest", medusaImageRepo), fmt.Sprintf("%s %s init container doesn't have the right image", dc.Name, container.Name))
 
-	// Check env vars
-	require.True(f.ContainerHasEnvVar(dc, "medusa-restore", "MEDUSA_MODE", "RESTORE"), "Missing MEDUSA_MODE env var for medusa-restore")
-	require.True(f.ContainerHasEnvVar(dc, "medusa-restore", "CQL_USERNAME", ""), "Missing CQL_USERNAME env var for medusa-restore")
-	require.True(f.ContainerHasEnvVar(dc, "medusa-restore", "CQL_PASSWORD", ""), "Missing CQL_PASSWORD env var for medusa-restore")
+		// Check volume mounts
+		assert.True(t, f.ContainerHasVolumeMount(container, "server-config", "/etc/cassandra"), "Missing Volume Mount for medusa-restore server-config")
+		assert.True(t, f.ContainerHasVolumeMount(container, "server-data", "/var/lib/cassandra"), "Missing Volume Mount for medusa-restore server-data")
+		assert.True(t, f.ContainerHasVolumeMount(container, "podinfo", "/etc/podinfo"), "Missing Volume Mount for medusa-restore podinfo")
+		assert.True(t, f.ContainerHasVolumeMount(container, cassandraUserSecret, "/etc/medusa-secrets"), "Missing Volume Mount for medusa-restore podinfo")
+		assert.True(t, f.ContainerHasVolumeMount(container, fmt.Sprintf("%s-medusa", kc.Spec.Cassandra.Cluster), "/etc/medusa"), "Missing Volume Mount for medusa-restore medusa config")
 
+		// Check env vars
+		if container.Name == "medusa" {
+			assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_MODE", "GRPC"), "Wrong MEDUSA_MODE env var for medusa")
+		} else {
+			assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_MODE", "RESTORE"), "Wrong MEDUSA_MODE env var for medusa-restore")
+		}
+		assert.True(t, f.ContainerHasEnvVar(container, "CQL_USERNAME", ""), "Missing CQL_USERNAME env var for medusa-restore")
+		assert.True(t, f.ContainerHasEnvVar(container, "CQL_PASSWORD", ""), "Missing CQL_PASSWORD env var for medusa-restore")
+	}
 }
