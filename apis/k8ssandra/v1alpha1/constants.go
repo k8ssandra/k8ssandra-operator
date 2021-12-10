@@ -14,6 +14,7 @@ const (
 	ComponentLabelValueCassandra = "cassandra"
 	ComponentLabelValueStargate  = "stargate"
 	ComponentLabelValueReaper    = "reaper"
+	ComponentLabelTelemetry      = "telemetry"
 
 	CreatedByLabel                                = "app.kubernetes.io/created-by"
 	CreatedByLabelValueK8ssandraClusterController = "k8ssandracluster-controller"
@@ -25,4 +26,6 @@ const (
 
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
+
+	DatacenterLabel = "k8ssandra.io/datacenter"
 )
