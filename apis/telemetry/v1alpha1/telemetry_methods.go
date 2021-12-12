@@ -44,8 +44,6 @@ func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusT
 			out.CommonLabels[k] = v
 		}
 	}
-	if a.Enabled {
-		out.Enabled = a.Enabled
-	}
+	out.Enabled = b.Enabled
 	return &out
 }
