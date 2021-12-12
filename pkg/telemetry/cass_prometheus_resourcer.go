@@ -4,6 +4,8 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"strings"
 
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +28,7 @@ type CassPrometheusResourcer struct {
 }
 
 // Static configuration for ServiceMonitor's endpoints.
-var endpointString = `
+const endpointString = `
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 spec:
@@ -314,7 +316,19 @@ spec:
       - prom_name
       targetLabel: __name__
     - action: labeldrop
-      regex: prom_name`
+      regex: prom_name
+`
+
+var endpointHolder promapi.ServiceMonitor
+
+func init() {
+	decode := scheme.Codecs.UniversalDeserializer().Decode
+	_, _, err := decode([]byte(endpointString), nil, &endpointHolder)
+	if err != nil {
+		fmt.Println("Fatal error initialising EndpointHolder in pks/telemetry/cass_prometheus_resourcer.go", err)
+		os.Exit(1)
+	}
+}
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
@@ -336,12 +350,6 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor,
 	}
 	// Overwrite any CommonLabels the user has asked for if they conflict with the labels essential for the functioning of the operator.
 	mergedLabels := utils.MergeMap(cfg.CommonLabels, cfg.mustLabels())
-	var endpointHolder promapi.ServiceMonitor
-	decode := scheme.Codecs.UniversalDeserializer().Decode
-	_, _, err := decode([]byte(endpointString), nil, &endpointHolder)
-	if err != nil {
-		return nil, err
-	}
 	sm := promapi.ServiceMonitor{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceMonitor",
