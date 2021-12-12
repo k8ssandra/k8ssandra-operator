@@ -443,20 +443,14 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 
 // CleanupResources executes the cleanup of any resources on the cluster, once they are no longer required.
 func (cfg CassPrometheusResourcer) CleanupResources(ctx context.Context, client runtimeclient.Client) error {
-	var deleteTargets promapi.ServiceMonitorList
-	if err := client.List(
-		ctx,
+	var deleteTargets promapi.ServiceMonitor
+	err := client.DeleteAllOf(ctx,
 		&deleteTargets,
 		runtimeclient.InNamespace(cfg.CassandraNamespace),
-		runtimeclient.MatchingLabels(cfg.mustLabels())); err != nil {
+		runtimeclient.MatchingLabels(cfg.mustLabels()),
+	)
+	if err != nil {
 		return err
-	}
-	if len(deleteTargets.Items) > 0 {
-		for _, i := range deleteTargets.Items {
-			if err := client.Delete(ctx, i); err != nil {
-				return err
-			}
-		}
 	}
 	return nil
 }
