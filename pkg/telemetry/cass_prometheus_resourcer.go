@@ -392,7 +392,7 @@ func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
 }
 
 // UpdateResources executes the creation of the desired Prometheus resources on the cluster.
-func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client runtimeclient.Client, owner *k8ssandraapi.K8ssandraCluster) error {
+func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client runtimeclient.Client, owner *cassdcapi.CassandraDatacenter) error {
 	desiredSM, err := cfg.NewServiceMonitor()
 	if err != nil {
 		return err

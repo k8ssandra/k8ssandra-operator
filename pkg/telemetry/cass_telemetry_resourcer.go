@@ -5,6 +5,7 @@ package telemetry
 
 import (
 	"context"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -26,7 +27,7 @@ type CassTelemetryResourcer struct {
 }
 
 // UpdateResources creates the required resources for a Cassandra DC and for the telemetry provider specified in the TelemetrySpec.
-func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error {
+func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client client.Client, owner *cassdcapi.CassandraDatacenter) error {
 	if cfg.TelemetrySpec == nil {
 		return TelemetryConfigIncomplete{"cfg.TelemetrySpec"}
 	}

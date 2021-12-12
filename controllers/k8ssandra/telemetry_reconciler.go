@@ -62,7 +62,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	case mergedSpec.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
 		dcCfg.TelemetrySpec = mergedSpec
-		if err := dcCfg.UpdateResources(ctx, remoteClient, kc); err != nil {
+		if err := dcCfg.UpdateResources(ctx, remoteClient, actualDc); err != nil {
 			return ctrl.Result{}, err
 		}
 	default:
