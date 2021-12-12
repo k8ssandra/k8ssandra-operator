@@ -9,6 +9,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -355,21 +356,21 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor,
 		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/managed-by": "cass-operator",
+					k8ssandraapi.ManagedByLabel: "cass-operator",
 					//It appears that this label is always set true by cass-operator, so I don't think filtering on it adds any value and we should look to deprecate.
 					//"cassandra.datastax.com/prom-metrics": "true",
 				},
 				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: "cassandra.datastax.com/cluster", Operator: "In", Values: []string{cfg.ClusterName}},
-					{Key: "cassandra.datastax.com/datacenter", Operator: "In", Values: []string{cfg.DataCenterName}},
+					{Key: cassdcapi.ClusterLabel, Operator: "In", Values: []string{cfg.ClusterName}},
+					{Key: cassdcapi.DatacenterLabel, Operator: "In", Values: []string{cfg.DataCenterName}},
 				},
 			},
 			NamespaceSelector: promapi.NamespaceSelector{
 				MatchNames: []string{cfg.CassandraNamespace},
 			},
 			TargetLabels: []string{
-				"cassandra.datastax.com/cluster",
-				"cassandra.datastax.com/datacenter",
+				cassdcapi.ClusterLabel,
+				cassdcapi.DatacenterLabel,
 			},
 			Endpoints: endpointHolder.Spec.Endpoints,
 		},
@@ -383,7 +384,7 @@ func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
 	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "cass-servicemonitor"}, "-")
 }
 
-// CreateResources executes the creation of the desired Prometheus resources on the cluster.
+// UpdateResources executes the creation of the desired Prometheus resources on the cluster.
 func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client runtimeclient.Client, owner *k8ssandraapi.K8ssandraCluster) error {
 	desiredSM, err := cfg.NewServiceMonitor()
 	if err != nil {
