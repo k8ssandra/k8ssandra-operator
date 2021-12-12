@@ -74,8 +74,3 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	}
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
-
-func (r *K8ssandraClusterReconciler) setCassandraTelemetryStatus() (ctrl.Result, error) {
-	// TODO
-	return ctrl.Result{}, nil
-}

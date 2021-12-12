@@ -525,11 +525,6 @@ func (in *K8ssandraStatus) DeepCopyInto(out *K8ssandraStatus) {
 		*out = new(v1beta1.CassandraDatacenterStatus)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CassandraTelemetry != nil {
-		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
-		*out = new(telemetryv1alpha1.TelemetryStatus)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Stargate != nil {
 		in, out := &in.Stargate, &out.Stargate
 		*out = new(stargatev1alpha1.StargateStatus)
