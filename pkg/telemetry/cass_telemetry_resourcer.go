@@ -25,7 +25,7 @@ type CassTelemetryResourcer struct {
 	Logger             logr.Logger
 }
 
-// CreateResources creates the required resources for a Cassandra DC and for the telemetry provider specified in the TelemetrySpec.
+// UpdateResources creates the required resources for a Cassandra DC and for the telemetry provider specified in the TelemetrySpec.
 func (cfg CassTelemetryResourcer) UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error {
 	if cfg.TelemetrySpec == nil {
 		return TelemetryConfigIncomplete{"cfg.TelemetrySpec"}
