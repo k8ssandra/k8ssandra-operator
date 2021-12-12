@@ -323,7 +323,6 @@ func (cfg CassPrometheusResourcer) mustLabels() map[string]string {
 		k8ssandraapi.PartOfLabel:               k8ssandraapi.PartOfLabelValue,
 		k8ssandraapi.K8ssandraClusterNameLabel: cfg.ClusterName,
 		k8ssandraapi.DatacenterLabel:           cfg.DataCenterName,
-		"k8ssandra.io/monitor-resource":        "cassandra-datacenter",
 		k8ssandraapi.ComponentLabel:            k8ssandraapi.ComponentLabelTelemetry,
 		k8ssandraapi.CreatedByLabel:            k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
