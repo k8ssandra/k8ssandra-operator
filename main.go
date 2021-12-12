@@ -19,11 +19,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"os"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -134,7 +134,7 @@ func main() {
 
 	// Add Prometheus API to scheme if Prometheus is installed in cluster.
 	// discoveryclient.NewDiscoveryClient()
-	promInstalled, err := telemetryapi.IsPromInstalled(uncachedClient, setupLog)
+	promInstalled, err := telemetry.IsPromInstalled(uncachedClient, setupLog)
 	if err != nil {
 		setupLog.Error(err, "unable to determine if Prometheus installed")
 		os.Exit(1)
