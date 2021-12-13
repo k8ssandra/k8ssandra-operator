@@ -10,11 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func IsValid(tspec *telemetryapi.TelemetrySpec, client client.Client, logger logr.Logger) (bool, error) {
-	promInstalled, err := IsPromInstalled(client, logger)
-	if err != nil {
-		return false, err
-	}
+func SpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) (bool, error) {
 	switch {
 	case tspec == nil:
 		return true, nil
@@ -24,8 +20,9 @@ func IsValid(tspec *telemetryapi.TelemetrySpec, client client.Client, logger log
 		return false, nil
 	case tspec.Prometheus.Enabled && promInstalled:
 		return true, nil
+	default:
+		return true, nil
 	}
-	return false, errors.New("something unexpected happened when determining if telemetry spec was valid")
 }
 
 // IsPromInstalled returns true if Prometheus is installed in the cluster, false otherwise.
