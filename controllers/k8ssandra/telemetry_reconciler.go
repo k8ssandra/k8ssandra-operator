@@ -32,7 +32,11 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
-	validConfig, err := telemetry.IsValid(mergedSpec, remoteClient, logger)
+	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	validConfig, err := telemetry.SpecIsValid(mergedSpec, promInstalled)
 	if err != nil {
 		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
 	}
@@ -40,10 +44,6 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		return ctrl.Result{}, errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
 	}
 	// If Prometheus not installed bail here.
-	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 	if !promInstalled {
 		return ctrl.Result{}, nil
 	}
