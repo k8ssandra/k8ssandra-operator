@@ -442,6 +442,8 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 }
 
 // CleanupResources executes the cleanup of any resources on the cluster, once they are no longer required.
+// CleanupResources does not rely on user-defined CommonLabels to select which resources to delete. It uses only
+// k8ssandra-operator defined labels.
 func (cfg CassPrometheusResourcer) CleanupResources(ctx context.Context, client runtimeclient.Client) error {
 	var deleteTargets promapi.ServiceMonitor
 	err := client.DeleteAllOf(ctx,
