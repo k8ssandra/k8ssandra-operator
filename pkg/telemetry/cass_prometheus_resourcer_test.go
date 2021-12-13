@@ -127,6 +127,7 @@ func Test_CassPrometheusResourcer_UpdateResources_Heal(t *testing.T) {
 	assert.NotEmpty(t, createdSM.Spec.Endpoints)
 }
 
+// TODO: This test not currently passing. We need to look at whether evaluating the resourceHash is sufficient to trigger healing.
 // Test_CassPrometheusResourcer_Cleanup_SUCCESS tests that the servicemonitor is cleaned up successfully,
 // when the TelemetrySpec is no longer in the CassPrometheusResourcer config.
 func Test_CassPrometheusResourcer_Cleanup(t *testing.T) {
@@ -161,13 +162,4 @@ func Test_CassPrometheusResourcer_Cleanup(t *testing.T) {
 	} else {
 		assert.Fail(t, "We still found a resource that had not been cleaned up.")
 	}
-}
-
-// Test_IsPromInstalled tests whether the IsPromInstalled function correctly identifies whether prom is installed or not.
-func Test_IsPromInstalled(t *testing.T) {
-	assert.Fail(t, "not implemented")
-}
-
-func Test_IsValid(t *testing.T) {
-	assert.Fail(t, "not implemented")
 }
