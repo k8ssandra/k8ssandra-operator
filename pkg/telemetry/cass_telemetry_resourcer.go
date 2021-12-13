@@ -8,13 +8,12 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	"github.com/go-logr/logr"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Resourcer interface {
-	UpdateResources(ctx context.Context, client client.Client, owner *k8ssandraapi.K8ssandraCluster) error
+	UpdateResources(ctx context.Context, client client.Client, owner *cassdcapi.CassandraDatacenter) error
 	CleanupResources(ctx context.Context, client client.Client) error
 }
 
