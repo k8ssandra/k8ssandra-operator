@@ -205,6 +205,30 @@ type ContainerImage struct {
 	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
 }
 
+func (in ContainerImage) GetRegistry() string {
+	return in.Registry
+}
+
+func (in ContainerImage) GetRepository() string {
+	return in.Repository
+}
+
+func (in ContainerImage) GetName() string {
+	return in.Name
+}
+
+func (in ContainerImage) GetTag() string {
+	return in.Tag
+}
+
+func (in ContainerImage) GetPullPolicy() corev1.PullPolicy {
+	return in.PullPolicy
+}
+
+func (in ContainerImage) GetPullSecretRef() *corev1.LocalObjectReference {
+	return in.PullSecretRef
+}
+
 // StargateProgress is a word summarizing the state of a Stargate resource.
 type StargateProgress string
 

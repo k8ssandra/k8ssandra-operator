@@ -6,6 +6,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,26 @@ const (
 	DefaultReaperImageRepository = "thelastpickle"
 	DefaultReaperImageName       = "cassandra-reaper"
 	DefaultReaperVersion         = "3.0.0"
-	DefaultReaperImage           = DefaultReaperImageRepository + "/" + DefaultReaperImageName + ":" + DefaultReaperVersion
+)
+
+var (
+	defaultReaperImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultReaperImageRepository,
+		DefaultReaperImageName,
+		DefaultReaperVersion,
+	)
+	latestReaperImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultReaperImageRepository,
+		DefaultReaperImageName,
+		"latest",
+	)
+)
+
+var (
+	defaultReaperImage = images.NewImage(defaultReaperImageId, corev1.PullIfNotPresent, nil)
+	latestReaperImage  = images.NewImage(latestReaperImageId, corev1.PullAlways, nil)
 )
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVars ...*corev1.EnvVar) *appsv1.Deployment {
@@ -121,6 +141,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		}
 	}
 
+	initImage := computeImage(reaper.Spec.InitContainerImage)
+	mainImage := computeImage(reaper.Spec.ContainerImage)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: reaper.Namespace,
@@ -138,8 +161,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 					InitContainers: []corev1.Container{
 						{
 							Name:            "reaper-schema-init",
-							Image:           computeImage(reaper.Spec.InitContainerImage),
-							ImagePullPolicy: computeImagePullPolicy(reaper.Spec.InitContainerImage),
+							Image:           images.ImageString(initImage),
+							ImagePullPolicy: initImage.GetPullPolicy(),
 							SecurityContext: reaper.Spec.InitContainerSecurityContext,
 							Env:             envVars,
 							Args:            []string{"schema-migration"},
@@ -148,8 +171,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
-							Image:           computeImage(reaper.Spec.ContainerImage),
-							ImagePullPolicy: computeImagePullPolicy(reaper.Spec.ContainerImage),
+							Image:           images.ImageString(mainImage),
+							ImagePullPolicy: mainImage.GetPullPolicy(),
 							SecurityContext: reaper.Spec.SecurityContext,
 							Ports: []corev1.ContainerPort{
 								{
@@ -171,7 +194,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
-					ImagePullSecrets:   computeImagePullSecrets(reaper.Spec.ContainerImage, reaper.Spec.InitContainerImage),
+					ImagePullSecrets:   images.CollectPullSecrets(mainImage, initImage),
 				},
 			},
 		},
@@ -201,53 +224,12 @@ func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
-func computeImage(containerImage *api.ContainerImage) string {
+func computeImage(containerImage *api.ContainerImage) images.Image {
 	if containerImage == nil {
-		return DefaultReaperImage
+		return defaultReaperImage
 	} else {
-		registry := "docker.io"
-		if containerImage.Registry != "" {
-			registry = containerImage.Registry
-		}
-		repository := DefaultReaperImageRepository
-		if containerImage.Repository != "" {
-			repository = containerImage.Repository
-		}
-		name := DefaultReaperImageName
-		if containerImage.Name != "" {
-			name = containerImage.Name
-		}
-		tag := "latest"
-		if containerImage.Tag != "" {
-			tag = containerImage.Tag
-		}
-		return fmt.Sprintf("%v/%v/%v:%v", registry, repository, name, tag)
+		return images.Coalesce(containerImage, latestReaperImage)
 	}
-}
-
-func computeImagePullPolicy(containerImage *api.ContainerImage) corev1.PullPolicy {
-	if containerImage != nil && containerImage.PullPolicy != "" {
-		return containerImage.PullPolicy
-	}
-	tag := "latest"
-	if containerImage != nil && containerImage.Tag != "" {
-		tag = containerImage.Tag
-	}
-	if tag == "latest" {
-		return corev1.PullAlways
-	} else {
-		return corev1.PullIfNotPresent
-	}
-}
-
-func computeImagePullSecrets(containerImages ...*api.ContainerImage) []corev1.LocalObjectReference {
-	var secrets []corev1.LocalObjectReference
-	for _, containerImage := range containerImages {
-		if containerImage != nil && containerImage.PullSecretRef != nil {
-			secrets = append(secrets, *containerImage.PullSecretRef)
-		}
-	}
-	return secrets
 }
 
 func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {

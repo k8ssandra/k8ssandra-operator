@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -29,8 +30,21 @@ const (
 	DefaultStargate4ImageName      = "stargate-4_0"
 	DefaultStargate3ImageName      = "stargate-3_11"
 	DefaultStargateVersion         = "1.0.45"
-	DefaultStargate4Image          = DefaultStargateImageRepository + "/" + DefaultStargate4ImageName + ":v" + DefaultStargateVersion
-	DefaultStargate3Image          = DefaultStargateImageRepository + "/" + DefaultStargate3ImageName + ":v" + DefaultStargateVersion
+)
+
+var (
+	stargate4DefaultImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultStargateImageRepository,
+		DefaultStargate4ImageName,
+		"v"+DefaultStargateVersion,
+	)
+	stargate3DefaultImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultStargateImageRepository,
+		DefaultStargate3ImageName,
+		"v"+DefaultStargateVersion,
+	)
 )
 
 type ClusterVersion string
@@ -51,6 +65,8 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 	replicasByRack := cassdcapi.SplitRacks(int(stargate.Spec.Size), len(racks))
 	dnsPolicy := computeDNSPolicy(dc)
 
+	defaultImage := computeDefaultImage(clusterVersion)
+
 	var deployments = make(map[string]appsv1.Deployment)
 	for i, rack := range racks {
 
@@ -62,9 +78,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
 
 		deploymentName := DeploymentName(dc, &rack)
-		image := computeImage(template.ContainerImage, clusterVersion)
-		imagePullPolicy := computeImagePullPolicy(template.ContainerImage)
-		imagePullSecrets := computeImagePullSecrets(template.ContainerImage)
+		image := images.Coalesce(template.ContainerImage, defaultImage)
 		resources := computeResourceRequirements(template)
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
@@ -119,13 +133,13 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 						HostNetwork:      dc.IsHostNetworkEnabled(),
 						DNSPolicy:        dnsPolicy,
-						ImagePullSecrets: imagePullSecrets,
+						ImagePullSecrets: images.CollectPullSecrets(image),
 
 						Containers: []corev1.Container{{
 
 							Name:            deploymentName,
-							Image:           image,
-							ImagePullPolicy: imagePullPolicy,
+							Image:           images.ImageString(image),
+							ImagePullPolicy: image.GetPullPolicy(),
 
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 8080, Name: "graphql"},
@@ -213,58 +227,12 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 	}
 }
 
-func computeImage(containerImage *api.ContainerImage, clusterVersion ClusterVersion) string {
-	if containerImage == nil {
-		if clusterVersion == ClusterVersion3 {
-			return DefaultStargate3Image
-		} else {
-			return DefaultStargate4Image
-		}
+func computeDefaultImage(clusterVersion ClusterVersion) images.Image {
+	if clusterVersion == ClusterVersion3 {
+		return images.NewImage(stargate3DefaultImageId, corev1.PullIfNotPresent, nil)
 	} else {
-		registry := "docker.io"
-		if containerImage.Registry != "" {
-			registry = containerImage.Registry
-		}
-		repository := DefaultStargateImageRepository
-		if containerImage.Repository != "" {
-			repository = containerImage.Repository
-		}
-		var name string
-		if containerImage.Name != "" {
-			name = containerImage.Name
-		} else if clusterVersion == ClusterVersion3 {
-			name = DefaultStargate3ImageName
-		} else {
-			name = DefaultStargate4ImageName
-		}
-		tag := "latest"
-		if containerImage.Tag != "" {
-			tag = containerImage.Tag
-		}
-		return fmt.Sprintf("%v/%v/%v:%v", registry, repository, name, tag)
+		return images.NewImage(stargate4DefaultImageId, corev1.PullIfNotPresent, nil)
 	}
-}
-
-func computeImagePullPolicy(containerImage *api.ContainerImage) corev1.PullPolicy {
-	if containerImage != nil && containerImage.PullPolicy != "" {
-		return containerImage.PullPolicy
-	}
-	tag := "latest"
-	if containerImage != nil && containerImage.Tag != "" {
-		tag = containerImage.Tag
-	}
-	if tag == "latest" {
-		return corev1.PullAlways
-	} else {
-		return corev1.PullIfNotPresent
-	}
-}
-
-func computeImagePullSecrets(containerImage *api.ContainerImage) []corev1.LocalObjectReference {
-	if containerImage != nil && containerImage.PullSecretRef != nil {
-		return []corev1.LocalObjectReference{*containerImage.PullSecretRef}
-	}
-	return nil
 }
 
 func computeResourceRequirements(template *api.StargateTemplate) corev1.ResourceRequirements {
