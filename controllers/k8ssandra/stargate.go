@@ -1,0 +1,198 @@
+package k8ssandra
+
+import (
+	"context"
+	"github.com/go-logr/logr"
+	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	v1alpha12 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	v12 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+func (r *K8ssandraClusterReconciler) reconcileStargate(
+	ctx context.Context,
+	kc *v1alpha1.K8ssandraCluster,
+	dcTemplate v1alpha1.CassandraDatacenterTemplate,
+	actualDc *v1beta1.CassandraDatacenter,
+	logger logr.Logger,
+	remoteClient client.Client,
+) result.ReconcileResult {
+
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
+	stargateKey := types.NamespacedName{
+		Namespace: actualDc.Namespace,
+		Name:      stargate.ResourceName(kc, actualDc),
+	}
+	actualStargate := &v1alpha12.Stargate{}
+	logger = logger.WithValues("Stargate", stargateKey)
+
+	if stargateTemplate != nil {
+		logger.Info("Reconcile Stargate")
+
+		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
+		utils.AddHashAnnotation(desiredStargate, v1alpha1.ResourceHashAnnotation)
+
+		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+			if errors.IsNotFound(err) {
+				logger.Info("Creating Stargate resource")
+				if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+					logger.Error(err, "Failed to create Stargate resource")
+					return result.Error(err)
+				} else {
+					return result.RequeueSoon(r.DefaultDelay)
+				}
+			} else {
+				logger.Error(err, "Failed to get Stargate resource")
+				return result.Error(err)
+			}
+		} else {
+			if err = r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name); err != nil {
+				logger.Error(err, "Failed to update status for stargate")
+				return result.Error(err)
+			}
+			if !utils.CompareAnnotations(desiredStargate, actualStargate, v1alpha1.ResourceHashAnnotation) {
+				logger.Info("Updating Stargate")
+				resourceVersion := actualStargate.GetResourceVersion()
+				desiredStargate.DeepCopyInto(actualStargate)
+				actualStargate.SetResourceVersion(resourceVersion)
+				if err = remoteClient.Update(ctx, actualStargate); err == nil {
+					return result.RequeueSoon(r.DefaultDelay)
+				} else {
+					logger.Error(err, "Failed to update Stargate")
+					return result.Error(err)
+				}
+			}
+			if !actualStargate.Status.IsReady() {
+				logger.Info("Waiting for Stargate to become ready")
+				return result.RequeueSoon(r.DefaultDelay)
+			}
+			logger.Info("Stargate is ready")
+		}
+	} else {
+		logger.Info("Stargate not present")
+
+		// Test if Stargate was removed
+		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
+			if errors.IsNotFound(err) {
+				// OK
+			} else {
+				logger.Error(err, "Failed to get Stargate")
+				return result.Error(err)
+			}
+		} else if utils.IsCreatedByK8ssandraController(actualStargate, kcKey) {
+			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
+				logger.Error(err, "Failed to delete Stargate")
+				return result.Error(err)
+			} else {
+				r.removeStargateStatus(kc, dcTemplate.Meta.Name)
+				logger.Info("Stargate deleted")
+			}
+		} else {
+			logger.Info("Not deleting Stargate since it wasn't created by this controller")
+		}
+	}
+	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *v1alpha1.K8ssandraCluster, stargateTemplate *v1alpha12.StargateDatacenterTemplate, actualDc *v1beta1.CassandraDatacenter) *v1alpha12.Stargate {
+	desiredStargate := &v1alpha12.Stargate{
+		ObjectMeta: v1.ObjectMeta{
+			Namespace:   stargateKey.Namespace,
+			Name:        stargateKey.Name,
+			Annotations: map[string]string{},
+			Labels: map[string]string{
+				v1alpha1.NameLabel:                      v1alpha1.NameLabelValue,
+				v1alpha1.PartOfLabel:                    v1alpha1.PartOfLabelValue,
+				v1alpha1.ComponentLabel:                 v1alpha1.ComponentLabelValueStargate,
+				v1alpha1.CreatedByLabel:                 v1alpha1.CreatedByLabelValueK8ssandraClusterController,
+				v1alpha1.K8ssandraClusterNameLabel:      kc.Name,
+				v1alpha1.K8ssandraClusterNamespaceLabel: kc.Namespace,
+			},
+		},
+		Spec: v1alpha12.StargateSpec{
+			StargateDatacenterTemplate: *stargateTemplate,
+			DatacenterRef:              v12.LocalObjectReference{Name: actualDc.Name},
+		},
+	}
+	return desiredStargate
+}
+
+func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *v1alpha1.K8ssandraCluster, stargate *v1alpha12.Stargate, dcName string) error {
+	if len(kc.Status.Datacenters) == 0 {
+		kc.Status.Datacenters = make(map[string]v1alpha1.K8ssandraStatus)
+	}
+
+	kdcStatus, found := kc.Status.Datacenters[dcName]
+
+	if found {
+		if kdcStatus.Stargate == nil {
+			kdcStatus.Stargate = stargate.Status.DeepCopy()
+			kc.Status.Datacenters[dcName] = kdcStatus
+		} else {
+			stargate.Status.DeepCopyInto(kdcStatus.Stargate)
+		}
+	} else {
+		kc.Status.Datacenters[dcName] = v1alpha1.K8ssandraStatus{
+			Stargate: stargate.Status.DeepCopy(),
+		}
+	}
+
+	if kc.Status.Datacenters[dcName].Stargate.Progress == "" {
+		kc.Status.Datacenters[dcName].Stargate.Progress = v1alpha12.StargateProgressPending
+	}
+	return nil
+}
+
+func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Context, kc *v1alpha1.K8ssandraCluster, dcs []*v1beta1.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	if !kc.HasStargates() {
+		return result.Continue()
+	}
+
+	logger.Info("Reconciling Stargate auth schema")
+	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
+
+	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
+		logger.Error(err, "Failed to get remote client")
+		return result.Error(err)
+	} else {
+		dc := dcs[0]
+		managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+		if err != nil {
+			logger.Error(err, "Failed to create ManagementApiFacade")
+			return result.Error(err)
+		}
+
+		replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
+		if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
+			logger.Error(err, "Failed to ensure keyspace replication")
+			return result.Error(err)
+		}
+
+		if err = stargate.ReconcileAuthTable(managementApi, logger); err != nil {
+			logger.Error(err, "Failed to reconcile Stargate auth table")
+			return result.Error(err)
+		}
+
+		return result.Continue()
+	}
+
+}
+
+func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *v1alpha1.K8ssandraCluster, dcName string) {
+	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
+		kc.Status.Datacenters[dcName] = v1alpha1.K8ssandraStatus{
+			Stargate:  nil,
+			Cassandra: kdcStatus.Cassandra.DeepCopy(),
+			Reaper:    kdcStatus.Reaper.DeepCopy(),
+		}
+	}
+}
