@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
@@ -37,7 +39,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	// Reconcile CassandraDatacenter objects only
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+	for idx, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -74,6 +76,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
 
+		if idx > 0 {
+			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
+		}
+
+		rebuildNeeded := datacenterAddedToExistingCluster(kc, desiredDc.Name)
+		if rebuildNeeded {
+			desiredDc.Labels[api.RebuildLabel] = "true"
+		}
+
 		annotations.AddHashAnnotation(desiredDc)
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
@@ -90,6 +101,18 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			// cassdc already exists, we'll update it
+
+			if _, rebuildNeeded = actualDc.Labels[api.RebuildLabel]; rebuildNeeded {
+				desiredDc.Labels[api.RebuildLabel] = "true"
+				// We need to recompute and reset the resource annotation here. On the
+				// first reconciliation after a DC has been added rebuildNeeded will be
+				// true and included in the resource hash. On subsequent reconciliations
+				// where the CassandraDatacenter exists rebuildNeeded will initially be set
+				// to false. If we get here, the label is present and thus the resource hash
+				// needs to be updated.
+				annotations.AddHashAnnotation(desiredDc)
+			}
+
 			if err = r.setStatusForDatacenter(kc, actualDc); err != nil {
 				logger.Error(err, "Failed to update status for datacenter")
 				return result.Error(err), actualDcs
@@ -147,6 +170,26 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return recResult, actualDcs
 			}
 
+			if recResult := r.reconcileStargateAuthSchema(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+				return recResult, actualDcs
+			}
+
+			if recResult := r.reconcileReaperSchema(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+				return recResult, actualDcs
+			}
+
+			if rebuildNeeded {
+				// TODO We need to handle the Stargate auth and Reaper keyspaces here.
+
+				if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+					return recResult, actualDcs
+				}
+
+				if recResult := reconcileDcRebuild(ctx, actualDc, actualDcs, remoteClient, logger); recResult.Completed() {
+					return recResult, actualDcs
+				}
+			}
+
 		} else {
 			if errors.IsNotFound(err) {
 				// cassdc doesn't exist, we'll create it
@@ -168,7 +211,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	// or as part of an existing cluster.
 	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionUnknown {
 		now := metav1.Now()
-		(&kc.Status).SetCondition(api.K8ssandraClusterCondition{
+		kc.Status.SetCondition(api.K8ssandraClusterCondition{
 			Type:               api.CassandraInitialized,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
@@ -194,4 +237,92 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 	}
 
 	return nil
+}
+
+func datacenterAddedToExistingCluster(kc *api.K8ssandraCluster, dcName string) bool {
+	_, found := kc.Status.Datacenters[dcName]
+	return kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue && !found
+}
+
+func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, dcs []*cassdcapi.CassandraDatacenter) string {
+	for _, dc := range dcs {
+		if dc.Name != targetDc.Name {
+			return dc.Name
+		}
+	}
+	// TODO This should never happen. Should we also return an error here?
+	return ""
+}
+
+func reconcileDcRebuild(ctx context.Context, dc *cassdcapi.CassandraDatacenter, dcs []*cassdcapi.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+	logger.Info("Reconciling rebuild")
+
+	srcDc := getSourceDatacenterName(dc, dcs)
+	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc)
+	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
+	task := &cassctlapi.CassandraTask{}
+
+	if err := remoteClient.Get(ctx, taskKey, task); err == nil {
+		if taskFinished(task) {
+			// TODO what should we do if it failed?
+			logger.Info("Datacenter build finished")
+			patch := client.MergeFromWithOptions(dc.DeepCopy())
+			delete(dc.Labels, api.RebuildLabel)
+			if err = remoteClient.Patch(ctx, dc, patch); err != nil {
+				logger.Error(err, "Failed to remove rebuild label")
+				return result.Error(err)
+			}
+			return result.Continue()
+		} else {
+			//logger.Info("Waiting for datacenter rebuild to complete", "Active", task.Status.Active,
+			//	"Succeeded", task.Status.Succeeded, "Failed", task.Status.Failed)
+			logger.Info("Waiting for datacenter rebuild to complete", "Task", task)
+			return result.RequeueSoon(15)
+		}
+	} else {
+		if errors.IsNotFound(err) {
+			logger.Info("Creating rebuild task", "Task", taskKey)
+			if err = remoteClient.Create(ctx, desiredTask); err != nil {
+				logger.Error(err, "Failed to create rebuild task", "Task", taskKey)
+				return result.Error(err)
+			}
+			return result.RequeueSoon(15)
+		}
+		logger.Error(err, "Failed to get rebuild task", "Task", taskKey)
+		return result.Error(err)
+	}
+}
+
+func taskFinished(task *cassctlapi.CassandraTask) bool {
+	return len(task.Spec.Jobs) == int(task.Status.Succeeded+task.Status.Failed)
+}
+
+func newRebuildTask(targetDc, namespace, srcDc string) *cassctlapi.CassandraTask {
+	now := metav1.Now()
+	task := &cassctlapi.CassandraTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      targetDc + "-rebuild",
+		},
+		Spec: cassctlapi.CassandraTaskSpec{
+			ScheduledTime: &now,
+			Datacenter: corev1.ObjectReference{
+				Namespace: namespace,
+				Name:      targetDc,
+			},
+			Jobs: []cassctlapi.CassandraJob{
+				{
+					Name:    targetDc + "-rebuild",
+					Command: "rebuild",
+					Arguments: map[string]string{
+						"source_datacenter": srcDc,
+					},
+				},
+			},
+		},
+	}
+
+	annotations.AddHashAnnotation(task)
+
+	return task
 }

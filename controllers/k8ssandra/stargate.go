@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileStargate(
@@ -157,14 +158,26 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dcs []*cassdcapi.CassandraDatacenter,
-	logger logr.Logger,
-) result.ReconcileResult {
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
 	if !kc.HasStargates() {
 		return result.Continue()
 	}
 
-	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
+	kcCopy := kc.DeepCopy()
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if err := r.ClientCache.GetLocalClient().Patch(ctx, kc, patch); err != nil {
+		if errors.IsConflict(err) {
+			return result.RequeueSoon(1 * time.Second)
+		}
+		logger.Error(err, "version check failed")
+		return result.Error(err)
+	}
+	// Need to copy the status here as in-memory status updates can be lost by results
+	// returned from the api server.
+	kc.Status = kcCopy.Status
 
 	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 		logger.Error(err, "Failed to get remote client")
@@ -176,11 +189,21 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 			logger.Error(err, "Failed to create ManagementApiFacade")
 			return result.Error(err)
 		}
-		if err = stargate.ReconcileAuthKeyspace(dcs, managementApi, logger); err != nil {
+
+		replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
+		if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
+			logger.Error(err, "Failed to ensure keyspace replication")
 			return result.Error(err)
 		}
+
+		if err = stargate.ReconcileAuthTable(managementApi, logger); err != nil {
+			logger.Error(err, "Failed to reconcile Stargate auth table")
+			return result.Error(err)
+		}
+
 		return result.Continue()
 	}
+
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

@@ -18,7 +18,6 @@ package k8ssandra
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -32,48 +31,57 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dcs []*cassdcapi.CassandraDatacenter,
-	logger logr.Logger,
-) result.ReconcileResult {
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
 	if !kc.HasReapers() {
 		return result.Continue()
 	}
 
 	logger.Info("Reconciling Reaper schema")
-	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
 
-	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
-		logger.Error(err, "Failed to get remote client")
+	kcCopy := kc.DeepCopy()
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	if err := r.ClientCache.GetLocalClient().Patch(ctx, kc, patch); err != nil {
+		if errors.IsConflict(err) {
+			return result.RequeueSoon(1 * time.Second)
+		}
+		logger.Error(err, "version check failed")
 		return result.Error(err)
-	} else {
-		dc := dcs[0]
-		managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create ManagementApiFacade")
-			return result.Error(err)
-		}
-		keyspace := reaperapi.DefaultKeyspace
-
-		if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
-			keyspace = kc.Spec.Reaper.Keyspace
-		}
-
-		err = managementApiFacade.EnsureKeyspaceReplication(
-			keyspace,
-			cassandra.ComputeReplication(3, dcs...),
-		)
-		if err != nil {
-			logger.Error(err, "Failed to ensure keyspace replication")
-			return result.Error(err)
-		}
-
-		return result.Continue()
 	}
+	// Need to copy the status here as in-memory status updates can be lost by results
+	// returned from the api server.
+	kc.Status = kcCopy.Status
+
+	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	if err != nil {
+		logger.Error(err, "Failed to create ManagementApiFacade")
+		return result.Error(err)
+	}
+	keyspace := reaperapi.DefaultKeyspace
+
+	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
+		keyspace = kc.Spec.Reaper.Keyspace
+	}
+
+	datacenters := cassandra.GetDatacentersForReplication(kc)
+	err = managementApiFacade.EnsureKeyspaceReplication(
+		keyspace,
+		cassandra.ComputeReplication(3, datacenters...),
+	)
+	if err != nil {
+		logger.Error(err, "Failed to ensure keyspace replication")
+		return result.Error(err)
+	}
+
+	return result.Continue()
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaper(

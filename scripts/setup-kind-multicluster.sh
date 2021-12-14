@@ -18,11 +18,21 @@ fi
 OPTS=$(getopt -o ho --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,overwrite:,help -n 'create-kind-clusters' -- "$@")
 eval set -- "$OPTS"
 
+function help() {
+  echo
+  echo "Syntax: create-kind-clusters.sh [options]"
+  echo "Options:"
+  echo "clusters           The number of clusters to create."
+  echo "cluster-names      A comma-delimited list of cluster names to create. Takes precedence over clusters option."
+  echo "kind-node-version  The image version of the kind nodes."
+  echo "kind-worker-nodes  The number of worker nodes to deploy."
+}
+
 registry_name='kind-registry'
 registry_port='5000'
 num_clusters=1
 cluster_names="kind"
-kind_node_version="v1.22.1"
+kind_node_version="v1.22.4"
 kind_worker_nodes=3
 overwrite_clusters="no"
 
@@ -52,7 +62,7 @@ function create_cluster() {
   num_workers=$3
   node_version=$4
 
-cat <<EOF | kind create cluster --name $cluster_name --image kindest/node:$node_version --config=-
+cat <<EOF | kind create cluster --name $cluster_name -v 5 --image kindest/node:$node_version --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
@@ -99,7 +109,7 @@ function delete_clusters() {
 }
 
 function create_clusters() {
-  echo "Creating clusters..."
+  echo "Creating $num_clusters clusters..."
 
   for ((i=0; i<$num_clusters; i++))
   do

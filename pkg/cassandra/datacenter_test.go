@@ -355,6 +355,31 @@ func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 
+func TestDatacentersReplication(t *testing.T) {
+	t.Run("EachDcContainsKeyspaces", testEachDcContainsKeyspaces)
+}
+
+func testEachDcContainsKeyspaces(t *testing.T) {
+	assert := assert.New(t)
+
+	replication := &Replication{
+		datacenters: map[string]keyspacesReplication{
+			"dc2": {
+				"ks1": 3,
+				"ks2": 3,
+			},
+			"dc3": {
+				"ks1": 5,
+				"ks2": 1,
+				"ks3": 7,
+			},
+		},
+	}
+
+	assert.True(replication.EachDcContainsKeyspaces("ks1", "ks2"))
+	assert.False(replication.EachDcContainsKeyspaces("ks1", "ks2", "ks3"))
+}
+
 // GetDatacenterConfig returns a minimum viable DataCenterConfig.
 func GetDatacenterConfig() DatacenterConfig {
 	storageClass := "default"

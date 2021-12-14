@@ -220,3 +220,75 @@ func TestCompareReplications(t *testing.T) {
 		})
 	}
 }
+
+func TestParseReplication(t *testing.T) {
+	tests := []struct {
+		name        string
+		replication []byte
+		want        *Replication
+		valid       bool
+	}{
+		{
+			name:        "valid replication - single DC",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}}`),
+			want: &Replication{
+				datacenters: map[string]keyspacesReplication{
+					"dc2": {
+						"ks1": 3,
+						"ks2": 3,
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name:        "valid replication - multiple DCs",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": 1}}`),
+			want: &Replication{
+				datacenters: map[string]keyspacesReplication{
+					"dc2": {
+						"ks1": 3,
+						"ks2": 3,
+					},
+					"dc3": {
+						"ks1": 5,
+						"ks2": 1,
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name:        "invalid replication - wrong type",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": "1"}}`),
+			want:        nil,
+			valid:       false,
+		},
+		{
+			name:        "invalid replication - replica count < 0",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": -1}}`),
+			want:        nil,
+			valid:       false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseReplication(tt.replication)
+			if tt.valid {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestReplicationFactor(t *testing.T) {
+	replication, err := ParseReplication([]byte(`{"dc2": {"ks1": 3, "ks2": 5}}`))
+	require.NoError(t, err)
+
+	assert.Equal(t, 3, replication.ReplicationFactor("dc2", "ks1"))
+	assert.Equal(t, 0, replication.ReplicationFactor("dc2", "ks3"))
+	assert.Equal(t, 0, replication.ReplicationFactor("dc3", "ks1"))
+}

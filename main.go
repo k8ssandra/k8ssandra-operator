@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassctl "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -69,6 +70,7 @@ func init() {
 
 	utilruntime.Must(k8ssandraiov1alpha1.AddToScheme(scheme))
 	utilruntime.Must(cassdcapi.AddToScheme(scheme))
+	utilruntime.Must(cassctl.AddToScheme(scheme))
 	utilruntime.Must(replicationapi.AddToScheme(scheme))
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
