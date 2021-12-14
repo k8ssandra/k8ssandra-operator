@@ -3,9 +3,9 @@ package k8ssandra
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	v1alpha12 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +17,7 @@ import (
 // checkDeletion performs cleanup when a K8ssandraCluster object is deleted. All objects
 // that are logically part of the K8ssandraCluster are deleted before removing its
 // finalizer.
-func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *v1alpha1.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
 	if kc.DeletionTimestamp == nil {
 		return result.Continue()
 	}
@@ -46,7 +46,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *v1al
 			continue
 		}
 
-		dc := &v1beta1.CassandraDatacenter{}
+		dc := &cassdcapi.CassandraDatacenter{}
 		err = remoteClient.Get(ctx, dcKey, dc)
 		if err != nil {
 			if !errors.IsNotFound(err) {
@@ -60,7 +60,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *v1al
 		}
 
 		selector := utils.CreatedByK8ssandraControllerLabels(kcKey)
-		stargateList := &v1alpha12.StargateList{}
+		stargateList := &stargateapi.StargateList{}
 		options := client.ListOptions{
 			Namespace:     namespace,
 			LabelSelector: labels.SelectorFromSet(selector),
@@ -104,7 +104,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *v1al
 }
 
 // checkFinalizer ensures that the K8ssandraCluster has a finalizer.
-func (r *K8ssandraClusterReconciler) checkFinalizer(ctx context.Context, kc *v1alpha1.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) checkFinalizer(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
 	if controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer) {
 		return result.Continue()
 	}

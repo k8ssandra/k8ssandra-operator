@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *v1alpha1.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*v1beta1.CassandraDatacenter) {
+func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
 	kcKey := utils.GetKey(kc)
 
 	systemReplication, err := r.checkSystemReplication(ctx, kc, logger)
@@ -26,7 +26,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		return result.Error(err), nil
 	}
 
-	actualDcs := make([]*v1beta1.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 
 	seeds, err := r.findSeeds(ctx, kc, logger)
 	if err != nil {
@@ -65,9 +65,9 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		utils.AddHashAnnotation(desiredDc, v1alpha1.ResourceHashAnnotation)
+		utils.AddHashAnnotation(desiredDc, api.ResourceHashAnnotation)
 
-		actualDc := &v1beta1.CassandraDatacenter{}
+		actualDc := &cassdcapi.CassandraDatacenter{}
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
@@ -86,7 +86,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 
-			if !utils.CompareAnnotations(actualDc, desiredDc, v1alpha1.ResourceHashAnnotation) {
+			if !utils.CompareAnnotations(actualDc, desiredDc, api.ResourceHashAnnotation) {
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
@@ -138,11 +138,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	// CassandraInitialized condition if it is unset, i.e., only once. This allows us to
 	// distinguish whether we are deploying a CassandraDatacenter as part of a new cluster
 	// or as part of an existing cluster.
-	if kc.Status.GetConditionStatus(v1alpha1.CassandraInitialized) == v1.ConditionUnknown {
-		now := v12.Now()
-		(&kc.Status).SetCondition(v1alpha1.K8ssandraClusterCondition{
-			Type:               v1alpha1.CassandraInitialized,
-			Status:             v1.ConditionTrue,
+	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionUnknown {
+		now := metav1.Now()
+		(&kc.Status).SetCondition(api.K8ssandraClusterCondition{
+			Type:               api.CassandraInitialized,
+			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
 		})
 	}
@@ -150,9 +150,9 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	return result.Continue(), actualDcs
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *v1alpha1.K8ssandraCluster, dc *v1beta1.CassandraDatacenter) error {
+func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) error {
 	if len(kc.Status.Datacenters) == 0 {
-		kc.Status.Datacenters = make(map[string]v1alpha1.K8ssandraStatus, 0)
+		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
 
 	kdcStatus, found := kc.Status.Datacenters[dc.Name]
@@ -160,7 +160,7 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *v1alpha1.K8ssand
 	if found {
 		dc.Status.DeepCopyInto(kdcStatus.Cassandra)
 	} else {
-		kc.Status.Datacenters[dc.Name] = v1alpha1.K8ssandraStatus{
+		kc.Status.Datacenters[dc.Name] = api.K8ssandraStatus{
 			Cassandra: dc.Status.DeepCopy(),
 		}
 	}

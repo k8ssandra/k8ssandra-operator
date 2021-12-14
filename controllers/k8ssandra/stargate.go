@@ -3,25 +3,25 @@ package k8ssandra
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	v1alpha12 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	v12 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileStargate(
 	ctx context.Context,
-	kc *v1alpha1.K8ssandraCluster,
-	dcTemplate v1alpha1.CassandraDatacenterTemplate,
-	actualDc *v1beta1.CassandraDatacenter,
+	kc *api.K8ssandraCluster,
+	dcTemplate api.CassandraDatacenterTemplate,
+	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 	remoteClient client.Client,
 ) result.ReconcileResult {
@@ -32,14 +32,14 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		Namespace: actualDc.Namespace,
 		Name:      stargate.ResourceName(kc, actualDc),
 	}
-	actualStargate := &v1alpha12.Stargate{}
+	actualStargate := &stargateapi.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)
 
 	if stargateTemplate != nil {
 		logger.Info("Reconcile Stargate")
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
-		utils.AddHashAnnotation(desiredStargate, v1alpha1.ResourceHashAnnotation)
+		utils.AddHashAnnotation(desiredStargate, api.ResourceHashAnnotation)
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
@@ -59,7 +59,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to update status for stargate")
 				return result.Error(err)
 			}
-			if !utils.CompareAnnotations(desiredStargate, actualStargate, v1alpha1.ResourceHashAnnotation) {
+			if !utils.CompareAnnotations(desiredStargate, actualStargate, api.ResourceHashAnnotation) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)
@@ -103,32 +103,32 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *v1alpha1.K8ssandraCluster, stargateTemplate *v1alpha12.StargateDatacenterTemplate, actualDc *v1beta1.CassandraDatacenter) *v1alpha12.Stargate {
-	desiredStargate := &v1alpha12.Stargate{
-		ObjectMeta: v1.ObjectMeta{
+func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *stargateapi.Stargate {
+	desiredStargate := &stargateapi.Stargate{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   stargateKey.Namespace,
 			Name:        stargateKey.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				v1alpha1.NameLabel:                      v1alpha1.NameLabelValue,
-				v1alpha1.PartOfLabel:                    v1alpha1.PartOfLabelValue,
-				v1alpha1.ComponentLabel:                 v1alpha1.ComponentLabelValueStargate,
-				v1alpha1.CreatedByLabel:                 v1alpha1.CreatedByLabelValueK8ssandraClusterController,
-				v1alpha1.K8ssandraClusterNameLabel:      kc.Name,
-				v1alpha1.K8ssandraClusterNamespaceLabel: kc.Namespace,
+				api.NameLabel:                      api.NameLabelValue,
+				api.PartOfLabel:                    api.PartOfLabelValue,
+				api.ComponentLabel:                 api.ComponentLabelValueStargate,
+				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel:      kc.Name,
+				api.K8ssandraClusterNamespaceLabel: kc.Namespace,
 			},
 		},
-		Spec: v1alpha12.StargateSpec{
+		Spec: stargateapi.StargateSpec{
 			StargateDatacenterTemplate: *stargateTemplate,
-			DatacenterRef:              v12.LocalObjectReference{Name: actualDc.Name},
+			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
 		},
 	}
 	return desiredStargate
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *v1alpha1.K8ssandraCluster, stargate *v1alpha12.Stargate, dcName string) error {
+func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *stargateapi.Stargate, dcName string) error {
 	if len(kc.Status.Datacenters) == 0 {
-		kc.Status.Datacenters = make(map[string]v1alpha1.K8ssandraStatus)
+		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus)
 	}
 
 	kdcStatus, found := kc.Status.Datacenters[dcName]
@@ -141,18 +141,18 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *v1alpha1.K8ssandra
 			stargate.Status.DeepCopyInto(kdcStatus.Stargate)
 		}
 	} else {
-		kc.Status.Datacenters[dcName] = v1alpha1.K8ssandraStatus{
+		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
 			Stargate: stargate.Status.DeepCopy(),
 		}
 	}
 
 	if kc.Status.Datacenters[dcName].Stargate.Progress == "" {
-		kc.Status.Datacenters[dcName].Stargate.Progress = v1alpha12.StargateProgressPending
+		kc.Status.Datacenters[dcName].Stargate.Progress = stargateapi.StargateProgressPending
 	}
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Context, kc *v1alpha1.K8ssandraCluster, dcs []*v1beta1.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
 	if !kc.HasStargates() {
 		return result.Continue()
 	}
@@ -187,9 +187,9 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Con
 
 }
 
-func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *v1alpha1.K8ssandraCluster, dcName string) {
+func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
 	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
-		kc.Status.Datacenters[dcName] = v1alpha1.K8ssandraStatus{
+		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
 			Stargate:  nil,
 			Cassandra: kdcStatus.Cassandra.DeepCopy(),
 			Reaper:    kdcStatus.Reaper.DeepCopy(),

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -16,8 +16,8 @@ import (
 // JSON value is unmarshalled and returned. If not found, the SystemReplication is computed
 // and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
 // Lastly, kc is patched so that the changes are persisted,
-func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *v1alpha1.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
-	if val := utils.GetAnnotation(kc, v1alpha1.SystemReplicationAnnotation); val != "" {
+func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
+	if val := utils.GetAnnotation(kc, api.SystemReplicationAnnotation); val != "" {
 		replication := &cassandra.SystemReplication{}
 		if err := json.Unmarshal([]byte(val), replication); err == nil {
 			return replication, nil
@@ -38,9 +38,9 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 	if kc.Annotations == nil {
 		kc.Annotations = make(map[string]string)
 	}
-	kc.Annotations[v1alpha1.SystemReplicationAnnotation] = string(bytes)
+	kc.Annotations[api.SystemReplicationAnnotation] = string(bytes)
 	if err = r.Patch(ctx, kc, patch); err != nil {
-		logger.Error(err, "Failed to apply "+v1alpha1.SystemReplicationAnnotation+" patch")
+		logger.Error(err, "Failed to apply "+api.SystemReplicationAnnotation+" patch")
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 // updateReplicationOfSystemKeyspaces ensures that the replication for the system_auth,
 // system_traces, and system_distributed keyspaces is up to date. It ensures that there are
 // replicas for each DC and that there is a max of 3 replicas per DC.
-func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(ctx context.Context, kc *v1alpha1.K8ssandraCluster, dc *v1beta1.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(ctx context.Context, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
 	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
 		logger.Error(err, "Failed to create ManagementApiFacade")
