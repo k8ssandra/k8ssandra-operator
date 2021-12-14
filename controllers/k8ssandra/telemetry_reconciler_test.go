@@ -1,61 +1,102 @@
-// Some of the tests in this package target functions from pkg/telemetry, because they need to be envtests. We prefer to keep envtests in the controller
+// Some of the tests in this package target functions from pkg/telemetryapi, because they need to be envtests. We prefer to keep envtests in the controller
 // packages.
 package k8ssandra
 
 import (
+	"context"
+	testlogr "github.com/go-logr/logr/testing"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-// Test_IsPromInstalled tests whether the IsPromInstalled function correctly identifies whether prom is installed or not.
-func Test_IsPromInstalled(t *testing.T) {
-	assert.Fail(t, "not implemented")
+// new_DummyK8ssandraClusterReconciler gives us back a `K8ssandraClusterReconciler` with just the fields that we need to test `reconcileCassandraDCTelemetry()`.
+func newDummyK8ssandraClusterReconciler() K8ssandraClusterReconciler {
+	return K8ssandraClusterReconciler{ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: interval}}
 }
 
-// Test_PromNotInstalled_NoTelemetrySpec tests that when prometheus is not installed and there is no TelemetrySpec,
-// no errors arise in reconciliation.
-func Test_PromNotInstalled_NoTelemetrySpec_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
+// Some magic to override the RESTMapper().KindsFor(...) call. fake client blows up with a panic otherwise.
+type composedClient struct {
+	client.Client
+}
+type fakeRESTMapper struct {
+	meta.RESTMapper
 }
 
-// Test_PromInstalled_NoTelemetrySpec tests that when prometheus IS installed and there is no TelemetrySpec,
-// no errors arise in reconciliation.
-func Test_PromInstalled_NoTelemetrySpec_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
+func (c composedClient) RESTMapper() meta.RESTMapper {
+	return fakeRESTMapper{}
+}
+func (rm fakeRESTMapper) KindsFor(resource schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
+	return []schema.GroupVersionKind{
+		{
+			Group:   promapi.SchemeGroupVersion.Group,
+			Version: promapi.Version,
+			Kind:    promapi.ServiceMonitorsKind,
+		},
+	}, nil
+}
+func NewFakeClientWRestMapper() client.Client {
+	fakeClient, _ := test.NewFakeClient()
+	return composedClient{fakeClient}
 }
 
-// Test_PromInstalled_TelemetrySpec tests that when prometheus IS installed and there IS a TelemetrySpec, no errors are observed.
-// (We cannot obtain an actual ServiceMonitor as we are not running the Prometheus operator controller).
-func Test_PromInstalled_TelemetrySpec_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
-}
-
-// Test_PromNotInstalled_TelemetrySpec_FAIL tests that when Prometheus is not installed and a TelemetrySpec is defined,
-// the reconciliation loop fails out.
-func Test_PromNotInstalled_TelemetrySpec_FAIL(t *testing.T) {
-
-	assert.Fail(t, "not implemented")
-}
-
-// TestCassPrometheusResourcer_UpdateResources_SUCCESS tests that NewServiceMonitor succeeds in creating a ServiceMonitor.
-func TestCassPrometheusResourcer_UpdateResources_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
-}
-
-// TestCassPrometheusResourcer_CleanupResources_FAIL_Incomplete tests that the correct error type is
-// returned when an incomplete CassandraSMConfig is passed to NewServiceMonitor.
-func TestCassPrometheusResourcer_CleanupResources_FAIL_Incomplete(t *testing.T) {
-	assert.Fail(t, "not implemented")
-}
-
-// TestCassTelemetryResourcer_CreateResources_SUCCESS tests that NewServiceMonitor succeeds in creating the expected resources.
-func TestCassTelemetryResourcer_CreateResources_SUCCESS(t *testing.T) {
-	assert.Fail(t, "not implemented")
-}
-
-// TestCassTelemetryResourcer_CleanupResources_FAIL_Incomplete tests that the correct error type is returned when an incomplete
-// CassandraSMConfig is passed to NewServiceMonitor.
-func TestCassTelemetryResourcer_CleanupResources_FAIL_Incomplete(t *testing.T) {
-	assert.Fail(t, "not implemented")
+// Test_CassPrometheusResourcer_UpdateResources_TracksNamespaces tests that the servicemonitor is created in the namespace of the CassandraDC,
+// not the namespace of the k8ssandraCluster.
+func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
+	// Test fixtures
+	r := newDummyK8ssandraClusterReconciler()
+	ctx := context.Background()
+	fakeClient := NewFakeClientWRestMapper()
+	testLogger := testlogr.TestLogger{t}
+	// Resources to create
+	cassDC := test.NewCassandraDatacenter()
+	cfg := telemetry.CassPrometheusResourcer{
+		CassTelemetryResourcer: telemetry.CassTelemetryResourcer{
+			CassandraNamespace: cassDC.Namespace,
+			DataCenterName:     cassDC.Name,
+			ClusterName:        "test-kc",
+			TelemetrySpec: &telemetryapi.TelemetrySpec{
+				Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+					Enabled: true,
+				},
+			},
+			Logger: testLogger,
+		},
+	}
+	cfg.ServiceMonitorName = telemetry.GetCassandraPromSMName(cfg.CassTelemetryResourcer)
+	kc := test.NewK8ssandraCluster(cfg.ClusterName, "test-kc-namespace")
+	kc.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
+		{
+			Meta: k8ssandraapi.EmbeddedObjectMeta{
+				Namespace: cassDC.Namespace,
+				Name:      cassDC.Name,
+			},
+			CassandraTelemetry: &telemetryapi.TelemetrySpec{
+				Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+					Enabled: true,
+				},
+			},
+		},
+	}
+	_, err := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient)
+	if err != nil {
+		assert.Fail(t, "reconciliation failed", err)
+	}
+	currentSM := &promapi.ServiceMonitor{}
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: cfg.ServiceMonitorName, Namespace: cfg.CassandraNamespace}, currentSM); err != nil {
+		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
+	}
+	assert.NotEmpty(t, currentSM.Spec.Endpoints)
+	assert.NotEqual(t, currentSM.Namespace, kc.Namespace)
 }
