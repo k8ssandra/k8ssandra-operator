@@ -160,8 +160,8 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAndReaper(ctx context.Cont
 			return recResult
 		} else if recResult := r.reconcileReaper(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
-		} else if result, err := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); !result.IsZero() || err != nil {
-			return reconcile.Result.Requeue
+		} else if recResult := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
+			return recResult
 		}
 	}
 	return result.Continue()
