@@ -6,8 +6,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
-
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -384,11 +382,6 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor,
 	}
 	utils.AddHashAnnotation(&sm, k8ssandraapi.ResourceHashAnnotation)
 	return &sm, nil
-}
-
-// GetCassandraPromSMName gets the name for our ServiceMonitors based on
-func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
-	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "cass-servicemonitor"}, "-")
 }
 
 // UpdateResources executes the creation of the desired Prometheus resources on the cluster.
