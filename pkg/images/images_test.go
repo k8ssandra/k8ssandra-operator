@@ -8,7 +8,7 @@ import (
 
 var (
 	defaultId = NewImageId("default.registry.io", "default-repo", "default-name", "default-tag")
-	latestId  = NewImageId("other.registry.io", "other-repo", "other-name", "latest")
+	latestId  = NewImageId("latest.registry.io", "latest-repo", "latest-name", "latest")
 	customId  = NewImageId("", "", "custom-name", "")
 	mergedId  = NewImageId(defaultId.GetRegistry(), defaultId.GetRepository(), customId.GetName(), defaultId.GetTag())
 	emptyId   = NewImageId("", "", "", "")
@@ -16,7 +16,7 @@ var (
 
 var (
 	defaultImage = NewImage(defaultId, corev1.PullIfNotPresent, nil)
-	latestImage  = NewImage(latestId, "", &corev1.LocalObjectReference{Name: "other-pull-secret"})
+	latestImage  = NewImage(latestId, "", &corev1.LocalObjectReference{Name: "latest-pull-secret"})
 	customImage  = NewImage(customId, corev1.PullAlways, &corev1.LocalObjectReference{Name: "custom-pull-secret"})
 	mergedImage  = NewImage(mergedId, customImage.GetPullPolicy(), customImage.GetPullSecretRef())
 	emptyImage   = NewImage(emptyId, "", nil)
@@ -48,7 +48,7 @@ func TestImageString(t *testing.T) {
 		expected string
 	}{
 		{"default", defaultImage, "default.registry.io/default-repo/default-name:default-tag"},
-		{"latest", latestImage, "other.registry.io/other-repo/other-name:latest"},
+		{"latest", latestImage, "latest.registry.io/latest-repo/latest-name:latest"},
 		{"custom", customImage, "//custom-name:"},
 		{"empty", emptyImage, "//:"},
 	}
@@ -69,8 +69,18 @@ func TestCollectPullSecrets(t *testing.T) {
 	}{
 		{"nil", nil, nil, nil},
 		{"no secrets", defaultImage, defaultImage, nil},
-		{"some secrets", latestImage, defaultImage, []corev1.LocalObjectReference{*latestImage.GetPullSecretRef()}},
-		{"all secrets", latestImage, customImage, []corev1.LocalObjectReference{*latestImage.GetPullSecretRef(), *customImage.GetPullSecretRef()}},
+		{
+			"some secrets",
+			latestImage,
+			defaultImage,
+			[]corev1.LocalObjectReference{{Name: "latest-pull-secret"}},
+		},
+		{
+			"all secrets",
+			latestImage,
+			customImage,
+			[]corev1.LocalObjectReference{{Name: "latest-pull-secret"}, {Name: "custom-pull-secret"}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,9 +97,9 @@ func Test_registry(t *testing.T) {
 		defaults ImageId
 		expected string
 	}{
-		{"nil", nil, defaultId, defaultId.GetRegistry()},
-		{"empty", emptyId, defaultId, defaultId.GetRegistry()},
-		{"non-empty", latestId, defaultId, latestId.GetRegistry()},
+		{"nil", nil, defaultId, "default.registry.io"},
+		{"empty", emptyId, defaultId, "default.registry.io"},
+		{"non-empty", latestId, defaultId, "latest.registry.io"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,9 +116,9 @@ func Test_repository(t *testing.T) {
 		defaults ImageId
 		expected string
 	}{
-		{"nil", nil, defaultId, defaultId.GetRepository()},
-		{"empty", emptyId, defaultId, defaultId.GetRepository()},
-		{"non-empty", latestId, defaultId, latestId.GetRepository()},
+		{"nil", nil, defaultId, "default-repo"},
+		{"empty", emptyId, defaultId, "default-repo"},
+		{"non-empty", latestId, defaultId, "latest-repo"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -125,9 +135,9 @@ func Test_name(t *testing.T) {
 		defaults ImageId
 		expected string
 	}{
-		{"nil", nil, defaultId, defaultId.GetName()},
-		{"empty", emptyId, defaultId, defaultId.GetName()},
-		{"non-empty", latestId, defaultId, latestId.GetName()},
+		{"nil", nil, defaultId, "default-name"},
+		{"empty", emptyId, defaultId, "default-name"},
+		{"non-empty", latestId, defaultId, "latest-name"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -139,17 +149,17 @@ func Test_name(t *testing.T) {
 
 func Test_tag(t *testing.T) {
 	tests := []struct {
-		tag      string
+		name     string
 		id       ImageId
 		defaults ImageId
 		expected string
 	}{
-		{"nil", nil, defaultId, defaultId.GetTag()},
-		{"empty", emptyId, defaultId, defaultId.GetTag()},
-		{"non-empty", latestId, defaultId, latestId.GetTag()},
+		{"nil", nil, defaultId, "default-tag"},
+		{"empty", emptyId, defaultId, "default-tag"},
+		{"non-empty", latestId, defaultId, "latest"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.tag, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			actual := tag(tt.id, tt.defaults)
 			assert.Equal(t, tt.expected, actual)
 		})
@@ -158,19 +168,38 @@ func Test_tag(t *testing.T) {
 
 func Test_pullPolicy(t *testing.T) {
 	tests := []struct {
-		pullPolicy string
-		image      Image
-		defaults   Image
-		expected   corev1.PullPolicy
+		name     string
+		image    Image
+		defaults Image
+		expected corev1.PullPolicy
 	}{
-		{"nil", nil, defaultImage, defaultImage.GetPullPolicy()},
-		{"empty", emptyImage, defaultImage, defaultImage.GetPullPolicy()},
-		{"non-empty", customImage, defaultImage, customImage.GetPullPolicy()},
+		{"nil", nil, defaultImage, corev1.PullIfNotPresent},
+		{"empty", emptyImage, defaultImage, corev1.PullIfNotPresent},
+		{"non-empty", customImage, defaultImage, corev1.PullAlways},
 		{"latest", latestImage, defaultImage, corev1.PullAlways},
 	}
 	for _, tt := range tests {
-		t.Run(tt.pullPolicy, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			actual := pullPolicy(tt.image, tt.defaults)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_pullSecretRef(t *testing.T) {
+	tests := []struct {
+		name     string
+		image    Image
+		defaults Image
+		expected *corev1.LocalObjectReference
+	}{
+		{"nil", nil, defaultImage, nil},
+		{"empty", emptyImage, defaultImage, nil},
+		{"non-empty", latestImage, defaultImage, &corev1.LocalObjectReference{Name: "latest-pull-secret"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := pullSecretRef(tt.image, tt.defaults)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
