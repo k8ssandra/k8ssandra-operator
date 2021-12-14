@@ -6,6 +6,7 @@ package telemetry
 import (
 	"context"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"strings"
 
 	"github.com/go-logr/logr"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -60,4 +61,9 @@ func (cfg CassTelemetryResourcer) CleanupResources(ctx context.Context, client c
 		return err
 	}
 	return nil
+}
+
+// GetCassandraPromSMName gets the name for our ServiceMonitors based on cluster and DC name.
+func GetCassandraPromSMName(cfg CassTelemetryResourcer) string {
+	return strings.Join([]string{cfg.ClusterName, cfg.DataCenterName, "cass-servicemonitor"}, "-")
 }
