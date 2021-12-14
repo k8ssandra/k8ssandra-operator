@@ -8,7 +8,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -69,62 +68,6 @@ func Test_CassPrometheusResourcer_UpdateResources_Create_SUCCESS(t *testing.T) {
 	assert.NotEmpty(t, createdSM)
 	assert.Equal(t, "test-sm", createdSM.Name)
 	assert.Equal(t, "test-namespace", createdSM.Namespace)
-}
-
-// Test_CassPrometheusResourcer_UpdateResources_Heal tests that a serviceMonitor is created if one exists but is in the incorrect state.
-func Test_CassPrometheusResourcer_UpdateResources_Heal(t *testing.T) {
-	fakeClient, err := test.NewFakeClient()
-	if err != nil {
-		assert.Fail(t, "could not create fake client", err)
-	}
-	ctx := context.Background()
-	testLogger := testlogr.TestLogger{T: t}
-	// Create k8ssandra cluster and pass through to CassPrometheusResourcer.UpdateResources()
-	cfg := CassPrometheusResourcer{
-		CassTelemetryResourcer: newCassTelemetryResourcer(testLogger),
-		CommonLabels:           nil,
-		ServiceMonitorName:     "test-sm",
-	}
-	ownerCassDC := test.NewCassandraDatacenter()
-	if cfg.UpdateResources(ctx, fakeClient, &ownerCassDC); err != nil {
-		assert.Fail(t, "could not create resources as expected", err)
-		return
-	}
-	// Check that the expected resources were created.
-	createdSM := &promapi.ServiceMonitor{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Namespace: cfg.CassandraNamespace, Name: "test-sm"}, createdSM); err != nil {
-		assert.Fail(t, "could not get expected ServiceMonitor", err)
-		return
-	}
-	assert.NotEmpty(t, createdSM)
-	assert.Equal(t, "test-sm", createdSM.Name)
-	assert.Equal(t, "test-namespace", createdSM.Namespace)
-	// Break the ServiceMonitor in various ways
-	patch := client.StrategicMergeFrom(createdSM.DeepCopy())
-	createdSM.Labels = nil
-	createdSM.Spec.Endpoints = nil
-	if err := fakeClient.Patch(ctx, createdSM, patch); err != nil {
-		assert.Fail(t, "could not apply breaking patch to ServiceMonitor", err)
-		return
-	}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Namespace: cfg.CassandraNamespace, Name: "test-sm"}, createdSM); err != nil {
-		assert.Fail(t, "could not get expected ServiceMonitor", err)
-		return
-	}
-	assert.Empty(t, createdSM.Labels)
-	assert.Empty(t, createdSM.Spec.Endpoints)
-	// Heal ServiceMonitor
-	if err := cfg.UpdateResources(ctx, fakeClient, &ownerCassDC); err != nil {
-		assert.Fail(t, "could not heal resources as expected", err)
-		return
-	}
-	// Get New ServiceMonitor
-	if err := fakeClient.Get(ctx, types.NamespacedName{Namespace: cfg.CassandraNamespace, Name: "test-sm"}, createdSM); err != nil {
-		assert.Fail(t, "could not get expected ServiceMonitor", err)
-		return
-	}
-	assert.NotEmpty(t, createdSM.Labels)
-	assert.NotEmpty(t, createdSM.Spec.Endpoints)
 }
 
 // TODO: This test not currently passing. We need to look at whether evaluating the resourceHash is sufficient to trigger healing.
