@@ -82,7 +82,7 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	assert.Equal(t, "stargateio/stargate-3_11:v"+api.DefaultStargateVersion, container.Image)
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+DefaultStargateVersion, container.Image)
 	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
 
 	assert.EqualValues(t, resource.MustParse("200m"), container.Resources.Requests[corev1.ResourceCPU])

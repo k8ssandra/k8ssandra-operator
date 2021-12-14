@@ -80,16 +80,16 @@ func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.Reaper
 
 	coalesced := &api.ReaperClusterTemplate{}
 
-	if dcTemplate != nil && len(dcTemplate.Image) != 0 {
-		coalesced.Image = dcTemplate.Image
-	} else if clusterTemplate != nil && len(clusterTemplate.Image) != 0 {
-		coalesced.Image = clusterTemplate.Image
+	if dcTemplate != nil && dcTemplate.ContainerImage != nil {
+		coalesced.ContainerImage = dcTemplate.ContainerImage
+	} else if clusterTemplate != nil && clusterTemplate.ContainerImage != nil {
+		coalesced.ContainerImage = clusterTemplate.ContainerImage
 	}
 
-	if dcTemplate != nil && len(dcTemplate.ImagePullPolicy) != 0 {
-		coalesced.ImagePullPolicy = dcTemplate.ImagePullPolicy
-	} else if clusterTemplate != nil && len(clusterTemplate.ImagePullPolicy) != 0 {
-		coalesced.ImagePullPolicy = clusterTemplate.ImagePullPolicy
+	if dcTemplate != nil && dcTemplate.InitContainerImage != nil {
+		coalesced.InitContainerImage = dcTemplate.InitContainerImage
+	} else if clusterTemplate != nil && clusterTemplate.InitContainerImage != nil {
+		coalesced.InitContainerImage = clusterTemplate.InitContainerImage
 	}
 
 	if dcTemplate != nil && len(dcTemplate.ServiceAccountName) != 0 {
