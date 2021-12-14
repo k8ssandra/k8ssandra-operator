@@ -7,7 +7,7 @@ func IsNil(v interface{}) bool {
 		return true
 	}
 	switch reflect.TypeOf(v).Kind() {
-	case reflect.Ptr, reflect.Map, reflect.Array, reflect.Chan, reflect.Slice:
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func:
 		return reflect.ValueOf(v).IsNil()
 	}
 	return false
