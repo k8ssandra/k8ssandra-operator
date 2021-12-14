@@ -4,6 +4,7 @@ package k8ssandra
 
 import (
 	"context"
+
 	testlogr "github.com/go-logr/logr/testing"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -89,8 +90,9 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			},
 		},
 	}
-	_, err := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient)
-	if err != nil {
+	recResult := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient)
+	if !recResult.Completed() {
+		_, err := recResult.Output()
 		assert.Fail(t, "reconciliation failed", err)
 	}
 	currentSM := &promapi.ServiceMonitor{}
