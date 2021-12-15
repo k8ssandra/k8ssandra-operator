@@ -135,42 +135,42 @@ func createMedusaIni(kc *api.K8ssandraCluster) string {
     [cassandra]
     # The start and stop commands are not applicable in k8s.
     stop_cmd = /etc/init.d/cassandra stop
-    start_cmd = /etc/init.d/cassandra start
-	
+    start_cmd = /etc/init.d/cassandra start	
     check_running = nodetool version
 
     [storage]
     storage_provider = %s
-	bucket_name = %s
-  	key_file = /etc/medusa-secrets/credentials
+    bucket_name = %s
+    key_file = /etc/medusa-secrets/credentials
     prefix = %s
-	max_backup_age = %d
-	max_backup_count = %d
-	`, kc.Spec.Medusa.StorageProperties.StorageProvider,
+    max_backup_age = %d
+    max_backup_count = %d`, kc.Spec.Medusa.StorageProperties.StorageProvider,
 		kc.Spec.Medusa.StorageProperties.BucketName,
 		prefix,
 		kc.Spec.Medusa.StorageProperties.MaxBackupAge,
 		kc.Spec.Medusa.StorageProperties.MaxBackupCount)
 
 	if kc.Spec.Medusa.StorageProperties.Host != "" {
-		medusaIni += fmt.Sprintf("host = %s\n", kc.Spec.Medusa.StorageProperties.Host)
+		medusaIni += fmt.Sprintf("\n    host = %s", kc.Spec.Medusa.StorageProperties.Host)
 	}
 
 	if kc.Spec.Medusa.StorageProperties.Port != 0 {
-		medusaIni += fmt.Sprintf("port = %d\n", kc.Spec.Medusa.StorageProperties.Port)
+		medusaIni += fmt.Sprintf("\n    port = %d", kc.Spec.Medusa.StorageProperties.Port)
 	}
 
 	if kc.Spec.Medusa.StorageProperties.Secure {
-		medusaIni += "secure = True\n"
+		medusaIni += "\n    secure = True"
 	} else {
-		medusaIni += "secure = False\n"
+		medusaIni += "\n    secure = False"
 	}
 
 	if kc.Spec.Medusa.StorageProperties.BackupGracePeriodInDays != 0 {
-		medusaIni += fmt.Sprintf("backup_grace_period_in_days = %d\n", kc.Spec.Medusa.StorageProperties.BackupGracePeriodInDays)
+		medusaIni += fmt.Sprintf("\n    backup_grace_period_in_days = %d", kc.Spec.Medusa.StorageProperties.BackupGracePeriodInDays)
 	}
 
-	medusaIni += `[grpc]
+	medusaIni += `
+
+    [grpc]
     enabled = 1
 
     [kubernetes]
@@ -212,8 +212,8 @@ func updateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		// medusa-restore init container already exists, we may need to update it
 		restoreContainer = dcConfig.PodTemplateSpec.Spec.InitContainers[restoreContainerIndex].DeepCopy()
 	}
-	restoreContainer.Image = fmt.Sprintf("%s/%s:%s", *medusaSpec.Image.Registry, medusaSpec.Image.Repository, *medusaSpec.Image.Tag)
-	restoreContainer.ImagePullPolicy = *medusaSpec.Image.PullPolicy
+	restoreContainer.Image = fmt.Sprintf("%s/%s:%s", medusaSpec.ContainerImage.Registry, medusaSpec.ContainerImage.Repository, medusaSpec.ContainerImage.Tag)
+	restoreContainer.ImagePullPolicy = *medusaSpec.ContainerImage.PullPolicy
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, dcConfig, logger, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, dcConfig, logger)
@@ -221,6 +221,10 @@ func updateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
 		// medusa-restore init container doesn't exist, we need to add it
+		// We'll add the server-config-init init container in first position so it initializes cassandra.yaml for Medusa to use.
+		// The definition of that container will be completed later by cass-operator.
+		serverConfigContainer := &corev1.Container{Name: "server-config-init"}
+		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *serverConfigContainer)
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *restoreContainer)
 	} else {
 		// Overwrite existing medusa-restore init container
@@ -236,8 +240,8 @@ func updateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		// medusa container already exists, we may need to update it
 		medusaContainer = dcConfig.PodTemplateSpec.Spec.Containers[medusaContainerIndex].DeepCopy()
 	}
-	medusaContainer.Image = fmt.Sprintf("%s/%s:%s", *medusaSpec.Image.Registry, medusaSpec.Image.Repository, *medusaSpec.Image.Tag)
-	medusaContainer.ImagePullPolicy = *medusaSpec.Image.PullPolicy
+	medusaContainer.Image = fmt.Sprintf("%s/%s:%s", medusaSpec.ContainerImage.Registry, medusaSpec.ContainerImage.Repository, medusaSpec.ContainerImage.Tag)
+	medusaContainer.ImagePullPolicy = *medusaSpec.ContainerImage.PullPolicy
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
 	medusaContainer.Env = medusaEnvVars(medusaSpec, dcConfig, logger, "GRPC")
 

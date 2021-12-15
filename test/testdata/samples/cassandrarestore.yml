@@ -1,0 +1,12 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: CassandraRestore
+metadata:
+  name: restore-backup1
+  namespace: k8ssandra-operator
+spec:
+  cassandraDatacenter: 
+    name: dc1
+    clusterName: demo
+  backup: medusa-backup1
+  inPlace: true
+  shutdown: true

@@ -68,7 +68,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
-				Image: medusaapi.ContainerImage{
+				ContainerImage: &medusaapi.ContainerImage{
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: medusaapi.Storage{
@@ -79,7 +79,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		},
 	}
 
-	t.Logf("Creating k8ssandracluster with Medusa pre Get: %s", kc.Spec.Medusa.Image.Repository)
+	t.Logf("Creating k8ssandracluster with Medusa pre Get: %s", kc.Spec.Medusa.ContainerImage.Repository)
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
@@ -214,8 +214,9 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 	// Check containers presence
 	initContainerIndex, found := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "medusa-restore")
 	require.True(found, fmt.Sprintf("%s doesn't have medusa-restore init container", dc.Name))
+	_, foundConfig := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "server-config-init")
+	require.True(foundConfig, fmt.Sprintf("%s doesn't have server-config-init container", dc.Name))
 	initContainer := dc.Spec.PodTemplateSpec.Spec.InitContainers[initContainerIndex]
-
 	containerIndex, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "medusa")
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc.Name))
 	mainContainer := dc.Spec.PodTemplateSpec.Spec.Containers[containerIndex]

@@ -206,11 +206,14 @@ func (r *CassandraBackupReconciler) addCassdcSpecToStatus(ctx context.Context, b
 		//     * ForceUpgradeRacks
 		//     * DseWorkloads
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			Size:                   cassdc.Spec.Size,
-			ServerVersion:          cassdc.Spec.ServerVersion,
-			ServerType:             cassdc.Spec.ServerType,
-			ServerImage:            cassdc.Spec.ServerImage,
-			Config:                 cassdc.Spec.Config,
+			Size:          cassdc.Spec.Size,
+			ServerVersion: cassdc.Spec.ServerVersion,
+			ServerType:    cassdc.Spec.ServerType,
+			ServerImage:   cassdc.Spec.ServerImage,
+			// I had to comment out the following line because it was causing the backup to fail as it seems to expect bytes for the config
+			// The next version of k8ssandra backup/restore will remove all references to a cassdc anyway and rather rely on the token map stored
+			// in the medusa backups.
+			//Config:                 cassdc.Spec.Config,
 			ManagementApiAuth:      cassdc.Spec.ManagementApiAuth,
 			Resources:              cassdc.Spec.Resources,
 			SystemLoggerResources:  cassdc.Spec.SystemLoggerResources,

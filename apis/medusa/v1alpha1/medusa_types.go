@@ -27,6 +27,7 @@ import (
 type Storage struct {
 	// The storage backend to use for the backups.
 	// +kubebuilder:validation:Enum=local;google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
+	// +kubebuilder:validation:Required
 	StorageProvider string `json:"storageProvider,omitempty"`
 
 	// Kubernetes Secret that stores the key file for the storage provider's API.
@@ -35,6 +36,7 @@ type Storage struct {
 	StorageSecretRef string `json:"storageSecretRef,omitempty"`
 
 	// The name of the bucket to use for the backups.
+	// +kubebuilder:validation:Required
 	BucketName string `json:"bucketName,omitempty"`
 
 	// Name of the top level folder in the backup bucket.
@@ -58,17 +60,20 @@ type Storage struct {
 	// Max upload bandwidth in MB/s.
 	// Defaults to 50 MB/s.
 	// +kubebuilder:default="50MB/s"
+	// +optional
 	TransferMaxBandwidth string `json:"transferMaxBandwidth,omitempty"`
 
 	// Number of concurrent uploads.
 	// Helps maximizing the speed of uploads but puts more pressure on the network.
 	// Defaults to 1.
 	// +kubebuilder:default=1
+	// +optional
 	ConcurrentTransfers int `json:"concurrentTransfers,omitempty"`
 
 	// File size over which cloud specific cli tools are used for transfer.
 	// Defaults to 100 MB.
 	// +kubebuilder:default=104857600
+	// +optional
 	MultiPartUploadThreshold int `json:"multiPartUploadThreshold,omitempty"`
 
 	// Host to connect to for the storage backend.
@@ -81,9 +86,11 @@ type Storage struct {
 	Region string `json:"region,omitempty"`
 
 	// Port to connect to for the storage backend.
+	// +optional
 	Port int `json:"port,omitempty"`
 
 	// Whether to use SSL for the storage backend.
+	// +optional
 	Secure bool `json:"secure,omitempty"`
 
 	// Age after which orphan sstables can be deleted from the storage backend.
@@ -96,15 +103,13 @@ type Storage struct {
 type ContainerImage struct {
 
 	// +kubebuilder:default="docker.io"
-	// +optional
-	Registry *string `json:"registry,omitempty"`
+	Registry string `json:"registry,omitempty"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:default="k8ssandra/medusa"
 	Repository string `json:"repository"`
 
 	// +kubebuilder:default="latest"
-	// +optional
-	Tag *string `json:"tag,omitempty"`
+	Tag string `json:"tag,omitempty"`
 
 	// +kubebuilder:default="IfNotPresent"
 	// +optional
@@ -118,7 +123,7 @@ type MedusaClusterTemplate struct {
 	// MedusaContainerImage is the image characteristics to use for Medusa containers. Leave nil
 	// to use a default image.
 	// +optional
-	Image ContainerImage `json:"medusaContainerImage,omitempty"`
+	ContainerImage *ContainerImage `json:"containerImage,omitempty"`
 
 	// SecurityContext applied to the Medusa containers.
 	// +optional

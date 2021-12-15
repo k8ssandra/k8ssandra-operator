@@ -48,17 +48,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cassandra.k8ssandra.io
+  - config.k8ssandra.io
   resources:
-  - cassandrarebackups
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - cassandra.k8ssandra.io
-  resources:
-  - cassandrarestores
+  - clientconfigs
   verbs:
   - create
   - delete
@@ -68,17 +60,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cassandra.k8ssandra.io
+  - ""
   resources:
-  - cassandrarestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - config.k8ssandra.io
-  resources:
-  - clientconfigs
+  - configmaps
   verbs:
   - create
   - delete
@@ -182,6 +166,33 @@ rules:
   - medusa.k8ssandra.io
   resources:
   - cassandrabackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarebackups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores/status
   verbs:
   - get
   - patch

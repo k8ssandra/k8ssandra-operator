@@ -24,13 +24,16 @@ spec:
       - metadata:
           name: dc1
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M
-      - metadata:
-          name: dc2
-        k8sContext: kind-k8ssandra-1
-        size: 3
-        stargate:
-          size: 1
-          heapSize: 256M
+  medusa:
+    containerImage:
+      registry: docker.io
+      repository: k8ssandra/medusa
+      tag: 0.11.3
+    storageProperties:
+      storageProvider: s3_compatible
+      storageSecretRef: medusa-bucket-key
+      bucketName: k8ssandra-medusa
+      prefix: test
+      host: minio.minio.svc.cluster.local
+      port: 9000
+      secure: false

@@ -51,10 +51,10 @@ type CassandraRestoreReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=cassandra.k8ssandra.io,namespace="k8ssandra",resources=cassandrarestores,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=cassandra.k8ssandra.io,namespace="k8ssandra",resources=cassandrarestores/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=cassandra.k8ssandra.io,namespace="k8ssandra",resources=cassandrarebackups,verbs=get;list;watch
-// +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=cassandrarestores,verbs=get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=cassandrarestores/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=cassandrarebackups,verbs=get;list;watch
+// +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,namespace="k8ssandra",resources=statefulsets,verbs=list;watch
 
 func (r *CassandraRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
