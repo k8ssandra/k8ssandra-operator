@@ -34,6 +34,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 )
 
+// TODO should we move this to secrets.go?
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
 	logger.Info("Reconciling Reaper user secrets")
 	if kc.Spec.Reaper != nil {

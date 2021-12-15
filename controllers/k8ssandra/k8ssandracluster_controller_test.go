@@ -2,11 +2,13 @@ package k8ssandra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/stretchr/testify/mock"
+	"reflect"
 	"testing"
 	"time"
 
@@ -129,9 +131,13 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
@@ -245,7 +251,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	dc1Size := int32(6)
 	dc2Size := int32(12)
 
-	kluster := &api.K8ssandraCluster{
+	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
@@ -289,19 +295,23 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 		},
 	}
 
-	err := f.Client.Create(ctx, kluster)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifySuperUserSecretCreated(ctx, t, f, kluster)
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+	verifySuperUserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
-	klusterKey := client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name}
-	err = f.Client.Get(ctx, klusterKey, kluster)
+	klusterKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	err = f.Client.Get(ctx, klusterKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
 	t.Log("verify configuration of dc1")
@@ -309,16 +319,16 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
-	assert.Equal(kluster.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
+	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -335,21 +345,21 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
-	assert.Equal(kluster.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
+	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
@@ -369,7 +379,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	dc1Size := int32(12)
 	dc2Size := int32(30)
 
-	kluster := &api.K8ssandraCluster{
+	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
@@ -447,12 +457,16 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 		},
 	}
 
-	err := f.Client.Create(ctx, kluster)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifySuperUserSecretCreated(ctx, t, f, kluster)
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+	verifySuperUserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -463,16 +477,16 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.Datacenters[0].StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kluster.Spec.Cassandra.Datacenters[0].Networking, dc1.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[0].Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[0].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.Datacenters[0].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -489,21 +503,21 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kluster.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
@@ -524,7 +538,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	dc1Size := int32(12)
 	dc2Size := int32(30)
 
-	kluster := &api.K8ssandraCluster{
+	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
@@ -598,12 +612,16 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 		},
 	}
 
-	err := f.Client.Create(ctx, kluster)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifySuperUserSecretCreated(ctx, t, f, kluster)
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifyReplicatedSecretReconciled(ctx, t, f, kluster)
+	verifySuperUserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -614,16 +632,16 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kluster.Spec.Cassandra.Networking, dc1.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kluster.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -640,21 +658,21 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kluster.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kluster.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kluster.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kluster.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kluster.Namespace, Name: kluster.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
@@ -692,7 +710,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
 
-	cluster := &api.K8ssandraCluster{
+	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "test",
@@ -732,12 +750,16 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		},
 	}
 
-	err := f.Client.Create(ctx, cluster)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifySuperUserSecretCreated(ctx, t, f, cluster)
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifyReplicatedSecretReconciled(ctx, t, f, cluster)
+	verifySuperUserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -845,7 +867,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: cluster.Namespace, Name: cluster.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
@@ -910,9 +932,13 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
 	verifySuperUserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -1163,6 +1189,35 @@ func verifySuperUserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 		}
 		return true
 	}, timeout, interval, "failed to verify that the default superuser secret was created")
+}
+
+func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	expectedReplication := cassandra.ComputeSystemReplication(kc)
+
+	assert.Eventually(t, func() bool {
+		kc = &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
+			return false
+		}
+
+		val, found := kc.Annotations[api.SystemReplicationAnnotation]
+		if !found {
+			return false
+		}
+
+		actualReplication := &cassandra.SystemReplication{}
+		if err := json.Unmarshal([]byte(val), actualReplication); err != nil {
+			t.Logf("Failed to unmarshal system replication annotation: %v", err)
+			return false
+		}
+
+		return reflect.DeepEqual(expectedReplication, *actualReplication)
+	}, timeout, interval, "Failed to verify that the system replication annotation was set correctly")
+
 }
 
 func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
