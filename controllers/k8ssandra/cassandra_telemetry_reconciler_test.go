@@ -5,6 +5,8 @@ package k8ssandra
 import (
 	"context"
 
+	"testing"
+
 	testlogr "github.com/go-logr/logr/testing"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -12,12 +14,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,38 +24,13 @@ func newDummyK8ssandraClusterReconciler() K8ssandraClusterReconciler {
 	return K8ssandraClusterReconciler{ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: interval}}
 }
 
-// Some magic to override the RESTMapper().KindsFor(...) call. fake client blows up with a panic otherwise.
-type composedClient struct {
-	client.Client
-}
-type fakeRESTMapper struct {
-	meta.RESTMapper
-}
-
-func (c composedClient) RESTMapper() meta.RESTMapper {
-	return fakeRESTMapper{}
-}
-func (rm fakeRESTMapper) KindsFor(resource schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
-	return []schema.GroupVersionKind{
-		{
-			Group:   promapi.SchemeGroupVersion.Group,
-			Version: promapi.Version,
-			Kind:    promapi.ServiceMonitorsKind,
-		},
-	}, nil
-}
-func NewFakeClientWRestMapper() client.Client {
-	fakeClient, _ := test.NewFakeClient()
-	return composedClient{fakeClient}
-}
-
 // Test_CassPrometheusResourcer_UpdateResources_TracksNamespaces tests that the servicemonitor is created in the namespace of the CassandraDC,
 // not the namespace of the k8ssandraCluster.
 func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 	// Test fixtures
 	r := newDummyK8ssandraClusterReconciler()
 	ctx := context.Background()
-	fakeClient := NewFakeClientWRestMapper()
+	fakeClient := test.NewFakeClientWRestMapper()
 	testLogger := testlogr.TestLogger{T: t}
 	// Resources to create
 	cassDC := test.NewCassandraDatacenter()
