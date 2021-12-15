@@ -17,7 +17,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
 * [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Cassandra Datacenter.
-
+* [ENHANCEMENT] [#24](https://github.com/k8ssandra/k8ssandra-operator/issues/24) Make Reaper images configurable and
+  use same struct for both Reaper and Stargate images
 * [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 
 ## v1.0.0-alpha.2 - 2021-12-03

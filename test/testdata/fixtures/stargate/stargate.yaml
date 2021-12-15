@@ -25,3 +25,8 @@ spec:
     timeoutSeconds: 20
   cassandraConfigMapRef:
     name: cassandra-config
+  containerImage:
+    repository: stargateio
+    name: "stargate-3_11"
+    tag: "v1.0.45"
+    pullPolicy: Always

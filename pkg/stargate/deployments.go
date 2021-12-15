@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -24,6 +25,35 @@ const (
 	clusterDomain = "cluster.local"
 )
 
+const (
+	DefaultStargateImageRepository = "stargateio"
+	DefaultStargate4ImageName      = "stargate-4_0"
+	DefaultStargate3ImageName      = "stargate-3_11"
+	DefaultStargateVersion         = "1.0.45"
+)
+
+var (
+	stargate4DefaultImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultStargateImageRepository,
+		DefaultStargate4ImageName,
+		"v"+DefaultStargateVersion,
+	)
+	stargate3DefaultImageId = images.NewImageId(
+		images.DefaultRegistry,
+		DefaultStargateImageRepository,
+		DefaultStargate3ImageName,
+		"v"+DefaultStargateVersion,
+	)
+)
+
+type ClusterVersion string
+
+const (
+	ClusterVersion3 ClusterVersion = "3.11"
+	ClusterVersion4 ClusterVersion = "4.0"
+)
+
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
 func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
@@ -34,6 +64,8 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 	racks := dc.GetRacks()
 	replicasByRack := cassdcapi.SplitRacks(int(stargate.Spec.Size), len(racks))
 	dnsPolicy := computeDNSPolicy(dc)
+
+	defaultImage := computeDefaultImage(clusterVersion)
 
 	var deployments = make(map[string]appsv1.Deployment)
 	for i, rack := range racks {
@@ -46,8 +78,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
 
 		deploymentName := DeploymentName(dc, &rack)
-		image := computeImage(template, clusterVersion)
-		pullPolicy := computePullPolicy(template)
+		image := images.Coalesce(template.ContainerImage, defaultImage)
 		resources := computeResourceRequirements(template)
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
@@ -100,14 +131,15 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 						ServiceAccountName: serviceAccountName,
 
-						HostNetwork: dc.IsHostNetworkEnabled(),
-						DNSPolicy:   dnsPolicy,
+						HostNetwork:      dc.IsHostNetworkEnabled(),
+						DNSPolicy:        dnsPolicy,
+						ImagePullSecrets: images.CollectPullSecrets(image),
 
 						Containers: []corev1.Container{{
 
 							Name:            deploymentName,
-							Image:           image,
-							ImagePullPolicy: pullPolicy,
+							Image:           images.ImageString(image),
+							ImagePullPolicy: image.GetPullPolicy(),
 
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 8080, Name: "graphql"},
@@ -135,7 +167,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 								},
 								{Name: "JAVA_OPTS", Value: jvmOptions},
 								{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
-								{Name: "CLUSTER_VERSION", Value: clusterVersion},
+								{Name: "CLUSTER_VERSION", Value: string(clusterVersion)},
 								{Name: "SEED", Value: seedService},
 								{Name: "DATACENTER_NAME", Value: dc.Name},
 								{Name: "RACK_NAME", Value: rack.Name},
@@ -186,42 +218,21 @@ func computeSeedServiceUrl(dc *cassdcapi.CassandraDatacenter) string {
 	return dc.Spec.ClusterName + "-seed-service." + dc.Namespace + ".svc." + clusterDomain
 }
 
-func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) string {
+func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 	cassandraVersion := dc.Spec.ServerVersion
 	if strings.HasPrefix(cassandraVersion, "3") {
-		return "3.11"
+		return ClusterVersion3
 	} else {
-		return "4.0"
+		return ClusterVersion4
 	}
 }
 
-func computeImage(template *api.StargateTemplate, clusterVersion string) string {
-	containerImage := template.StargateContainerImage
-	if containerImage == nil {
-		if clusterVersion == "3.11" {
-			return fmt.Sprintf("%s/%s:v%s", "stargateio", "stargate-3_11", api.DefaultStargateVersion)
-		} else {
-			return fmt.Sprintf("%s/%s:v%s", "stargateio", "stargate-4_0", api.DefaultStargateVersion)
-		}
+func computeDefaultImage(clusterVersion ClusterVersion) images.Image {
+	if clusterVersion == ClusterVersion3 {
+		return images.NewImage(stargate3DefaultImageId, corev1.PullIfNotPresent, nil)
 	} else {
-		registry := "docker.io"
-		if containerImage.Registry != nil {
-			registry = *containerImage.Registry
-		}
-		tag := "latest"
-		if containerImage.Tag != nil {
-			tag = *containerImage.Tag
-		}
-		return fmt.Sprintf("%v/%v:%v", registry, containerImage.Repository, tag)
+		return images.NewImage(stargate4DefaultImageId, corev1.PullIfNotPresent, nil)
 	}
-}
-
-func computePullPolicy(template *api.StargateTemplate) corev1.PullPolicy {
-	containerImage := template.StargateContainerImage
-	if containerImage != nil && containerImage.PullPolicy != nil {
-		return *containerImage.PullPolicy
-	}
-	return corev1.PullIfNotPresent
 }
 
 func computeResourceRequirements(template *api.StargateTemplate) corev1.ResourceRequirements {
