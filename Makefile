@@ -75,7 +75,7 @@ DEPLOYMENT =
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
 else
-	DEPLOY_TARGET = -$(DEPLOYMENT)
+	DEPLOY_TARGET = /$(DEPLOYMENT)
 endif
 
 all: build

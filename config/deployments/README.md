@@ -9,10 +9,11 @@ make DEPLOYMENT=cluster-scope multi-up
 
 The Makefile assumes a naming convention for the kustomize directories which is:
 
-* `control-plane-<custom deployment name>`
-* `data-plane-<custom deployment name>`
+* `control-plane/<custom deployment name>`
+* `data-plane/<custom deployment name>`
 
-You simply specify the `<custom deployment name` part as the value for the `DEPLOYMENT` variable
+You simply specify the `<custom deployment name>` part as the value for the `DEPLOYMENT` 
+variable
 
 # Kustomizations
 
