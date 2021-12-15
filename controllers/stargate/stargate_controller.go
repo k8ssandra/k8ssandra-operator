@@ -236,6 +236,12 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
+	telemetryResult := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
+	if !telemetryResult.Completed() {
+		_, err := telemetryResult.Output()
+		return ctrl.Result{}, err
+	}
+
 	// Update status to reflect deployment status
 	if stargate.Status.Replicas != replicas ||
 		stargate.Status.ReadyReplicas != readyReplicas ||
