@@ -21,11 +21,11 @@ func newCassTelemetryResourcer(logger logr.Logger) CassTelemetryResourcer {
 		CassandraNamespace: "test-namespace",
 		DataCenterName:     "test-DC",
 		ClusterName:        "test-cluster",
-		TelemetrySpec :     &telemetryapi.TelemetrySpec{
+		TelemetrySpec: &telemetryapi.TelemetrySpec{
 			Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 				Enabled: true,
 			},
 		},
-		Logger:          logger,
+		Logger: logger,
 	}
 }

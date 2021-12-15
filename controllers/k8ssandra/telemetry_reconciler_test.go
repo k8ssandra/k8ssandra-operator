@@ -59,7 +59,7 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 	r := newDummyK8ssandraClusterReconciler()
 	ctx := context.Background()
 	fakeClient := NewFakeClientWRestMapper()
-	testLogger := testlogr.TestLogger{t}
+	testLogger := testlogr.TestLogger{T: t}
 	// Resources to create
 	cassDC := test.NewCassandraDatacenter()
 	cfg := telemetry.CassPrometheusResourcer{
