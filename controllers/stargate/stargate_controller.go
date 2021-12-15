@@ -19,9 +19,9 @@ package stargate
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -189,8 +189,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		} else {
 			// Deployment already exists: check if it needs to be updated
-			desiredDeploymentHash := desiredDeployment.Annotations[coreapi.ResourceHashAnnotation]
-			if actualDeploymentHash, found := actualDeployment.Annotations[coreapi.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
+			desiredDeploymentHash := desiredDeployment.Annotations[utils.ResourceHashAnnotation]
+			if actualDeploymentHash, found := actualDeployment.Annotations[utils.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
 				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
 				resourceVersion := actualDeployment.GetResourceVersion()
 				desiredDeployment.DeepCopyInto(&actualDeployment)
@@ -303,8 +303,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check if the service needs to be updated
-	desiredServiceHash := desiredService.Annotations[coreapi.ResourceHashAnnotation]
-	if actualServiceHash, found := actualService.Annotations[coreapi.ResourceHashAnnotation]; !found || actualServiceHash != desiredServiceHash {
+	desiredServiceHash := desiredService.Annotations[utils.ResourceHashAnnotation]
+	if actualServiceHash, found := actualService.Annotations[utils.ResourceHashAnnotation]; !found || actualServiceHash != desiredServiceHash {
 		logger.Info("Updating Stargate Service", "Service", serviceKey)
 		resourceVersion := actualService.GetResourceVersion()
 		desiredService.DeepCopyInto(actualService)

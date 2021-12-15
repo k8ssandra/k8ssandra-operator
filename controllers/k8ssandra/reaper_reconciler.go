@@ -149,7 +149,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 			return result.Error(err)
 		}
 
-		if !utils.CompareAnnotations(actualReaper, desiredReaper, api.ResourceHashAnnotation) {
+		if !utils.CompareHashes(actualReaper, desiredReaper) {
 			logger.Info("Updating Reaper resource")
 			resourceVersion := actualReaper.GetResourceVersion()
 			desiredReaper.DeepCopyInto(actualReaper)

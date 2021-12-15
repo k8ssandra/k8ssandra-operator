@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,14 +33,16 @@ const (
 type ReaperDatacenterTemplate struct {
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:3.0.0".
+	// The default is "thelastpickle/cassandra-reaper:3.1.0".
 	// +optional
-	ContainerImage *ContainerImage `json:"containerImage,omitempty"`
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
+	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for tje Reaper pod init container (that performs schema migrations).
-	// The default is "thelastpickle/cassandra-reaper:3.0.0".
+	// The default is "thelastpickle/cassandra-reaper:3.1.0".
 	// +optional
-	InitContainerImage *ContainerImage `json:"initContainerImage,omitempty"`
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
+	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
 	// +optional
@@ -80,62 +83,6 @@ type ReaperDatacenterTemplate struct {
 	// migrations.
 	// +optional
 	InitContainerSecurityContext *corev1.SecurityContext `json:"initContainerSecurityContext,omitempty"`
-}
-
-type ContainerImage struct {
-
-	// The docker registry to use. Defaults to docker.io.
-	// +kubebuilder:default="docker.io"
-	// +optional
-	Registry string `json:"registry,omitempty"`
-
-	// The docker repository to use. Defaults to "thelastpickle".
-	// +kubebuilder:default="thelastpickle"
-	// +optional
-	Repository string `json:"repository,omitempty"`
-
-	// The image name to use. Defaults to "cassandra-reaper".
-	// +kubebuilder:default="cassandra-reaper"
-	// +optional
-	Name string `json:"name,omitempty"`
-
-	// The image tag to use. Defaults to "latest".
-	// +kubebuilder:default="latest"
-	// +optional
-	Tag string `json:"tag,omitempty"`
-
-	// The image pull policy to use. Defaults to "Always" if the tag is "latest", otherwise to "IfNotPresent".
-	// +optional
-	// +kubebuilder:validation:Enum:=Always;IfNotPresent;Never
-	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
-
-	// The secret to use when pulling the image from private repositories.
-	// +optional
-	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
-}
-
-func (in ContainerImage) GetRegistry() string {
-	return in.Registry
-}
-
-func (in ContainerImage) GetRepository() string {
-	return in.Repository
-}
-
-func (in ContainerImage) GetName() string {
-	return in.Name
-}
-
-func (in ContainerImage) GetTag() string {
-	return in.Tag
-}
-
-func (in ContainerImage) GetPullPolicy() corev1.PullPolicy {
-	return in.PullPolicy
-}
-
-func (in ContainerImage) GetPullSecretRef() *corev1.LocalObjectReference {
-	return in.PullSecretRef
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.

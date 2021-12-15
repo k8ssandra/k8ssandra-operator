@@ -1,10 +1,10 @@
 package secret
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,9 +15,9 @@ func TestLabelIsSet(t *testing.T) {
 	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
 	repSec := generateReplicatedSecret(kcKey, targets)
 
-	assert.Equal(t, api.NameLabelValue, repSec.Labels[api.ManagedByLabel])
-	assert.Equal(t, repSec.Labels[api.K8ssandraClusterNamespaceLabel], kcKey.Namespace)
-	assert.Equal(t, repSec.Labels[api.K8ssandraClusterNameLabel], kcKey.Name)
+	assert.Equal(t, utils.NameLabelValue, repSec.Labels[utils.ManagedByLabel])
+	assert.Equal(t, repSec.Labels[utils.K8ssandraClusterNamespaceLabel], kcKey.Namespace)
+	assert.Equal(t, repSec.Labels[utils.K8ssandraClusterNameLabel], kcKey.Name)
 }
 
 func TestRandomPasswordGen(t *testing.T) {
@@ -58,7 +58,7 @@ func TestRequiresUpdate(t *testing.T) {
 	currentRepSec.Labels["my-personal-one"] = "supersecret"
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
-	currentRepSec.Labels[api.K8ssandraClusterNameLabel] = "wrong-cluster"
+	currentRepSec.Labels[utils.K8ssandraClusterNameLabel] = "wrong-cluster"
 	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
 
 	// ReplicationTargets can include additional stuff, but not remove our targets

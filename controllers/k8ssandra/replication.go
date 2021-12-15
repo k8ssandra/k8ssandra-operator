@@ -17,7 +17,7 @@ import (
 // and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
 // Lastly, kc is patched so that the changes are persisted,
 func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
-	if val := utils.GetAnnotation(kc, api.SystemReplicationAnnotation); val != "" {
+	if val := utils.GetAnnotation(kc, utils.SystemReplicationAnnotation); val != "" {
 		replication := &cassandra.SystemReplication{}
 		if err := json.Unmarshal([]byte(val), replication); err == nil {
 			return replication, nil
@@ -38,9 +38,9 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 	if kc.Annotations == nil {
 		kc.Annotations = make(map[string]string)
 	}
-	kc.Annotations[api.SystemReplicationAnnotation] = string(bytes)
+	kc.Annotations[utils.SystemReplicationAnnotation] = string(bytes)
 	if err = r.Patch(ctx, kc, patch); err != nil {
-		logger.Error(err, "Failed to apply "+api.SystemReplicationAnnotation+" patch")
+		logger.Error(err, "Failed to apply "+utils.SystemReplicationAnnotation+" patch")
 		return nil, err
 	}
 

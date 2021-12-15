@@ -72,7 +72,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(ctx context.Context
 				return result.Error(err)
 			}
 		} else {
-			if !utils.CompareAnnotations(actualEndpoints, desiredEndpoints, api.ResourceHashAnnotation) {
+			if !utils.CompareHashes(actualEndpoints, desiredEndpoints) {
 				logger.Info("Updating endpoints", "Endpoints", endpointsKey)
 				actualEndpoints := actualEndpoints.DeepCopy()
 				resourceVersion := actualEndpoints.GetResourceVersion()
@@ -133,7 +133,7 @@ func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1
 		},
 	}
 
-	utils.AddHashAnnotation(ep, api.ResourceHashAnnotation)
+	utils.AddHashAnnotation(ep)
 
 	return ep
 }

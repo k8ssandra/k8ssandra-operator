@@ -20,7 +20,6 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -192,7 +191,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	actualDeployment = actualDeployment.DeepCopy()
 
 	// Check if the deployment needs to be updated
-	if !utils.CompareAnnotations(actualDeployment, desiredDeployment, k8ssandraapi.ResourceHashAnnotation) {
+	if !utils.CompareHashes(actualDeployment, desiredDeployment) {
 		logger.Info("Updating Reaper Deployment")
 		resourceVersion := actualDeployment.GetResourceVersion()
 		desiredDeployment.DeepCopyInto(actualDeployment)
@@ -248,7 +247,7 @@ func (r *ReaperReconciler) reconcileService(
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		}
 	}
-	if !utils.CompareAnnotations(actualService, desiredService, k8ssandraapi.ResourceHashAnnotation) {
+	if !utils.CompareHashes(actualService, desiredService) {
 		logger.Info("Updating Reaper Service")
 		updatedService := actualService.DeepCopy()
 		desiredService.DeepCopyInto(updatedService)

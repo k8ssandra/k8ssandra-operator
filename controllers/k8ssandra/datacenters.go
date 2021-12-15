@@ -65,7 +65,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		utils.AddHashAnnotation(desiredDc, api.ResourceHashAnnotation)
+		utils.AddHashAnnotation(desiredDc)
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
@@ -86,7 +86,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 
-			if !utils.CompareAnnotations(actualDc, desiredDc, api.ResourceHashAnnotation) {
+			if !utils.CompareHashes(actualDc, desiredDc) {
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {

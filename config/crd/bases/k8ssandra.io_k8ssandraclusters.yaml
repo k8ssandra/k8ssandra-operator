@@ -1333,13 +1333,15 @@ spec:
                                   type: string
                               type: object
                             containerImage:
+                              default:
+                                name: cassandra-reaper
+                                repository: thelastpickle
+                                tag: 3.1.0
                               description: The image to use for the Reaper pod main
-                                container. The default is "thelastpickle/cassandra-reaper:3.0.0".
+                                container. The default is "thelastpickle/cassandra-reaper:3.1.0".
                               properties:
                                 name:
-                                  default: cassandra-reaper
-                                  description: The image name to use. Defaults to
-                                    "cassandra-reaper".
+                                  description: The image name to use.
                                   type: string
                                 pullPolicy:
                                   description: The image pull policy to use. Defaults
@@ -1351,8 +1353,12 @@ spec:
                                   - Never
                                   type: string
                                 pullSecretRef:
-                                  description: The secret to use when pulling the
-                                    image from private repositories.
+                                  description: 'The secret to use when pulling the
+                                    image from private repositories. If specified,
+                                    this secret will be passed to individual puller
+                                    implementations for them to use. For example,
+                                    in the case of Docker, only DockerConfig type
+                                    secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                                   properties:
                                     name:
                                       description: 'Name of the referent. More info:
@@ -1363,13 +1369,11 @@ spec:
                                   type: object
                                 registry:
                                   default: docker.io
-                                  description: The docker registry to use. Defaults
-                                    to docker.io.
+                                  description: The Docker registry to use. Defaults
+                                    to "docker.io", the official Docker Hub.
                                   type: string
                                 repository:
-                                  default: thelastpickle
-                                  description: The docker repository to use. Defaults
-                                    to "thelastpickle".
+                                  description: The Docker repository to use.
                                   type: string
                                 tag:
                                   default: latest
@@ -1377,14 +1381,16 @@ spec:
                                   type: string
                               type: object
                             initContainerImage:
+                              default:
+                                name: cassandra-reaper
+                                repository: thelastpickle
+                                tag: 3.1.0
                               description: The image to use for tje Reaper pod init
                                 container (that performs schema migrations). The default
-                                is "thelastpickle/cassandra-reaper:3.0.0".
+                                is "thelastpickle/cassandra-reaper:3.1.0".
                               properties:
                                 name:
-                                  default: cassandra-reaper
-                                  description: The image name to use. Defaults to
-                                    "cassandra-reaper".
+                                  description: The image name to use.
                                   type: string
                                 pullPolicy:
                                   description: The image pull policy to use. Defaults
@@ -1396,8 +1402,12 @@ spec:
                                   - Never
                                   type: string
                                 pullSecretRef:
-                                  description: The secret to use when pulling the
-                                    image from private repositories.
+                                  description: 'The secret to use when pulling the
+                                    image from private repositories. If specified,
+                                    this secret will be passed to individual puller
+                                    implementations for them to use. For example,
+                                    in the case of Docker, only DockerConfig type
+                                    secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                                   properties:
                                     name:
                                       description: 'Name of the referent. More info:
@@ -1408,13 +1418,11 @@ spec:
                                   type: object
                                 registry:
                                   default: docker.io
-                                  description: The docker registry to use. Defaults
-                                    to docker.io.
+                                  description: The Docker registry to use. Defaults
+                                    to "docker.io", the official Docker Hub.
                                   type: string
                                 repository:
-                                  default: thelastpickle
-                                  description: The docker repository to use. Defaults
-                                    to "thelastpickle".
+                                  description: The Docker repository to use.
                                   type: string
                                 tag:
                                   default: latest
@@ -3320,14 +3328,15 @@ spec:
                                   type: string
                               type: object
                             containerImage:
+                              default:
+                                repository: stargateio
+                                tag: v1.0.45
                               description: ContainerImage is the image characteristics
                                 to use for Stargate containers. Leave nil to use a
                                 default image.
                               properties:
                                 name:
-                                  description: The image name to use. Defaults to
-                                    either "stargate-3_11" or "stargate-4_0", depending
-                                    on the Cassandra server version detected.
+                                  description: The image name to use.
                                   type: string
                                 pullPolicy:
                                   description: The image pull policy to use. Defaults
@@ -3339,8 +3348,12 @@ spec:
                                   - Never
                                   type: string
                                 pullSecretRef:
-                                  description: The secret to use when pulling the
-                                    image from private repositories.
+                                  description: 'The secret to use when pulling the
+                                    image from private repositories. If specified,
+                                    this secret will be passed to individual puller
+                                    implementations for them to use. For example,
+                                    in the case of Docker, only DockerConfig type
+                                    secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                                   properties:
                                     name:
                                       description: 'Name of the referent. More info:
@@ -3351,20 +3364,15 @@ spec:
                                   type: object
                                 registry:
                                   default: docker.io
-                                  description: The docker registry to use. Defaults
-                                    to docker.io.
+                                  description: The Docker registry to use. Defaults
+                                    to "docker.io", the official Docker Hub.
                                   type: string
                                 repository:
-                                  default: stargateio
-                                  description: The docker repository to use. Defaults
-                                    to "stargateio".
+                                  description: The Docker repository to use.
                                   type: string
                                 tag:
                                   default: latest
-                                  description: 'The image tag to use. Defaults to
-                                    "latest" (but please note: "latest" is not a valid
-                                    tag name for official Stargate images from the
-                                    stargateio Docker Hub repository).'
+                                  description: The image tag to use. Defaults to "latest".
                                   type: string
                               type: object
                             heapSize:
@@ -4693,15 +4701,15 @@ spec:
                                         type: string
                                     type: object
                                   containerImage:
+                                    default:
+                                      repository: stargateio
+                                      tag: v1.0.45
                                     description: ContainerImage is the image characteristics
                                       to use for Stargate containers. Leave nil to
                                       use a default image.
                                     properties:
                                       name:
-                                        description: The image name to use. Defaults
-                                          to either "stargate-3_11" or "stargate-4_0",
-                                          depending on the Cassandra server version
-                                          detected.
+                                        description: The image name to use.
                                         type: string
                                       pullPolicy:
                                         description: The image pull policy to use.
@@ -4713,8 +4721,13 @@ spec:
                                         - Never
                                         type: string
                                       pullSecretRef:
-                                        description: The secret to use when pulling
-                                          the image from private repositories.
+                                        description: 'The secret to use when pulling
+                                          the image from private repositories. If
+                                          specified, this secret will be passed to
+                                          individual puller implementations for them
+                                          to use. For example, in the case of Docker,
+                                          only DockerConfig type secrets are honored.
+                                          More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                                         properties:
                                           name:
                                             description: 'Name of the referent. More
@@ -4725,20 +4738,16 @@ spec:
                                         type: object
                                       registry:
                                         default: docker.io
-                                        description: The docker registry to use. Defaults
-                                          to docker.io.
+                                        description: The Docker registry to use. Defaults
+                                          to "docker.io", the official Docker Hub.
                                         type: string
                                       repository:
-                                        default: stargateio
-                                        description: The docker repository to use.
-                                          Defaults to "stargateio".
+                                        description: The Docker repository to use.
                                         type: string
                                       tag:
                                         default: latest
-                                        description: 'The image tag to use. Defaults
-                                          to "latest" (but please note: "latest" is
-                                          not a valid tag name for official Stargate
-                                          images from the stargateio Docker Hub repository).'
+                                        description: The image tag to use. Defaults
+                                          to "latest".
                                         type: string
                                     type: object
                                   heapSize:
@@ -7264,12 +7273,15 @@ spec:
                       itself and must contain two keys: "username" and "password".'
                     type: string
                   containerImage:
+                    default:
+                      name: cassandra-reaper
+                      repository: thelastpickle
+                      tag: 3.1.0
                     description: The image to use for the Reaper pod main container.
-                      The default is "thelastpickle/cassandra-reaper:3.0.0".
+                      The default is "thelastpickle/cassandra-reaper:3.1.0".
                     properties:
                       name:
-                        default: cassandra-reaper
-                        description: The image name to use. Defaults to "cassandra-reaper".
+                        description: The image name to use.
                         type: string
                       pullPolicy:
                         description: The image pull policy to use. Defaults to "Always"
@@ -7280,8 +7292,11 @@ spec:
                         - Never
                         type: string
                       pullSecretRef:
-                        description: The secret to use when pulling the image from
-                          private repositories.
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -7290,11 +7305,11 @@ spec:
                         type: object
                       registry:
                         default: docker.io
-                        description: The docker registry to use. Defaults to docker.io.
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
                         type: string
                       repository:
-                        default: thelastpickle
-                        description: The docker repository to use. Defaults to "thelastpickle".
+                        description: The Docker repository to use.
                         type: string
                       tag:
                         default: latest
@@ -7302,12 +7317,15 @@ spec:
                         type: string
                     type: object
                   initContainerImage:
+                    default:
+                      name: cassandra-reaper
+                      repository: thelastpickle
+                      tag: 3.1.0
                     description: The image to use for tje Reaper pod init container
-                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.0.0".
+                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.0".
                     properties:
                       name:
-                        default: cassandra-reaper
-                        description: The image name to use. Defaults to "cassandra-reaper".
+                        description: The image name to use.
                         type: string
                       pullPolicy:
                         description: The image pull policy to use. Defaults to "Always"
@@ -7318,8 +7336,11 @@ spec:
                         - Never
                         type: string
                       pullSecretRef:
-                        description: The secret to use when pulling the image from
-                          private repositories.
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -7328,11 +7349,11 @@ spec:
                         type: object
                       registry:
                         default: docker.io
-                        description: The docker registry to use. Defaults to docker.io.
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
                         type: string
                       repository:
-                        default: thelastpickle
-                        description: The docker repository to use. Defaults to "thelastpickle".
+                        description: The Docker repository to use.
                         type: string
                       tag:
                         default: latest
@@ -9031,13 +9052,14 @@ spec:
                         type: string
                     type: object
                   containerImage:
+                    default:
+                      repository: stargateio
+                      tag: v1.0.45
                     description: ContainerImage is the image characteristics to use
                       for Stargate containers. Leave nil to use a default image.
                     properties:
                       name:
-                        description: The image name to use. Defaults to either "stargate-3_11"
-                          or "stargate-4_0", depending on the Cassandra server version
-                          detected.
+                        description: The image name to use.
                         type: string
                       pullPolicy:
                         description: The image pull policy to use. Defaults to "Always"
@@ -9048,8 +9070,11 @@ spec:
                         - Never
                         type: string
                       pullSecretRef:
-                        description: The secret to use when pulling the image from
-                          private repositories.
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -9058,17 +9083,15 @@ spec:
                         type: object
                       registry:
                         default: docker.io
-                        description: The docker registry to use. Defaults to docker.io.
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
                         type: string
                       repository:
-                        default: stargateio
-                        description: The docker repository to use. Defaults to "stargateio".
+                        description: The Docker repository to use.
                         type: string
                       tag:
                         default: latest
-                        description: 'The image tag to use. Defaults to "latest" (but
-                          please note: "latest" is not a valid tag name for official
-                          Stargate images from the stargateio Docker Hub repository).'
+                        description: The image tag to use. Defaults to "latest".
                         type: string
                     type: object
                   heapSize:

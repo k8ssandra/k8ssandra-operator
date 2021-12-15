@@ -7,6 +7,7 @@ import (
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/mock"
 	"reflect"
 	"testing"
@@ -1192,7 +1193,7 @@ func verifySuperUserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 }
 
 func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
-	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+	t.Logf("check that the %s annotation is set", utils.SystemReplicationAnnotation)
 
 	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	expectedReplication := cassandra.ComputeSystemReplication(kc)
@@ -1204,7 +1205,7 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 			return false
 		}
 
-		val, found := kc.Annotations[api.SystemReplicationAnnotation]
+		val, found := kc.Annotations[utils.SystemReplicationAnnotation]
 		if !found {
 			return false
 		}
@@ -1251,13 +1252,13 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 		return err == nil
 	}, timeout, interval, "failed to get ReplicatedSecret")
 
-	val, exists := rsec.Labels[api.ManagedByLabel]
+	val, exists := rsec.Labels[utils.ManagedByLabel]
 	assert.True(t, exists)
-	assert.Equal(t, api.NameLabelValue, val)
-	val, exists = rsec.Labels[api.K8ssandraClusterNameLabel]
+	assert.Equal(t, utils.NameLabelValue, val)
+	val, exists = rsec.Labels[utils.K8ssandraClusterNameLabel]
 	assert.True(t, exists)
 	assert.Equal(t, kc.Name, val)
-	val, exists = rsec.Labels[api.K8ssandraClusterNamespaceLabel]
+	val, exists = rsec.Labels[utils.K8ssandraClusterNamespaceLabel]
 	assert.True(t, exists)
 	assert.Equal(t, kc.Namespace, val)
 
@@ -1343,7 +1344,7 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 				for _, ts := range targetSecretList.Items {
 					if s.Name == ts.Name {
 						found = true
-						if s.GetAnnotations()[api.ResourceHashAnnotation] != ts.GetAnnotations()[api.ResourceHashAnnotation] {
+						if s.GetAnnotations()[utils.ResourceHashAnnotation] != ts.GetAnnotations()[utils.ResourceHashAnnotation] {
 							return false
 						}
 						break

@@ -39,7 +39,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		logger.Info("Reconcile Stargate")
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
-		utils.AddHashAnnotation(desiredStargate, api.ResourceHashAnnotation)
+		utils.AddHashAnnotation(desiredStargate)
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
@@ -59,7 +59,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to update status for stargate")
 				return result.Error(err)
 			}
-			if !utils.CompareAnnotations(desiredStargate, actualStargate, api.ResourceHashAnnotation) {
+			if !utils.CompareHashes(desiredStargate, actualStargate) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)
@@ -110,12 +110,12 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 			Name:        stargateKey.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				api.NameLabel:                      api.NameLabelValue,
-				api.PartOfLabel:                    api.PartOfLabelValue,
-				api.ComponentLabel:                 api.ComponentLabelValueStargate,
-				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterNameLabel:      kc.Name,
-				api.K8ssandraClusterNamespaceLabel: kc.Namespace,
+				utils.NameLabel:                      utils.NameLabelValue,
+				utils.PartOfLabel:                    utils.PartOfLabelValue,
+				utils.ComponentLabel:                 utils.ComponentLabelValueStargate,
+				utils.CreatedByLabel:                 utils.CreatedByLabelValueK8ssandraClusterController,
+				utils.K8ssandraClusterNameLabel:      kc.Name,
+				utils.K8ssandraClusterNamespaceLabel: kc.Namespace,
 			},
 		},
 		Spec: stargateapi.StargateSpec{

@@ -3,12 +3,13 @@ package reaper
 import (
 	"context"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -188,6 +189,18 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	assert.Len(t, deployment.OwnerReferences, 1, "deployment owner reference not set")
 	assert.Equal(t, rpr.UID, deployment.OwnerReferences[0].UID, "deployment owner reference has wrong uid")
 
+	// init container should be a default image and thus should not contain the latest tag; pull policy should be the
+	// default one (IfNotPresent)
+	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:"+reaper.DefaultVersion, deployment.Spec.Template.Spec.InitContainers[0].Image)
+	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
+
+	// main container is a custom image where the tag isn't specified, so it should default to latest, and pull policy
+	// to Always.
+	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper-custom:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+	// one secret should have been collected, from the main container image
+	assert.Equal(t, []corev1.LocalObjectReference{{Name: "main-secret"}}, deployment.Spec.Template.Spec.ImagePullSecrets)
+
 	t.Log("update deployment to be ready")
 	patchDeploymentStatus(t, ctx, deployment, 1, 1, k8sClient)
 
@@ -241,8 +254,8 @@ func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sC
 	// already exists, the reconciler will just check that it is ready. There are unit tests to
 	// verify that the deployment is created as expected.
 	labels := map[string]string{
-		reaperapi.ReaperLabel:       reaperName,
-		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		reaperapi.ReaperLabel: reaperName,
+		utils.ManagedByLabel:  utils.NameLabelValue,
 	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -253,9 +266,9 @@ func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sC
 			Selector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      k8ssandraapi.ManagedByLabel,
+						Key:      utils.ManagedByLabel,
 						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{k8ssandraapi.NameLabelValue},
+						Values:   []string{utils.NameLabelValue},
 					},
 					{
 						Key:      reaperapi.ReaperLabel,
@@ -368,6 +381,15 @@ func newReaper(namespace string) *reaperapi.Reaper {
 			Name:      reaperName,
 		},
 		Spec: reaperapi.ReaperSpec{
+			ReaperClusterTemplate: reaperapi.ReaperClusterTemplate{
+				ReaperDatacenterTemplate: reaperapi.ReaperDatacenterTemplate{
+					// custom image for the main container, but default image for the init container
+					ContainerImage: &images.Image{
+						Name:          "cassandra-reaper-custom",
+						PullSecretRef: &corev1.LocalObjectReference{Name: "main-secret"},
+					},
+				},
+			},
 			DatacenterRef: reaperapi.CassandraDatacenterRef{
 				Name: cassandraDatacenterName,
 			},

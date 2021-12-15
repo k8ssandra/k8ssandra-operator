@@ -170,8 +170,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
-		kcName := utils.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
-		kcNamespace := utils.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
+		kcName := utils.GetLabel(mapObj, utils.K8ssandraClusterNameLabel)
+		kcNamespace := utils.GetLabel(mapObj, utils.K8ssandraClusterNamespaceLabel)
 
 		if kcName != "" && kcNamespace != "" {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})

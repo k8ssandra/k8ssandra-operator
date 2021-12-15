@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -135,7 +134,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		if targetSecret.Name == generatedSecrets[0].Name {
 			phantomSecret := targetSecret.DeepCopy()
 			phantomSecret.Data["be-gone-key"] = []byte("my-phantom-value")
-			targetSecret.GetAnnotations()[coreapi.ResourceHashAnnotation] = "XXXXXX"
+			targetSecret.GetAnnotations()[utils.ResourceHashAnnotation] = "XXXXXX"
 			err = modifierClient.Update(ctx, phantomSecret)
 			require.NoError(err)
 			break
@@ -265,9 +264,9 @@ func generateSecrets(namespace string) []*corev1.Secret {
 				Namespace: namespace,
 				Name:      "test-secret-first",
 				Labels: map[string]string{
-					"secret-controller":                    "test",
-					coreapi.K8ssandraClusterNamespaceLabel: namespace,
-					coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
+					"secret-controller":                  "test",
+					utils.K8ssandraClusterNamespaceLabel: namespace,
+					utils.K8ssandraClusterNameLabel:      "k8sssandra",
 				},
 			},
 			Type: "Opaque",
@@ -300,9 +299,9 @@ func generateReplicatedSecret(namespace string) *api.ReplicatedSecret {
 		Spec: api.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"secret-controller":                    "test",
-					coreapi.K8ssandraClusterNamespaceLabel: namespace,
-					coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
+					"secret-controller":                  "test",
+					utils.K8ssandraClusterNamespaceLabel: namespace,
+					utils.K8ssandraClusterNameLabel:      "k8sssandra",
 				},
 			},
 			ReplicationTargets: []api.ReplicationTarget{
@@ -361,7 +360,7 @@ func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Cl
 				for _, ts := range targetSecretList.Items {
 					if s.Name == ts.Name {
 						found = true
-						if s.GetAnnotations()[coreapi.ResourceHashAnnotation] != ts.GetAnnotations()[coreapi.ResourceHashAnnotation] {
+						if s.GetAnnotations()[utils.ResourceHashAnnotation] != ts.GetAnnotations()[utils.ResourceHashAnnotation] {
 							return false
 						}
 						break
@@ -396,7 +395,7 @@ func TestSyncSecrets(t *testing.T) {
 				"label1": "value1",
 			},
 			Annotations: map[string]string{
-				coreapi.ResourceHashAnnotation: "12345678",
+				utils.ResourceHashAnnotation: "12345678",
 			},
 		},
 		Data: map[string][]byte{
@@ -413,7 +412,7 @@ func TestSyncSecrets(t *testing.T) {
 
 	dest.GetLabels()[secret.OrphanResourceAnnotation] = "true"
 
-	dest.GetAnnotations()[coreapi.ResourceHashAnnotation] = "9876555"
+	dest.GetAnnotations()[utils.ResourceHashAnnotation] = "9876555"
 
 	syncSecrets(orig, dest)
 
@@ -448,7 +447,7 @@ func TestRequiresUpdate(t *testing.T) {
 			Namespace: "b",
 			UID:       "a",
 			Annotations: map[string]string{
-				coreapi.ResourceHashAnnotation: "",
+				utils.ResourceHashAnnotation: "",
 			},
 		},
 		Data: map[string][]byte{
@@ -456,7 +455,7 @@ func TestRequiresUpdate(t *testing.T) {
 		},
 	}
 
-	orig.GetAnnotations()[coreapi.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
+	orig.GetAnnotations()[utils.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
 
 	// Secrets don't match
 	assert.True(requiresUpdate(orig, dest))

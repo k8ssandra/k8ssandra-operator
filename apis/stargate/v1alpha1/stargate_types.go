@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +41,8 @@ type StargateTemplate struct {
 	// ContainerImage is the image characteristics to use for Stargate containers. Leave nil
 	// to use a default image.
 	// +optional
-	ContainerImage *ContainerImage `json:"containerImage,omitempty"`
+	// +kubebuilder:default={repository:"stargateio", tag:"v1.0.45"}
+	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// ServiceAccount is the service account name to use for Stargate pods.
 	// +kubebuilder:default="default"
@@ -170,63 +172,6 @@ type StargateSpec struct {
 	// Stargate should be deployed.
 	// +kubebuilder:validation:Required
 	DatacenterRef corev1.LocalObjectReference `json:"datacenterRef"`
-}
-
-type ContainerImage struct {
-
-	// The docker registry to use. Defaults to docker.io.
-	// +kubebuilder:default="docker.io"
-	// +optional
-	Registry string `json:"registry,omitempty"`
-
-	// The docker repository to use. Defaults to "stargateio".
-	// +kubebuilder:default="stargateio"
-	// +optional
-	Repository string `json:"repository,omitempty"`
-
-	// The image name to use. Defaults to either "stargate-3_11" or "stargate-4_0", depending on the Cassandra server
-	// version detected.
-	// +optional
-	Name string `json:"name,omitempty"`
-
-	// The image tag to use. Defaults to "latest" (but please note: "latest" is not a valid tag name for official
-	// Stargate images from the stargateio Docker Hub repository).
-	// +kubebuilder:default="latest"
-	// +optional
-	Tag string `json:"tag,omitempty"`
-
-	// The image pull policy to use. Defaults to "Always" if the tag is "latest", otherwise to "IfNotPresent".
-	// +optional
-	// +kubebuilder:validation:Enum:=Always;IfNotPresent;Never
-	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
-
-	// The secret to use when pulling the image from private repositories.
-	// +optional
-	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
-}
-
-func (in ContainerImage) GetRegistry() string {
-	return in.Registry
-}
-
-func (in ContainerImage) GetRepository() string {
-	return in.Repository
-}
-
-func (in ContainerImage) GetName() string {
-	return in.Name
-}
-
-func (in ContainerImage) GetTag() string {
-	return in.Tag
-}
-
-func (in ContainerImage) GetPullPolicy() corev1.PullPolicy {
-	return in.PullPolicy
-}
-
-func (in ContainerImage) GetPullSecretRef() *corev1.LocalObjectReference {
-	return in.PullSecretRef
 }
 
 // StargateProgress is a word summarizing the state of a Stargate resource.

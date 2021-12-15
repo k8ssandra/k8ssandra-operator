@@ -6,9 +6,13 @@ import (
 	"k8s.io/kubernetes/pkg/util/hash"
 )
 
-func AddHashAnnotation(obj Annotated, annotationKey string) {
+func AddHashAnnotation(obj Annotated) {
 	h := DeepHashString(obj)
-	AddAnnotation(obj, annotationKey, h)
+	AddAnnotation(obj, ResourceHashAnnotation, h)
+}
+
+func CompareHashes(r1, r2 Annotated) bool {
+	return CompareAnnotations(r1, r2, ResourceHashAnnotation)
 }
 
 func DeepHashString(obj interface{}) string {

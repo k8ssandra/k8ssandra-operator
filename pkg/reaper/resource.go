@@ -48,7 +48,7 @@ func NewReaper(
 	if desiredReaper.Spec.JmxUserSecretRef == "" {
 		desiredReaper.Spec.JmxUserSecretRef = DefaultJmxUserSecretName(kc.Name)
 	}
-	utils.AddHashAnnotation(desiredReaper, k8ssandraapi.ResourceHashAnnotation)
+	utils.AddHashAnnotation(desiredReaper)
 	return desiredReaper
 }
 
