@@ -34,7 +34,7 @@ import (
 const (
 	clustersToCreate    = 3
 	clusterProtoName    = "cluster-%d"
-	cassOperatorVersion = "v1.8.0"
+	CassOperatorVersion = "v1.9.0"
 )
 
 var (
@@ -257,7 +257,7 @@ func prepareCRDs() error {
 		return err
 	}
 
-	cassOperatorCrd := "github.com/k8ssandra/cass-operator/config/crd?ref=" + cassOperatorVersion
+	cassOperatorCrd := "github.com/k8ssandra/cass-operator/config/crd?ref=" + CassOperatorVersion
 	buf, err = kustomize.BuildUrl(cassOperatorCrd)
 	if err != nil {
 		return err
