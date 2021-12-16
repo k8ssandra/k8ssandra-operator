@@ -34,7 +34,7 @@ import (
 const (
 	clustersToCreate    = 3
 	clusterProtoName    = "cluster-%d"
-	cassOperatorVersion = "v1.8.0"
+	cassOperatorVersion = "v1.9.0"
 )
 
 var (

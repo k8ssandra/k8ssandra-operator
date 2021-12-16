@@ -127,7 +127,7 @@ func generateCassOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/default?ref=v1.8.0
+- github.com/k8ssandra/cass-operator/config/default?ref=v1.9.0
 namespace: {{ .Namespace }}
 `
 	k := Kustomization{Namespace: namespace}
