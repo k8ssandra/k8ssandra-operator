@@ -5,12 +5,14 @@ package telemetry
 import (
 	"context"
 	"fmt"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"os"
+
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -179,7 +181,7 @@ func (cfg StargatePrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMoni
 			Endpoints: stargateEndpointHolder.Spec.Endpoints,
 		},
 	}
-	utils.AddHashAnnotation(&sm, k8ssandraapi.ResourceHashAnnotation)
+	annotations.AddHashAnnotation(&sm)
 	return &sm, nil
 }
 
@@ -215,7 +217,7 @@ func (cfg StargatePrometheusResourcer) UpdateResources(ctx context.Context, clie
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
 	actualSM = actualSM.DeepCopy()
-	if !utils.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	if !annotations.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
 		resourceVersion := actualSM.GetResourceVersion()
 		desiredSM.DeepCopyInto(actualSM)
 		actualSM.SetResourceVersion(resourceVersion)

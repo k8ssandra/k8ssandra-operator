@@ -6,11 +6,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -380,7 +382,7 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor,
 			Endpoints: endpointHolder.Spec.Endpoints,
 		},
 	}
-	utils.AddHashAnnotation(&sm, k8ssandraapi.ResourceHashAnnotation)
+	annotations.AddHashAnnotation(&sm)
 	return &sm, nil
 }
 
@@ -416,7 +418,7 @@ func (cfg CassPrometheusResourcer) UpdateResources(ctx context.Context, client r
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
 	actualSM = actualSM.DeepCopy()
-	if !utils.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	if !annotations.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
 		resourceVersion := actualSM.GetResourceVersion()
 		desiredSM.DeepCopyInto(actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
