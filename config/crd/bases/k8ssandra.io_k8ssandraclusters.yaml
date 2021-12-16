@@ -5157,27 +5157,6 @@ spec:
                                     description: ServiceAccount is the service account
                                       name to use for Stargate pods.
                                     type: string
-                                  stargateContainerImage:
-                                    description: StargateContainerImage is the image
-                                      characteristics to use for Stargate containers.
-                                      Leave nil to use a default image.
-                                    properties:
-                                      pullPolicy:
-                                        default: IfNotPresent
-                                        description: PullPolicy describes a policy
-                                          for if/when to pull a container image
-                                        type: string
-                                      registry:
-                                        default: docker.io
-                                        type: string
-                                      repository:
-                                        type: string
-                                      tag:
-                                        default: latest
-                                        type: string
-                                    required:
-                                    - repository
-                                    type: object
                                   telemetry:
                                     description: Telemetry defines the desired telemetry
                                       integrations to deploy targeting the Stargate
@@ -5435,27 +5414,6 @@ spec:
                               format: int32
                               minimum: 1
                               type: integer
-                            stargateContainerImage:
-                              description: StargateContainerImage is the image characteristics
-                                to use for Stargate containers. Leave nil to use a
-                                default image.
-                              properties:
-                                pullPolicy:
-                                  default: IfNotPresent
-                                  description: PullPolicy describes a policy for if/when
-                                    to pull a container image
-                                  type: string
-                                registry:
-                                  default: docker.io
-                                  type: string
-                                repository:
-                                  type: string
-                                tag:
-                                  default: latest
-                                  type: string
-                              required:
-                              - repository
-                              type: object
                             telemetry:
                               description: Telemetry defines the desired telemetry
                                 integrations to deploy targeting the Stargate pods
@@ -9543,26 +9501,6 @@ spec:
                     format: int32
                     minimum: 1
                     type: integer
-                  stargateContainerImage:
-                    description: StargateContainerImage is the image characteristics
-                      to use for Stargate containers. Leave nil to use a default image.
-                    properties:
-                      pullPolicy:
-                        default: IfNotPresent
-                        description: PullPolicy describes a policy for if/when to
-                          pull a container image
-                        type: string
-                      registry:
-                        default: docker.io
-                        type: string
-                      repository:
-                        type: string
-                      tag:
-                        default: latest
-                        type: string
-                    required:
-                    - repository
-                    type: object
                   telemetry:
                     description: Telemetry defines the desired telemetry integrations
                       to deploy targeting the Stargate pods for all DCs in this cluster

@@ -21,8 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
