@@ -2,7 +2,7 @@ package reaper
 
 import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,6 +35,6 @@ func NewService(key types.NamespacedName, reaper *api.Reaper) *corev1.Service {
 			Selector: labels,
 		},
 	}
-	utils.AddHashAnnotation(service)
+	annotations.AddHashAnnotation(service)
 	return service
 }

@@ -5,7 +5,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"math/big"
 	"reflect"
@@ -85,9 +86,9 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 	}
 
 	// It exists or was created: ensure it has proper annotations
-	if !utils.IsManagedBy(currentSec, kcKey) {
-		utils.SetManagedBy(currentSec, kcKey)
-		utils.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
+	if !labels.IsManagedBy(currentSec, kcKey) {
+		labels.SetManagedBy(currentSec, kcKey)
+		annotations.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}
 	return nil
@@ -166,7 +167,7 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 		ObjectMeta: getManagedObjectMeta(kcKey.Name, kcKey),
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: utils.ManagedByLabels(kcKey),
+				MatchLabels: labels.ManagedByLabels(kcKey),
 			},
 			ReplicationTargets: replicationTargets,
 		},
@@ -208,6 +209,6 @@ func getManagedObjectMeta(name string, kcKey client.ObjectKey) metav1.ObjectMeta
 	return metav1.ObjectMeta{
 		Name:      name,
 		Namespace: kcKey.Namespace,
-		Labels:    utils.ManagedByLabels(kcKey),
+		Labels:    labels.ManagedByLabels(kcKey),
 	}
 }

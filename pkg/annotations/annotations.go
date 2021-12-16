@@ -1,13 +1,8 @@
-package utils
+package annotations
 
-const (
-	ResourceHashAnnotation = "k8ssandra.io/resource-hash"
-	
-	// SystemReplicationAnnotation provides the initial replication of system keyspaces
-	// (system_auth, system_distributed, system_traces) encoded as JSON. This annotation
-	// is set on a K8ssandraCluster when it is first created. The value does not change
-	// regardless of whether the replication of the system keyspaces changes.
-	SystemReplicationAnnotation = "k8ssandra.io/system-replication"
+import (
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
 type Annotated interface {
@@ -39,4 +34,13 @@ func CompareAnnotations(r1, r2 Annotated, annotationKey string) bool {
 		return false
 	}
 	return HasAnnotationWithValue(r2, annotationKey, annotationValue)
+}
+
+func AddHashAnnotation(obj Annotated) {
+	h := utils.DeepHashString(obj)
+	AddAnnotation(obj, v1alpha1.ResourceHashAnnotation, h)
+}
+
+func CompareHashAnnotations(r1, r2 Annotated) bool {
+	return CompareAnnotations(r1, r2, v1alpha1.ResourceHashAnnotation)
 }

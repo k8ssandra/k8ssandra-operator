@@ -26,6 +26,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -170,8 +171,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
-		kcName := utils.GetLabel(mapObj, utils.K8ssandraClusterNameLabel)
-		kcNamespace := utils.GetLabel(mapObj, utils.K8ssandraClusterNamespaceLabel)
+		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		kcNamespace := labels.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
 
 		if kcName != "" && kcNamespace != "" {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})

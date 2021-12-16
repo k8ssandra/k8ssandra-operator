@@ -20,7 +20,9 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
@@ -149,7 +151,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 			return result.Error(err)
 		}
 
-		if !utils.CompareHashAnnotations(actualReaper, desiredReaper) {
+		if !annotations.CompareHashAnnotations(actualReaper, desiredReaper) {
 			logger.Info("Updating Reaper resource")
 			resourceVersion := actualReaper.GetResourceVersion()
 			desiredReaper.DeepCopyInto(actualReaper)
@@ -181,7 +183,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 				logger.Error(err, "Failed to get Reaper resource")
 				return result.Error(err)
 			}
-		} else if utils.IsCreatedByK8ssandraController(actualReaper, kcKey) {
+		} else if k8ssandralabels.IsCreatedByK8ssandraController(actualReaper, kcKey) {
 			if err = remoteClient.Delete(ctx, actualReaper); err != nil {
 				logger.Error(err, "Failed to delete Reaper resource")
 				return result.Error(err)
@@ -204,7 +206,7 @@ func (r *K8ssandraClusterReconciler) deleteReapers(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := utils.CreatedByK8ssandraControllerLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	selector := k8ssandralabels.CreatedByK8ssandraControllerLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	reaperList := &reaperapi.ReaperList{}
 	options := client.ListOptions{
 		Namespace:     namespace,

@@ -2,6 +2,7 @@ package stargate
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -18,11 +19,11 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 			Namespace:   stargate.Namespace,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				utils.NameLabel:      utils.NameLabelValue,
-				utils.PartOfLabel:    utils.PartOfLabelValue,
-				utils.ComponentLabel: utils.ComponentLabelValueStargate,
-				utils.CreatedByLabel: utils.CreatedByLabelValueStargateController,
-				api.StargateLabel:    stargate.Name,
+				v1alpha1.NameLabel:      v1alpha1.NameLabelValue,
+				v1alpha1.PartOfLabel:    v1alpha1.PartOfLabelValue,
+				v1alpha1.ComponentLabel: v1alpha1.ComponentLabelValueStargate,
+				v1alpha1.CreatedByLabel: v1alpha1.CreatedByLabelValueStargateController,
+				api.StargateLabel:       stargate.Name,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -41,13 +42,13 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 		},
 	}
 
-	klusterName, nameFound := stargate.Labels[utils.K8ssandraClusterNameLabel]
-	klusterNamespace, namespaceFound := stargate.Labels[utils.K8ssandraClusterNamespaceLabel]
+	klusterName, nameFound := stargate.Labels[v1alpha1.K8ssandraClusterNameLabel]
+	klusterNamespace, namespaceFound := stargate.Labels[v1alpha1.K8ssandraClusterNamespaceLabel]
 
 	if nameFound && namespaceFound {
-		service.Labels[utils.K8ssandraClusterNameLabel] = klusterName
-		service.Labels[utils.K8ssandraClusterNamespaceLabel] = klusterNamespace
+		service.Labels[v1alpha1.K8ssandraClusterNameLabel] = klusterName
+		service.Labels[v1alpha1.K8ssandraClusterNamespaceLabel] = klusterNamespace
 	}
-	service.Annotations[utils.ResourceHashAnnotation] = utils.DeepHashString(service)
+	service.Annotations[v1alpha1.ResourceHashAnnotation] = utils.DeepHashString(service)
 	return service
 }

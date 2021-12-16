@@ -6,9 +6,9 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -17,7 +17,7 @@ import (
 // and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
 // Lastly, kc is patched so that the changes are persisted,
 func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
-	if val := utils.GetAnnotation(kc, utils.SystemReplicationAnnotation); val != "" {
+	if val := annotations.GetAnnotation(kc, api.SystemReplicationAnnotation); val != "" {
 		replication := &cassandra.SystemReplication{}
 		if err := json.Unmarshal([]byte(val), replication); err == nil {
 			return replication, nil
@@ -38,9 +38,9 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 	if kc.Annotations == nil {
 		kc.Annotations = make(map[string]string)
 	}
-	kc.Annotations[utils.SystemReplicationAnnotation] = string(bytes)
+	kc.Annotations[api.SystemReplicationAnnotation] = string(bytes)
 	if err = r.Patch(ctx, kc, patch); err != nil {
-		logger.Error(err, "Failed to apply "+utils.SystemReplicationAnnotation+" patch")
+		logger.Error(err, "Failed to apply "+api.SystemReplicationAnnotation+" patch")
 		return nil, err
 	}
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
@@ -717,7 +717,7 @@ func (f *E2eFramework) DumpCassandraLogs(namespace string) {
 func (f *E2eFramework) DumpStargateLogs(namespace string) {
 	for _, k8sContextName := range f.getClusterContexts() {
 		f.logger.Info("dumping Stargate logs in " + k8sContextName)
-		cmd := exec.Command("kubectl", "get", "pods", "-l", utils.ComponentLabel+"="+utils.ComponentLabelValueStargate, "-o", "name", "-n", namespace, "--context", k8sContextName)
+		cmd := exec.Command("kubectl", "get", "pods", "-l", api.ComponentLabel+"="+api.ComponentLabelValueStargate, "-o", "name", "-n", namespace, "--context", k8sContextName)
 		output, _ := cmd.Output()
 		podNames := strings.Split(string(output), "\n")
 		for _, podName := range podNames {
@@ -737,7 +737,7 @@ func (f *E2eFramework) DumpStargateLogs(namespace string) {
 			println()
 		}
 		fmt.Println("=============", "BEGIN DUMP", "stargate service", "context", k8sContextName, "namespace", namespace, "=============")
-		cmd = exec.Command("kubectl", "describe", "service", "-l", utils.ComponentLabel+"="+utils.ComponentLabelValueStargate, "-n", namespace, "--context", k8sContextName)
+		cmd = exec.Command("kubectl", "describe", "service", "-l", api.ComponentLabel+"="+api.ComponentLabelValueStargate, "-n", namespace, "--context", k8sContextName)
 		output, _ = cmd.CombinedOutput()
 		fmt.Println(string(output))
 		fmt.Println("=============", "END DUMP", "stargate service", "context", k8sContextName, "namespace", namespace, "=============")

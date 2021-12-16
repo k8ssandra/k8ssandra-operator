@@ -3,13 +3,13 @@ package reaper
 import (
 	"context"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -254,8 +254,8 @@ func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sC
 	// already exists, the reconciler will just check that it is ready. There are unit tests to
 	// verify that the deployment is created as expected.
 	labels := map[string]string{
-		reaperapi.ReaperLabel: reaperName,
-		utils.ManagedByLabel:  utils.NameLabelValue,
+		reaperapi.ReaperLabel:       reaperName,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
 	}
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -266,9 +266,9 @@ func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sC
 			Selector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      utils.ManagedByLabel,
+						Key:      k8ssandraapi.ManagedByLabel,
 						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{utils.NameLabelValue},
+						Values:   []string{k8ssandraapi.NameLabelValue},
 					},
 					{
 						Key:      reaperapi.ReaperLabel,

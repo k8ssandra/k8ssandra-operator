@@ -19,9 +19,8 @@ package stargate
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -189,7 +188,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		} else {
 			// Deployment already exists: check if it needs to be updated
-			if !utils.CompareHashAnnotations(&desiredDeployment, &actualDeployment) {
+			if !annotations.CompareHashAnnotations(&desiredDeployment, &actualDeployment) {
 				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
 				resourceVersion := actualDeployment.GetResourceVersion()
 				desiredDeployment.DeepCopyInto(&actualDeployment)
@@ -302,7 +301,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check if the service needs to be updated
-	if !utils.CompareHashAnnotations(desiredService, actualService) {
+	if !annotations.CompareHashAnnotations(desiredService, actualService) {
 		logger.Info("Updating Stargate Service", "Service", serviceKey)
 		resourceVersion := actualService.GetResourceVersion()
 		desiredService.DeepCopyInto(actualService)

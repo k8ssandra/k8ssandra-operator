@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -290,9 +291,9 @@ func requiresUpdate(source, dest client.Object) bool {
 		return false
 	}
 
-	if srcHash, found := source.GetAnnotations()[utils.ResourceHashAnnotation]; found {
+	if srcHash, found := source.GetAnnotations()[coreapi.ResourceHashAnnotation]; found {
 		// Get dest hash value
-		destHash, destFound := dest.GetAnnotations()[utils.ResourceHashAnnotation]
+		destHash, destFound := dest.GetAnnotations()[coreapi.ResourceHashAnnotation]
 		if !destFound {
 			return true
 		}
@@ -349,8 +350,8 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	if sec.GetAnnotations() == nil {
 		sec.Annotations = make(map[string]string)
 	}
-	if existingHash, found := sec.GetAnnotations()[utils.ResourceHashAnnotation]; !found || (existingHash != hash) {
-		sec.GetAnnotations()[utils.ResourceHashAnnotation] = hash
+	if existingHash, found := sec.GetAnnotations()[coreapi.ResourceHashAnnotation]; !found || (existingHash != hash) {
+		sec.GetAnnotations()[coreapi.ResourceHashAnnotation] = hash
 		return s.ClientCache.GetLocalClient().Update(ctx, sec)
 	}
 	return nil

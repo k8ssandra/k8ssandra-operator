@@ -3,10 +3,11 @@ package reaper
 import (
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,9 +38,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
-				Key:      utils.ManagedByLabel,
+				Key:      v1alpha1.ManagedByLabel,
 				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{utils.NameLabelValue},
+				Values:   []string{v1alpha1.NameLabelValue},
 			},
 			{
 				Key:      api.ReaperLabel,
@@ -190,7 +191,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		},
 	}
 	addAuthEnvVars(deployment, authVars)
-	utils.AddHashAnnotation(deployment)
+	annotations.AddHashAnnotation(deployment)
 	return deployment
 }
 

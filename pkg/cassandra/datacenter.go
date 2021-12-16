@@ -5,7 +5,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,12 +72,12 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				utils.NameLabel:                      utils.NameLabelValue,
-				utils.PartOfLabel:                    utils.PartOfLabelValue,
-				utils.ComponentLabel:                 utils.ComponentLabelValueCassandra,
-				utils.CreatedByLabel:                 utils.CreatedByLabelValueK8ssandraClusterController,
-				utils.K8ssandraClusterNameLabel:      klusterKey.Name,
-				utils.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+				api.NameLabel:                      api.NameLabelValue,
+				api.PartOfLabel:                    api.PartOfLabelValue,
+				api.ComponentLabel:                 api.ComponentLabelValueCassandra,
+				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+				api.K8ssandraClusterNameLabel:      klusterKey.Name,
+				api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 			},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{

@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
@@ -145,7 +145,7 @@ func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Cont
 	require.Eventually(t, func() bool {
 		return f.Get(ctx, secretKey, secret) == nil
 	}, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval)
-	assert.True(t, utils.IsManagedBy(secret, kcKey), "secret is not managed by k8c")
+	assert.True(t, labels.IsManagedBy(secret, kcKey), "secret is not managed by k8c")
 }
 
 func checkReaperReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {

@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
 
@@ -95,11 +96,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 				Namespace:   stargate.Namespace,
 				Annotations: map[string]string{},
 				Labels: map[string]string{
-					utils.NameLabel:      utils.NameLabelValue,
-					utils.PartOfLabel:    utils.PartOfLabelValue,
-					utils.ComponentLabel: utils.ComponentLabelValueStargate,
-					utils.CreatedByLabel: utils.CreatedByLabelValueStargateController,
-					api.StargateLabel:    stargate.Name,
+					v1alpha1.NameLabel:      v1alpha1.NameLabelValue,
+					v1alpha1.PartOfLabel:    v1alpha1.PartOfLabelValue,
+					v1alpha1.ComponentLabel: v1alpha1.ComponentLabelValueStargate,
+					v1alpha1.CreatedByLabel: v1alpha1.CreatedByLabelValueStargateController,
+					api.StargateLabel:       stargate.Name,
 				},
 			},
 
@@ -117,10 +118,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							utils.NameLabel:             utils.NameLabelValue,
-							utils.PartOfLabel:           utils.PartOfLabelValue,
-							utils.ComponentLabel:        utils.ComponentLabelValueStargate,
-							utils.CreatedByLabel:        utils.CreatedByLabelValueStargateController,
+							v1alpha1.NameLabel:          v1alpha1.NameLabelValue,
+							v1alpha1.PartOfLabel:        v1alpha1.PartOfLabelValue,
+							v1alpha1.ComponentLabel:     v1alpha1.ComponentLabelValueStargate,
+							v1alpha1.CreatedByLabel:     v1alpha1.CreatedByLabelValueStargateController,
 							api.StargateLabel:           stargate.Name,
 							api.StargateDeploymentLabel: deploymentName,
 						},
@@ -192,15 +193,15 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			},
 		}
 
-		klusterName, nameFound := stargate.Labels[utils.K8ssandraClusterNameLabel]
-		klusterNamespace, namespaceFound := stargate.Labels[utils.K8ssandraClusterNamespaceLabel]
+		klusterName, nameFound := stargate.Labels[v1alpha1.K8ssandraClusterNameLabel]
+		klusterNamespace, namespaceFound := stargate.Labels[v1alpha1.K8ssandraClusterNamespaceLabel]
 
 		if nameFound && namespaceFound {
-			deployment.Labels[utils.K8ssandraClusterNameLabel] = klusterName
-			deployment.Spec.Template.Labels[utils.K8ssandraClusterNameLabel] = klusterName
-			deployment.Spec.Template.Labels[utils.K8ssandraClusterNamespaceLabel] = klusterNamespace
+			deployment.Labels[v1alpha1.K8ssandraClusterNameLabel] = klusterName
+			deployment.Spec.Template.Labels[v1alpha1.K8ssandraClusterNameLabel] = klusterName
+			deployment.Spec.Template.Labels[v1alpha1.K8ssandraClusterNamespaceLabel] = klusterNamespace
 		}
-		deployment.Annotations[utils.ResourceHashAnnotation] = utils.DeepHashString(deployment)
+		deployment.Annotations[v1alpha1.ResourceHashAnnotation] = utils.DeepHashString(deployment)
 		deployments[deploymentName] = deployment
 	}
 	return deployments

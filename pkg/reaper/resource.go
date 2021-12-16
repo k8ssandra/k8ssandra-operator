@@ -5,7 +5,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -48,7 +48,7 @@ func NewReaper(
 	if desiredReaper.Spec.JmxUserSecretRef == "" {
 		desiredReaper.Spec.JmxUserSecretRef = DefaultJmxUserSecretName(kc.Name)
 	}
-	utils.AddHashAnnotation(desiredReaper)
+	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper
 }
 
