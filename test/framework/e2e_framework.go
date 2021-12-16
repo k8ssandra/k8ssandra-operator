@@ -180,7 +180,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../../../config/deployments/control-plane-cluster-scope
+- ../../../../config/deployments/control-plane/cluster-scope
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
@@ -191,7 +191,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../../../config/deployments/data-plane-cluster-scope
+- ../../../../config/deployments/data-plane/cluster-scope
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
