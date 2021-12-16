@@ -4,11 +4,12 @@ package telemetry
 
 import (
 	"context"
+	"testing"
+
 	testlogr "github.com/go-logr/logr/testing"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -35,11 +36,6 @@ func Test_NewServiceMonitor_SUCCESS(t *testing.T) {
 		assert.Fail(t, "error creating new service monitor", err)
 	}
 	assert.Equal(t, "prometheus", actualSM.Spec.Endpoints[0].Port)
-}
-
-// Test_CassPrometheusResourcer_IS_TelemetryResourcer tests that CassPrometheusResourcer implements the Resourcer interface.
-func Test_CassPrometheusResourcer_IS_TelemetryResourcer(t *testing.T) {
-	assert.Implements(t, (*Resourcer)(nil), CassPrometheusResourcer{})
 }
 
 // Test_CassPrometheusResourcer_UpdateResources_Create_SUCCESS tests that a serviceMonitor is created if one does not exist.

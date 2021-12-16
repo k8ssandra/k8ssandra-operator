@@ -39,11 +39,6 @@ func Test_StargatePrometheusResourcer_NewServiceMonitor_SUCCESS(t *testing.T) {
 	assert.Equal(t, "prometheus", actualSM.Spec.Endpoints[0].Port)
 }
 
-// Test_CassPrometheusResourcer_IS_TelemetryResourcer tests that CassPrometheusResourcer implements the Resourcer interface.
-func Test_StargatePrometheusResourcer_IS_TelemetryResourcer(t *testing.T) {
-	assert.Implements(t, (*Resourcer)(nil), StargatePrometheusResourcer{})
-}
-
 // Test_CassPrometheusResourcer_UpdateResources_Create_SUCCESS tests that a serviceMonitor is created if one does not exist.
 func Test_StargatePrometheusResourcer_UpdateResources_Create_SUCCESS(t *testing.T) {
 	fakeClient, err := test.NewFakeClient()
