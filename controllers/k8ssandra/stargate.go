@@ -6,10 +6,11 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +40,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		logger.Info("Reconcile Stargate")
 
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
-		utils.AddHashAnnotation(desiredStargate, api.ResourceHashAnnotation)
+		annotations.AddHashAnnotation(desiredStargate)
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
@@ -59,7 +60,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to update status for stargate")
 				return result.Error(err)
 			}
-			if !utils.CompareAnnotations(desiredStargate, actualStargate, api.ResourceHashAnnotation) {
+			if !annotations.CompareHashAnnotations(desiredStargate, actualStargate) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)
@@ -88,7 +89,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate")
 				return result.Error(err)
 			}
-		} else if utils.IsCreatedByK8ssandraController(actualStargate, kcKey) {
+		} else if labels.IsCreatedByK8ssandraController(actualStargate, kcKey) {
 			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
 				logger.Error(err, "Failed to delete Stargate")
 				return result.Error(err)

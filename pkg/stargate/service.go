@@ -4,7 +4,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -49,6 +49,6 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 		service.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
 		service.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 	}
-	service.Annotations[coreapi.ResourceHashAnnotation] = utils.DeepHashString(service)
+	annotations.AddHashAnnotation(service)
 	return service
 }

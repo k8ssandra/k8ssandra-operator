@@ -1,4 +1,9 @@
-package utils
+package annotations
+
+import (
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+)
 
 type Annotated interface {
 	GetAnnotations() map[string]string
@@ -29,4 +34,13 @@ func CompareAnnotations(r1, r2 Annotated, annotationKey string) bool {
 		return false
 	}
 	return HasAnnotationWithValue(r2, annotationKey, annotationValue)
+}
+
+func AddHashAnnotation(obj Annotated) {
+	h := utils.DeepHashString(obj)
+	AddAnnotation(obj, k8ssandraapi.ResourceHashAnnotation, h)
+}
+
+func CompareHashAnnotations(r1, r2 Annotated) bool {
+	return CompareAnnotations(r1, r2, k8ssandraapi.ResourceHashAnnotation)
 }

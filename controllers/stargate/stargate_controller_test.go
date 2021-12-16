@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"testing"
 	"time"
 
@@ -88,7 +89,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 		return err == nil
 	}, timeout, interval)
 
-	stargate := &api.Stargate{
+	sg := &api.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "dc1-stargate",
@@ -120,14 +121,14 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	err = testClient.Status().Update(ctx, dc)
 	require.NoError(t, err, "failed to update dc")
 
-	err = testClient.Create(ctx, stargate)
+	err = testClient.Create(ctx, sg)
 	require.NoError(t, err, "failed to create Stargate")
 
 	t.Log("check that the Stargate resource was created")
 	stargateKey := types.NamespacedName{Namespace: namespace, Name: "dc1-stargate"}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, stargate)
-		return err == nil && stargate.Status.Progress == api.StargateProgressDeploying
+		err := testClient.Get(ctx, stargateKey, sg)
+		return err == nil && sg.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
 	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc1-default-stargate-deployment"}
@@ -139,7 +140,10 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 
 	t.Log("check that the owner reference is set on the Stargate deployment")
 	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
-	assert.Equal(t, stargate.UID, deployment.OwnerReferences[0].UID)
+	assert.Equal(t, sg.UID, deployment.OwnerReferences[0].UID)
+
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	deployment.Status.Replicas = 1
 	deployment.Status.ReadyReplicas = 1
@@ -157,23 +161,23 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 
 	t.Log("check that the Stargate resource is fully reconciled")
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, stargate)
-		return err == nil && stargate.Status.Progress == api.StargateProgressRunning
+		err := testClient.Get(ctx, stargateKey, sg)
+		return err == nil && sg.Status.Progress == api.StargateProgressRunning
 	}, timeout, interval)
 
 	t.Log("check Stargate status")
-	assert.EqualValues(t, 1, stargate.Status.Replicas, "expected to find 1 replica for Stargate")
-	assert.EqualValues(t, 1, stargate.Status.ReadyReplicas, "expected to find 1 ready replica for Stargate")
-	assert.EqualValues(t, 1, stargate.Status.AvailableReplicas, "expected to find 1 available replica for Stargate")
-	assert.EqualValues(t, 1, stargate.Status.UpdatedReplicas, "expected to find 1 updated replica for Stargate")
-	assert.Equal(t, "1/1", *stargate.Status.ReadyReplicasRatio)
-	assert.Len(t, stargate.Status.DeploymentRefs, 1)
-	assert.NotNil(t, stargate.Status.ServiceRef)
+	assert.EqualValues(t, 1, sg.Status.Replicas, "expected to find 1 replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.ReadyReplicas, "expected to find 1 ready replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.AvailableReplicas, "expected to find 1 available replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.UpdatedReplicas, "expected to find 1 updated replica for Stargate")
+	assert.Equal(t, "1/1", *sg.Status.ReadyReplicasRatio)
+	assert.Len(t, sg.Status.DeploymentRefs, 1)
+	assert.NotNil(t, sg.Status.ServiceRef)
 
 	t.Log("check Stargate condition")
-	assert.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
-	assert.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
-	assert.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
+	assert.Len(t, sg.Status.Conditions, 1, "expected to find 1 condition for Stargate")
+	assert.Equal(t, api.StargateReady, sg.Status.Conditions[0].Type)
+	assert.Equal(t, corev1.ConditionTrue, sg.Status.Conditions[0].Status)
 }
 
 func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {

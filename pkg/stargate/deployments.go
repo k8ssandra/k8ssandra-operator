@@ -2,13 +2,13 @@ package stargate
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,25 +26,12 @@ const (
 )
 
 const (
-	DefaultStargateImageRepository = "stargateio"
-	DefaultStargate4ImageName      = "stargate-4_0"
-	DefaultStargate3ImageName      = "stargate-3_11"
-	DefaultStargateVersion         = "1.0.45"
-)
-
-var (
-	stargate4DefaultImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultStargateImageRepository,
-		DefaultStargate4ImageName,
-		"v"+DefaultStargateVersion,
-	)
-	stargate3DefaultImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultStargateImageRepository,
-		DefaultStargate3ImageName,
-		"v"+DefaultStargateVersion,
-	)
+	DefaultImageRepository = "stargateio"
+	DefaultImageName3      = "stargate-3_11"
+	DefaultImageName4      = "stargate-4_0"
+	DefaultVersion         = "1.0.45"
+	// When changing the default version above, please also change the kubebuilder marker in
+	// apis/stargate/v1alpha1/stargate_types.go accordingly.
 )
 
 type ClusterVersion string
@@ -52,6 +39,21 @@ type ClusterVersion string
 const (
 	ClusterVersion3 ClusterVersion = "3.11"
 	ClusterVersion4 ClusterVersion = "4.0"
+)
+
+var (
+	defaultImage3 = images.Image{
+		Registry:   images.DefaultRegistry,
+		Repository: DefaultImageRepository,
+		Name:       DefaultImageName3,
+		Tag:        "v" + DefaultVersion,
+	}
+	defaultImage4 = images.Image{
+		Registry:   images.DefaultRegistry,
+		Repository: DefaultImageRepository,
+		Name:       DefaultImageName4,
+		Tag:        "v" + DefaultVersion,
+	}
 )
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
@@ -65,8 +67,6 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 	replicasByRack := cassdcapi.SplitRacks(int(stargate.Spec.Size), len(racks))
 	dnsPolicy := computeDNSPolicy(dc)
 
-	defaultImage := computeDefaultImage(clusterVersion)
-
 	var deployments = make(map[string]appsv1.Deployment)
 	for i, rack := range racks {
 
@@ -78,7 +78,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
 
 		deploymentName := DeploymentName(dc, &rack)
-		image := images.Coalesce(template.ContainerImage, defaultImage)
+		image := computeImage(template, clusterVersion)
 		resources := computeResourceRequirements(template)
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
@@ -138,8 +138,8 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 						Containers: []corev1.Container{{
 
 							Name:            deploymentName,
-							Image:           images.ImageString(image),
-							ImagePullPolicy: image.GetPullPolicy(),
+							Image:           image.String(),
+							ImagePullPolicy: image.PullPolicy,
 
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 8080, Name: "graphql"},
@@ -201,7 +201,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
 			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 		}
-		deployment.Annotations[coreapi.ResourceHashAnnotation] = utils.DeepHashString(deployment)
+		annotations.AddHashAnnotation(&deployment)
 		deployments[deploymentName] = deployment
 	}
 	return deployments
@@ -227,11 +227,11 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 	}
 }
 
-func computeDefaultImage(clusterVersion ClusterVersion) images.Image {
+func computeImage(template *api.StargateTemplate, clusterVersion ClusterVersion) *images.Image {
 	if clusterVersion == ClusterVersion3 {
-		return images.NewImage(stargate3DefaultImageId, corev1.PullIfNotPresent, nil)
+		return template.ContainerImage.ApplyDefaults(defaultImage3)
 	} else {
-		return images.NewImage(stargate4DefaultImageId, corev1.PullIfNotPresent, nil)
+		return template.ContainerImage.ApplyDefaults(defaultImage4)
 	}
 }
 

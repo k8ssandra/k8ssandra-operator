@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
@@ -65,7 +66,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		utils.AddHashAnnotation(desiredDc, api.ResourceHashAnnotation)
+		annotations.AddHashAnnotation(desiredDc)
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
@@ -86,7 +87,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 
-			if !utils.CompareAnnotations(actualDc, desiredDc, api.ResourceHashAnnotation) {
+			if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {

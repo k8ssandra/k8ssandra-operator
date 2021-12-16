@@ -3,11 +3,11 @@ package reaper
 import (
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,29 +16,20 @@ import (
 )
 
 const (
-	DefaultReaperImageRepository = "thelastpickle"
-	DefaultReaperImageName       = "cassandra-reaper"
-	DefaultReaperVersion         = "3.0.0"
+	DefaultImageRepository = "thelastpickle"
+	DefaultImageName       = "cassandra-reaper"
+	DefaultVersion         = "3.1.0"
+	// When changing the default version above, please also change the kubebuilder markers in
+	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 )
 
 var (
-	defaultReaperImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultReaperImageRepository,
-		DefaultReaperImageName,
-		DefaultReaperVersion,
-	)
-	latestReaperImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultReaperImageRepository,
-		DefaultReaperImageName,
-		"latest",
-	)
-)
-
-var (
-	defaultReaperImage = images.NewImage(defaultReaperImageId, corev1.PullIfNotPresent, nil)
-	latestReaperImage  = images.NewImage(latestReaperImageId, corev1.PullAlways, nil)
+	defaultImage = images.Image{
+		Registry:   images.DefaultRegistry,
+		Repository: DefaultImageRepository,
+		Name:       DefaultImageName,
+		Tag:        DefaultVersion,
+	}
 )
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVars ...*corev1.EnvVar) *appsv1.Deployment {
@@ -47,9 +38,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
-				Key:      k8ssandraapi.ManagedByLabel,
+				Key:      v1alpha1.ManagedByLabel,
 				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{k8ssandraapi.NameLabelValue},
+				Values:   []string{v1alpha1.NameLabelValue},
 			},
 			{
 				Key:      api.ReaperLabel,
@@ -141,8 +132,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		}
 	}
 
-	initImage := computeImage(reaper.Spec.InitContainerImage)
-	mainImage := computeImage(reaper.Spec.ContainerImage)
+	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
+	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -161,8 +152,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 					InitContainers: []corev1.Container{
 						{
 							Name:            "reaper-schema-init",
-							Image:           images.ImageString(initImage),
-							ImagePullPolicy: initImage.GetPullPolicy(),
+							Image:           initImage.String(),
+							ImagePullPolicy: initImage.PullPolicy,
 							SecurityContext: reaper.Spec.InitContainerSecurityContext,
 							Env:             envVars,
 							Args:            []string{"schema-migration"},
@@ -171,8 +162,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
-							Image:           images.ImageString(mainImage),
-							ImagePullPolicy: mainImage.GetPullPolicy(),
+							Image:           mainImage.String(),
+							ImagePullPolicy: mainImage.PullPolicy,
 							SecurityContext: reaper.Spec.SecurityContext,
 							Ports: []corev1.ContainerPort{
 								{
@@ -200,7 +191,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		},
 	}
 	addAuthEnvVars(deployment, authVars)
-	utils.AddHashAnnotation(deployment, k8ssandraapi.ResourceHashAnnotation)
+	annotations.AddHashAnnotation(deployment)
 	return deployment
 }
 
@@ -222,14 +213,6 @@ func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
 		},
 	}
 	return probe
-}
-
-func computeImage(containerImage *api.ContainerImage) images.Image {
-	if containerImage == nil {
-		return defaultReaperImage
-	} else {
-		return images.Coalesce(containerImage, latestReaperImage)
-	}
 }
 
 func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {
