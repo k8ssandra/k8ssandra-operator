@@ -62,10 +62,11 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			},
 		},
 	}
-	recResult := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient)
-	_, err := recResult.Output()
-	if err != nil {
-		assert.Fail(t, "reconciliation failed", err)
+	if recResult := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient); recResult.Completed() {
+		_, err := recResult.Output()
+		if err != nil {
+			assert.Fail(t, "reconciliation failed", err)
+		}
 	}
 	currentSM := &promapi.ServiceMonitor{}
 	if err := fakeClient.Get(ctx, types.NamespacedName{Name: cfg.ServiceMonitorName, Namespace: cfg.CassandraNamespace}, currentSM); err != nil {

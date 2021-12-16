@@ -45,7 +45,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	}
 	// If Prometheus not installed bail here.
 	if !promInstalled {
-		return result.Continue()
+		return result.Done()
 	}
 	// Determine if we want a cleanup or a resource update.
 	switch {
@@ -54,25 +54,25 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
-		return result.Continue()
+		return result.Done()
 	case mergedSpec.Prometheus == nil:
 		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
-		return result.Continue()
+		return result.Done()
 	case mergedSpec.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
 		dcCfg.TelemetrySpec = mergedSpec
 		if err := dcCfg.UpdateResources(ctx, remoteClient, actualDc); err != nil {
 			return result.Error(err)
 		}
-		return result.Continue()
+		return result.Done()
 	default:
 		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
-		return result.Continue()
+		return result.Done()
 	}
 }
