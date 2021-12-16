@@ -130,10 +130,6 @@ type StargateDatacenterTemplate struct {
 	// Racks allow customizing Stargate characteristics for specific racks in the datacenter.
 	// +optional
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
-
-	// Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for this DC.
-	// +optional
-	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 }
 
 // Coalesce compares this StargateDatacenterTemplate with the given StargateClusterTemplate and returns the first

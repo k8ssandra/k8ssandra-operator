@@ -5157,6 +5157,48 @@ spec:
                                     description: ServiceAccount is the service account
                                       name to use for Stargate pods.
                                     type: string
+                                  stargateContainerImage:
+                                    description: StargateContainerImage is the image
+                                      characteristics to use for Stargate containers.
+                                      Leave nil to use a default image.
+                                    properties:
+                                      pullPolicy:
+                                        default: IfNotPresent
+                                        description: PullPolicy describes a policy
+                                          for if/when to pull a container image
+                                        type: string
+                                      registry:
+                                        default: docker.io
+                                        type: string
+                                      repository:
+                                        type: string
+                                      tag:
+                                        default: latest
+                                        type: string
+                                    required:
+                                    - repository
+                                    type: object
+                                  telemetry:
+                                    description: Telemetry defines the desired telemetry
+                                      integrations to deploy targeting the Stargate
+                                      pods for all DCs in this cluster (unless overriden
+                                      by DC specific settings)
+                                    properties:
+                                      prometheus:
+                                        properties:
+                                          commonLabels:
+                                            additionalProperties:
+                                              type: string
+                                            description: CommonLabels are applied
+                                              to all serviceMonitors created.
+                                            type: object
+                                          enabled:
+                                            description: Enable the creation of Prometheus
+                                              serviceMonitors for this resource (Cassandra
+                                              or Stargate).
+                                            type: boolean
+                                        type: object
+                                    type: object
                                   tolerations:
                                     description: Tolerations are tolerations to apply
                                       to the Stargate pods. Leave nil to let the controller
@@ -5393,6 +5435,48 @@ spec:
                               format: int32
                               minimum: 1
                               type: integer
+                            stargateContainerImage:
+                              description: StargateContainerImage is the image characteristics
+                                to use for Stargate containers. Leave nil to use a
+                                default image.
+                              properties:
+                                pullPolicy:
+                                  default: IfNotPresent
+                                  description: PullPolicy describes a policy for if/when
+                                    to pull a container image
+                                  type: string
+                                registry:
+                                  default: docker.io
+                                  type: string
+                                repository:
+                                  type: string
+                                tag:
+                                  default: latest
+                                  type: string
+                              required:
+                              - repository
+                              type: object
+                            telemetry:
+                              description: Telemetry defines the desired telemetry
+                                integrations to deploy targeting the Stargate pods
+                                for all DCs in this cluster (unless overriden by DC
+                                specific settings)
+                              properties:
+                                prometheus:
+                                  properties:
+                                    commonLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: CommonLabels are applied to all
+                                        serviceMonitors created.
+                                      type: object
+                                    enabled:
+                                      description: Enable the creation of Prometheus
+                                        serviceMonitors for this resource (Cassandra
+                                        or Stargate).
+                                      type: boolean
+                                  type: object
+                              type: object
                             tolerations:
                               description: Tolerations are tolerations to apply to
                                 the Stargate pods. Leave nil to let the controller
@@ -9459,6 +9543,45 @@ spec:
                     format: int32
                     minimum: 1
                     type: integer
+                  stargateContainerImage:
+                    description: StargateContainerImage is the image characteristics
+                      to use for Stargate containers. Leave nil to use a default image.
+                    properties:
+                      pullPolicy:
+                        default: IfNotPresent
+                        description: PullPolicy describes a policy for if/when to
+                          pull a container image
+                        type: string
+                      registry:
+                        default: docker.io
+                        type: string
+                      repository:
+                        type: string
+                      tag:
+                        default: latest
+                        type: string
+                    required:
+                    - repository
+                    type: object
+                  telemetry:
+                    description: Telemetry defines the desired telemetry integrations
+                      to deploy targeting the Stargate pods for all DCs in this cluster
+                      (unless overriden by DC specific settings)
+                    properties:
+                      prometheus:
+                        properties:
+                          commonLabels:
+                            additionalProperties:
+                              type: string
+                            description: CommonLabels are applied to all serviceMonitors
+                              created.
+                            type: object
+                          enabled:
+                            description: Enable the creation of Prometheus serviceMonitors
+                              for this resource (Cassandra or Stargate).
+                            type: boolean
+                        type: object
+                    type: object
                   tolerations:
                     description: Tolerations are tolerations to apply to the Stargate
                       pods. Leave nil to let the controller reuse the same tolerations
