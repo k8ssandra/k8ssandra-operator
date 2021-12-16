@@ -5,6 +5,7 @@ package stargate
 import (
 	"context"
 	"errors"
+
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 
 	"github.com/go-logr/logr"
@@ -48,22 +49,25 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
+		return result.Continue()
 	case thisStargate.Spec.Telemetry.Prometheus == nil:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
+		return result.Continue()
 	case thisStargate.Spec.Telemetry.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		dcCfg.TelemetrySpec = thisStargate.Spec.Telemetry
 		if err := dcCfg.UpdateResources(ctx, remoteClient, thisStargate); err != nil {
 			return result.Error(err)
 		}
+		return result.Continue()
 	default:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "mergedSpec", thisStargate.Spec.Telemetry)
 		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
+		return result.Continue()
 	}
-	return result.Error(errors.New("something unexpected occurred in reconcileStargateTelemetry"))
 }

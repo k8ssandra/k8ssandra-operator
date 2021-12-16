@@ -4,6 +4,8 @@ package stargate
 
 import (
 	"context"
+	"testing"
+
 	testlogr "github.com/go-logr/logr/testing"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -11,7 +13,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -42,8 +43,8 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	}
 	smName := telemetry.GetStargatePromSMName(cfg)
 	recResult := r.reconcileStargateTelemetry(ctx, &stargate, testLogger, fakeClient)
-	if !recResult.Completed() {
-		_, err := recResult.Output()
+	_, err := recResult.Output()
+	if err != nil {
 		assert.Fail(t, "reconciliation failed", err)
 	}
 	currentSM := &promapi.ServiceMonitor{}

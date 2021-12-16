@@ -63,8 +63,8 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 		},
 	}
 	recResult := r.reconcileCassandraDCTelemetry(ctx, &kc, kc.Spec.Cassandra.Datacenters[0], &cassDC, testLogger, fakeClient)
-	if !recResult.Completed() {
-		_, err := recResult.Output()
+	_, err := recResult.Output()
+	if err != nil {
 		assert.Fail(t, "reconciliation failed", err)
 	}
 	currentSM := &promapi.ServiceMonitor{}
