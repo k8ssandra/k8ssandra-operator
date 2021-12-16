@@ -59,7 +59,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to update status for stargate")
 				return result.Error(err)
 			}
-			if !utils.CompareHashes(desiredStargate, actualStargate) {
+			if !utils.CompareHashAnnotations(desiredStargate, actualStargate) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)

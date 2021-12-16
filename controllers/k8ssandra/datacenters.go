@@ -86,7 +86,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 
-			if !utils.CompareHashes(actualDc, desiredDc) {
+			if !utils.CompareHashAnnotations(actualDc, desiredDc) {
 				logger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {

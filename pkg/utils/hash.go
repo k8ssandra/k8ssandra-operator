@@ -11,7 +11,7 @@ func AddHashAnnotation(obj Annotated) {
 	AddAnnotation(obj, ResourceHashAnnotation, h)
 }
 
-func CompareHashes(r1, r2 Annotated) bool {
+func CompareHashAnnotations(r1, r2 Annotated) bool {
 	return CompareAnnotations(r1, r2, ResourceHashAnnotation)
 }
 

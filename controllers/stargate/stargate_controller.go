@@ -189,8 +189,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		} else {
 			// Deployment already exists: check if it needs to be updated
-			desiredDeploymentHash := desiredDeployment.Annotations[utils.ResourceHashAnnotation]
-			if actualDeploymentHash, found := actualDeployment.Annotations[utils.ResourceHashAnnotation]; !found || actualDeploymentHash != desiredDeploymentHash {
+			if !utils.CompareHashAnnotations(&desiredDeployment, &actualDeployment) {
 				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
 				resourceVersion := actualDeployment.GetResourceVersion()
 				desiredDeployment.DeepCopyInto(&actualDeployment)
@@ -303,8 +302,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check if the service needs to be updated
-	desiredServiceHash := desiredService.Annotations[utils.ResourceHashAnnotation]
-	if actualServiceHash, found := actualService.Annotations[utils.ResourceHashAnnotation]; !found || actualServiceHash != desiredServiceHash {
+	if !utils.CompareHashAnnotations(desiredService, actualService) {
 		logger.Info("Updating Stargate Service", "Service", serviceKey)
 		resourceVersion := actualService.GetResourceVersion()
 		desiredService.DeepCopyInto(actualService)

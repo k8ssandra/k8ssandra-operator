@@ -72,7 +72,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(ctx context.Context
 				return result.Error(err)
 			}
 		} else {
-			if !utils.CompareHashes(actualEndpoints, desiredEndpoints) {
+			if !utils.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
 				logger.Info("Updating endpoints", "Endpoints", endpointsKey)
 				actualEndpoints := actualEndpoints.DeepCopy()
 				resourceVersion := actualEndpoints.GetResourceVersion()

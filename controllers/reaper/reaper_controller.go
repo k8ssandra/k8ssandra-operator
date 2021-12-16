@@ -191,7 +191,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	actualDeployment = actualDeployment.DeepCopy()
 
 	// Check if the deployment needs to be updated
-	if !utils.CompareHashes(actualDeployment, desiredDeployment) {
+	if !utils.CompareHashAnnotations(actualDeployment, desiredDeployment) {
 		logger.Info("Updating Reaper Deployment")
 		resourceVersion := actualDeployment.GetResourceVersion()
 		desiredDeployment.DeepCopyInto(actualDeployment)
@@ -247,7 +247,7 @@ func (r *ReaperReconciler) reconcileService(
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		}
 	}
-	if !utils.CompareHashes(actualService, desiredService) {
+	if !utils.CompareHashAnnotations(actualService, desiredService) {
 		logger.Info("Updating Reaper Service")
 		updatedService := actualService.DeepCopy()
 		desiredService.DeepCopyInto(updatedService)
