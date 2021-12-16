@@ -7,6 +7,3 @@ resources:
   - ../../default
   - ../../../../../cass-operator/config/deployments/default
 
-images:
-  - name: k8ssandra/cass-operator
-    newTag: latest
