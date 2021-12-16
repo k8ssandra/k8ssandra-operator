@@ -36,7 +36,7 @@ func Test_StargatePrometheusResourcer_NewServiceMonitor_SUCCESS(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "error creating new service monitor", err)
 	}
-	assert.Equal(t, "prometheus", actualSM.Spec.Endpoints[0].Port)
+	assert.Equal(t, "health", actualSM.Spec.Endpoints[0].Port)
 }
 
 // Test_CassPrometheusResourcer_UpdateResources_Create_SUCCESS tests that a serviceMonitor is created if one does not exist.
