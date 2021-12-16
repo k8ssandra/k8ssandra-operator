@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -129,7 +128,7 @@ func generateCassOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/default?ref=` + test.CassOperatorVersion + `
+- github.com/k8ssandra/cass-operator/config/default?ref=v1.9.0
 namespace: {{ .Namespace }}
 `
 	k := Kustomization{Namespace: namespace}
