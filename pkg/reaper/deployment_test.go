@@ -2,7 +2,7 @@ package reaper
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
@@ -34,9 +34,9 @@ func TestNewDeployment(t *testing.T) {
 	assert.Len(t, selector.MatchLabels, 0)
 	assert.ElementsMatch(t, selector.MatchExpressions, []metav1.LabelSelectorRequirement{
 		{
-			Key:      v1alpha1.ManagedByLabel,
+			Key:      k8ssandraapi.ManagedByLabel,
 			Operator: metav1.LabelSelectorOpIn,
-			Values:   []string{v1alpha1.NameLabelValue},
+			Values:   []string{k8ssandraapi.NameLabelValue},
 		},
 		{
 			Key:      reaperapi.ReaperLabel,

@@ -2,9 +2,9 @@ package stargate
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,11 +19,11 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 			Namespace:   stargate.Namespace,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				v1alpha1.NameLabel:      v1alpha1.NameLabelValue,
-				v1alpha1.PartOfLabel:    v1alpha1.PartOfLabelValue,
-				v1alpha1.ComponentLabel: v1alpha1.ComponentLabelValueStargate,
-				v1alpha1.CreatedByLabel: v1alpha1.CreatedByLabelValueStargateController,
-				api.StargateLabel:       stargate.Name,
+				coreapi.NameLabel:      coreapi.NameLabelValue,
+				coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+				coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+				coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+				api.StargateLabel:      stargate.Name,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -42,13 +42,13 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 		},
 	}
 
-	klusterName, nameFound := stargate.Labels[v1alpha1.K8ssandraClusterNameLabel]
-	klusterNamespace, namespaceFound := stargate.Labels[v1alpha1.K8ssandraClusterNamespaceLabel]
+	klusterName, nameFound := stargate.Labels[coreapi.K8ssandraClusterNameLabel]
+	klusterNamespace, namespaceFound := stargate.Labels[coreapi.K8ssandraClusterNamespaceLabel]
 
 	if nameFound && namespaceFound {
-		service.Labels[v1alpha1.K8ssandraClusterNameLabel] = klusterName
-		service.Labels[v1alpha1.K8ssandraClusterNamespaceLabel] = klusterNamespace
+		service.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
+		service.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 	}
-	service.Annotations[v1alpha1.ResourceHashAnnotation] = utils.DeepHashString(service)
+	annotations.AddHashAnnotation(service)
 	return service
 }
