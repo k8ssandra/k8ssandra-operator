@@ -237,10 +237,9 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	telemetryResult := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
-	if !telemetryResult.Completed() {
-		_, err := telemetryResult.Output()
-		return ctrl.Result{}, err
+	_, err := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
+	if err != nil {
+		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
 	}
 
 	// Update status to reflect deployment status

@@ -42,8 +42,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 		Logger:            testLogger,
 	}
 	smName := telemetry.GetStargatePromSMName(cfg)
-	recResult := r.reconcileStargateTelemetry(ctx, &stargate, testLogger, fakeClient)
-	_, err := recResult.Output()
+	_, err := r.reconcileStargateTelemetry(ctx, &stargate, testLogger, fakeClient)
 	if err != nil {
 		assert.Fail(t, "reconciliation failed", err)
 	}
