@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"os"
 	"strings"
 
@@ -70,6 +69,7 @@ func init() {
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
+	utilruntime.Must(promapi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -131,18 +131,6 @@ func main() {
 		os.Exit(1)
 	}
 	ctx := ctrl.SetupSignalHandler()
-
-	// Add Prometheus API to scheme if Prometheus is installed in cluster.
-	// discoveryclient.NewDiscoveryClient()
-	promInstalled, err := telemetry.IsPromInstalled(uncachedClient, setupLog)
-	if err != nil {
-		setupLog.Error(err, "unable to determine if Prometheus installed")
-		os.Exit(1)
-	}
-	if promInstalled {
-		utilruntime.Must(promapi.AddToScheme(scheme))
-	}
-
 	reconcilerConfig := config.InitConfig()
 
 	if isControlPlane() {
