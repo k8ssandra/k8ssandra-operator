@@ -67,9 +67,8 @@ func Test_StargatePrometheusResourcer_UpdateResources_Create_SUCCESS(t *testing.
 	assert.Equal(t, "test-namespace", createdSM.Namespace)
 }
 
-// TODO: This test not currently passing. We need to look at whether evaluating the resourceHash is sufficient to trigger healing.
-// Test_CassPrometheusResourcer_Cleanup_SUCCESS tests that the servicemonitor is cleaned up successfully,
-// when the TelemetrySpec is no longer in the CassPrometheusResourcer config.
+// Test_StargatePrometheusResourcer_Cleanup tests that the StargatePrometheusResourcer method correctly cleans up all resources
+// which it created with its UpdateResources method.
 func Test_StargatePrometheusResourcer_Cleanup(t *testing.T) {
 	fakeClient, err := test.NewFakeClient()
 	if err != nil {
