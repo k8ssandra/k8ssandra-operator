@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	medusaImageRepo     = "test/medusa"
+	medusaImageRepo     = "test"
 	storageSecret       = "storage-secret"
 	cassandraUserSecret = "medusa-secret"
 )
@@ -79,11 +79,10 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		},
 	}
 
-	t.Logf("Creating k8ssandracluster with Medusa pre Get: %s", kc.Spec.Medusa.ContainerImage.Repository)
+	t.Log("Creating k8ssandracluster with Medusa")
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
-
-	verifyDefaultSuperUserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
@@ -121,7 +120,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -185,7 +184,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc1Key.Name)
 			return false
@@ -197,7 +196,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc2Key.Name)
 			return false
@@ -223,7 +222,7 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 
 	for _, container := range [](corev1.Container){initContainer, mainContainer} {
 		// Check containers Image
-		require.True(container.Image == fmt.Sprintf("docker.io/%s:latest", medusaImageRepo), fmt.Sprintf("%s %s init container doesn't have the right image", dc.Name, container.Name))
+		require.True(container.Image == fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo), fmt.Sprintf("%s %s init container doesn't have the right image %s vs docker.io/%s/medusa:latest", dc.Name, container.Name, container.Image, medusaImageRepo))
 
 		// Check volume mounts
 		assert.True(t, f.ContainerHasVolumeMount(container, "server-config", "/etc/cassandra"), "Missing Volume Mount for medusa-restore server-config")

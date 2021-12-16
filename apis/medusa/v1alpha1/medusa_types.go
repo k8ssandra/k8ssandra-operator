@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -102,21 +101,60 @@ type Storage struct {
 
 type ContainerImage struct {
 
+	// The docker registry to use. Defaults to docker.io.
 	// +kubebuilder:default="docker.io"
+	// +optional
 	Registry string `json:"registry,omitempty"`
 
-	// +kubebuilder:default="k8ssandra/medusa"
-	Repository string `json:"repository"`
+	// The docker repository to use. Defaults to "stargateio".
+	// +kubebuilder:default="k8ssandra"
+	// +optional
+	Repository string `json:"repository,omitempty"`
 
+	// The image name to use.
+	// version detected.
+	// +kubebuilder:default="medusa"
+	// +optional
+	Name string `json:"name,omitempty"`
+
+	// The image tag to use. Defaults to "latest" (but please note: "latest" is not a valid tag name for official
+	// Stargate images from the stargateio Docker Hub repository).
 	// +kubebuilder:default="latest"
+	// +optional
 	Tag string `json:"tag,omitempty"`
 
-	// +kubebuilder:default="IfNotPresent"
+	// The image pull policy to use. Defaults to "Always" if the tag is "latest", otherwise to "IfNotPresent".
 	// +optional
-	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty"`
+	// +kubebuilder:validation:Enum:=Always;IfNotPresent;Never
+	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty"`
 
+	// The secret to use when pulling the image from private repositories.
 	// +optional
-	PullSecret corev1.LocalObjectReference `json:"imagePullSecret,omitempty"`
+	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
+}
+
+func (in ContainerImage) GetRegistry() string {
+	return in.Registry
+}
+
+func (in ContainerImage) GetRepository() string {
+	return in.Repository
+}
+
+func (in ContainerImage) GetName() string {
+	return in.Name
+}
+
+func (in ContainerImage) GetTag() string {
+	return in.Tag
+}
+
+func (in ContainerImage) GetPullPolicy() corev1.PullPolicy {
+	return in.PullPolicy
+}
+
+func (in ContainerImage) GetPullSecretRef() *corev1.LocalObjectReference {
+	return in.PullSecretRef
 }
 
 type MedusaClusterTemplate struct {
@@ -143,11 +181,4 @@ type MedusaClusterTemplate struct {
 // MedusaSpec defines the desired state of Medusa.
 type MedusaSpec struct {
 	MedusaClusterTemplate `json:",inline"`
-}
-
-type Medusa struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec MedusaSpec `json:"spec,omitempty"`
 }

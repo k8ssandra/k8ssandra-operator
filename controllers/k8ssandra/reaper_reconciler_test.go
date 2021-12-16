@@ -3,6 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -13,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -110,7 +111,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -208,7 +209,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc1Key.Name)
 			return false
@@ -224,7 +225,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 			return false
 		}
 
-		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc2Key.Name)
 			return false

@@ -6412,32 +6412,41 @@ spec:
                     description: MedusaContainerImage is the image characteristics
                       to use for Medusa containers. Leave nil to use a default image.
                     properties:
-                      imagePullSecret:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
+                      name:
+                        default: medusa
+                        description: The image name to use. version detected.
+                        type: string
+                      pullPolicy:
+                        description: The image pull policy to use. Defaults to "Always"
+                          if the tag is "latest", otherwise to "IfNotPresent".
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        - Never
+                        type: string
+                      pullSecretRef:
+                        description: The secret to use when pulling the image from
+                          private repositories.
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                         type: object
-                      pullPolicy:
-                        default: IfNotPresent
-                        description: PullPolicy describes a policy for if/when to
-                          pull a container image
-                        type: string
                       registry:
                         default: docker.io
+                        description: The docker registry to use. Defaults to docker.io.
                         type: string
                       repository:
-                        default: k8ssandra/medusa
+                        default: k8ssandra
+                        description: The docker repository to use. Defaults to "stargateio".
                         type: string
                       tag:
                         default: latest
+                        description: 'The image tag to use. Defaults to "latest" (but
+                          please note: "latest" is not a valid tag name for official
+                          Stargate images from the stargateio Docker Hub repository).'
                         type: string
-                    required:
-                    - repository
                     type: object
                   securityContext:
                     description: SecurityContext applied to the Medusa containers.

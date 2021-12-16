@@ -173,14 +173,6 @@ rules:
 - apiGroups:
   - medusa.k8ssandra.io
   resources:
-  - cassandrarebackups
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
   - cassandrarestores
   verbs:
   - delete

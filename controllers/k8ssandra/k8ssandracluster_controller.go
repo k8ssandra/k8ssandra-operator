@@ -118,9 +118,11 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
-	if err := r.reconcileMedusaSecrets(ctx, kc, kcLogger); err != nil {
-		return ctrl.Result{}, err
+	if medusaSecretResult := r.reconcileMedusaSecrets(ctx, kc, kcLogger); medusaSecretResult.Completed() {
+		return medusaSecretResult.Output()
 	}
+
+	kcLogger.Info("Reconciling replicated secrets")
 
 	if recResult := r.reconcileReplicatedSecret(ctx, kc, kcLogger); recResult.Completed() {
 		return recResult.Output()
