@@ -20,7 +20,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
   use same struct for both Reaper and Stargate images
 * [ENHANCEMENT] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 * [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Cassandra Datacenter.
-
+* [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Stargate deployment.
 * [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 
 ## v1.0.0-alpha.2 - 2021-12-03
