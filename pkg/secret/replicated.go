@@ -45,12 +45,26 @@ func generateRandomString(charset string, length int) ([]byte, error) {
 	return result, nil
 }
 
-// DefaultSuperuserSecretName follows the convention from k8ssandra Helm charts
+// DefaultSuperuserSecretName returns a default name for the superuser secret. It is of the general form
+// <cluster_name>-superuser.
 func DefaultSuperuserSecretName(clusterName string) string {
-	cleanedClusterName := strings.ReplaceAll(strings.ReplaceAll(clusterName, "_", ""), "-", "")
-	secretName := fmt.Sprintf("%s-superuser", cleanedClusterName)
+	return fmt.Sprintf("%s-superuser", SanitizeSecretName(clusterName))
+}
 
-	return secretName
+// SanitizeSecretName returns a string suitable for creating secret names derived from the given cluster name.
+// Secret names must be a valid DNS subdomain name as defined in RFC 1123.
+func SanitizeSecretName(name string) string {
+	// FIXME maybe move this function to pkg/utils/objects.go? It could also be used for resource, service and deployment names.
+	// see https://github.com/k8ssandra/k8ssandra-operator/issues/267
+	// FIXME this is not really what is needed to make the string compliant with a DNS subdomain string, see
+	// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
+	// Names must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric
+	// character (e.g. 'example.com').
+	// Regex for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
+	clean := name
+	clean = strings.ReplaceAll(clean, "_", "")
+	clean = strings.ReplaceAll(clean, "-", "")
+	return clean
 }
 
 // ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such

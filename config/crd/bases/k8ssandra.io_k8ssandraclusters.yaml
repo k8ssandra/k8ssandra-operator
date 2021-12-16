@@ -39,6 +39,14 @@ spec:
           spec:
             description: K8ssandraClusterSpec defines the desired state of K8ssandraCluster
             properties:
+              auth:
+                default: true
+                description: Whether to enable authentication in this cluster. The
+                  default is true; it is highly recommended to always leave authentication
+                  turned on. When enabled, authentication will be enforced not only
+                  on Cassandra nodes, but also on Reaper, Medusa and Stargate nodes,
+                  if any.
+                type: boolean
               cassandra:
                 description: Cassandra is a specification of the Cassandra cluster.
                   This includes everything from the number of datacenters, the k8s
@@ -77,9 +85,15 @@ spec:
                       for 4.x.
                     properties:
                       cassandraYaml:
+                        description: 'CassandraYaml defines the contents of the cassandra.yaml
+                          file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                         properties:
                           allocate_tokens_for_local_replication_factor:
                             type: integer
+                          authenticator:
+                            type: string
+                          authorizer:
+                            type: string
                           auto_snapshot:
                             type: boolean
                           commitlog_segment_size_in_mb:
@@ -96,6 +110,12 @@ spec:
                             type: integer
                           counter_cache_size_in_mb:
                             type: integer
+                          credentials_update_interval_in_ms:
+                            format: int64
+                            type: integer
+                          credentials_validity_in_ms:
+                            format: int64
+                            type: integer
                           file_cache_size_in_mb:
                             type: integer
                           key_cache_size_in_mb:
@@ -104,7 +124,21 @@ spec:
                             type: integer
                           num_tokens:
                             type: integer
+                          permissions_update_interval_in_ms:
+                            format: int64
+                            type: integer
+                          permissions_validity_in_ms:
+                            format: int64
+                            type: integer
                           prepared_statements_cache_size_mb:
+                            type: integer
+                          role_manager:
+                            type: string
+                          roles_update_interval_in_ms:
+                            format: int64
+                            type: integer
+                          roles_validity_in_ms:
+                            format: int64
                             type: integer
                           row_cache_size_in_mb:
                             type: integer
@@ -168,9 +202,15 @@ spec:
                             or jvm-server-options for 4.x.
                           properties:
                             cassandraYaml:
+                              description: 'CassandraYaml defines the contents of
+                                the cassandra.yaml file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                               properties:
                                 allocate_tokens_for_local_replication_factor:
                                   type: integer
+                                authenticator:
+                                  type: string
+                                authorizer:
+                                  type: string
                                 auto_snapshot:
                                   type: boolean
                                 commitlog_segment_size_in_mb:
@@ -187,6 +227,12 @@ spec:
                                   type: integer
                                 counter_cache_size_in_mb:
                                   type: integer
+                                credentials_update_interval_in_ms:
+                                  format: int64
+                                  type: integer
+                                credentials_validity_in_ms:
+                                  format: int64
+                                  type: integer
                                 file_cache_size_in_mb:
                                   type: integer
                                 key_cache_size_in_mb:
@@ -195,7 +241,21 @@ spec:
                                   type: integer
                                 num_tokens:
                                   type: integer
+                                permissions_update_interval_in_ms:
+                                  format: int64
+                                  type: integer
+                                permissions_validity_in_ms:
+                                  format: int64
+                                  type: integer
                                 prepared_statements_cache_size_mb:
+                                  type: integer
+                                role_manager:
+                                  type: string
+                                roles_update_interval_in_ms:
+                                  format: int64
+                                  type: integer
+                                roles_validity_in_ms:
+                                  format: int64
                                   type: integer
                                 row_cache_size_in_mb:
                                   type: integer
@@ -227,6 +287,54 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                               type: object
+                          type: object
+                        jmxInitContainerImage:
+                          default:
+                            name: busybox
+                            tag: 1.34.1
+                          description: The image to use in each Cassandra pod for
+                            the (short-lived) init container that enables JMX remote
+                            authentication on Cassandra pods. This is only useful
+                            when authentication is enabled in the cluster. The default
+                            is "busybox:1.34.1".
+                          properties:
+                            name:
+                              description: The image name to use.
+                              type: string
+                            pullPolicy:
+                              description: The image pull policy to use. Defaults
+                                to "Always" if the tag is "latest", otherwise to "IfNotPresent".
+                              enum:
+                              - Always
+                              - IfNotPresent
+                              - Never
+                              type: string
+                            pullSecretRef:
+                              description: 'The secret to use when pulling the image
+                                from private repositories. If specified, this secret
+                                will be passed to individual puller implementations
+                                for them to use. For example, in the case of Docker,
+                                only DockerConfig type secrets are honored. More info:
+                                https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            registry:
+                              default: docker.io
+                              description: The Docker registry to use. Defaults to
+                                "docker.io", the official Docker Hub.
+                              type: string
+                            repository:
+                              description: The Docker repository to use.
+                              type: string
+                            tag:
+                              default: latest
+                              description: The image tag to use. Defaults to "latest".
+                              type: string
                           type: object
                         k8sContext:
                           type: string
@@ -1427,7 +1535,7 @@ spec:
                                 name: cassandra-reaper
                                 repository: thelastpickle
                                 tag: 3.1.0
-                              description: The image to use for tje Reaper pod init
+                              description: The image to use for the Reaper pod init
                                 container (that performs schema migrations). The default
                                 is "thelastpickle/cassandra-reaper:3.1.0".
                               properties:
@@ -5911,6 +6019,51 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  jmxInitContainerImage:
+                    default:
+                      name: busybox
+                      tag: 1.34.1
+                    description: The image to use in each Cassandra pod for the (short-lived)
+                      init container that enables JMX remote authentication on Cassandra
+                      pods. This is only useful when authentication is enabled in
+                      the cluster. The default is "busybox:1.34.1".
+                    properties:
+                      name:
+                        description: The image name to use.
+                        type: string
+                      pullPolicy:
+                        description: The image pull policy to use. Defaults to "Always"
+                          if the tag is "latest", otherwise to "IfNotPresent".
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        - Never
+                        type: string
+                      pullSecretRef:
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      registry:
+                        default: docker.io
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
+                        type: string
+                      repository:
+                        description: The Docker repository to use.
+                        type: string
+                      tag:
+                        default: latest
+                        description: The image tag to use. Defaults to "latest".
+                        type: string
+                    type: object
                   mgmtAPIHeap:
                     anyOf:
                     - type: integer
@@ -6362,10 +6515,18 @@ spec:
                             type: string
                         type: object
                     type: object
-                  superuserSecret:
-                    description: SuperuserSecretName allows to override the default
-                      super user secret
-                    type: string
+                  superuserSecretRef:
+                    description: The reference to the superuser secret to use for
+                      Cassandra. If unspecified, a default secret will be generated
+                      with a random password; the generated secret name will be "<cluster_name>-superuser"
+                      where <cluster_name> is the Cassandra cluster name specified
+                      above.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   systemLoggerResources:
                     description: SystemLoggerResources is the cpu and memory resources
                       for the server-system-logger container.
@@ -7667,7 +7828,12 @@ spec:
                       using CQL. If CQL authentication is not required, leave this
                       field empty. The secret must be in the same namespace as Reaper
                       itself and must contain two keys: "username" and "password".'
-                    type: string
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   containerImage:
                     default:
                       name: cassandra-reaper
@@ -7717,7 +7883,7 @@ spec:
                       name: cassandra-reaper
                       repository: thelastpickle
                       tag: 3.1.0
-                    description: The image to use for tje Reaper pod init container
+                    description: The image to use for the Reaper pod init container
                       (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.0".
                     properties:
                       name:
@@ -7924,7 +8090,12 @@ spec:
                       is not required, leave this field empty. The secret must be
                       in the same namespace as Reaper itself and must contain two
                       keys: "username" and "password".'
-                    type: string
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   keyspace:
                     default: reaper_db
                     description: The keyspace to use to store Reaper's state. Will

@@ -230,10 +230,11 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, use
 
 func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx int, username, password string) *client.CqlClientConnection {
 	contactPoint := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
-	cqlClient := client.NewCqlClient(contactPoint, &client.AuthCredentials{
-		Username: username,
-		Password: password,
-	})
+	var credentials *client.AuthCredentials
+	if username != "" {
+		credentials = &client.AuthCredentials{Username: username, Password: password}
+	}
+	cqlClient := client.NewCqlClient(contactPoint, credentials)
 	cqlClient.ConnectTimeout = 30 * time.Second
 	cqlClient.ReadTimeout = 3 * time.Minute
 	connection, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)

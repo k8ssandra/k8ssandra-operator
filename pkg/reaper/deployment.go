@@ -23,14 +23,12 @@ const (
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 )
 
-var (
-	defaultImage = images.Image{
-		Registry:   images.DefaultRegistry,
-		Repository: DefaultImageRepository,
-		Name:       DefaultImageName,
-		Tag:        DefaultVersion,
-	}
-)
+var defaultImage = images.Image{
+	Registry:   images.DefaultRegistry,
+	Repository: DefaultImageRepository,
+	Name:       DefaultImageName,
+	Tag:        DefaultVersion,
+}
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	labels := createServiceAndDeploymentLabels(reaper)
@@ -67,6 +65,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
 		},
 		{
+			// Reaper web UI authentication is currently always disabled
 			Name:  "REAPER_AUTH_ENABLED",
 			Value: "false",
 		},

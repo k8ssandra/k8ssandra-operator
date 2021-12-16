@@ -37,7 +37,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/component-base v0.22.3 // indirect
 	k8s.io/kubernetes v1.22.2
-	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
+	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
 	sigs.k8s.io/controller-runtime v0.9.2
 )
 

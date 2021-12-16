@@ -68,23 +68,28 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dir, namespace, k8sContext)
 	assert.NoError(t, err)
-	stargateHttp := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
-	stargateCql := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	require.Eventually(t, func() bool {
+	stargateHttp := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
+	stargateCql := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
+	assert.Eventually(t, func() bool {
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetBody(body)
 		response, err := request.Post(stargateHttp)
-		return err == nil && response.StatusCode() == http.StatusCreated
+		if username != "" {
+			return err == nil && response.StatusCode() == http.StatusCreated
+		} else {
+			return err == nil && response.StatusCode() == http.StatusBadRequest
+		}
 	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
-	require.Eventually(t, func() bool {
-		cqlClient := client.NewCqlClient(stargateCql, &client.AuthCredentials{
-			Username: username,
-			Password: password,
-		})
+	assert.Eventually(t, func() bool {
+		var credentials *client.AuthCredentials
+		if username != "" {
+			credentials = &client.AuthCredentials{Username: username, Password: password}
+		}
+		cqlClient := client.NewCqlClient(stargateCql, credentials)
 		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
 		defer connection.Close()
 		return err == nil

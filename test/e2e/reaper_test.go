@@ -6,13 +6,11 @@ import (
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"net/url"
@@ -31,7 +29,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("check Reaper keyspace created")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_db")
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_db")
 
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
@@ -42,7 +40,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context kind-k8ssandra-0")
-		testReaperApi(t, ctx, 0, "reaper_db")
+		testReaperApi(t, ctx, 0, "test", "reaper_db")
 	})
 }
 
@@ -68,12 +66,12 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("check Stargate auth keyspace created in both clusters")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", stargate.AuthKeyspace)
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", stargate.AuthKeyspace)
 
 	t.Log("check Reaper custom keyspace created in both clusters")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_ks")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-1", namespace, "test", "test-dc2-default-sts-0", "reaper_ks")
 
 	checkStargateReady(t, f, ctx, stargate1Key)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
@@ -87,8 +85,15 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkReaperReady(t, f, ctx, reaper2Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 
-	t.Log("retrieving database credentials")
-	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, "test")
+	require.NoError(t, err, "failed to retrieve database credentials")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, "-u", username, "-pw", password)
+
+	t.Log("check nodes in dc2 see nodes in dc1")
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, "test-dc2-default-sts-0", 2, "-u", username, "-pw", password)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
@@ -100,10 +105,10 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
-		testReaperApi(t, ctx, 0, "reaper_ks")
+		testReaperApi(t, ctx, 0, "test", "reaper_ks")
 	})
 	t.Run("TestReaperApi[1]", func(t *testing.T) {
-		testReaperApi(t, ctx, 1, "reaper_ks")
+		testReaperApi(t, ctx, 1, "test", "reaper_ks")
 	})
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
@@ -124,9 +129,11 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	checkDatacenterReady(t, ctx, dcKey, f)
 
 	t.Log("create Reaper keyspace")
-	f.ExecuteCql(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0",
+	_, err := f.ExecuteCql(ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0",
 		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3} ")
-	f.CheckKeyspaceExists(t, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "reaper_db")
+	require.NoError(t, err, "failed to create Reaper keyspace")
+
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "reaper_db")
 
 	checkReaperReady(t, f, ctx, reaperKey)
 
@@ -136,16 +143,8 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context kind-k8ssandra-0")
-		testReaperApi(t, ctx, 0, "reaper_db")
+		testReaperApi(t, ctx, 0, "test", "reaper_db")
 	})
-}
-
-func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
-	secret := &corev1.Secret{}
-	require.Eventually(t, func() bool {
-		return f.Get(ctx, secretKey, secret) == nil
-	}, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval)
-	assert.True(t, labels.IsManagedBy(secret, kcKey), "secret is not managed by k8c")
 }
 
 func checkReaperReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {
@@ -254,12 +253,12 @@ func testRemoveReaperFromK8ssandraCluster(
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 }
 
-func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, keyspace string) {
+func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName, keyspace string) {
 	t.Logf("Testing Reaper API in context kind-k8ssandra-%v...", k8sContextIdx)
 	var reaperURL, _ = url.Parse(fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%d080", k8sContextIdx))
 	var reaperClient = reaperclient.NewClient(reaperURL)
-	checkClusterIsRegisteredInReaper(t, ctx, "test", reaperClient)
-	repairId := triggerRepair(t, ctx, "test", keyspace, reaperClient)
+	checkClusterIsRegisteredInReaper(t, ctx, clusterName, reaperClient)
+	repairId := triggerRepair(t, ctx, clusterName, keyspace, reaperClient)
 	t.Log("Waiting for one segment to be repaired and canceling run")
 	waitForOneSegmentToBeDone(t, ctx, repairId, reaperClient)
 	err := reaperClient.AbortRepairRun(ctx, repairId)

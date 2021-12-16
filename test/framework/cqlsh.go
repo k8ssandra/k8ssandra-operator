@@ -4,46 +4,41 @@ import (
 	"context"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
-	"time"
 )
 
-func (f *E2eFramework) RetrieveSuperuserSecret(t *testing.T, ctx context.Context, namespace, k8cName string) *corev1.Secret {
+func (f *E2eFramework) RetrieveSuperuserSecret(ctx context.Context, namespace, clusterName string) (*corev1.Secret, error) {
 	var superUserSecret *corev1.Secret
-	timeout := 2 * time.Minute
-	interval := 1 * time.Second
-	require.Eventually(t, func() bool {
-		superUserSecret = &corev1.Secret{}
-		superUserSecretKey := ClusterKey{
-			NamespacedName: types.NamespacedName{
-				Namespace: namespace,
-				Name:      secret.DefaultSuperuserSecretName(k8cName),
-			},
-			K8sContext: f.ControlPlaneContext,
-		}
-		err := f.Get(ctx, superUserSecretKey, superUserSecret)
-		return err == nil &&
-			len(superUserSecret.Data["username"]) >= 0 &&
-			len(superUserSecret.Data["password"]) >= 0
-	}, timeout, interval, "Failed to retrieve superuser secret")
-	return superUserSecret
+	superUserSecret = &corev1.Secret{}
+	superUserSecretKey := ClusterKey{
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      secret.DefaultSuperuserSecretName(clusterName),
+		},
+		K8sContext: f.ControlPlaneContext,
+	}
+	err := f.Get(ctx, superUserSecretKey, superUserSecret)
+	return superUserSecret, err
 }
 
-func (f *E2eFramework) RetrieveDatabaseCredentials(t *testing.T, ctx context.Context, namespace, k8cName string) (string, string) {
-	superUserSecret := f.RetrieveSuperuserSecret(t, ctx, namespace, k8cName)
-	username := string(superUserSecret.Data["username"])
-	password := string(superUserSecret.Data["password"])
-	return username, password
+func (f *E2eFramework) RetrieveDatabaseCredentials(ctx context.Context, namespace, clusterName string) (string, string, error) {
+	superUserSecret, err := f.RetrieveSuperuserSecret(ctx, namespace, clusterName)
+	var username, password string
+	if err == nil {
+		username = string(superUserSecret.Data["username"])
+		password = string(superUserSecret.Data["password"])
+	}
+	return username, password, err
 }
 
-func (f *E2eFramework) ExecuteCql(t *testing.T, ctx context.Context, k8sContext, namespace, k8cName, pod, query string) string {
-	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, k8cName)
-	options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-	output, err := kubectl.Exec(options, pod,
+func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, clusterName, pod, query string) (string, error) {
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, clusterName)
+	if err != nil {
+		return "", err
+	}
+	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
+	return kubectl.Exec(options, pod,
 		"/opt/cassandra/bin/cqlsh",
 		"--username",
 		username,
@@ -52,11 +47,4 @@ func (f *E2eFramework) ExecuteCql(t *testing.T, ctx context.Context, k8sContext,
 		"-e",
 		query,
 	)
-	require.NoErrorf(t, err, "failed to execute CQL query '%s' on pod %s", query, pod)
-	return output
-}
-
-func (f *E2eFramework) CheckKeyspaceExists(t *testing.T, ctx context.Context, k8sContext, namespace, k8cName, pod, keyspace string) {
-	keyspaces := f.ExecuteCql(t, ctx, k8sContext, namespace, k8cName, pod, "describe keyspaces")
-	assert.Contains(t, keyspaces, keyspace)
 }

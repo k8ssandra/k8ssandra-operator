@@ -300,8 +300,8 @@ func (r *ReaperReconciler) collectAuthVars(ctx context.Context, actualReaper *re
 }
 
 func (r *ReaperReconciler) collectCqlAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
-	if len(actualReaper.Spec.CassandraUserSecretRef) > 0 {
-		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.CassandraUserSecretRef}
+	if len(actualReaper.Spec.CassandraUserSecretRef.Name) > 0 {
+		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.CassandraUserSecretRef.Name}
 		if secret, err := r.getSecret(ctx, secretKey); err != nil {
 			logger.Error(err, "Failed to get Cassandra authentication secret", "CassandraUserSecretName", secretKey)
 			return nil, err
@@ -316,8 +316,8 @@ func (r *ReaperReconciler) collectCqlAuthVars(ctx context.Context, actualReaper 
 }
 
 func (r *ReaperReconciler) collectJmxAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
-	if len(actualReaper.Spec.JmxUserSecretRef) > 0 {
-		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.JmxUserSecretRef}
+	if len(actualReaper.Spec.JmxUserSecretRef.Name) > 0 {
+		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.JmxUserSecretRef.Name}
 		if secret, err := r.getSecret(ctx, secretKey); err != nil {
 			logger.Error(err, "Failed to get JMX authentication secret", "JmxUserSecretName", secretKey)
 			return nil, err

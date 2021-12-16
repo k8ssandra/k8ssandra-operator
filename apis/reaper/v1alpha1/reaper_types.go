@@ -38,7 +38,7 @@ type ReaperDatacenterTemplate struct {
 	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
-	// The image to use for tje Reaper pod init container (that performs schema migrations).
+	// The image to use for the Reaper pod init container (that performs schema migrations).
 	// The default is "thelastpickle/cassandra-reaper:3.1.0".
 	// +optional
 	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
@@ -163,7 +163,7 @@ type ReaperClusterTemplate struct {
 	// authentication is not required, leave this field empty. The secret must be in the same namespace as Reaper itself
 	// and must contain two keys: "username" and "password".
 	// +optional
-	CassandraUserSecretRef string `json:"cassandraUserSecretRef,omitempty"`
+	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
 
 	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra clusters.
 	// These credentials will be automatically passed to each Cassandra node in the datacenter, as well as to the Reaper
@@ -171,7 +171,7 @@ type ReaperClusterTemplate struct {
 	// this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys: "username"
 	// and "password".
 	// +optional
-	JmxUserSecretRef string `json:"jmxUserSecretRef,omitempty"`
+	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.

@@ -20,56 +20,26 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 )
 
-// TODO should we move this to secrets.go?
-func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	logger.Info("Reconciling Reaper user secrets")
-	if kc.Spec.Reaper != nil {
-		kcKey := utils.GetKey(kc)
-		cassandraUserSecretRef := kc.Spec.Reaper.CassandraUserSecretRef
-		jmxUserSecretRef := kc.Spec.Reaper.JmxUserSecretRef
-		if cassandraUserSecretRef == "" {
-			cassandraUserSecretRef = reaper.DefaultUserSecretName(kc.Name)
-		}
-		if jmxUserSecretRef == "" {
-			jmxUserSecretRef = reaper.DefaultJmxUserSecretName(kc.Name)
-		}
-		logger = logger.WithValues(
-			"ReaperCassandraUserSecretRef",
-			cassandraUserSecretRef,
-			"ReaperJmxUserSecretRef",
-			jmxUserSecretRef,
-		)
-		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kcKey); err != nil {
-			logger.Error(err, "Failed to reconcile Reaper CQL user secret")
-			return result.Error(err)
-		}
-		if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef, kcKey); err != nil {
-			logger.Error(err, "Failed to reconcile Reaper JMX user secret")
-			return result.Error(err)
-		}
-	}
-	logger.Info("Reaper user secrets successfully reconciled")
-	return result.Continue()
-}
-
-func (r *K8ssandraClusterReconciler) reconcileReaperSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcs []*cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+) result.ReconcileResult {
 	if !kc.HasReapers() {
 		return result.Continue()
 	}
@@ -119,7 +89,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
-		Name:      reaper.ResourceName(kc.Name, actualDc.Name),
+		Name:      reaper.DefaultResourceName(actualDc),
 	}
 	logger = logger.WithValues("Reaper", reaperKey)
 	actualReaper := &reaperapi.Reaper{}

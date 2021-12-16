@@ -171,10 +171,15 @@ func Exec(opts Options, pod string, args ...string) (string, error) {
 	fmt.Println(cmd)
 
 	err := cmd.Run()
+
+	if logOutput {
+		fmt.Println(stderr.String())
+		fmt.Println(stdout.String())
+	}
+
 	if err != nil {
 		return stderr.String(), err
 	}
-
 	return stdout.String(), nil
 }
 
@@ -217,4 +222,35 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 	}
 
 	return err
+}
+
+func GetPod(opts Options, pod string, args ...string) (string, error) {
+	cmd := exec.Command("kubectl")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "get", "pod", pod)
+	cmd.Args = append(cmd.Args, args...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	fmt.Println(cmd)
+
+	err := cmd.Run()
+
+	if logOutput {
+		fmt.Println(stderr.String())
+		fmt.Println(stdout.String())
+	}
+
+	if err != nil {
+		return stderr.String(), err
+	}
+	return stdout.String(), nil
 }

@@ -15,6 +15,7 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 
 	"github.com/Jeffail/gabs"
 	"github.com/go-logr/logr"
@@ -55,7 +56,6 @@ const (
 var (
 	defaultStorageClass = "default"
 	testEnv             *testutils.MultiClusterTestEnv
-	seedsResolver       = &fakeSeedsResolver{}
 	managementApi       = &fakeManagementApiFactory{}
 )
 
@@ -63,9 +63,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{}
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		return []string{}, nil
-	}
 
 	reconcilerConfig := config.InitConfig()
 
@@ -97,6 +94,8 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
+	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
+	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -138,7 +137,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -312,20 +311,20 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:             clusterName,
-				SuperuserSecretName: superUserSecretName,
-				ServerVersion:       serverVersion,
+				Cluster:            clusterName,
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				ServerVersion:      serverVersion,
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 						StorageClassName: &defaultStorageClass,
 					},
 				},
 				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: &api.CassandraYaml{
-						ConcurrentReads:  intPtr(8),
-						ConcurrentWrites: intPtr(16),
+					CassandraYaml: api.CassandraYaml{
+						ConcurrentReads:  pointer.Int(8),
+						ConcurrentWrites: pointer.Int(16),
 					},
-					JvmOptions: &api.JvmOptions{
+					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 					},
 				},
@@ -354,7 +353,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -466,11 +465,11 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 						},
 						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: &api.CassandraYaml{
-								ConcurrentReads:  intPtr(4),
-								ConcurrentWrites: intPtr(4),
+							CassandraYaml: api.CassandraYaml{
+								ConcurrentReads:  pointer.Int(4),
+								ConcurrentWrites: pointer.Int(4),
 							},
-							JvmOptions: &api.JvmOptions{
+							JvmOptions: api.JvmOptions{
 								HeapSize: parseResource("1024Mi"),
 							},
 						},
@@ -497,11 +496,11 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 						},
 						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: &api.CassandraYaml{
-								ConcurrentReads:  intPtr(4),
-								ConcurrentWrites: intPtr(12),
+							CassandraYaml: api.CassandraYaml{
+								ConcurrentReads:  pointer.Int(4),
+								ConcurrentWrites: pointer.Int(12),
 							},
-							JvmOptions: &api.JvmOptions{
+							JvmOptions: api.JvmOptions{
 								HeapSize: parseResource("2048Mi"),
 							},
 						},
@@ -516,7 +515,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -615,11 +614,11 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 					HostNetwork: true,
 				},
 				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: &api.CassandraYaml{
-						ConcurrentReads:  intPtr(4),
-						ConcurrentWrites: intPtr(4),
+					CassandraYaml: api.CassandraYaml{
+						ConcurrentReads:  pointer.Int(4),
+						ConcurrentWrites: pointer.Int(4),
 					},
-					JvmOptions: &api.JvmOptions{
+					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 					},
 				},
@@ -652,11 +651,11 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 							HostNetwork: false,
 						},
 						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: &api.CassandraYaml{
-								ConcurrentReads:  intPtr(4),
-								ConcurrentWrites: intPtr(12),
+							CassandraYaml: api.CassandraYaml{
+								ConcurrentReads:  pointer.Int(4),
+								ConcurrentWrites: pointer.Int(12),
 							},
-							JvmOptions: &api.JvmOptions{
+							JvmOptions: api.JvmOptions{
 								HeapSize: parseResource("2048Mi"),
 							},
 						},
@@ -671,7 +670,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -734,21 +733,14 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, systemRF int, dcNames ...string) (*gabs.Container, error) {
 	config = config.DeepCopy()
-	if config.JvmOptions == nil {
-		config.JvmOptions = &api.JvmOptions{}
-	}
-	if config.JvmOptions.AdditionalOptions == nil {
-		config.JvmOptions.AdditionalOptions = make([]string, 0)
-	}
-	additionalOpts := config.JvmOptions.AdditionalOptions
-
-	dcNamesOpt := "-Dcassandra.system_distributed_replication_dc_names=" + strings.Join(dcNames, ",")
-	rfOpt := "-Dcassandra.system_distributed_replication_per_dc=" + strconv.Itoa(systemRF)
-	additionalOpts = append(additionalOpts, dcNamesOpt, rfOpt)
-
-	config.JvmOptions.AdditionalOptions = additionalOpts
-
-	json, err := cassandra.CreateJsonConfig(config, serverVersion)
+	dcNamesOpt := cassandra.SystemReplicationDcNames + "=" + strings.Join(dcNames, ",")
+	rfOpt := cassandra.SystemReplicationFactor + "=" + strconv.Itoa(systemRF)
+	*config = cassandra.ApplyAuthSettings(*config, true)
+	config.JvmOptions.AdditionalOptions = append(
+		[]string{dcNamesOpt, rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},
+		config.JvmOptions.AdditionalOptions...,
+	)
+	json, err := cassandra.CreateJsonConfig(*config, serverVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -771,7 +763,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
+				Cluster: "cluster-multi",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -809,7 +801,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -940,7 +932,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
+				Cluster: "cluster-multi-stargate",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -988,7 +980,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -1042,7 +1034,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
+			Name:      kc.Spec.Cassandra.Cluster + "-" + dc1Key.Name + "-stargate"},
 	}
 
 	t.Logf("check that stargate %s has not been created", sg1Key)
@@ -1074,7 +1066,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
+			Name:      kc.Spec.Cassandra.Cluster + "-" + dc2Key.Name + "-stargate"},
 	}
 
 	t.Log("update dc2 status to ready")
@@ -1092,19 +1084,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
 
 	t.Logf("update stargate sg1 status to ready")
-	err = f.PatchStargateStatus(ctx, sg1Key, func(sg *stargateapi.Stargate) {
-		now := metav1.Now()
-		sg.Status.Progress = stargateapi.StargateProgressRunning
-		sg.Status.AvailableReplicas = 1
-		sg.Status.Replicas = 1
-		sg.Status.ReadyReplicas = 1
-		sg.Status.UpdatedReplicas = 1
-		sg.Status.SetCondition(stargateapi.StargateCondition{
-			Type:               stargateapi.StargateReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: &now,
-		})
-	})
+	err = f.SetStargateStatusReady(ctx, sg1Key)
 	require.NoError(err, "failed to patch stargate status")
 
 	k := &api.K8ssandraCluster{}
@@ -1121,19 +1101,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(f.StargateExists(ctx, sg2Key), timeout, interval)
 
 	t.Logf("update stargate sg2 status to ready")
-	err = f.PatchStargateStatus(ctx, sg2Key, func(sg *stargateapi.Stargate) {
-		now := metav1.Now()
-		sg.Status.Progress = stargateapi.StargateProgressRunning
-		sg.Status.AvailableReplicas = 1
-		sg.Status.Replicas = 1
-		sg.Status.ReadyReplicas = 1
-		sg.Status.UpdatedReplicas = 1
-		sg.Status.SetCondition(stargateapi.StargateCondition{
-			Type:               stargateapi.StargateReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: &now,
-		})
-	})
+	err = f.SetStargateStatusReady(ctx, sg2Key)
 	require.NoError(err, "failed to patch stargate status")
 
 	t.Log("check that the K8ssandraCluster status is updated")
@@ -1227,31 +1195,48 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
 }
 
-func verifySuperUserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
+func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
 	t.Logf("check that the default superuser secret is created")
+	assert.Eventually(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")
+}
 
-	secretName := kluster.Spec.Cassandra.SuperuserSecretName
+func superuserSecretExists(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) func() bool {
+	secretName := kluster.Spec.Cassandra.SuperuserSecretRef.Name
 	if secretName == "" {
 		secretName = secret.DefaultSuperuserSecretName(kluster.Spec.Cassandra.Cluster)
 	}
+	return secretExists(f, ctx, kluster.Namespace, secretName)
+}
 
-	assert.Eventually(t, func() bool {
-		defaultSecret := &corev1.Secret{}
-		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: kluster.Namespace, Name: secretName}, defaultSecret); err != nil {
-			t.Logf("failed to get superuser secret: %v", err)
+func verifySecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, namespace, secretName string) {
+	t.Logf("check that the default superuser secret is created")
+	assert.Eventually(t, secretExists(f, ctx, namespace, secretName), timeout, interval, "failed to verify that the secret %s was created", secretName)
+}
+
+func verifySecretNotCreated(ctx context.Context, t *testing.T, f *framework.Framework, namespace, secretName string) {
+	t.Logf("check that the default superuser secret is created")
+	assert.Never(t, secretExists(f, ctx, namespace, secretName), timeout, interval, "failed to verify that the secret %s was not created", secretName)
+}
+
+func secretExists(f *framework.Framework, ctx context.Context, namespace, secretName string) func() bool {
+	return func() bool {
+		s := &corev1.Secret{}
+		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: secretName}, s); err != nil {
 			return false
 		}
 		return true
-	}, timeout, interval, "failed to verify that the default superuser secret was created")
+	}
 }
 
 func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+	assert.Eventually(t, systemReplicationAnnotationIsSet(t, f, ctx, kc), timeout, interval, "Failed to verify that the system replication annotation was set correctly")
+}
 
-	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	expectedReplication := cassandra.ComputeSystemReplication(kc)
-
-	assert.Eventually(t, func() bool {
+func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) func() bool {
+	return func() bool {
+		key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+		expectedReplication := cassandra.ComputeSystemReplication(kc)
 		kc = &api.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, key, kc); err != nil {
 			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
@@ -1270,8 +1255,7 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 		}
 
 		return reflect.DeepEqual(expectedReplication, *actualReplication)
-	}, timeout, interval, "Failed to verify that the system replication annotation was set correctly")
-
+	}
 }
 
 func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
@@ -1343,21 +1327,9 @@ func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 	return nil
 }
 
-func intPtr(n int) *int {
-	return &n
-}
-
 func parseResource(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
-}
-
-type fakeSeedsResolver struct {
-	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
-}
-
-func (r *fakeSeedsResolver) ResolveSeedEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client) ([]string, error) {
-	return r.callback(dc)
 }
 
 type fakeManagementApiFactory struct {
@@ -1371,44 +1343,4 @@ func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassd
 		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
 	})).Return(nil)
 	return m, nil
-}
-
-// verifySecretsMatch checks that the same secret is copied to other clusters
-func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}, namespace string) bool {
-	secretList := &corev1.SecretList{}
-	err := localClient.List(ctx, secretList, client.InNamespace(namespace))
-	if err != nil {
-		return false
-	}
-
-	for _, remoteCluster := range remoteClusters {
-		testClient := testEnv.Clients[remoteCluster]
-
-		targetSecretList := &corev1.SecretList{}
-		err := testClient.List(ctx, targetSecretList, client.InNamespace(namespace))
-		if err != nil {
-			return false
-		}
-
-		for _, s := range secretList.Items {
-			if _, exists := secrets[s.Name]; exists {
-				// Find the corresponding item from targetSecretList - or fail if it's not there
-				found := false
-				for _, ts := range targetSecretList.Items {
-					if s.Name == ts.Name {
-						found = true
-						if s.GetAnnotations()[api.ResourceHashAnnotation] != ts.GetAnnotations()[api.ResourceHashAnnotation] {
-							return false
-						}
-						break
-					}
-				}
-				if !found {
-					return false
-				}
-			}
-		}
-	}
-
-	return true
 }

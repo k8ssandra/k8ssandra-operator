@@ -1,8 +1,10 @@
 package cassandra
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,8 +37,8 @@ func TestCoalesce(t *testing.T) {
 			// and should not differ among DCs.
 			name: "Set non-override configs",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:             "k8ssandra",
-				SuperuserSecretName: "test-superuser",
+				Cluster:            "k8ssandra",
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -57,8 +59,8 @@ func TestCoalesce(t *testing.T) {
 						"env": "dev",
 					},
 				},
-				SuperUserSecretName: "test-superuser",
-				Size:                3,
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				Size:               3,
 			},
 		},
 		{
@@ -173,27 +175,27 @@ func TestCoalesce(t *testing.T) {
 			name: "Override CassandraConfig",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: &api.CassandraYaml{
-						ConcurrentReads: intPtr(8),
+					CassandraYaml: api.CassandraYaml{
+						ConcurrentReads: pointer.Int(8),
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: &api.CassandraYaml{
-						ConcurrentWrites: intPtr(8),
+					CassandraYaml: api.CassandraYaml{
+						ConcurrentWrites: pointer.Int(8),
 					},
-					JvmOptions: &api.JvmOptions{
+					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 					},
 				},
 			},
 			want: &DatacenterConfig{
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: &api.CassandraYaml{
-						ConcurrentWrites: intPtr(8),
+				CassandraConfig: api.CassandraConfig{
+					CassandraYaml: api.CassandraYaml{
+						ConcurrentWrites: pointer.Int(8),
 					},
-					JvmOptions: &api.JvmOptions{
+					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 					},
 				},
@@ -238,8 +240,8 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "set management api heap size from DatacenterTemplate",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:             "k8ssandra",
-				SuperuserSecretName: "test-superuser",
+				Cluster:            "k8ssandra",
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -261,17 +263,17 @@ func TestCoalesce(t *testing.T) {
 						"env": "dev",
 					},
 				},
-				SuperUserSecretName: "test-superuser",
-				Size:                3,
-				MgmtAPIHeap:         &mgmtAPIHeap,
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				Size:               3,
+				MgmtAPIHeap:        &mgmtAPIHeap,
 			},
 		},
 		{
 			name: "set management api heap size from CassandraClusterTemplate",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:             "k8ssandra",
-				SuperuserSecretName: "test-superuser",
-				MgmtAPIHeap:         &mgmtAPIHeap,
+				Cluster:            "k8ssandra",
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				MgmtAPIHeap:        &mgmtAPIHeap,
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -292,9 +294,21 @@ func TestCoalesce(t *testing.T) {
 						"env": "dev",
 					},
 				},
-				SuperUserSecretName: "test-superuser",
-				Size:                3,
-				MgmtAPIHeap:         &mgmtAPIHeap,
+				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				Size:               3,
+				MgmtAPIHeap:        &mgmtAPIHeap,
+			},
+		},
+		{
+			name: "Override JMX init container",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				JmxInitContainerImage: &images.Image{Name: "cluster-image"},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				JmxInitContainerImage: &images.Image{Name: "dc-image"},
+			},
+			want: &DatacenterConfig{
+				JmxInitContainerImage: &images.Image{Name: "dc-image"},
 			},
 		},
 	}
@@ -355,14 +369,14 @@ func GetDatacenterConfig() DatacenterConfig {
 				"env": "dev",
 			},
 		},
-		SuperUserSecretName: "test-superuser",
-		Size:                3,
-		CassandraConfig: &api.CassandraConfig{
-			JvmOptions: &api.JvmOptions{
+		SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+		Size:               3,
+		CassandraConfig: api.CassandraConfig{
+			JvmOptions: api.JvmOptions{
 				HeapSize: parseResource("1024Mi"),
 				AdditionalOptions: []string{
-					systemReplicationDcNames + "=dc1",
-					systemReplicationFactor + "=3",
+					SystemReplicationDcNames + "=dc1",
+					SystemReplicationFactor + "=3",
 				},
 			},
 		},
