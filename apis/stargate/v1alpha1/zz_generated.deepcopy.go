@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -98,6 +99,11 @@ func (in *StargateDatacenterTemplate) DeepCopyInto(out *StargateDatacenterTempla
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(telemetryv1alpha1.TelemetrySpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -269,6 +275,11 @@ func (in *StargateTemplate) DeepCopyInto(out *StargateTemplate) {
 		in, out := &in.CassandraConfigMapRef, &out.CassandraConfigMapRef
 		*out = new(v1.LocalObjectReference)
 		**out = **in
+	}
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(telemetryv1alpha1.TelemetrySpec)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
