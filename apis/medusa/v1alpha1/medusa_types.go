@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -45,11 +46,13 @@ type Storage struct {
 
 	// Maximum backup age that the purge process should observe.
 	// +kubebuilder:default=0
+	// +optional
 	MaxBackupAge int `json:"maxBackupAge,omitempty"`
 
 	// Maximum number of backups to keep (used by the purge process).
 	// Default is unlimited.
 	// +kubebuilder:default=0
+	// +optional
 	MaxBackupCount int `json:"maxBackupCount,omitempty"`
 
 	// AWS Profile to use for authentication.
@@ -97,6 +100,27 @@ type Storage struct {
 	// Defaults to 10 days.
 	// +optional
 	BackupGracePeriodInDays int `json:"backupGracePeriodInDays,omitempty"`
+
+	// Pod storage settings for the local storage provider
+	// +optional
+	PodStorage *PodStorageSettings `json:"podStorage,omitempty"`
+}
+
+type PodStorageSettings struct {
+	// Settings for the pod's storage when backups use the local storage provider.
+
+	// Storage class name to use for the pod's storage.
+	StorageClassName string `json:"storageClassName,omitempty"`
+
+	// Size of the pod's storage in bytes.
+	// Defaults to 10 GB.
+	// +kubebuilder:default="10Gi"
+	// +optional
+	Size resource.Quantity `json:"size,omitempty"`
+
+	// Pod local storage access modes
+	// +optional
+	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
 }
 
 type ContainerImage struct {

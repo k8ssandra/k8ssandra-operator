@@ -24,16 +24,14 @@ spec:
       - metadata:
           name: dc1
         size: 3
+        k8sContext: kind-k8ssandra-0
   medusa:
-    containerImage:
-      registry: docker.io
-      repository: k8ssandra
-      tag: 0.11.3
     storageProperties:
-      storageProvider: s3_compatible
-      storageSecretRef: medusa-bucket-key
+      storageProvider: local
       bucketName: k8ssandra-medusa
       prefix: test
-      host: minio.minio.svc.cluster.local
-      port: 9000
-      secure: false
+      podStorage:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        size: 1Gi

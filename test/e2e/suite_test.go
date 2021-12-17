@@ -107,6 +107,13 @@ func TestOperator(t *testing.T) {
 			additionalNamespaces: []string{"test-1", "test-2"},
 		}))
 	})
+	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusa,
+		fixture:                      "single-dc-medusa",
+		deployTraefik:                false,
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -195,7 +202,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
-		f, err := framework.NewE2eFramework()
+		f, err := framework.NewE2eFramework(t)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}

@@ -28,7 +28,11 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 	if err != nil {
 		return result.Error(err)
 	}
-	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + kc.Namespace + "/" + dcConfig.Meta.Namespace)
+	namespace := dcTemplate.Meta.Namespace
+	if namespace == "" {
+		namespace = kc.Namespace
+	}
+	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {
 		logger.Info("Medusa is enabled")
@@ -40,7 +44,7 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 				},
 			}
 		}
-		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger); res.Completed() {
+		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, logger)
@@ -85,11 +89,12 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	remoteClient client.Client,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger,
+	namespace string,
 ) result.ReconcileResult {
-	logger.Info("Reconciling Medusa configMap on namespace : " + kc.Namespace)
+	logger.Info("Reconciling Medusa configMap on namespace : " + namespace)
 	if kc.Spec.Medusa != nil {
 		medusaIni := medusa.CreateMedusaIni(kc)
-		desiredConfigMap := medusa.CreateMedusaConfigMap(kc.Spec.Medusa, kc.Namespace, kc.Spec.Cassandra.Cluster, medusaIni)
+		desiredConfigMap := medusa.CreateMedusaConfigMap(kc.Spec.Medusa, namespace, kc.Spec.Cassandra.Cluster, medusaIni)
 		// Compute a hash which will allow to compare desired and actual configMaps
 		utils.AddHashAnnotation(desiredConfigMap, api.ResourceHashAnnotation)
 		actualConfigMap := &corev1.ConfigMap{}

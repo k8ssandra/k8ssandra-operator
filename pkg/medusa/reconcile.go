@@ -1,16 +1,19 @@
 package medusa
 
 import (
+	"bytes"
 	"fmt"
+	"text/template"
 
+	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
-	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,49 +44,54 @@ var (
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
-	prefix := kc.Spec.Medusa.StorageProperties.Prefix
-	if prefix == "" {
-		prefix = kc.ClusterName
-	}
-
-	medusaIni := fmt.Sprintf(`
+	medusaIniTemplate := `
     [cassandra]
-    # The start and stop commands are not applicable in k8s.
-    stop_cmd = /etc/init.d/cassandra stop
-    start_cmd = /etc/init.d/cassandra start	
-    check_running = nodetool version
 
     [storage]
-    storage_provider = %s
-    bucket_name = %s
+    storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
+    {{- if eq .Spec.Medusa.StorageProperties.StorageProvider "local" }}
+    bucket_name = {{ .Spec.Cassandra.Cluster }}
+    base_path = /mnt/backups
+    {{- else }}
+	bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
+    {{- end }}
     key_file = /etc/medusa-secrets/credentials
-    prefix = %s
-    max_backup_age = %d
-    max_backup_count = %d`, kc.Spec.Medusa.StorageProperties.StorageProvider,
-		kc.Spec.Medusa.StorageProperties.BucketName,
-		prefix,
-		kc.Spec.Medusa.StorageProperties.MaxBackupAge,
-		kc.Spec.Medusa.StorageProperties.MaxBackupCount)
-
-	if kc.Spec.Medusa.StorageProperties.Host != "" {
-		medusaIni += fmt.Sprintf("\n    host = %s", kc.Spec.Medusa.StorageProperties.Host)
-	}
-
-	if kc.Spec.Medusa.StorageProperties.Port != 0 {
-		medusaIni += fmt.Sprintf("\n    port = %d", kc.Spec.Medusa.StorageProperties.Port)
-	}
-
-	if kc.Spec.Medusa.StorageProperties.Secure {
-		medusaIni += "\n    secure = True"
-	} else {
-		medusaIni += "\n    secure = False"
-	}
-
-	if kc.Spec.Medusa.StorageProperties.BackupGracePeriodInDays != 0 {
-		medusaIni += fmt.Sprintf("\n    backup_grace_period_in_days = %d", kc.Spec.Medusa.StorageProperties.BackupGracePeriodInDays)
-	}
-
-	medusaIni += `
+    {{- if .Spec.Medusa.StorageProperties.Prefix }}
+    prefix = {{ .Spec.Medusa.StorageProperties.Prefix }}
+    {{- else }}
+    prefix = {{ .Spec.Cassandra.Cluster }}
+    {{- end }}
+    max_backup_age = {{ .Spec.Medusa.StorageProperties.MaxBackupAge }}
+    max_backup_count = {{ .Spec.Medusa.StorageProperties.MaxBackupCount }}
+    {{- if .Spec.Medusa.StorageProperties.Region }}
+    region = {{ .Spec.Medusa.StorageProperties.Region }}
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.Host }}
+    host = {{ .Spec.Medusa.StorageProperties.Host }}
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.Port }}
+    port = {{ .Spec.Medusa.StorageProperties.Port }}
+    {{- end }}
+    {{- if not .Spec.Medusa.StorageProperties.Secure }}
+    secure = False
+    {{- else }}
+    secure = True
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
+    backup_grace_period_in_days = {{ .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.ApiProfile }}
+    api_profile = {{ .Spec.Medusa.StorageProperties.ApiProfile }}
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
+    transfer_max_bandwidth = {{ .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
+    {{- end }}
+	{{- if .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
+    concurrent_transfers = {{ .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
+	{{- end }}
+	{{- if .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
+    multi_part_upload_threshold = {{ .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
+	{{- end }}
 
     [grpc]
     enabled = 1
@@ -96,10 +104,20 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     [logging]
     level = DEBUG`
 
-	return medusaIni
+	t, err := template.New("ini").Parse(medusaIniTemplate)
+	if err != nil {
+		panic(err)
+	}
+	medusaIni := new(bytes.Buffer)
+	err = t.Execute(medusaIni, kc)
+	if err != nil {
+		panic(err)
+	}
+
+	return medusaIni.String()
 }
 
-func CreateMedusaConfigMap(medusaSpec *medusaapi.MedusaClusterTemplate, namespace, clusterName, medusaIni string) *corev1.ConfigMap {
+func CreateMedusaConfigMap(medusaSpec *api.MedusaClusterTemplate, namespace, clusterName, medusaIni string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-medusa", clusterName),
@@ -112,14 +130,14 @@ func CreateMedusaConfigMap(medusaSpec *medusaapi.MedusaClusterTemplate, namespac
 }
 
 // Get the cassandra user secret name from the medusa spec or generate one based on the cluster name
-func CassandraUserSecretName(medusaSpec *medusaapi.MedusaClusterTemplate, clusterName string) string {
+func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, clusterName string) string {
 	if medusaSpec.CassandraUserSecretRef == "" {
 		return fmt.Sprintf("%s-medusa", clusterName)
 	}
 	return medusaSpec.CassandraUserSecretRef
 }
 
-func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *medusaapi.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
 	restoreContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
 	restoreContainer := &corev1.Container{Name: "medusa-restore"}
 	if found {
@@ -146,7 +164,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 }
 
-func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *medusaapi.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
 	medusaContainerIndex, found := cassandra.FindContainer(dcConfig.PodTemplateSpec, "medusa")
 	medusaContainer := &corev1.Container{Name: "medusa"}
 	if found {
@@ -171,13 +189,13 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 }
 
 // Build the image name and pull policy and add it to a medusa container definition
-func setImage(containerImage *medusaapi.ContainerImage, container *corev1.Container) {
+func setImage(containerImage *api.ContainerImage, container *corev1.Container) {
 	image := computeImage(containerImage)
 	container.Image = images.ImageString(image)
 	container.ImagePullPolicy = image.GetPullPolicy()
 }
 
-func medusaVolumeMounts(medusaSpec *medusaapi.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger) []corev1.VolumeMount {
+func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
@@ -215,7 +233,7 @@ func medusaVolumeMounts(medusaSpec *medusaapi.MedusaClusterTemplate, dcConfig *c
 	return volumeMounts
 }
 
-func medusaEnvVars(medusaSpec *medusaapi.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger, mode string) []corev1.EnvVar {
+func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger, mode string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "MEDUSA_MODE",
@@ -245,7 +263,7 @@ func medusaEnvVars(medusaSpec *medusaapi.MedusaClusterTemplate, dcConfig *cassan
 }
 
 // Create or update volumes for medusa
-func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *medusaapi.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
 	// Medusa config volume, containing medusa.ini
 	configVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", dcConfig.Cluster))
 	configVolume := &corev1.Volume{
@@ -275,6 +293,48 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *medus
 		}
 
 		addOrUpdateVolume(dcConfig, secretVolume, secretVolumeIndex, found)
+	} else {
+		// We're using local storage for backups, which requires a volume for the local backup storage
+		backupVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "medusa-backups")
+		/* backupVolume := &corev1.Volume{
+			Name: "medusa-backups",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName:    "medusa-backups",
+					StorageClass: medusaSpec.StorageProperties.PodStorage.StorageClassName,
+				},
+			},
+		} */
+		accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+		storageClassName := "standard"
+		storageSize := resource.MustParse("10Gi")
+		if medusaSpec.StorageProperties.PodStorage != nil {
+			if medusaSpec.StorageProperties.PodStorage.AccessModes != nil {
+				accessModes = medusaSpec.StorageProperties.PodStorage.AccessModes
+			}
+			if medusaSpec.StorageProperties.PodStorage.StorageClassName != "" {
+				storageClassName = medusaSpec.StorageProperties.PodStorage.StorageClassName
+			}
+			if !medusaSpec.StorageProperties.PodStorage.Size.IsZero() {
+				storageSize = medusaSpec.StorageProperties.PodStorage.Size
+			}
+		}
+
+		backupVolume := &v1beta1.AdditionalVolumes{
+			Name:      "medusa-backups",
+			MountPath: "/mnt/backups",
+			PVCSpec: corev1.PersistentVolumeClaimSpec{
+				StorageClassName: &storageClassName,
+				AccessModes:      accessModes,
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: storageSize,
+					},
+				},
+			},
+		}
+
+		addOrUpdateAdditionalVolume(dcConfig, backupVolume, backupVolumeIndex, found)
 	}
 
 	// Pod info volume
@@ -305,6 +365,19 @@ func addOrUpdateVolume(dcConfig *cassandra.DatacenterConfig, volume *corev1.Volu
 	} else {
 		// Overwrite existing volume
 		dcConfig.PodTemplateSpec.Spec.Volumes[volumeIndex] = *volume
+	}
+}
+
+func addOrUpdateAdditionalVolume(dcConfig *cassandra.DatacenterConfig, volume *v1beta1.AdditionalVolumes, volumeIndex int, found bool) {
+	if dcConfig.StorageConfig.AdditionalVolumes == nil {
+		dcConfig.StorageConfig.AdditionalVolumes = make(v1beta1.AdditionalVolumesSlice, 0)
+	}
+	if !found {
+		// volume doesn't exist, we need to add it
+		dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, *volume)
+	} else {
+		// Overwrite existing volume
+		dcConfig.StorageConfig.AdditionalVolumes[volumeIndex] = *volume
 	}
 }
 
