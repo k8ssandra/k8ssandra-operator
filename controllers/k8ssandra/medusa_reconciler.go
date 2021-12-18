@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
@@ -96,7 +97,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		medusaIni := medusa.CreateMedusaIni(kc)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(kc.Spec.Medusa, namespace, kc.Spec.Cassandra.Cluster, medusaIni)
 		// Compute a hash which will allow to compare desired and actual configMaps
-		utils.AddHashAnnotation(desiredConfigMap, api.ResourceHashAnnotation)
+		annotations.AddHashAnnotation(desiredConfigMap)
 		actualConfigMap := &corev1.ConfigMap{}
 
 		configMapKey := client.ObjectKey{
@@ -115,7 +116,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 
 		actualConfigMap = actualConfigMap.DeepCopy()
 
-		if !utils.CompareAnnotations(actualConfigMap, desiredConfigMap, api.ResourceHashAnnotation) {
+		if !annotations.CompareAnnotations(actualConfigMap, desiredConfigMap, api.ResourceHashAnnotation) {
 			logger.Info("Updating Medusa ConfigMap")
 			resourceVersion := actualConfigMap.GetResourceVersion()
 			desiredConfigMap.DeepCopyInto(actualConfigMap)

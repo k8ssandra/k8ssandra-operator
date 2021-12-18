@@ -24,23 +24,12 @@ const (
 )
 
 var (
-	defaultMedusaImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultMedusaImageRepository,
-		DefaultMedusaImageName,
-		DefaultMedusaVersion,
-	)
-	latestMedusaImageId = images.NewImageId(
-		images.DefaultRegistry,
-		DefaultMedusaImageRepository,
-		DefaultMedusaImageName,
-		"latest",
-	)
-)
-
-var (
-	defaultMedusaImage = images.NewImage(defaultMedusaImageId, corev1.PullIfNotPresent, nil)
-	latestMedusaImage  = images.NewImage(latestMedusaImageId, corev1.PullAlways, nil)
+	defaultMedusaImage = images.Image{
+		Registry:   images.DefaultRegistry,
+		Repository: DefaultMedusaImageRepository,
+		Name:       DefaultMedusaImageName,
+		Tag:        DefaultMedusaVersion,
+	}
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
@@ -189,10 +178,10 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 }
 
 // Build the image name and pull policy and add it to a medusa container definition
-func setImage(containerImage *api.ContainerImage, container *corev1.Container) {
-	image := computeImage(containerImage)
-	container.Image = images.ImageString(image)
-	container.ImagePullPolicy = image.GetPullPolicy()
+func setImage(containerImage *images.Image, container *corev1.Container) {
+	image := containerImage.ApplyDefaults(defaultMedusaImage)
+	container.Image = image.String()
+	container.ImagePullPolicy = image.PullPolicy
 }
 
 func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger) []corev1.VolumeMount {
@@ -378,13 +367,5 @@ func addOrUpdateAdditionalVolume(dcConfig *cassandra.DatacenterConfig, volume *v
 	} else {
 		// Overwrite existing volume
 		dcConfig.StorageConfig.AdditionalVolumes[volumeIndex] = *volume
-	}
-}
-
-func computeImage(containerImage *api.ContainerImage) images.Image {
-	if containerImage == nil {
-		return defaultMedusaImage
-	} else {
-		return images.Coalesce(containerImage, latestMedusaImage)
 	}
 }

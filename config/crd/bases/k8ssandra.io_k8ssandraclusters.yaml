@@ -6413,8 +6413,7 @@ spec:
                       to use for Medusa containers. Leave nil to use a default image.
                     properties:
                       name:
-                        default: medusa
-                        description: The image name to use. version detected.
+                        description: The image name to use.
                         type: string
                       pullPolicy:
                         description: The image pull policy to use. Defaults to "Always"
@@ -6425,8 +6424,11 @@ spec:
                         - Never
                         type: string
                       pullSecretRef:
-                        description: The secret to use when pulling the image from
-                          private repositories.
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -6435,17 +6437,15 @@ spec:
                         type: object
                       registry:
                         default: docker.io
-                        description: The docker registry to use. Defaults to docker.io.
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
                         type: string
                       repository:
-                        default: k8ssandra
-                        description: The docker repository to use. Defaults to "stargateio".
+                        description: The Docker repository to use.
                         type: string
                       tag:
                         default: latest
-                        description: 'The image tag to use. Defaults to "latest" (but
-                          please note: "latest" is not a valid tag name for official
-                          Stargate images from the stargateio Docker Hub repository).'
+                        description: The image tag to use. Defaults to "latest".
                         type: string
                     type: object
                   securityContext:
