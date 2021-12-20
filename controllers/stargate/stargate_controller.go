@@ -19,6 +19,7 @@ package stargate
 import (
 	"context"
 	"fmt"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -239,7 +240,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	_, err := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
+		logger.Error(err, "reconcileStargateTelemetry failed")
+		return ctrl.Result{}, err
 	}
 
 	// Update status to reflect deployment status

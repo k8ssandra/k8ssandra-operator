@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands: 
+- script: |
+    kustomize build ./config/single-node-k8ssandra | kubectl apply --server-side --force-conflicts -f -
+  ignoreFailure: false

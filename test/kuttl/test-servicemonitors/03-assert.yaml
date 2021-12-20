@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-dc1-default-sts
+  namespace: k8ssandra-operator
+status:
+  readyReplicas: 1
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: test-dc1-cass-servicemonitor
+  namespace: k8ssandra-operator
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: test-dc1-stargate-stargate-servicemonitor
+  namespace: k8ssandra-operator
+  

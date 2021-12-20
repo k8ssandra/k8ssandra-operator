@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: k8ssandra-operator
+resources:
+- ../../../../testdata/fixtures/single-dc
+# take basic deployment, add stargate, and add telemetry for both stargate and cassandra.
+patches:
+- patch: |-
+    - op: add
+      path: /spec/stargate
+      value:
+        size: 1
+        telemetry:
+          prometheus:
+            enabled: true
+        allowStargateOnDataNodes: true
+    - op: add
+      path: /spec/cassandra/cassandraTelemetry
+      value:
+        prometheus:
+            enabled: true
+    - op: remove
+      path: /spec/cassandra/datacenters/0/k8sContext
+    - op: remove
+      path: /spec/cassandra/datacenters/0/stargate
+  target:
+    kind: K8ssandraCluster
+    name: test
