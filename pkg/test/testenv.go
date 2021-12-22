@@ -33,9 +33,9 @@ import (
 )
 
 const (
-	clustersToCreate    = 3
-	clusterProtoName    = "cluster-%d"
-	cassOperatorVersion = "v1.8.0"
+	clustersToCreate          = 3
+	clusterProtoName          = "cluster-%d"
+	cassOperatorVersion       = "v1.8.0"
 	prometheusOperatorVersion = "v0.9.0"
 )
 
@@ -62,7 +62,6 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 			filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
 			filepath.Join("..", "..", "build", "crd", "kube-prometheus"),
 			filepath.Join("..", "..", "build", "crd", "cass-operator")},
-
 	}
 
 	cfg, err := e.Environment.Start()
@@ -136,6 +135,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
+				filepath.Join("..", "..", "build", "crd", "kube-prometheus"),
 				filepath.Join("..", "..", "build", "crd", "cass-operator"),
 			},
 			ErrorIfCRDPathMissing: true,

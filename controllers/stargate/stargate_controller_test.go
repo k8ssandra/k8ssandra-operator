@@ -192,11 +192,11 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	assert.Equal(t, api.StargateReady, sg.Status.Conditions[0].Type)
 	assert.Equal(t, corev1.ConditionTrue, sg.Status.Conditions[0].Status)
 
-
+	smKey := types.NamespacedName{Name: sg.Name + "-" + "stargate-servicemonitor", Namespace: "default"}
 	//	Check for presence of expected ServiceMonitor
 	sm := &promapi.ServiceMonitor{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, types.NamespacedName{Name: sg.Name+ "-" + "stargate-servicemonitor", Namespace: "default"}, sm);
+		err := testClient.Get(ctx, smKey, sm)
 		return err == nil
 	}, timeout, interval)
 	assert.NotNil(t, sm.Spec.Endpoints)
@@ -207,10 +207,8 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	if err := testClient.Patch(ctx, sg, sgPatch); err != nil {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
-	key := types.NamespacedName{Name: sg.Name+ "-" + "stargate-servicemonitor", Namespace: "default"}
-
-	assert.Eventually(t, func () bool {
-		err := testClient.Get(ctx, key, sm)
+	assert.Eventually(t, func() bool {
+		err := testClient.Get(ctx, smKey, sm)
 		if err != nil {
 			return k8serrors.IsNotFound(err)
 		}

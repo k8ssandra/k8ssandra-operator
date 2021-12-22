@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"reflect"
 	"testing"
 	"time"
@@ -230,8 +233,57 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
+	//Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
+	kcPatch := client.MergeFrom(kc.DeepCopy())
+	kc.Spec.Cassandra.Datacenters[0].CassandraTelemetry = &telemetryapi.TelemetrySpec{
+		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+			Enabled: true,
+		},
+	}
+	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {
+		assert.Fail(t, "got error patching for telemetry", "error", err)
+	}
+	if err = f.SetDatacenterStatusReady(ctx, framework.ClusterKey{
+		NamespacedName: types.NamespacedName{
+			Name:      "dc1",
+			Namespace: namespace,
+		},
+		K8sContext: "cluster-1",
+	}); err != nil {
+		assert.Fail(t, "error setting status ready", err)
+	}
+	//	Check for presence of expected ServiceMonitor for Cassandra Datacenter
+	sm := &promapi.ServiceMonitor{}
+	smKey := framework.ClusterKey{
+		NamespacedName: types.NamespacedName{
+			Name:      kc.Name + "-" + kc.Spec.Cassandra.Datacenters[0].Meta.Name + "-" + "cass-servicemonitor",
+			Namespace: namespace,
+		},
+		K8sContext: k8sCtx,
+	}
+	assert.Eventually(t, func() bool {
+		if err := f.Get(ctx, smKey, sm); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+	assert.NotNil(t, sm.Spec.Endpoints)
+	// Ensure that removing the telemetry spec does delete the ServiceMonitor
+	kcPatch = client.MergeFrom(kc.DeepCopy())
+	kc.Spec.Cassandra.Datacenters[0].CassandraTelemetry = nil
+	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
+		assert.Fail(t, "failed to patch stargate", "error", err)
+	}
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, smKey, sm)
+		if err != nil {
+			return k8serrors.IsNotFound(err)
+		}
+		return false
+	}, timeout, interval)
+	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
 }

@@ -156,11 +156,11 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAndReaper(ctx context.Cont
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			logger.Error(err, "Failed to get remote client")
 			return result.Error(err)
+		} else if recResult := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
+			return recResult
 		} else if recResult := r.reconcileStargate(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
 		} else if recResult := r.reconcileReaper(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
-			return recResult
-		} else if recResult := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
 		}
 	}
