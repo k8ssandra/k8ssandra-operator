@@ -44,15 +44,15 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 
 }
 
-func NewCassandraDatacenter() cassdcapi.CassandraDatacenter {
+func NewCassandraDatacenter(name string, namespace string) cassdcapi.CassandraDatacenter {
 	return cassdcapi.CassandraDatacenter{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "CassandraDatacenter",
 			APIVersion: "cassandra.datastax.com/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cassdc",
-			Namespace: "test-namespace",
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:          1,

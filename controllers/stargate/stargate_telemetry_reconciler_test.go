@@ -4,6 +4,7 @@ package stargate
 
 import (
 	"context"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -36,18 +37,19 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 			Enabled: true,
 		},
 	}
-	cfg := telemetry.StargateTelemetryResourcer{
-		StargateNamespace: stargate.Namespace,
-		StargateName:      stargate.Name,
-		Logger:            testLogger,
+	cfg := telemetry.PrometheusResourcer{
+		MonitoringTargetNS:   stargate.Namespace,
+		MonitoringTargetName: stargate.Name,
+		Logger:               testLogger,
+		ServiceMonitorName:   GetStargatePromSMName(stargate.Name),
+		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
 	}
-	smName := telemetry.GetStargatePromSMName(cfg)
 	_, err := r.reconcileStargateTelemetry(ctx, &stargate, testLogger, fakeClient)
 	if err != nil {
 		assert.Fail(t, "reconciliation failed", err)
 	}
 	currentSM := &promapi.ServiceMonitor{}
-	if err := fakeClient.Get(ctx, types.NamespacedName{Name: smName, Namespace: cfg.StargateNamespace}, currentSM); err != nil {
+	if err := fakeClient.Get(ctx, types.NamespacedName{Name: cfg.ServiceMonitorName, Namespace: cfg.MonitoringTargetNS}, currentSM); err != nil {
 		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)

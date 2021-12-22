@@ -5,6 +5,7 @@ package stargate
 import (
 	"context"
 	"errors"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 
@@ -21,10 +22,16 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
 	logger.Info("reconciling telemetry", "stargate", thisStargate.Name)
-	dcCfg := telemetry.StargateTelemetryResourcer{
-		StargateNamespace: thisStargate.Namespace,
-		StargateName:      thisStargate.Name,
-		Logger:            logger,
+	cfg := telemetry.PrometheusResourcer{
+		MonitoringTargetNS:   thisStargate.Namespace,
+		MonitoringTargetName: thisStargate.Name,
+		ServiceMonitorName:   GetStargatePromSMName(thisStargate.Name),
+		Logger:               logger,
+		CommonLabels:         mustLabels(thisStargate.Name),
+	}
+	klusterName, ok := thisStargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
+	if ok {
+		cfg.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel] = klusterName
 	}
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
 	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
@@ -42,32 +49,52 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	if !promInstalled {
 		return ctrl.Result{}, nil
 	}
+	// If Stargate is attached
 	// Determine if we want a cleanup or a resource update.
 	switch {
 	case thisStargate.Spec.Telemetry == nil:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
-		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	case thisStargate.Spec.Telemetry.Prometheus == nil:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
-		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	case thisStargate.Spec.Telemetry.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
-		dcCfg.TelemetrySpec = thisStargate.Spec.Telemetry
-		if err := dcCfg.UpdateResources(ctx, remoteClient, thisStargate); err != nil {
+		desiredSM, err := cfg.NewStargateServiceMonitor()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := cfg.UpdateResources(ctx, remoteClient, thisStargate, &desiredSM); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	default:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "mergedSpec", thisStargate.Spec.Telemetry)
-		if err := dcCfg.CleanupResources(ctx, remoteClient); err != nil {
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
+}
+
+// mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
+func mustLabels(stargateName string) map[string]string {
+	return map[string]string{
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		stargateapi.StargateLabel:   stargateName,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelTelemetry,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+	}
+}
+
+// GetStargatePromSMName gets the name for our ServiceMonitors based on cluster and DC name.
+func GetStargatePromSMName(stargateName string) string {
+	return stargateName + "-" + "stargate-servicemonitor"
 }

@@ -21,6 +21,7 @@ build
 
 # editor and IDE paraphernalia
 .idea
+.run/
 *.swp
 *.swo
 *~
