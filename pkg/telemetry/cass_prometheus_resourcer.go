@@ -351,10 +351,6 @@ func (cfg CassPrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMonitor,
 	// Overwrite any CommonLabels the user has asked for if they conflict with the labels essential for the functioning of the operator.
 	mergedLabels := utils.MergeMap(cfg.CommonLabels, cfg.mustLabels())
 	sm := promapi.ServiceMonitor{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceMonitor",
-			APIVersion: "v1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.ServiceMonitorName,
 			Namespace: cfg.CassandraNamespace,

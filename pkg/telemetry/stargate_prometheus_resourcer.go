@@ -140,12 +140,11 @@ func init() {
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func (cfg StargatePrometheusResourcer) mustLabels() map[string]string {
 	return map[string]string{
-		k8ssandraapi.ManagedByLabel:  k8ssandraapi.NameLabelValue,
-		k8ssandraapi.PartOfLabel:     k8ssandraapi.PartOfLabelValue,
-		k8ssandraapi.DatacenterLabel: cfg.StargateName,
-		stargateapi.StargateLabel:    cfg.StargateName,
-		k8ssandraapi.ComponentLabel:  k8ssandraapi.ComponentLabelTelemetry,
-		k8ssandraapi.CreatedByLabel:  k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		stargateapi.StargateLabel:   cfg.StargateName,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelTelemetry,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
 }
 
@@ -159,10 +158,6 @@ func (cfg StargatePrometheusResourcer) NewServiceMonitor() (*promapi.ServiceMoni
 	mergedLabels := utils.MergeMap(cfg.CommonLabels, cfg.mustLabels())
 	stargateEndpointHolder.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement = cfg.StargateName
 	sm := promapi.ServiceMonitor{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceMonitor",
-			APIVersion: "v1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.ServiceMonitorName,
 			Namespace: cfg.StargateNamespace,
