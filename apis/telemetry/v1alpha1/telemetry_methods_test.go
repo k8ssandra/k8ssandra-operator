@@ -22,6 +22,15 @@ func TestTelemetrySpec_Merge_OneNil(t *testing.T) {
 	}
 	assert.Equal(t, expected, actual)
 }
+
+func TestTelemetrySpec_Merge_BothNil(t *testing.T) {
+	a := (*TelemetrySpec)(nil)
+	b := (*TelemetrySpec)(nil)
+	actual := a.Merge(b)
+	expected := (*TelemetrySpec)(nil)
+	assert.Equal(t, expected, actual)
+}
+
 func TestPrometheusTelemetrySpec_Merge_OneNil(t *testing.T) {
 	a := PrometheusTelemetrySpec{}
 	b := PrometheusTelemetrySpec{

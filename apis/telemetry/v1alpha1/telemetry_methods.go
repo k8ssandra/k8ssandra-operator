@@ -7,7 +7,7 @@ func (a *TelemetrySpec) Merge(b *TelemetrySpec) *TelemetrySpec {
 	// patch logic.
 	out := TelemetrySpec{}
 	if a == nil && b == nil {
-		return &out
+		return nil
 	} else if b == nil {
 		return a
 	} else if a == nil {
