@@ -24,12 +24,15 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 ) result.ReconcileResult {
 	logger.Info("reconciling telemetry")
 	mergedSpec := kc.Spec.Cassandra.CassandraTelemetry.Merge(dcTemplate.CassandraTelemetry)
+	if mergedSpec == nil {
+		return result.Continue()
+	}
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
 		ServiceMonitorName:   kc.Name + "-" + actualDc.Name + "-" + "cass-servicemonitor",
 		Logger:               logger,
-		CommonLabels:         mustLabels(kc.Name, actualDc.Name),
+		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name),
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
@@ -82,12 +85,13 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
-func mustLabels(klusterName string, dcName string) map[string]string {
+func mustLabels(klusterName string, klusterNamespace string, dcName string) map[string]string {
 	return map[string]string{
 		k8ssandraapi.ManagedByLabel:            k8ssandraapi.NameLabelValue,
 		k8ssandraapi.PartOfLabel:               k8ssandraapi.PartOfLabelValue,
 		k8ssandraapi.K8ssandraClusterNameLabel: klusterName,
 		k8ssandraapi.DatacenterLabel:           dcName,
+		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterNamespace,
 		k8ssandraapi.ComponentLabel:            k8ssandraapi.ComponentLabelTelemetry,
 		k8ssandraapi.CreatedByLabel:            k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
