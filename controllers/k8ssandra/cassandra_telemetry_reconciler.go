@@ -84,12 +84,12 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func mustLabels(klusterName string, klusterNamespace string, dcName string) map[string]string {
 	return map[string]string{
-		k8ssandraapi.ManagedByLabel:            k8ssandraapi.NameLabelValue,
-		k8ssandraapi.PartOfLabel:               k8ssandraapi.PartOfLabelValue,
-		k8ssandraapi.K8ssandraClusterNameLabel: klusterName,
-		k8ssandraapi.DatacenterLabel:           dcName,
+		k8ssandraapi.ManagedByLabel:                 k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.K8ssandraClusterNameLabel:      klusterName,
+		k8ssandraapi.DatacenterLabel:                dcName,
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterNamespace,
-		k8ssandraapi.ComponentLabel:            k8ssandraapi.ComponentLabelTelemetry,
-		k8ssandraapi.CreatedByLabel:            k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+		k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelTelemetry,
+		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
 }
