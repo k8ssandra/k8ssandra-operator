@@ -10,7 +10,6 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,7 +67,7 @@ func (cfg PrometheusResourcer) UpdateResources(
 	}
 	// Logic to handle case where SM exists, but is in the wrong state.
 	actualSM = actualSM.DeepCopy()
-	if !annotations.CompareAnnotations(actualSM, desiredSM, k8ssandraapi.ResourceHashAnnotation) {
+	if !annotations.CompareHashAnnotations(actualSM, desiredSM) {
 		resourceVersion := actualSM.GetResourceVersion()
 		desiredSM.DeepCopyInto(actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
