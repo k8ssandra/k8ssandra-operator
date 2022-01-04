@@ -5,8 +5,8 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "4.0.1"
-    serverImage: k8ssandra/cass-management-api:4.0.1
+    serverVersion: "4.0.0"
+    serverImage: k8ssandra/cass-management-api:4.0.0
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -24,7 +24,10 @@ spec:
       - metadata:
           name: dc1
         size: 3
-        k8sContext: kind-k8ssandra-0
+      - metadata:
+          name: dc2
+        size: 3
+        k8sContext: kind-k8ssandra-1
   medusa:
     storageProperties:
       storageProvider: local
