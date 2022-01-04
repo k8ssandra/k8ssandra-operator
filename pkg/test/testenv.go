@@ -3,11 +3,12 @@ package test
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"os"
 	"path/filepath"
 	"testing"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -35,7 +36,7 @@ import (
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d"
-	cassOperatorVersion       = "v1.8.0"
+	cassOperatorVersion       = "v1.9.0"
 	prometheusOperatorVersion = "v0.9.0"
 )
 
