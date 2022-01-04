@@ -58,65 +58,65 @@ func TestOperator(t *testing.T) {
 
 	applyPollingDefaults()
 
-	//t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:      createSingleDatacenterCluster,
-	//	fixture:       "single-dc",
-	//	deployTraefik: true,
-	//}))
-	//t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:                     createStargateAndDatacenter,
-	//	fixture:                      "stargate",
-	//	deployTraefik:                true,
-	//	skipK8ssandraClusterCleanup:  true,
-	//	doCassandraDatacenterCleanup: true,
-	//}))
-	//t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc: createMultiDatacenterCluster,
-	//	fixture:  "multi-dc",
-	//}))
-	//t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:      createMultiDatacenterCluster,
-	//	fixture:       "multi-dc",
-	//	deployTraefik: true,
-	//}))
-	//t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:      checkStargateApisWithMultiDcCluster,
-	//	fixture:       "multi-dc-stargate",
-	//	deployTraefik: true,
-	//}))
-	//t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:      createSingleReaper,
-	//	fixture:       "single-dc-reaper",
-	//	deployTraefik: true,
-	//}))
-	//t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:      createMultiReaper,
-	//	fixture:       "multi-dc-reaper",
-	//	deployTraefik: true,
-	//}))
-	//t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:                     createReaperAndDatacenter,
-	//	fixture:                      "reaper",
-	//	deployTraefik:                true,
-	//	skipK8ssandraClusterCleanup:  true,
-	//	doCassandraDatacenterCleanup: true,
-	//}))
-	//t.Run("ClusterScoped", func(t *testing.T) {
-	//	t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
-	//		testFunc:             multiDcMultiCluster,
-	//		fixture:              "multi-dc-cluster-scope",
-	//		clusterScoped:        true,
-	//		sutNamespace:         "test-0",
-	//		additionalNamespaces: []string{"test-1", "test-2"},
-	//	}))
-	//})
-	//t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:                     createSingleMedusa,
-	//	fixture:                      "single-dc-medusa",
-	//	deployTraefik:                false,
-	//	skipK8ssandraClusterCleanup:  false,
-	//	doCassandraDatacenterCleanup: false,
-	//}))
+	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createSingleDatacenterCluster,
+		fixture:       "single-dc",
+		deployTraefik: true,
+	}))
+	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createStargateAndDatacenter,
+		fixture:                      "stargate",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
+	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterCluster,
+		fixture:  "multi-dc",
+	}))
+	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createMultiDatacenterCluster,
+		fixture:       "multi-dc",
+		deployTraefik: true,
+	}))
+	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      checkStargateApisWithMultiDcCluster,
+		fixture:       "multi-dc-stargate",
+		deployTraefik: true,
+	}))
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createSingleReaper,
+		fixture:       "single-dc-reaper",
+		deployTraefik: true,
+	}))
+	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createMultiReaper,
+		fixture:       "multi-dc-reaper",
+		deployTraefik: true,
+	}))
+	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createReaperAndDatacenter,
+		fixture:                      "reaper",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
+	t.Run("ClusterScoped", func(t *testing.T) {
+		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
+			testFunc:             multiDcMultiCluster,
+			fixture:              "multi-dc-cluster-scope",
+			clusterScoped:        true,
+			sutNamespace:         "test-0",
+			additionalNamespaces: []string{"test-1", "test-2"},
+		}))
+	})
+	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusa,
+		fixture:                      "single-dc-medusa",
+		deployTraefik:                false,
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
 	t.Run("CreateMultiMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusa,
 		fixture:                      "multi-dc-medusa",
