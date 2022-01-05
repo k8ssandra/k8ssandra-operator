@@ -72,9 +72,11 @@ func TestOperator(t *testing.T) {
 		fixture:  "multi-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createMultiDatacenterCluster,
-		fixture:       "multi-dc",
-		deployTraefik: true,
+		testFunc:                     createStargateAndDatacenter,
+		fixture:                      "multi-stargate",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
 	}))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      checkStargateApisWithMultiDcCluster,
