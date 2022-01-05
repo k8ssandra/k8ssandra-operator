@@ -42,7 +42,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     bucket_name = {{ .Spec.Cassandra.Cluster }}
     base_path = /mnt/backups
     {{- else }}
-	bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
+    bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
     {{- end }}
     key_file = /etc/medusa-secrets/credentials
     {{- if .Spec.Medusa.StorageProperties.Prefix }}
