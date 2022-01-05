@@ -34,4 +34,4 @@ spec:
         storageClassName: standard
         accessModes:
           - ReadWriteOnce
-        size: 1Gi
+        size: 100Mi

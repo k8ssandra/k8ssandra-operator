@@ -14,7 +14,7 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 5Gi
+            storage: 1Gi
     config:
       jvmOptions:
         heapSize: 512M
@@ -37,4 +37,4 @@ spec:
         storageClassName: standard
         accessModes:
           - ReadWriteOnce
-        size: 1Gi
+        size: 100Mi

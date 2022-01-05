@@ -101,7 +101,7 @@ func createBackup(t *testing.T, ctx context.Context, namespace string, f *framew
 		},
 	}
 
-	err := f.Client.Create(ctx, backup)
+	err := f.Create(ctx, dcKey, backup)
 	require.NoError(err, "failed to create CassandraBackup")
 }
 
