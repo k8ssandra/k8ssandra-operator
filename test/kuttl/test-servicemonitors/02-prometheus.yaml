@@ -1,0 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands: 
+- script: |
+    kustomize build ./config/prometheus | kubectl apply --server-side -f -
+  ignoreFailure: true
+- script: |
+    until kubectl get crd servicemonitors.monitoring.coreos.com; do sleep 5; done
+  ignoreFailure: true
+- script: |
+    until kubectl get crd prometheuses.monitoring.coreos.com; do sleep 5; done
+  ignoreFailure: true
+- script: | 
+    kustomize build ./config/prometheus | kubectl apply --server-side -f -
+  ignoreFailure: false

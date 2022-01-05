@@ -19,6 +19,7 @@ package stargate
 import (
 	"context"
 	"fmt"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -44,6 +45,7 @@ import (
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
 
 // StargateReconciler reconciles a Stargate object
 type StargateReconciler struct {
@@ -234,6 +236,12 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
 			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 		}
+	}
+
+	_, err := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
+	if err != nil {
+		logger.Error(err, "reconcileStargateTelemetry failed")
+		return ctrl.Result{}, err
 	}
 
 	// Update status to reflect deployment status

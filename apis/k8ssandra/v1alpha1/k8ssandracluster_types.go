@@ -20,6 +20,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -195,6 +196,12 @@ type CassandraClusterTemplate struct {
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 
+	// CassandraTelemetry defines the desired state for telemetry resources in this K8ssandraCluster.
+	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
+	// a user-provided monitoring solution (at present, only support for Prometheus is available).
+	// +optional
+	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
+
 	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
 	// +optional
@@ -255,10 +262,17 @@ type CassandraDatacenterTemplate struct {
 	// deploying Reaper in this datacenter.
 	// +optional
 	Reaper *reaperapi.ReaperDatacenterTemplate `json:"reaper,omitempty"`
+
 	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
 	// +optional
 	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
+
+	// Telemetry defines the desired state for telemetry resources in this datacenter.
+	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
+	// a user-provided monitoring solution (at present, only support for Prometheus is available).
+	// +optional
+	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"testing"
 	"time"
 
@@ -57,6 +58,9 @@ func Init(t *testing.T) {
 
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
+
+	err = promapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for prometheus")
 
 	// cfg, err := ctrl.GetConfig()
 	// require.NoError(t, err, "failed to get *rest.Config")
@@ -113,6 +117,28 @@ func (f *Framework) Get(ctx context.Context, key ClusterKey, obj client.Object) 
 	}
 
 	return remoteClient.Get(ctx, key.NamespacedName, obj)
+}
+
+func (f *Framework) List(ctx context.Context, key ClusterKey, obj client.ObjectList, opts ...client.ListOption) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+	return remoteClient.List(ctx, obj, opts...)
+}
+
+func (f *Framework) Patch(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.PatchOption) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+	return remoteClient.Patch(ctx, obj, patch, opts...)
 }
 
 func (f *Framework) CreateNamespace(name string) error {

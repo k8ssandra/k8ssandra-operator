@@ -3,10 +3,12 @@ package test
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"os"
 	"path/filepath"
 	"testing"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -32,9 +34,10 @@ import (
 )
 
 const (
-	clustersToCreate    = 3
-	clusterProtoName    = "cluster-%d"
-	cassOperatorVersion = "v1.9.0"
+	clustersToCreate          = 3
+	clusterProtoName          = "cluster-%d"
+	cassOperatorVersion       = "v1.9.0"
+	prometheusOperatorVersion = "v0.9.0"
 )
 
 var (
@@ -58,6 +61,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	e.Environment = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
+			filepath.Join("..", "..", "build", "crd", "kube-prometheus"),
 			filepath.Join("..", "..", "build", "crd", "cass-operator")},
 	}
 
@@ -132,6 +136,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
+				filepath.Join("..", "..", "build", "crd", "kube-prometheus"),
 				filepath.Join("..", "..", "build", "crd", "cass-operator"),
 			},
 			ErrorIfCRDPathMissing: true,
@@ -246,6 +251,11 @@ func prepareCRDs() error {
 		return err
 	}
 
+	promOperatorTargetDir := filepath.Join("..", "..", "build", "crd", "kube-prometheus")
+	if err := os.MkdirAll(promOperatorTargetDir, 0755); err != nil {
+		return err
+	}
+
 	k8ssandraOperatorSrcDir := filepath.Join("..", "..", "config", "crd")
 
 	buf, err := kustomize.BuildDir(k8ssandraOperatorSrcDir)
@@ -263,7 +273,18 @@ func prepareCRDs() error {
 		return err
 	}
 	cassOperatorCrdPath := filepath.Join(cassOperatorTargetDir, "crd.yaml")
-	return os.WriteFile(cassOperatorCrdPath, buf.Bytes(), 0644)
+	if err = os.WriteFile(cassOperatorCrdPath, buf.Bytes(), 0644); err != nil {
+		return err
+	}
+
+	promOperatorCrd := "https://github.com/prometheus-operator/kube-prometheus?ref=" + prometheusOperatorVersion
+	buf, err = kustomize.BuildUrl(promOperatorCrd)
+	if err != nil {
+		return err
+	}
+	promOperatorCrdPath := filepath.Join(promOperatorTargetDir, "crd.yaml")
+	return os.WriteFile(promOperatorCrdPath, buf.Bytes(), 0644)
+
 }
 
 func registerApis() error {
@@ -288,6 +309,10 @@ func registerApis() error {
 	}
 
 	if err := replicationapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := promapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 

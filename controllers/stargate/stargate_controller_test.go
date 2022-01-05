@@ -2,12 +2,16 @@ package stargate
 
 import (
 	"context"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"testing"
 	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -96,7 +100,16 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 		},
 		Spec: api.StargateSpec{
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
-				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
+				StargateClusterTemplate: api.StargateClusterTemplate{
+					Size: 1,
+					StargateTemplate: api.StargateTemplate{
+						Telemetry: &telemetryapi.TelemetrySpec{
+							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+								Enabled: true,
+							},
+						},
+					},
+				},
 			},
 			DatacenterRef: corev1.LocalObjectReference{Name: "dc1"},
 		},
@@ -178,6 +191,29 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	assert.Len(t, sg.Status.Conditions, 1, "expected to find 1 condition for Stargate")
 	assert.Equal(t, api.StargateReady, sg.Status.Conditions[0].Type)
 	assert.Equal(t, corev1.ConditionTrue, sg.Status.Conditions[0].Status)
+
+	smKey := types.NamespacedName{Name: sg.Name + "-" + "stargate-servicemonitor", Namespace: "default"}
+	//	Check for presence of expected ServiceMonitor
+	sm := &promapi.ServiceMonitor{}
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, smKey, sm)
+		return err == nil
+	}, timeout, interval)
+	assert.NotNil(t, sm.Spec.Endpoints)
+
+	// Ensure that removing the telemetry spec does delete the ServiceMonitor
+	sgPatch := client.MergeFrom(sg.DeepCopy())
+	sg.Spec.Telemetry = nil
+	if err := testClient.Patch(ctx, sg, sgPatch); err != nil {
+		assert.Fail(t, "failed to patch stargate", "error", err)
+	}
+	assert.Eventually(t, func() bool {
+		err := testClient.Get(ctx, smKey, sm)
+		if err != nil {
+			return k8serrors.IsNotFound(err)
+		}
+		return false
+	}, timeout, interval)
 }
 
 func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
@@ -363,4 +399,5 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	assert.Len(t, stargate.Status.Conditions, 1, "expected to find 1 condition for Stargate")
 	assert.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
 	assert.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
+
 }

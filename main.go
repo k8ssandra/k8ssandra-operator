@@ -27,6 +27,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -68,6 +69,7 @@ func init() {
 	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
+	utilruntime.Must(promapi.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -128,9 +130,7 @@ func main() {
 		setupLog.Error(err, "unable to fetch config connection")
 		os.Exit(1)
 	}
-
 	ctx := ctrl.SetupSignalHandler()
-
 	reconcilerConfig := config.InitConfig()
 
 	if isControlPlane() {

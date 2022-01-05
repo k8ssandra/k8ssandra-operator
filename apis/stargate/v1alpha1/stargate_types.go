@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -101,6 +102,11 @@ type StargateTemplate struct {
 	// The map should have a key named cassandra_yaml.
 	// +optional
 	CassandraConfigMapRef *corev1.LocalObjectReference `json:"cassandraConfigMapRef,omitempty"`
+
+	// Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster
+	// (unless overriden by DC specific settings)
+	// +optional
+	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 }
 
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.
