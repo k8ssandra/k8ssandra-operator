@@ -5,6 +5,7 @@ package stargate
 import (
 	"context"
 	"errors"
+
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
@@ -52,18 +53,11 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	// If Stargate is attached
 	// Determine if we want a cleanup or a resource update.
 	switch {
-	case thisStargate.Spec.Telemetry == nil:
+	case thisStargate.Spec.Telemetry == nil || thisStargate.Spec.Telemetry.Prometheus == nil:
 		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
-	case thisStargate.Spec.Telemetry.Prometheus == nil:
-		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
-		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
 	case thisStargate.Spec.Telemetry.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		desiredSM, err := cfg.NewStargateServiceMonitor()
@@ -73,14 +67,8 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		if err := cfg.UpdateResources(ctx, remoteClient, thisStargate, &desiredSM); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
-	default:
-		logger.Info("Telemetry not present for Stargate, will delete resources", "mergedSpec", thisStargate.Spec.Telemetry)
-		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
 	}
+	return ctrl.Result{}, nil
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
