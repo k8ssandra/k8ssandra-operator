@@ -9686,8 +9686,6 @@ spec:
                           - Configuring
                           - Running
                           type: string
-                      required:
-                      - progress
                       type: object
                     stargate:
                       description: StargateStatus defines the observed state of a
@@ -9760,7 +9758,6 @@ spec:
                           type: integer
                       required:
                       - availableReplicas
-                      - progress
                       - readyReplicas
                       - replicas
                       - updatedReplicas

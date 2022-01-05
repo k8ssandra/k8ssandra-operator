@@ -2745,7 +2745,6 @@ spec:
                 type: integer
             required:
             - availableReplicas
-            - progress
             - readyReplicas
             - replicas
             - updatedReplicas
