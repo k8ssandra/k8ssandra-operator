@@ -224,8 +224,8 @@ func DumpClusterInfo(opts ClusterInfoOptions) error {
 	return err
 }
 
-func GetPod(opts Options, pod string, args ...string) (string, error) {
-	cmd := exec.Command("kubectl")
+func Get(opts Options, args ...string) (string, error) {
+	cmd := exec.Command("kubectl", "get")
 	if len(opts.Context) > 0 {
 		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
@@ -233,7 +233,6 @@ func GetPod(opts Options, pod string, args ...string) (string, error) {
 		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
 	}
 
-	cmd.Args = append(cmd.Args, "get", "pod", pod)
 	cmd.Args = append(cmd.Args, args...)
 
 	var stdout, stderr bytes.Buffer
@@ -253,4 +252,21 @@ func GetPod(opts Options, pod string, args ...string) (string, error) {
 		return stderr.String(), err
 	}
 	return stdout.String(), nil
+}
+
+func RolloutStatus(opts Options, kind, name string) error {
+	cmd := exec.Command("kubectl", "rollout", "status")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+	cmd.Args = append(cmd.Args, kind, name)
+	fmt.Println(cmd)
+	output, err := cmd.CombinedOutput()
+	if logOutput || err != nil {
+		fmt.Println(string(output))
+	}
+	return err
 }

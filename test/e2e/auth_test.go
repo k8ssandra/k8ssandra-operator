@@ -7,14 +7,13 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"net/http"
@@ -120,11 +119,18 @@ func waitForAllComponentsReady(
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
-	// we need to wait until the number of pods in stargate and reaper replica sets reaches 1 before continuing
-	checkStargateDeploymentRolledOut(t, f, ctx, stargate1Key)
-	checkReaperDeploymentRolledOut(t, f, ctx, reaper1Key)
-	checkStargateDeploymentRolledOut(t, f, ctx, stargate1Key)
-	checkReaperDeploymentRolledOut(t, f, ctx, reaper1Key)
+	// we need to wait until the deployments are fully rolled out before continuing, to avoid hitting an old
+	// pod that has authentication enabled while we just turned it off.
+	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-0"}
+	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-1"}
+	err := kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-default-stargate-deployment")
+	assert.NoError(t, err)
+	err = kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-reaper")
+	assert.NoError(t, err)
+	err = kubectl.RolloutStatus(options2, "deployment", "cluster1-dc2-default-stargate-deployment")
+	assert.NoError(t, err)
+	err = kubectl.RolloutStatus(options2, "deployment", "cluster1-dc2-reaper")
+	assert.NoError(t, err)
 }
 
 func toggleAuthentication(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName, on bool) {
@@ -295,29 +301,7 @@ func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *r
 	assert.Equal(t, http.StatusUnauthorized, response.StatusCode(), "Expected auth request to return 401")
 }
 
-func checkStargateDeploymentRolledOut(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey) {
-	assert.Eventually(t, func() bool {
-		podList := &corev1.PodList{}
-		labels := client.MatchingLabels{stargateapi.StargateLabel: stargateKey.Name}
-		if err := f.List(ctx, stargateKey, podList, labels); err != nil {
-			return false
-		}
-		return len(podList.Items) == 1
-	}, polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for stargate pods")
-}
-
-func checkReaperDeploymentRolledOut(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {
-	assert.Eventually(t, func() bool {
-		podList := &corev1.PodList{}
-		labels := client.MatchingLabels{reaperapi.ReaperLabel: reaperKey.Name}
-		if err := f.List(ctx, reaperKey, podList, labels); err != nil {
-			return false
-		}
-		return len(podList.Items) == 1
-	}, polling.reaperReady.timeout, polling.reaperReady.interval, "timed out waiting for reaper pods")
-}
-
-func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace string, pod1Name string, pod2Name string) (string, string) {
+func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod2Name string) (string, string) {
 	pod1IP, err := f.GetPodIP("kind-k8ssandra-0", namespace, pod1Name)
 	require.NoError(t, err, "failed to get pod %s IP in context kind-k8ssandra-0", pod1Name)
 	pod2IP, err := f.GetPodIP("kind-k8ssandra-1", namespace, pod2Name)

@@ -680,7 +680,7 @@ func (f *E2eFramework) GetNodeToolStatusUN(k8sContext, namespace, pod string, ad
 
 func (f *E2eFramework) GetPodIP(k8sContext, namespace, pod string) (string, error) {
 	opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
-	output, err := kubectl.GetPod(opts, pod, "-o", "jsonpath={.status.podIP}")
+	output, err := kubectl.Get(opts, "pod", pod, "-o", "jsonpath={.status.podIP}")
 	if err != nil {
 		err = fmt.Errorf("%s (%w)", output, err)
 		f.logger.Error(err, fmt.Sprintf("failed to get pod IP for %s: %s", pod, err))
