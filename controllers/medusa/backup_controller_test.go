@@ -67,7 +67,9 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 				StorageProperties: api.Storage{
 					StorageSecretRef: cassandraUserSecret,
 				},
-				CassandraUserSecretRef: cassandraUserSecret,
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: cassandraUserSecret,
+				},
 			},
 		},
 	}

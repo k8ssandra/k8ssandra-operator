@@ -23,10 +23,10 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        size: 3
+        size: 2
       - metadata:
           name: dc2
-        size: 3
+        size: 2
         k8sContext: kind-k8ssandra-1
   medusa:
     storageProperties:

@@ -117,7 +117,7 @@ func verifyBackupFinished(t *testing.T, ctx context.Context, f *framework.E2eFra
 		t.Logf("backup finish time: %v", updated.Status.FinishTime)
 		t.Logf("backup finished: %v", updated.Status.Finished)
 		t.Logf("backup in progress: %v", updated.Status.InProgress)
-		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
+		return !updated.Status.FinishTime.IsZero() && len(updated.Status.InProgress) == 0
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "backup didn't finish within timeout")
 }
 

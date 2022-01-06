@@ -139,13 +139,8 @@ type MedusaClusterTemplate struct {
 	// then passed to the Medusa instances, so that it can authenticate against nodes in the datacenter using CQL.
 	// The secret must be in the same namespace as Cassandra and must contain two keys: "username" and "password".
 	// +optional
-	CassandraUserSecretRef string `json:"cassandraUserSecretRef,omitempty"`
+	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
 
 	// Provides all storage backend related properties for backups.
 	StorageProperties Storage `json:"storageProperties,omitempty"`
-}
-
-// MedusaSpec defines the desired state of Medusa.
-type MedusaSpec struct {
-	MedusaClusterTemplate `json:",inline"`
 }

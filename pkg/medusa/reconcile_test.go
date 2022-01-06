@@ -6,6 +6,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,7 +56,9 @@ func testMedusaIniFull(t *testing.T) {
 					Secure:                   false,
 					BackupGracePeriodInDays:  7,
 				},
-				CassandraUserSecretRef: "test-superuser",
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
 			},
 		},
 	}
@@ -115,7 +118,9 @@ func testMedusaIniNoPrefix(t *testing.T) {
 					Secure:                   false,
 					BackupGracePeriodInDays:  7,
 				},
-				CassandraUserSecretRef: "test-superuser",
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
 			},
 		},
 	}
@@ -174,7 +179,9 @@ func testMedusaIniSecured(t *testing.T) {
 					Secure:                   true,
 					BackupGracePeriodInDays:  7,
 				},
-				CassandraUserSecretRef: "test-superuser",
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
 			},
 		},
 	}
@@ -233,7 +240,9 @@ func testMedusaIniUnsecured(t *testing.T) {
 					Secure:                   true,
 					BackupGracePeriodInDays:  7,
 				},
-				CassandraUserSecretRef: "test-superuser",
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
 			},
 		},
 	}
@@ -281,7 +290,9 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 					StorageSecretRef: "secret",
 					BucketName:       "bucket",
 				},
-				CassandraUserSecretRef: "test-superuser",
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
 			},
 		},
 	}

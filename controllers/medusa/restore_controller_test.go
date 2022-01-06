@@ -57,7 +57,9 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 				StorageProperties: api.Storage{
 					StorageSecretRef: cassandraUserSecret,
 				},
-				CassandraUserSecretRef: cassandraUserSecret,
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: cassandraUserSecret,
+				},
 			},
 		},
 	}

@@ -75,7 +75,9 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: cassandraUserSecret,
 				},
-				CassandraUserSecretRef: cassandraUserSecret,
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: cassandraUserSecret,
+				},
 			},
 		},
 	}

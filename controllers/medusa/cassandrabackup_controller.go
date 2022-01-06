@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -100,7 +101,7 @@ func (r *CassandraBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// using it as a completion marker.
 		patch := client.MergeFrom(backup.DeepCopy())
 		backup.Status.FinishTime = metav1.Now()
-		if err := r.Status().Patch(context.Background(), backup, patch); err != nil {
+		if err := r.Status().Patch(ctx, backup, patch); err != nil {
 			logger.Error(err, "failed to patch status with finish time")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		}
@@ -142,7 +143,7 @@ func (r *CassandraBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		backup.Status.InProgress = append(backup.Status.InProgress, pod.Name)
 	}
 	logger.Info("checking status", "CassandraDatacenterTemplateSpec", backup.Status.CassdcTemplateSpec)
-	if err := r.Status().Patch(context.Background(), backup, patch); err != nil {
+	if err := r.Status().Patch(ctx, backup, patch); err != nil {
 		logger.Error(err, "Failed to patch status")
 		// We received a stale object, requeue for next processing
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
@@ -172,7 +173,7 @@ func (r *CassandraBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				backupMutex.Lock()
 				defer backupMutex.Unlock()
 				defer wg.Done()
-				backup.Status.InProgress = removeValue(backup.Status.InProgress, pod.Name)
+				backup.Status.InProgress = utils.RemoveValue(backup.Status.InProgress, pod.Name)
 				if succeeded {
 					backup.Status.Finished = append(backup.Status.Finished, pod.Name)
 				} else {
@@ -241,21 +242,9 @@ func (r *CassandraBackupReconciler) addCassdcSpecToStatus(ctx context.Context, b
 }
 
 func (r *CassandraBackupReconciler) getCassandraDatacenterPods(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) ([]corev1.Pod, error) {
-	cassdcSvc := &corev1.Service{}
-	err := r.Get(ctx, types.NamespacedName{Namespace: cassdc.Namespace, Name: cassdc.GetAllPodsServiceName()}, cassdcSvc)
-	if err != nil {
-		return nil, err
-	}
-
 	podList := &corev1.PodList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: cassdcSvc.Spec.Selector})
-	listOpts := []client.ListOption{
-		client.MatchingLabelsSelector{
-			Selector: selector,
-		},
-	}
-
-	if err := r.List(context.Background(), podList, listOpts...); err != nil {
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: cassdc.Name}
+	if err := r.List(ctx, podList, labels); err != nil {
 		logger.Error(err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", cassdc.Name)
 		return nil, err
 	}
@@ -298,16 +287,6 @@ func doBackup(ctx context.Context, name string, backupType medusaapi.BackupType,
 
 func backupFinished(backup *medusaapi.CassandraBackup) bool {
 	return !backup.Status.FinishTime.IsZero()
-}
-
-func removeValue(slice []string, value string) []string {
-	newSlice := make([]string, 0)
-	for _, s := range slice {
-		if s != value {
-			newSlice = append(newSlice, s)
-		}
-	}
-	return newSlice
 }
 
 func (r *CassandraBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {

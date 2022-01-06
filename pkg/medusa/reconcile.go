@@ -106,7 +106,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
 	return medusaIni.String()
 }
 
-func CreateMedusaConfigMap(medusaSpec *api.MedusaClusterTemplate, namespace, clusterName, medusaIni string) *corev1.ConfigMap {
+func CreateMedusaConfigMap(namespace, clusterName, medusaIni string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-medusa", clusterName),
@@ -120,10 +120,10 @@ func CreateMedusaConfigMap(medusaSpec *api.MedusaClusterTemplate, namespace, clu
 
 // Get the cassandra user secret name from the medusa spec or generate one based on the cluster name
 func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, clusterName string) string {
-	if medusaSpec.CassandraUserSecretRef == "" {
+	if medusaSpec.CassandraUserSecretRef.Name == "" {
 		return fmt.Sprintf("%s-medusa", clusterName)
 	}
-	return medusaSpec.CassandraUserSecretRef
+	return medusaSpec.CassandraUserSecretRef.Name
 }
 
 func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
@@ -285,15 +285,6 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 	} else {
 		// We're using local storage for backups, which requires a volume for the local backup storage
 		backupVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "medusa-backups")
-		/* backupVolume := &corev1.Volume{
-			Name: "medusa-backups",
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName:    "medusa-backups",
-					StorageClass: medusaSpec.StorageProperties.PodStorage.StorageClassName,
-				},
-			},
-		} */
 		accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		storageClassName := "standard"
 		storageSize := resource.MustParse("10Gi")

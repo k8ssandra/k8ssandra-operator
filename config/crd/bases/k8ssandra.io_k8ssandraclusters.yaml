@@ -6407,7 +6407,12 @@ spec:
                       instances, so that it can authenticate against nodes in the
                       datacenter using CQL. The secret must be in the same namespace
                       as Cassandra and must contain two keys: "username" and "password".'
-                    type: string
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   containerImage:
                     description: MedusaContainerImage is the image characteristics
                       to use for Medusa containers. Leave nil to use a default image.

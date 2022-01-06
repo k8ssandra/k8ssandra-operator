@@ -67,15 +67,15 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 	logger.Info("Reconciling Medusa user secrets")
 	if kc.Spec.Medusa != nil {
 		cassandraUserSecretRef := kc.Spec.Medusa.CassandraUserSecretRef
-		if cassandraUserSecretRef == "" {
-			cassandraUserSecretRef = medusa.CassandraUserSecretName(kc.Spec.Medusa, kc.Name)
+		if cassandraUserSecretRef.Name == "" {
+			cassandraUserSecretRef.Name = medusa.CassandraUserSecretName(kc.Spec.Medusa, kc.Name)
 		}
 		logger = logger.WithValues(
 			"MedusaCassandraUserSecretRef",
 			cassandraUserSecretRef,
 		)
 		kcKey := utils.GetKey(kc)
-		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef, kcKey); err != nil {
+		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
 			logger.Error(err, "Failed to reconcile Medusa CQL user secret")
 			return result.Error(err)
 		}
@@ -95,34 +95,33 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	logger.Info("Reconciling Medusa configMap on namespace : " + namespace)
 	if kc.Spec.Medusa != nil {
 		medusaIni := medusa.CreateMedusaIni(kc)
-		desiredConfigMap := medusa.CreateMedusaConfigMap(kc.Spec.Medusa, namespace, kc.Spec.Cassandra.Cluster, medusaIni)
-		// Compute a hash which will allow to compare desired and actual configMaps
-		annotations.AddHashAnnotation(desiredConfigMap)
-		actualConfigMap := &corev1.ConfigMap{}
-
 		configMapKey := client.ObjectKey{
 			Namespace: kc.Namespace,
 			Name:      fmt.Sprintf("%s-medusa", kc.Spec.Cassandra.Cluster),
 		}
 
+		logger := logger.WithValues("MedusaConfigMap", configMapKey)
+		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.Spec.Cassandra.Cluster, medusaIni)
+		// Compute a hash which will allow to compare desired and actual configMaps
+		annotations.AddHashAnnotation(desiredConfigMap)
+		actualConfigMap := &corev1.ConfigMap{}
+
 		if err := remoteClient.Get(ctx, configMapKey, actualConfigMap); err != nil {
 			if errors.IsNotFound(err) {
 				if err := remoteClient.Create(ctx, desiredConfigMap); err != nil {
 					logger.Error(err, "Failed to create Medusa ConfigMap")
-					return result.RequeueSoon(r.DefaultDelay)
+					return result.Error(err)
 				}
 			}
 		}
 
 		actualConfigMap = actualConfigMap.DeepCopy()
 
-		if !annotations.CompareAnnotations(actualConfigMap, desiredConfigMap, api.ResourceHashAnnotation) {
-			logger.Info("Updating Medusa ConfigMap")
+		if !annotations.CompareHashAnnotations(actualConfigMap, desiredConfigMap) {
+			logger.Info("Updating configMap on namespace " + actualConfigMap.ObjectMeta.Namespace)
 			resourceVersion := actualConfigMap.GetResourceVersion()
 			desiredConfigMap.DeepCopyInto(actualConfigMap)
 			actualConfigMap.SetResourceVersion(resourceVersion)
-			logger.Info("Updating configMap on namespace " + actualConfigMap.ObjectMeta.Namespace)
-			logger.Info("Should be on namespace " + actualConfigMap.ObjectMeta.Namespace)
 			if err := remoteClient.Update(ctx, actualConfigMap); err != nil {
 				logger.Error(err, "Failed to update Medusa ConfigMap resource")
 				return result.Error(err)
