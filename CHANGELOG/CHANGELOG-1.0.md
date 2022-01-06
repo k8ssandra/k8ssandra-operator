@@ -25,6 +25,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Stargate deployment.
 * [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 * [ENHANCEMENT] [#170](https://github.com/k8ssandra/k8ssandra-operator/issues/170) Enforce cluster-wide authentication by default 
+* [ENHANCEMENT] [#267](https://github.com/k8ssandra/k8ssandra-operator/issues/267) Use the K8ssandraCluster name as cluster name for CassandraDatacenter objects
 
 ## v1.0.0-alpha.2 - 2021-12-03
 

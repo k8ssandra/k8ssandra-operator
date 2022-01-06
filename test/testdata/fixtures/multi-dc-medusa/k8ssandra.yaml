@@ -4,7 +4,6 @@ metadata:
   name: test
 spec:
   cassandra:
-    cluster: test
     serverVersion: "4.0.0"
     serverImage: k8ssandra/cass-management-api:4.0.0
     storageConfig:

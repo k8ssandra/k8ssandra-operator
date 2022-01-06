@@ -26,12 +26,11 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Auth: pointer.BoolPtr(false),
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "cluster1",
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext:    "cluster-1",
@@ -59,8 +58,8 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Spec.Cassandra.Cluster))
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Spec.Cassandra.Cluster))
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
@@ -145,12 +144,11 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Auth: pointer.BoolPtr(true),
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "cluster1",
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext:    "cluster-1",
@@ -178,8 +176,8 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
-	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Spec.Cassandra.Cluster))
-	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Spec.Cassandra.Cluster))
+	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
+	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 

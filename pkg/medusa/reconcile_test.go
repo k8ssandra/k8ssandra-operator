@@ -26,7 +26,6 @@ func testMedusaIniFull(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -85,11 +84,10 @@ func testMedusaIniNoPrefix(t *testing.T) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
-			Name:      "test",
+			Name:      "demo",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "demo",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -146,11 +144,10 @@ func testMedusaIniSecured(t *testing.T) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
-			Name:      "test",
+			Name:      "demo",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "demo",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -207,11 +204,10 @@ func testMedusaIniUnsecured(t *testing.T) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
-			Name:      "test",
+			Name:      "demo",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "demo",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -268,11 +264,10 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
-			Name:      "test",
+			Name:      "demo",
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "demo",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{

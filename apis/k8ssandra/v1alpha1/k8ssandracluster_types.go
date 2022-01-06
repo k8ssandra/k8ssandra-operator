@@ -110,7 +110,8 @@ type K8ssandraStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=k8ssandraclusters,shortName=k8c;k8cs
 
-// K8ssandraCluster is the Schema for the k8ssandraclusters API
+// K8ssandraCluster is the Schema for the k8ssandraclusters API. The K8ssandraCluster CRD name is also the name of the
+// Cassandra cluster (which corresponds to cluster_name in cassandra.yaml).
 type K8ssandraCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -165,14 +166,10 @@ type K8ssandraClusterList struct {
 }
 
 type CassandraClusterTemplate struct {
-	// Cluster is the name of the cluster. This corresponds to cluster_name in
-	// cassandra.yaml.
-	// +kubebuilder:validation:MinLength=2
-	Cluster string `json:"cluster,omitempty"`
 
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
-	// Cassandra cluster name specified above.
+	// K8ssandraCluster CRD name.
 	// +optional
 	SuperuserSecretRef corev1.LocalObjectReference `json:"superuserSecretRef,omitempty"`
 

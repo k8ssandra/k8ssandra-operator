@@ -22,7 +22,9 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: K8ssandraCluster is the Schema for the k8ssandraclusters API
+        description: K8ssandraCluster is the Schema for the k8ssandraclusters API.
+          The K8ssandraCluster CRD name is also the name of the Cassandra cluster
+          (which corresponds to cluster_name in cassandra.yaml).
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -74,11 +76,6 @@ spec:
                             type: boolean
                         type: object
                     type: object
-                  cluster:
-                    description: Cluster is the name of the cluster. This corresponds
-                      to cluster_name in cassandra.yaml.
-                    minLength: 2
-                    type: string
                   config:
                     description: CassandraConfig is configuration settings that are
                       applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
@@ -8229,8 +8226,7 @@ spec:
                     description: The reference to the superuser secret to use for
                       Cassandra. If unspecified, a default secret will be generated
                       with a random password; the generated secret name will be "<cluster_name>-superuser"
-                      where <cluster_name> is the Cassandra cluster name specified
-                      above.
+                      where <cluster_name> is the K8ssandraCluster CRD name.
                     properties:
                       name:
                         description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names

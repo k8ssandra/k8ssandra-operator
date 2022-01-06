@@ -1,11 +1,10 @@
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
-  name: test
+  name: cluster1
 spec:
   auth: false
   cassandra:
-    cluster: cluster1
     serverVersion: "4.0.1"
     datacenters:
       - metadata:

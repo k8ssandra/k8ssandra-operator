@@ -32,16 +32,12 @@ func TestRandomPasswordGen(t *testing.T) {
 func TestDefaultSuperuserSecretName(t *testing.T) {
 	clusterName := "dc1"
 	clusterName2 := "d-c-1"
-	clusterName3 := "d_c1"
 
 	superUsername := DefaultSuperuserSecretName(clusterName)
 	superUsername2 := DefaultSuperuserSecretName(clusterName2)
-	superUsername3 := DefaultSuperuserSecretName(clusterName3)
-
-	assert.Equal(t, superUsername, superUsername2)
-	assert.Equal(t, superUsername, superUsername3)
 
 	assert.Equal(t, "dc1-superuser", superUsername)
+	assert.Equal(t, "d-c-1-superuser", superUsername2)
 }
 
 func TestRequiresUpdate(t *testing.T) {

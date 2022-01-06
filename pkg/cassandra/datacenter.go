@@ -191,11 +191,11 @@ func UpdateInitContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
 // defined in both templates, the dc-level property takes precedence.
-func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) *DatacenterConfig {
+func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) *DatacenterConfig {
 	dcConfig := &DatacenterConfig{}
 
 	// Handler cluster-wide settings first
-	dcConfig.Cluster = clusterTemplate.Cluster
+	dcConfig.Cluster = clusterName
 	dcConfig.SuperuserSecretRef = clusterTemplate.SuperuserSecretRef
 
 	// DC-level settings

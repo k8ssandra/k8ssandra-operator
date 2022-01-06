@@ -36,7 +36,6 @@ func testK8ssandraClusterHasStargates(t *testing.T) {
 		kc := K8ssandraCluster{
 			Spec: K8ssandraClusterSpec{
 				Cassandra: &CassandraClusterTemplate{
-					Cluster: "cluster1",
 					Datacenters: []CassandraDatacenterTemplate{
 						{
 							Size:     3,
@@ -81,7 +80,6 @@ func testK8ssandraClusterHasReapers(t *testing.T) {
 		kc := K8ssandraCluster{
 			Spec: K8ssandraClusterSpec{
 				Cassandra: &CassandraClusterTemplate{
-					Cluster: "cluster1",
 					Datacenters: []CassandraDatacenterTemplate{
 						{
 							Size:   3,

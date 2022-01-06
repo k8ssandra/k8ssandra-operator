@@ -24,7 +24,6 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 		},
 		Spec: k8ssandraapi.K8ssandraClusterSpec{
 			Cassandra: &k8ssandraapi.CassandraClusterTemplate{
-				Cluster:         "test-cluster",
 				ServerVersion:   "4.0.0",
 				CassandraConfig: nil,
 				StorageConfig: &cassdcapi.StorageConfig{

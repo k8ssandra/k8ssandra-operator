@@ -7,17 +7,15 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"math/big"
-	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"math/big"
+	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -46,25 +44,10 @@ func generateRandomString(charset string, length int) ([]byte, error) {
 }
 
 // DefaultSuperuserSecretName returns a default name for the superuser secret. It is of the general form
-// <cluster_name>-superuser.
+// <cluster_name>-superuser. Note that we expect clusterName to be a valid DNS subdomain name as defined in RFC 1123,
+// otherwise the secret name won't be valid.
 func DefaultSuperuserSecretName(clusterName string) string {
-	return fmt.Sprintf("%s-superuser", SanitizeSecretName(clusterName))
-}
-
-// SanitizeSecretName returns a string suitable for creating secret names derived from the given cluster name.
-// Secret names must be a valid DNS subdomain name as defined in RFC 1123.
-func SanitizeSecretName(name string) string {
-	// FIXME maybe move this function to pkg/utils/objects.go? It could also be used for resource, service and deployment names.
-	// see https://github.com/k8ssandra/k8ssandra-operator/issues/267
-	// FIXME this is not really what is needed to make the string compliant with a DNS subdomain string, see
-	// https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
-	// Names must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric
-	// character (e.g. 'example.com').
-	// Regex for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')"
-	clean := name
-	clean = strings.ReplaceAll(clean, "_", "")
-	clean = strings.ReplaceAll(clean, "-", "")
-	return clean
+	return fmt.Sprintf("%s-superuser", clusterName)
 }
 
 // ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such

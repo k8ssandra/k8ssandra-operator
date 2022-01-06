@@ -52,10 +52,10 @@ func NewReaper(
 		// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
 		// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
 		if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
-			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.Spec.Cassandra.Cluster)
+			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.Name)
 		}
 		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
-			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Spec.Cassandra.Cluster)
+			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Name)
 		}
 	}
 	annotations.AddHashAnnotation(desiredReaper)

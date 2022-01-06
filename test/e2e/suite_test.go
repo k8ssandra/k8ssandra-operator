@@ -511,7 +511,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
@@ -599,7 +599,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -727,7 +727,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")

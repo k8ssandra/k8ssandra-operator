@@ -47,7 +47,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
-		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on

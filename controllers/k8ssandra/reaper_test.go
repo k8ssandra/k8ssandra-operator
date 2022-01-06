@@ -30,7 +30,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{

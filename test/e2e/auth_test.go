@@ -24,7 +24,7 @@ import (
 
 func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "cluster1"}
 
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}

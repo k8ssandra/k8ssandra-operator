@@ -33,7 +33,6 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 		},
 		Spec: k8ss.K8ssandraClusterSpec{
 			Cassandra: &k8ss.CassandraClusterTemplate{
-				Cluster: "test",
 				Datacenters: []k8ss.CassandraDatacenterTemplate{
 					{
 						Meta: k8ss.EmbeddedObjectMeta{
