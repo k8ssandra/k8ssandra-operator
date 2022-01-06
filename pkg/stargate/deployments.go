@@ -171,7 +171,6 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 								{Name: "SEED", Value: seedService},
 								{Name: "DATACENTER_NAME", Value: dc.Name},
 								{Name: "RACK_NAME", Value: rack.Name},
-								{Name: "ENABLE_AUTH", Value: "true"},
 								// Watching bundles is unnecessary in a k8s deployment. See
 								// https://github.com/stargate/stargate/issues/1286 for
 								// details.
@@ -201,6 +200,20 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
 			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 		}
+
+		if stargate.Spec.IsAuthEnabled() {
+			// Stargate reacts to the sole presence of this variable, regardless of its contents.
+			// When this variable is absent, Stargate will use AllowAllAuthenticator.
+			// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden
+			// by the stargate.authenticator_class_name system property (see below, computeJvmOptions).
+			// Note that any other authenticator than PasswordAuthenticator will cause the REST APIs to be unusable,
+			// however the CQL API will still be usable.
+			deployment.Spec.Template.Spec.Containers[0].Env = append(
+				deployment.Spec.Template.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
+			)
+		}
+
 		annotations.AddHashAnnotation(&deployment)
 		deployments[deploymentName] = deployment
 	}

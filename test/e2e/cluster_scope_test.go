@@ -4,8 +4,6 @@ import (
 	"context"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
-	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"testing"
@@ -13,7 +11,6 @@ import (
 
 func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace string, f *framework.E2eFramework) {
 	require := require.New(t)
-	assert := assert.New(t)
 
 	dc1Namespace := "test-1"
 	dc2Namespace := "test-2"
@@ -67,18 +64,16 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, dc1Namespace, k8ssandra.Spec.Cassandra.Cluster)
+	require.NoError(err, "failed to retrieve database credentials")
+
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	opts := kubectl.Options{Namespace: dc1Namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
-
-	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", dc1Namespace, pod, count, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	opts = kubectl.Options{Namespace: dc2Namespace, Context: "kind-k8ssandra-1"}
 	pod = "test-dc2-rack1-sts-0"
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
-
-	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", dc2Namespace, pod, count, "-u", username, "-pw", password)
 }

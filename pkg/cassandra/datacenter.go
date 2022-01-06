@@ -6,14 +6,24 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
+var DefaultJmxInitImage = images.Image{
+	Registry:   images.DefaultRegistry,
+	Repository: images.DockerOfficialRepository,
+	Name:       "busybox",
+	Tag:        "1.34.1",
+	// When changing the default version above, please also change the kubebuilder marker in
+	// apis/reaper/v1alpha1/reaper_types.go accordingly.
+}
+
 // SystemReplication represents the replication factor of the system_auth, system_traces,
-// and system_distributed keyspsces. This is applied to each datacenter. The replication
+// and system_distributed keyspaces. This is applied to each datacenter. The replication
 // should be configured per DC, but that is currently not supported. See
 // https://github.com/k8ssandra/management-api-for-apache-cassandra/issues/124 and
 // https://github.com/k8ssandra/k8ssandra-operator/issues/91 for details.
@@ -30,22 +40,23 @@ type SystemReplication struct {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta                api.EmbeddedObjectMeta
-	Cluster             string
-	SuperUserSecretName string
-	ServerImage         string
-	ServerVersion       string
-	Size                int32
-	Resources           *corev1.ResourceRequirements
-	SystemReplication   SystemReplication
-	StorageConfig       *cassdcapi.StorageConfig
-	Racks               []cassdcapi.Rack
-	CassandraConfig     *api.CassandraConfig
-	AdditionalSeeds     []string
-	Networking          *cassdcapi.NetworkingConfig
-	Users               []cassdcapi.CassandraUser
-	PodTemplateSpec     *corev1.PodTemplateSpec
-	MgmtAPIHeap         *resource.Quantity
+	Meta                  api.EmbeddedObjectMeta
+	Cluster               string
+	SuperuserSecretRef    corev1.LocalObjectReference
+	ServerImage           string
+	ServerVersion         string
+	JmxInitContainerImage *images.Image
+	Size                  int32
+	Resources             *corev1.ResourceRequirements
+	SystemReplication     SystemReplication
+	StorageConfig         *cassdcapi.StorageConfig
+	Racks                 []cassdcapi.Rack
+	CassandraConfig       api.CassandraConfig
+	AdditionalSeeds       []string
+	Networking            *cassdcapi.NetworkingConfig
+	Users                 []cassdcapi.CassandraUser
+	PodTemplateSpec       *corev1.PodTemplateSpec
+	MgmtAPIHeap           *resource.Quantity
 }
 
 const (
@@ -90,7 +101,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Racks:               template.Racks,
 			StorageConfig:       *template.StorageConfig,
 			ClusterName:         template.Cluster,
-			SuperuserSecretName: template.SuperUserSecretName,
+			SuperuserSecretName: template.SuperuserSecretRef.Name,
 			Users:               template.Users,
 			Networking:          template.Networking,
 			AdditionalSeeds:     template.AdditionalSeeds,
@@ -125,26 +136,57 @@ func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quanti
 // back to the PodTemplateSpec. The Container object is created if necessary before calling
 // f. Only the Name field is initialized.
 func UpdateCassandraContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
-	idx := -1
-	container := &corev1.Container{}
+	UpdateContainer(p, reconciliation.CassandraContainerName, f)
+}
 
+// UpdateContainer finds the container with the given name, passes it to f, and then adds it
+// back to the PodTemplateSpec. The Container object is created if necessary before calling
+// f. Only the Name field is initialized.
+func UpdateContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev1.Container)) {
+	idx := -1
+	var container *corev1.Container
 	for i, c := range p.Spec.Containers {
-		if c.Name == reconciliation.CassandraContainerName {
+		if c.Name == name {
 			idx = i
 			break
 		}
 	}
 
 	if idx == -1 {
-		idx = 0
-		container.Name = reconciliation.CassandraContainerName
-		p.Spec.Containers = make([]corev1.Container, 1)
+		idx = len(p.Spec.Containers)
+		container = &corev1.Container{Name: name}
+		p.Spec.Containers = append(p.Spec.Containers, *container)
 	} else {
 		container = &p.Spec.Containers[idx]
 	}
 
 	f(container)
 	p.Spec.Containers[idx] = *container
+}
+
+// UpdateInitContainer finds the init container with the given name, passes it to f, and then adds it
+// back to the PodTemplateSpec. The Container object is created if necessary before calling
+// f. Only the Name field is initialized.
+func UpdateInitContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev1.Container)) {
+	idx := -1
+	var container *corev1.Container
+	for i, c := range p.Spec.InitContainers {
+		if c.Name == name {
+			idx = i
+			break
+		}
+	}
+
+	if idx == -1 {
+		idx = len(p.Spec.InitContainers)
+		container = &corev1.Container{Name: name}
+		p.Spec.InitContainers = append(p.Spec.InitContainers, *container)
+	} else {
+		container = &p.Spec.InitContainers[idx]
+	}
+
+	f(container)
+	p.Spec.InitContainers[idx] = *container
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
@@ -154,7 +196,7 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 
 	// Handler cluster-wide settings first
 	dcConfig.Cluster = clusterTemplate.Cluster
-	dcConfig.SuperUserSecretName = clusterTemplate.SuperuserSecretName
+	dcConfig.SuperuserSecretRef = clusterTemplate.SuperuserSecretRef
 
 	// DC-level settings
 	dcConfig.Meta = dcTemplate.Meta
@@ -170,6 +212,12 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 		dcConfig.ServerImage = clusterTemplate.ServerImage
 	} else {
 		dcConfig.ServerImage = dcTemplate.ServerImage
+	}
+
+	if dcTemplate.JmxInitContainerImage != nil {
+		dcConfig.JmxInitContainerImage = dcTemplate.JmxInitContainerImage
+	} else {
+		dcConfig.JmxInitContainerImage = clusterTemplate.JmxInitContainerImage
 	}
 
 	if len(dcTemplate.Racks) == 0 {
@@ -198,15 +246,15 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 	}
 
 	// TODO Do we want merge vs override?
-	if dcTemplate.CassandraConfig == nil {
-		dcConfig.CassandraConfig = clusterTemplate.CassandraConfig
-	} else {
-		dcConfig.CassandraConfig = dcTemplate.CassandraConfig
+	if dcTemplate.CassandraConfig != nil {
+		dcConfig.CassandraConfig = *dcTemplate.CassandraConfig
+	} else if clusterTemplate.CassandraConfig != nil {
+		dcConfig.CassandraConfig = *clusterTemplate.CassandraConfig
 	}
 
 	if dcTemplate.MgmtAPIHeap == nil {
 		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
-	} else if dcTemplate.MgmtAPIHeap != nil {
+	} else {
 		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
 	}
 

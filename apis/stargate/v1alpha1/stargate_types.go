@@ -178,6 +178,20 @@ type StargateSpec struct {
 	// Stargate should be deployed.
 	// +kubebuilder:validation:Required
 	DatacenterRef corev1.LocalObjectReference `json:"datacenterRef"`
+
+	// Whether to enable authentication for Stargate. The default is true; it is highly recommended to always leave
+	// authentication turned on, not only on Stargate nodes, but also on data nodes as well. Note that Stargate REST
+	// APIs are currently only accessible if authentication is enabled, and if the authenticator in use in the whole
+	// cluster is PasswordAuthenticator. The usage of any other authenticator will cause the REST API to become
+	// inaccessible, see https://github.com/stargate/stargate/issues/792 for more. Stargate CQL API however remains
+	// accessible even if authentication is disabled in the cluster, or when a custom authenticator is being used.
+	// +optional
+	// +kubebuilder:default=true
+	Auth *bool `json:"auth,omitempty"`
+}
+
+func (in StargateSpec) IsAuthEnabled() bool {
+	return in.Auth == nil || *in.Auth
 }
 
 // StargateProgress is a word summarizing the state of a Stargate resource.

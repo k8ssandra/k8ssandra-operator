@@ -31,7 +31,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
-		Name:      stargate.ResourceName(kc, actualDc),
+		Name:      stargate.ResourceName(actualDc),
 	}
 	actualStargate := &stargateapi.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)
@@ -104,6 +104,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return result.Continue()
 }
 
+// TODO move to stargate package
 func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *stargateapi.Stargate {
 	desiredStargate := &stargateapi.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
@@ -122,6 +123,7 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 		Spec: stargateapi.StargateSpec{
 			StargateDatacenterTemplate: *stargateTemplate,
 			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
+			Auth:                       kc.Spec.Auth,
 		},
 	}
 	return desiredStargate

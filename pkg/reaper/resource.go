@@ -15,8 +15,11 @@ const (
 	DatacenterAvailabilityEach  = "EACH"
 )
 
-func ResourceName(klusterName, dcName string) string {
-	return klusterName + "-" + dcName + "-reaper"
+// DefaultResourceName generates a name for a new Reaper resource that is derived from the Cassandra cluster and DC
+// names.
+func DefaultResourceName(dc *cassdcapi.CassandraDatacenter) string {
+	// FIXME sanitize name
+	return dc.Spec.ClusterName + "-" + dc.Name + "-reaper"
 }
 
 func NewReaper(
@@ -42,11 +45,18 @@ func NewReaper(
 			DatacenterAvailability: computeReaperDcAvailability(kc),
 		},
 	}
-	if desiredReaper.Spec.CassandraUserSecretRef == "" {
-		desiredReaper.Spec.CassandraUserSecretRef = DefaultUserSecretName(kc.Name)
-	}
-	if desiredReaper.Spec.JmxUserSecretRef == "" {
-		desiredReaper.Spec.JmxUserSecretRef = DefaultJmxUserSecretName(kc.Name)
+	if kc.Spec.IsAuthEnabled() {
+		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
+		// Reaper: one for CQL connections, one for JMX connections. Here we assume that these secrets exist. If the
+		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
+		// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
+		// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
+		if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
+			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.Spec.Cassandra.Cluster)
+		}
+		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
+			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Spec.Cassandra.Cluster)
+		}
 	}
 	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper
@@ -98,15 +108,15 @@ func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.Reaper
 		coalesced.ServiceAccountName = clusterTemplate.ServiceAccountName
 	}
 
-	if clusterTemplate != nil && len(clusterTemplate.Keyspace) != 0 {
+	if clusterTemplate != nil {
 		coalesced.Keyspace = clusterTemplate.Keyspace
 	}
 
-	if clusterTemplate != nil && len(clusterTemplate.CassandraUserSecretRef) != 0 {
+	if clusterTemplate != nil {
 		coalesced.CassandraUserSecretRef = clusterTemplate.CassandraUserSecretRef
 	}
 
-	if clusterTemplate != nil && len(clusterTemplate.JmxUserSecretRef) != 0 {
+	if clusterTemplate != nil {
 		coalesced.JmxUserSecretRef = clusterTemplate.JmxUserSecretRef
 	}
 

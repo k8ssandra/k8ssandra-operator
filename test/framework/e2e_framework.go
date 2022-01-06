@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -657,27 +658,33 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 
 // GetNodeToolStatusUN Executes nodetool status against the Cassandra pod and returns a
 // count of the matching lines reporting a status of Up/Normal.
-func (f *E2eFramework) GetNodeToolStatusUN(opts kubectl.Options, pod string) (int, error) {
-	output, err := kubectl.Exec(opts, pod, "nodetool", "status")
+func (f *E2eFramework) GetNodeToolStatusUN(k8sContext, namespace, pod string, additionalArgs ...string) (int, error) {
+	opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+	args := []string{"nodetool"}
+	args = append(args, additionalArgs...)
+	args = append(args, "status")
+	output, err := kubectl.Exec(opts, pod, args...)
 	if err != nil {
+		// remove stack traces and only keep the first line of stderr
+		scanner := bufio.NewScanner(strings.NewReader(output))
+		if scanner.Scan() {
+			output = scanner.Text()
+		}
+		err = fmt.Errorf("%s (%w)", output, err)
+		f.logger.Error(err, fmt.Sprintf("failed to execute nodetool status on %s: %s", pod, err))
 		return -1, err
 	}
-
 	matches := f.nodeToolStatusUN.FindAllString(output, -1)
-
 	return len(matches), nil
 }
 
-// WaitForNodeToolStatusUN polls until nodetool status reports UN for count nodes.
-func (f *E2eFramework) WaitForNodeToolStatusUN(opts kubectl.Options, pod string, count int, timeout, interval time.Duration) error {
-	return wait.Poll(interval, timeout, func() (bool, error) {
-		actual, err := f.GetNodeToolStatusUN(opts, pod)
-		if err != nil {
-			f.logger.Error(err, "failed to execute nodetool status for %s: %s", pod, err)
-			return false, err
-		}
-		f.logger.Info("nodetool status output", "Count", actual)
-		return actual == count, nil
-	})
-
+func (f *E2eFramework) GetPodIP(k8sContext, namespace, pod string) (string, error) {
+	opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+	output, err := kubectl.Get(opts, "pod", pod, "-o", "jsonpath={.status.podIP}")
+	if err != nil {
+		err = fmt.Errorf("%s (%w)", output, err)
+		f.logger.Error(err, fmt.Sprintf("failed to get pod IP for %s: %s", pod, err))
+		return "", err
+	}
+	return output, nil
 }

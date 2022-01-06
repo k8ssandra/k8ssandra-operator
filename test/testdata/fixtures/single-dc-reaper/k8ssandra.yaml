@@ -9,6 +9,9 @@ spec:
   cassandra:
     cluster: test
     serverVersion: "3.11.11"
+    jmxInitContainerImage:
+      repository: library
+      name: busybox
     datacenters:
       - metadata:
           name: dc1

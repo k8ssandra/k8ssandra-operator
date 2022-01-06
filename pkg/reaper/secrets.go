@@ -2,6 +2,7 @@ package reaper
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -20,12 +21,14 @@ var EnableCassAuthVar = &corev1.EnvVar{
 	Value: "true",
 }
 
-func DefaultUserSecretName(k8cName string) string {
-	return fmt.Sprintf("%v-reaper", k8cName)
+// DefaultUserSecretName generates a name for the Reaper CQL user, that is derived from the Cassandra cluster name.
+func DefaultUserSecretName(clusterName string) string {
+	return fmt.Sprintf("%v-reaper", secret.SanitizeSecretName(clusterName))
 }
 
-func DefaultJmxUserSecretName(k8cName string) string {
-	return fmt.Sprintf("%v-reaper-jmx", k8cName)
+// DefaultJmxUserSecretName generates a name for the Reaper JMX user, that is derived from the Cassandra cluster name.
+func DefaultJmxUserSecretName(clusterName string) string {
+	return fmt.Sprintf("%v-reaper-jmx", secret.SanitizeSecretName(clusterName))
 }
 
 func GetCassandraAuthEnvironmentVars(secret *corev1.Secret) (*corev1.EnvVar, *corev1.EnvVar, error) {

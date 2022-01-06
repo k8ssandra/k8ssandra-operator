@@ -158,6 +158,11 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
+	t.Log("check that authentication is enabled on the Stargate deployment")
+	envVars := deployment.Spec.Template.Spec.Containers[0].Env
+	assert.Equal(t, "ENABLE_AUTH", envVars[len(envVars)-1].Name)
+	assert.Equal(t, "true", envVars[len(envVars)-1].Value)
+
 	deployment.Status.Replicas = 1
 	deployment.Status.ReadyReplicas = 1
 	deployment.Status.AvailableReplicas = 1

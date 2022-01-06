@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,8 +34,6 @@ type pollingConfig struct {
 }
 
 var (
-	nodetoolStatusTimeout time.Duration
-
 	polling struct {
 		nodetoolStatus          pollingConfig
 		datacenterReady         pollingConfig
@@ -55,8 +54,6 @@ func TestOperator(t *testing.T) {
 	beforeSuite(t)
 
 	ctx := context.Background()
-
-	applyPollingDefaults()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterCluster,
@@ -126,15 +123,21 @@ func TestOperator(t *testing.T) {
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 	}))
+	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      multiDcAuthOnOff,
+		fixture:       "multi-dc-auth",
+		deployTraefik: true,
+	}))
 }
 
 func beforeSuite(t *testing.T) {
+
+	applyPollingDefaults()
+
 	if val, ok := os.LookupEnv("NODETOOL_STATUS_TIMEOUT"); ok {
 		timeout, err := time.ParseDuration(val)
 		require.NoError(t, err, fmt.Sprintf("failed to parse NODETOOL_STATUS_TIMEOUT value: %s", val))
-		nodetoolStatusTimeout = timeout
-	} else {
-		nodetoolStatusTimeout = 1 * time.Minute
+		polling.nodetoolStatus.timeout = timeout
 	}
 
 	kustomize.LogOutput(*logKustomizeOutput)
@@ -508,7 +511,8 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
@@ -529,7 +533,8 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, "test")
+	require.NoError(t, err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
@@ -593,18 +598,20 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	require.NoError(err, "failed to retrieve database credentials")
+
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	opts.Context = "kind-k8ssandra-1"
 	pod = "test-dc2-rack1-sts-0"
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 }
@@ -719,23 +726,22 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Spec.Cassandra.Cluster)
+	require.NoError(err, "failed to retrieve database credentials")
+
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	opts := kubectl.Options{Namespace: namespace, Context: "kind-k8ssandra-0"}
 	pod := "test-dc1-rack1-sts-0"
 	count := 4
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	opts.Context = "kind-k8ssandra-1"
 	pod = "test-dc2-rack1-sts-0"
-	err = f.WaitForNodeToolStatusUN(opts, pod, count, polling.nodetoolStatus.timeout, polling.nodetoolStatus.interval)
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
-
-	t.Log("retrieve database credentials")
-	username, password := f.RetrieveDatabaseCredentials(t, ctx, namespace, "test")
 
 	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
 	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
@@ -810,6 +816,66 @@ func checkStargateK8cStatusReady(
 			kdcStatus.Stargate != nil &&
 			kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+}
+
+// checkNodeToolStatusUN polls until nodetool status reports UN for count nodes.
+func checkNodeToolStatusUN(
+	t *testing.T,
+	f *framework.E2eFramework,
+	k8sContext, namespace, pod string,
+	count int,
+	additionalArgs ...string,
+) {
+	require.Eventually(
+		t,
+		func() bool {
+			actual, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod, additionalArgs...)
+			return err == nil && actual == count
+		},
+		polling.nodetoolStatus.timeout,
+		polling.nodetoolStatus.interval,
+		"timed out waiting for nodetool status to reach count %v",
+		count,
+	)
+}
+
+func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
+	secret := &corev1.Secret{}
+	require.Eventually(
+		t,
+		func() bool {
+			return f.Get(ctx, secretKey, secret) == nil && labels.IsManagedBy(secret, kcKey)
+		},
+		time.Minute,
+		time.Second,
+		"secret %s does not exist or is not managed by k8c",
+		secretKey,
+	)
+}
+
+func checkSecretDoesNotExist(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
+	secret := &corev1.Secret{}
+	require.Never(
+		t,
+		func() bool {
+			return f.Get(ctx, secretKey, secret) == nil
+		},
+		15*time.Second,
+		time.Second,
+		"secret %s exists",
+		secretKey,
+	)
+}
+
+func checkKeyspaceExists(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace string,
+) {
+	keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
+	require.NoError(t, err, "failed to describe keyspaces")
+	assert.Contains(t, keyspaces, keyspace)
 }
 
 func configureZeroLog() {

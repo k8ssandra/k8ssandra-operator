@@ -7,65 +7,69 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
-	addUser(reaperTemplate, dcConfig)
+func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig, authEnabled bool) {
 	if dcConfig.PodTemplateSpec == nil {
 		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	addInitContainer(reaperTemplate, dcConfig)
+	enableRemoteJmxAccess(dcConfig)
+	if authEnabled {
+		addCqlUser(reaperTemplate, dcConfig)
+		enableJmxAuth(reaperTemplate, dcConfig)
+	}
+}
+
+// By default, the Cassandra process will be started with LOCAL_JMX=yes, see cassandra-env.sh. This means that the
+// Cassandra process will only be accessible with JMX from localhost. However, Reaper needs remote JMX access, so we
+// need to change that to LOCAL_JMX=no here. Note that this change has implications on authentication that were handled
+// already in pkg/cassandra/auth.go.
+func enableRemoteJmxAccess(dcConfig *cassandra.DatacenterConfig) {
 	cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(c.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
 	})
 }
 
-func addUser(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
+// If auth is enabled in this cluster, we need to allow Reaper to access the cluster through CQL. This is done by
+// declaring a Cassandra user whose credentials are pulled from CassandraUserSecretRef.
+func addCqlUser(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
 	cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
-	if cassandraUserSecretRef == "" {
-		cassandraUserSecretRef = DefaultUserSecretName(dcConfig.Cluster)
+	if cassandraUserSecretRef.Name == "" {
+		cassandraUserSecretRef.Name = DefaultUserSecretName(dcConfig.Cluster)
 	}
 	dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
-		SecretName: cassandraUserSecretRef,
+		SecretName: cassandraUserSecretRef.Name,
 		Superuser:  true,
 	})
 }
 
-func addInitContainer(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
+// If auth is enabled in this cluster, then a JMX init container is already present in the pod definition, see
+// pkg/cassandra/auth.go. Here we want to modify this init container to append the Reaper JMX credentials to the
+// jmxremote.password file.
+func enableJmxAuth(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
 	jmxUserSecretRef := reaperTemplate.JmxUserSecretRef
-	if jmxUserSecretRef == "" {
-		jmxUserSecretRef = DefaultJmxUserSecretName(dcConfig.Cluster)
+	if jmxUserSecretRef.Name == "" {
+		jmxUserSecretRef.Name = DefaultJmxUserSecretName(dcConfig.Cluster)
 	}
-	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, corev1.Container{
-		Name:            "jmx-credentials",
-		Image:           "docker.io/busybox:1.33.1",
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
+	cassandra.UpdateInitContainer(dcConfig.PodTemplateSpec, cassandra.JmxInitContainer, func(c *corev1.Container) {
+		c.Env = append(c.Env,
+			corev1.EnvVar{
 				Name: "REAPER_JMX_USERNAME",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: jmxUserSecretRef},
+						LocalObjectReference: jmxUserSecretRef,
 						Key:                  "username",
 					},
 				},
 			},
-			{
+			corev1.EnvVar{
 				Name: "REAPER_JMX_PASSWORD",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: jmxUserSecretRef},
+						LocalObjectReference: jmxUserSecretRef,
 						Key:                  "password",
 					},
 				},
 			},
-		},
-		Args: []string{
-			"/bin/sh",
-			"-c",
-			"echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" > /config/jmxremote.password",
-		},
-		VolumeMounts: []corev1.VolumeMount{{
-			Name:      "server-config",
-			MountPath: "/config",
-		}},
+		)
+		c.Args[2] = c.Args[2] + " && echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" >> /config/jmxremote.password"
 	})
 }

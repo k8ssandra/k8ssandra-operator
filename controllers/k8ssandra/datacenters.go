@@ -49,14 +49,20 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+
+		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
+
+		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
+		// unauthenticated clusters.
 		cassandra.ApplySystemReplication(dcConfig, *systemReplication)
+
 		if !cassandra.IsCassandra3(dcConfig.ServerVersion) && kc.HasStargates() {
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 		reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
 		if reaperTemplate != nil {
-			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig)
+			reaper.AddReaperSettingsToDcConfig(reaperTemplate, dcConfig, kc.Spec.IsAuthEnabled())
 		}
 		// Create Medusa related objects
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {

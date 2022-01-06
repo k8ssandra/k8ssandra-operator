@@ -334,7 +334,7 @@ func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context
 }
 
 func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
-	t.Log("creating a secret")
+	t.Log("creating reaper secrets")
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
@@ -347,10 +347,23 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 	}
 	err := k8sClient.Create(ctx, &secret)
 	require.NoError(t, err)
+	secret = corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      "top-secret-jmx",
+		},
+		Data: map[string][]byte{
+			"username": []byte("bond"),
+			"password": []byte("james"),
+		},
+	}
+	err = k8sClient.Create(ctx, &secret)
+	require.NoError(t, err)
 
 	t.Log("create the Reaper object and modify it")
 	rpr := newReaper(testNamespace)
-	rpr.Spec.CassandraUserSecretRef = "top-secret-cass"
+	rpr.Spec.CassandraUserSecretRef.Name = "top-secret-cass"
+	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx"
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)
 
@@ -364,14 +377,21 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 
 	t.Log("verify the deployment has CassAuth EnvVars")
 	envVars := deployment.Spec.Template.Spec.Containers[0].Env
-	assert.Equal(t, "REAPER_CASS_AUTH_USERNAME", envVars[len(envVars)-3].Name)
-	assert.Equal(t, "top-secret-cass", envVars[len(envVars)-3].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
-	assert.Equal(t, "username", envVars[len(envVars)-3].ValueFrom.SecretKeyRef.Key)
-	assert.Equal(t, "REAPER_CASS_AUTH_PASSWORD", envVars[len(envVars)-2].Name)
-	assert.Equal(t, "top-secret-cass", envVars[len(envVars)-2].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
-	assert.Equal(t, "password", envVars[len(envVars)-2].ValueFrom.SecretKeyRef.Key)
-	assert.Equal(t, "REAPER_CASS_AUTH_ENABLED", envVars[len(envVars)-1].Name)
-	assert.Equal(t, "true", envVars[len(envVars)-1].Value)
+
+	assert.Equal(t, "REAPER_CASS_AUTH_USERNAME", envVars[len(envVars)-5].Name)
+	assert.Equal(t, "top-secret-cass", envVars[len(envVars)-5].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
+	assert.Equal(t, "username", envVars[len(envVars)-5].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "REAPER_CASS_AUTH_PASSWORD", envVars[len(envVars)-4].Name)
+	assert.Equal(t, "top-secret-cass", envVars[len(envVars)-4].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
+	assert.Equal(t, "password", envVars[len(envVars)-4].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "REAPER_CASS_AUTH_ENABLED", envVars[len(envVars)-3].Name)
+	assert.Equal(t, "true", envVars[len(envVars)-3].Value)
+	assert.Equal(t, "REAPER_JMX_AUTH_USERNAME", envVars[len(envVars)-2].Name)
+	assert.Equal(t, "top-secret-jmx", envVars[len(envVars)-2].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
+	assert.Equal(t, "username", envVars[len(envVars)-2].ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, "REAPER_JMX_AUTH_PASSWORD", envVars[len(envVars)-1].Name)
+	assert.Equal(t, "top-secret-jmx", envVars[len(envVars)-1].ValueFrom.SecretKeyRef.LocalObjectReference.Name)
+	assert.Equal(t, "password", envVars[len(envVars)-1].ValueFrom.SecretKeyRef.Key)
 }
 
 func newReaper(namespace string) *reaperapi.Reaper {

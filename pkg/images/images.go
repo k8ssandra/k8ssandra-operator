@@ -6,7 +6,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const DefaultRegistry = "docker.io"
+const (
+	DefaultRegistry          = "docker.io"
+	DockerOfficialRepository = "library"
+)
 
 // Image uniquely describes a container image and also specifies how to pull it from its remote repository.
 // More info: https://kubernetes.io/docs/concepts/containers/images.

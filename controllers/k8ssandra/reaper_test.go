@@ -72,7 +72,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifySuperUserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -134,14 +134,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
 	t.Log("update dc1 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to update dc1 status to ready")
 
 	t.Log("check that dc2 was created")
@@ -160,34 +153,21 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	}
 
 	t.Log("update dc2 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to update dc2 status to ready")
 
 	t.Log("check that reaper reaper1 is created")
 	require.Eventually(f.ReaperExists(ctx, reaper1Key), timeout, interval)
 
 	t.Logf("update reaper reaper1 status to ready")
-	err = f.PatchReaperStatus(ctx, reaper1Key, func(reaper *reaperapi.Reaper) {
-		reaper.Status.Progress = reaperapi.ReaperProgressRunning
-		reaper.Status.SetReady()
-	})
+	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
 
 	t.Log("check that reaper reaper2 is created")
 	require.Eventually(f.ReaperExists(ctx, reaper2Key), timeout, interval)
 
 	t.Logf("update reaper reaper2 status to ready")
-	err = f.PatchReaperStatus(ctx, reaper2Key, func(reaper *reaperapi.Reaper) {
-		reaper.Status.Progress = reaperapi.ReaperProgressRunning
-		reaper.Status.SetReady()
-	})
+	err = f.SetReaperStatusReady(ctx, reaper2Key)
 	require.NoError(err, "failed to patch reaper status")
 
 	t.Log("check that the K8ssandraCluster status is updated")

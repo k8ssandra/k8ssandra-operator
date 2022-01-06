@@ -6,8 +6,10 @@ spec:
   datacenterRef:
     # TODO check multi-namespace when cluster-scope is ready
     name: dc1
-  cassandraUserSecretRef: reaper-cql-secret
-  jmxUserSecretRef: reaper-jmx-secret
+  cassandraUserSecretRef:
+    name: reaper-cql-secret
+  jmxUserSecretRef:
+    name: reaper-jmx-secret
   containerImage:
     repository: thelastpickle
     name: cassandra-reaper

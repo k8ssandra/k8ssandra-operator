@@ -22,6 +22,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,14 @@ import (
 
 // K8ssandraClusterSpec defines the desired state of K8ssandraCluster
 type K8ssandraClusterSpec struct {
+
+	// Whether to enable authentication in this cluster. The default is true; it is highly recommended to always leave
+	// authentication turned on. When enabled, authentication will be enforced not only on Cassandra nodes, but also on
+	// Reaper, Medusa and Stargate nodes, if any.
+	// +optional
+	// +kubebuilder:default=true
+	Auth *bool `json:"auth,omitempty"`
+
 	// Cassandra is a specification of the Cassandra cluster. This includes everything from
 	// the number of datacenters, the k8s cluster where each DC should be deployed, node
 	// affinity (via racks), individual C* node settings, JVM settings, and more.
@@ -51,6 +60,10 @@ type K8ssandraClusterSpec struct {
 	// If this is non-nil, Medusa will be deployed in every Cassandra pod in this K8ssandraCluster.
 	// +optional
 	Medusa *medusaapi.MedusaClusterTemplate `json:"medusa,omitempty"`
+}
+
+func (in K8ssandraClusterSpec) IsAuthEnabled() bool {
+	return in.Auth == nil || *in.Auth
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster
@@ -157,8 +170,11 @@ type CassandraClusterTemplate struct {
 	// +kubebuilder:validation:MinLength=2
 	Cluster string `json:"cluster,omitempty"`
 
-	// SuperuserSecretName allows to override the default super user secret
-	SuperuserSecretName string `json:"superuserSecret,omitempty"`
+	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
+	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
+	// Cassandra cluster name specified above.
+	// +optional
+	SuperuserSecretRef corev1.LocalObjectReference `json:"superuserSecretRef,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a
 	// management-api image. If left empty the operator will choose a default image based
@@ -169,6 +185,13 @@ type CassandraClusterTemplate struct {
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
+
+	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
+	// authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster.
+	// The default is "busybox:1.34.1".
+	// +optional
+	// +kubebuilder:default={name:"busybox",tag:"1.34.1"}
+	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
 
 	// Resources is the cpu and memory resources for the cassandra container.
 	// +optional
@@ -232,6 +255,13 @@ type CassandraDatacenterTemplate struct {
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
 	// +optional
 	ServerVersion string `json:"serverVersion,omitempty"`
+
+	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
+	// authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster.
+	// The default is "busybox:1.34.1".
+	// +optional
+	// +kubebuilder:default={name:"busybox",tag:"1.34.1"}
+	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
 
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
 	// jvm-options for 3.11.x or jvm-server-options for 4.x.
@@ -297,38 +327,42 @@ type EmbeddedObjectMeta struct {
 // TODO Implement Stringer interface. It will helpful for debugging and testing.
 type CassandraConfig struct {
 	// +optional
-	CassandraYaml *CassandraYaml `json:"cassandraYaml,omitempty"`
+	CassandraYaml CassandraYaml `json:"cassandraYaml,omitempty"`
 
 	// +optional
-	JvmOptions *JvmOptions `json:"jvmOptions,omitempty"`
+	JvmOptions JvmOptions `json:"jvmOptions,omitempty"`
 }
 
-type Auth struct {
-	// +optional
-	Enabled bool `json:"enabled,omitempty"`
-
-	// +optional
-	CacheValidityPeriodMillis *int64 `json:"cacheValidityPeriodMillis,omitempty"`
-
-	// +optional
-	CacheUpdateIntervalMillis *int64 `json:"cacheUpdateIntervalMillis,omitempty"`
-
-	// +optional
-	SuperUserSecretName string `json:"superUserSecretName,omitempty"`
-}
-
+// CassandraYaml defines the contents of the cassandra.yaml file. For more info see:
+// https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html
 type CassandraYaml struct {
-	// Authenticator string `json:"authenticator,omitempty"`
-	//
-	// Authorizer string `json:"authorizer,omitempty"`
-	//
-	// RoleManager string `json:"role_manager,omitempty"`
-	//
-	// RoleValidityMillis *int64 `json:"roles_validity_in_ms,omitempty"`
-	//
-	// RoleUpdateIntervalMillis *int64 `json:"roles_update_interval_in_ms,omitempty"`
-	//
-	// PermissionValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
+
+	// +optional
+	Authenticator *string `json:"authenticator,omitempty"`
+
+	// +optional
+	Authorizer *string `json:"authorizer,omitempty"`
+
+	// +optional
+	RoleManager *string `json:"role_manager,omitempty"`
+
+	// +optional
+	RolesValidityMillis *int64 `json:"roles_validity_in_ms,omitempty"`
+
+	// +optional
+	RolesUpdateIntervalMillis *int64 `json:"roles_update_interval_in_ms,omitempty"`
+
+	// +optional
+	PermissionsValidityMillis *int64 `json:"permissions_validity_in_ms,omitempty"`
+
+	// +optional
+	PermissionsUpdateIntervalMillis *int64 `json:"permissions_update_interval_in_ms,omitempty"`
+
+	// +optional
+	CredentialsValidityMillis *int64 `json:"credentials_validity_in_ms,omitempty"`
+
+	// +optional
+	CredentialsUpdateIntervalMillis *int64 `json:"credentials_update_interval_in_ms,omitempty"`
 
 	// +optional
 	NumTokens *int `json:"num_tokens,omitempty"`

@@ -57,6 +57,7 @@ jobs:
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
           - CreateMultiMedusa
+          - MultiDcAuthOnOff
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

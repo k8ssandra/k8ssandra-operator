@@ -211,6 +211,22 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
+func (f *Framework) SetStargateStatusReady(ctx context.Context, key ClusterKey) error {
+	return f.PatchStargateStatus(ctx, key, func(sg *stargateapi.Stargate) {
+		now := metav1.Now()
+		sg.Status.Progress = stargateapi.StargateProgressRunning
+		sg.Status.AvailableReplicas = 1
+		sg.Status.Replicas = 1
+		sg.Status.ReadyReplicas = 1
+		sg.Status.UpdatedReplicas = 1
+		sg.Status.SetCondition(stargateapi.StargateCondition{
+			Type:               stargateapi.StargateReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	})
+}
+
 func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
 	sg := &stargateapi.Stargate{}
 	err := f.Get(ctx, key, sg)
@@ -226,19 +242,26 @@ func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, upd
 	return remoteClient.Status().Patch(ctx, sg, patch)
 }
 
-func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updateFn func(sg *reaperapi.Reaper)) error {
-	sg := &reaperapi.Reaper{}
-	err := f.Get(ctx, key, sg)
+func (f *Framework) SetReaperStatusReady(ctx context.Context, key ClusterKey) error {
+	return f.PatchReaperStatus(ctx, key, func(r *reaperapi.Reaper) {
+		r.Status.Progress = reaperapi.ReaperProgressRunning
+		r.Status.SetReady()
+	})
+}
+
+func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updateFn func(r *reaperapi.Reaper)) error {
+	r := &reaperapi.Reaper{}
+	err := f.Get(ctx, key, r)
 
 	if err != nil {
 		return err
 	}
 
-	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	updateFn(sg)
+	patch := client.MergeFromWithOptions(r.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(r)
 
 	remoteClient := f.remoteClients[key.K8sContext]
-	return remoteClient.Status().Patch(ctx, sg, patch)
+	return remoteClient.Status().Patch(ctx, r, patch)
 }
 
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
