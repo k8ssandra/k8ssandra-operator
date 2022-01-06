@@ -3,10 +3,11 @@ package framework
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"testing"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
@@ -15,13 +16,14 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -61,6 +63,9 @@ func Init(t *testing.T) {
 
 	err = promapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for prometheus")
+
+	err = medusaapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for medusa")
 
 	// cfg, err := ctrl.GetConfig()
 	// require.NoError(t, err, "failed to get *rest.Config")
@@ -134,11 +139,24 @@ func (f *Framework) Patch(ctx context.Context, obj client.Object, patch client.P
 	if len(key.K8sContext) == 0 {
 		return fmt.Errorf("the K8sContext must be specified for key %s", key)
 	}
+
 	remoteClient, found := f.remoteClients[key.K8sContext]
 	if !found {
 		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
 	}
 	return remoteClient.Patch(ctx, obj, patch, opts...)
+}
+
+func (f *Framework) Create(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+	return remoteClient.Create(ctx, obj)
 }
 
 func (f *Framework) CreateNamespace(name string) error {
@@ -326,7 +344,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
-			if !errors.IsNotFound(err) {
+			if !k8serrors.IsNotFound(err) {
 				// We won't log the error if its not found because that is expected and it helps cut
 				// down on the verbosity of the test output.
 				f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
@@ -413,4 +431,22 @@ type terratestLoggerBridge struct {
 func (c *terratestLoggerBridge) Logf(t terratesttesting.TestingT, format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	c.logger.Info(msg)
+}
+
+func (f *Framework) ContainerHasVolumeMount(container corev1.Container, volumeName, volumePath string) bool {
+	for _, volume := range container.VolumeMounts {
+		if volume.Name == volumeName && volume.MountPath == volumePath {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *Framework) ContainerHasEnvVar(container corev1.Container, envVarName, envVarValue string) bool {
+	for _, envVar := range container.Env {
+		if envVar.Name == envVarName && (envVar.Value == envVarValue || envVarValue == "") {
+			return true
+		}
+	}
+	return false
 }

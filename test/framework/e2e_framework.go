@@ -3,15 +3,17 @@ package framework
 import (
 	"context"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"testing"
 	"text/template"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -41,7 +43,7 @@ type E2eFramework struct {
 	nodeToolStatusUN *regexp.Regexp
 }
 
-func NewE2eFramework() (*E2eFramework, error) {
+func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
 	configFile, err := filepath.Abs("../../build/kubeconfig")
 	if err != nil {
 		return nil, err
@@ -59,6 +61,7 @@ func NewE2eFramework() (*E2eFramework, error) {
 	controlPlaneContext := ""
 	var controlPlaneClient client.Client
 	remoteClients := make(map[string]client.Client, 0)
+	t.Logf("Using config file: %s", configFile)
 
 	for name, _ := range config.Contexts {
 		clientCfg := clientcmd.NewNonInteractiveClientConfig(*config, name, &clientcmd.ConfigOverrides{}, nil)
@@ -69,8 +72,8 @@ func NewE2eFramework() (*E2eFramework, error) {
 		}
 
 		remoteClient, err := client.New(restCfg, client.Options{Scheme: scheme.Scheme})
-		if err != nil {
-			return nil, err
+		if err == nil {
+			remoteClients[name] = remoteClient
 		}
 
 		// TODO Add a flag or option to allow the user to specify the control plane cluster
@@ -78,8 +81,11 @@ func NewE2eFramework() (*E2eFramework, error) {
 		//	ControlPlaneContext = name
 		//	controlPlaneClient = remoteClient
 		// }
-		remoteClients[name] = remoteClient
 	}
+	if len(remoteClients) == 0 {
+		return nil, fmt.Errorf("no valid context found in kubeconfig file")
+	}
+	t.Logf("Using config remote clients: %v", remoteClients)
 
 	if remoteClient, found := remoteClients[defaultControlPlaneContext]; found {
 		controlPlaneContext = defaultControlPlaneContext

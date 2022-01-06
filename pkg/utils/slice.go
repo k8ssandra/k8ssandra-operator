@@ -8,3 +8,13 @@ func SliceContains(slice []string, s string) bool {
 	}
 	return false
 }
+
+func RemoveValue(slice []string, value string) []string {
+	newSlice := make([]string, 0)
+	for _, s := range slice {
+		if s != value {
+			newSlice = append(newSlice, s)
+		}
+	}
+	return newSlice
+}

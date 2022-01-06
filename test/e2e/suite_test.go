@@ -42,6 +42,9 @@ var (
 		k8ssandraClusterStatus  pollingConfig
 		stargateReady           pollingConfig
 		reaperReady             pollingConfig
+		medusaBackupDone        pollingConfig
+		medusaRestoreDone       pollingConfig
+		datacenterUpdating      pollingConfig
 	}
 
 	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
@@ -109,6 +112,20 @@ func TestOperator(t *testing.T) {
 			additionalNamespaces: []string{"test-1", "test-2"},
 		}))
 	})
+	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusa,
+		fixture:                      "single-dc-medusa",
+		deployTraefik:                false,
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
+	t.Run("CreateMultiMedusa", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createMultiMedusa,
+		fixture:                      "multi-dc-medusa",
+		deployTraefik:                false,
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -197,7 +214,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
-		f, err := framework.NewE2eFramework()
+		f, err := framework.NewE2eFramework(t)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -351,6 +368,15 @@ func applyPollingDefaults() {
 
 	polling.reaperReady.timeout = 5 * time.Minute
 	polling.reaperReady.interval = 5 * time.Second
+
+	polling.medusaBackupDone.timeout = 2 * time.Minute
+	polling.medusaBackupDone.interval = 5 * time.Second
+
+	polling.medusaRestoreDone.timeout = 5 * time.Minute
+	polling.medusaRestoreDone.interval = 15 * time.Second
+
+	polling.datacenterUpdating.timeout = 1 * time.Minute
+	polling.datacenterUpdating.interval = 1 * time.Second
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {
@@ -732,6 +758,15 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+}
+
+func checkDatacenterUpdating(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s is updating", key.Name, key.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, key)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterUpdating)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressUpdating
+	}), polling.datacenterUpdating.timeout, polling.datacenterUpdating.interval, fmt.Sprintf("timed out waiting for datacenter %s to become updating", key.Name))
 }
 
 func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *cassdcapi.CassandraDatacenterStatus {

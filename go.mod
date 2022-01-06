@@ -29,6 +29,8 @@ require (
 	golang.org/x/net v0.0.0-20210903162142-ad29c8ab022f // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/sys v0.0.0-20210906170528-6f6e22806c34 // indirect
+	google.golang.org/grpc v1.39.1
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/resty.v1 v1.12.0
 	k8s.io/api v0.22.3
 	k8s.io/apimachinery v0.22.3

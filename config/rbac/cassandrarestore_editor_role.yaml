@@ -1,0 +1,24 @@
+# permissions for end users to edit cassandrarestores.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cassandrarestore-editor-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores/status
+  verbs:
+  - get

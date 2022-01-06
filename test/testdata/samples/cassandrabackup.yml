@@ -1,0 +1,8 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: CassandraBackup
+metadata:
+  name: medusa-backup1
+  namespace: k8ssandra-operator
+spec:
+  cassandraDatacenter: dc1
+  name: medusa-backup1

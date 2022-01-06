@@ -8,6 +8,15 @@ metadata:
   namespace: k8ssandra
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -18,6 +27,13 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - list
   - watch
 - apiGroups:
   - cassandra.datastax.com
@@ -35,6 +51,18 @@ rules:
   - config.k8ssandra.io
   resources:
   - clientconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
   verbs:
   - create
   - delete
@@ -110,6 +138,53 @@ rules:
   - k8ssandra.io
   resources:
   - k8ssandraclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - medusa.datastax.com
+  resources:
+  - cassandradatacenters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrabackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrabackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - cassandrarestores/status
   verbs:
   - get
   - patch

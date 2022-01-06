@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
@@ -11,9 +15,6 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"reflect"
-	"testing"
-	"time"
 
 	"github.com/Jeffail/gabs"
 	"github.com/go-logr/logr"
@@ -95,6 +96,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
+	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -177,7 +179,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return condition != nil
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -220,12 +222,12 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		if condition == nil || condition.Status == corev1.ConditionTrue {
 			return false
 		}
 
-		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			return false
 		}
@@ -853,7 +855,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -903,7 +905,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			return false
 		}
@@ -914,7 +916,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			return false
 		}
 
-		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -1032,7 +1034,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -1158,7 +1160,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc1Key.Name)
 			return false
@@ -1174,7 +1176,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			return false
 		}
 
-		condition = findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		if condition == nil || condition.Status == corev1.ConditionFalse {
 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc2Key.Name)
 			return false
@@ -1332,7 +1334,7 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	require.NoError(t, err, "Failed to update ReplicationSecret status")
 }
 
-func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
+func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
 	for _, condition := range status.Conditions {
 		if condition.Type == condType {
 			return &condition

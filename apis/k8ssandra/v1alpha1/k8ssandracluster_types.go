@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -45,6 +46,11 @@ type K8ssandraClusterSpec struct {
 	// If this is non-nil, Reaper will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
 	Reaper *reaperapi.ReaperClusterTemplate `json:"reaper,omitempty"`
+
+	// Medusa defines the desired deployment characteristics for Medusa in this K8ssandraCluster.
+	// If this is non-nil, Medusa will be deployed in every Cassandra pod in this K8ssandraCluster.
+	// +optional
+	Medusa *medusaapi.MedusaClusterTemplate `json:"medusa,omitempty"`
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster

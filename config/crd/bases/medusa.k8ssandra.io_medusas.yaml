@@ -1,0 +1,307 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: medusas.medusa.k8ssandra.io
+spec:
+  group: medusa.k8ssandra.io
+  names:
+    kind: Medusa
+    listKind: MedusaList
+    plural: medusas
+    singular: medusa
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MedusaSpec defines the desired state of Medusa.
+            properties:
+              cassandraUserSecretRef:
+                description: 'Defines the username and password that Medusa will use
+                  to authenticate CQL connections to Cassandra clusters. These credentials
+                  will be automatically turned into CQL roles by cass-operator when
+                  bootstrapping the datacenter, then passed to the Medusa instances,
+                  so that it can authenticate against nodes in the datacenter using
+                  CQL. The secret must be in the same namespace as Cassandra and must
+                  contain two keys: "username" and "password".'
+                type: string
+              containerImage:
+                description: MedusaContainerImage is the image characteristics to
+                  use for Medusa containers. Leave nil to use a default image.
+                properties:
+                  imagePullSecret:
+                    description: LocalObjectReference contains enough information
+                      to let you locate the referenced object inside the same namespace.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  pullPolicy:
+                    default: IfNotPresent
+                    description: PullPolicy describes a policy for if/when to pull
+                      a container image
+                    type: string
+                  registry:
+                    default: docker.io
+                    type: string
+                  repository:
+                    default: k8ssandra/medusa
+                    type: string
+                  tag:
+                    default: latest
+                    type: string
+                required:
+                - repository
+                type: object
+              securityContext:
+                description: SecurityContext applied to the Medusa containers.
+                properties:
+                  allowPrivilegeEscalation:
+                    description: 'AllowPrivilegeEscalation controls whether a process
+                      can gain more privileges than its parent process. This bool
+                      directly controls if the no_new_privs flag will be set on the
+                      container process. AllowPrivilegeEscalation is true always when
+                      the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN'
+                    type: boolean
+                  capabilities:
+                    description: The capabilities to add/drop when running containers.
+                      Defaults to the default set of capabilities granted by the container
+                      runtime.
+                    properties:
+                      add:
+                        description: Added capabilities
+                        items:
+                          description: Capability represent POSIX capabilities type
+                          type: string
+                        type: array
+                      drop:
+                        description: Removed capabilities
+                        items:
+                          description: Capability represent POSIX capabilities type
+                          type: string
+                        type: array
+                    type: object
+                  privileged:
+                    description: Run container in privileged mode. Processes in privileged
+                      containers are essentially equivalent to root on the host. Defaults
+                      to false.
+                    type: boolean
+                  procMount:
+                    description: procMount denotes the type of proc mount to use for
+                      the containers. The default is DefaultProcMount which uses the
+                      container runtime defaults for readonly paths and masked paths.
+                      This requires the ProcMountType feature flag to be enabled.
+                    type: string
+                  readOnlyRootFilesystem:
+                    description: Whether this container has a read-only root filesystem.
+                      Default is false.
+                    type: boolean
+                  runAsGroup:
+                    description: The GID to run the entrypoint of the container process.
+                      Uses runtime default if unset. May also be set in PodSecurityContext.  If
+                      set in both SecurityContext and PodSecurityContext, the value
+                      specified in SecurityContext takes precedence.
+                    format: int64
+                    type: integer
+                  runAsNonRoot:
+                    description: Indicates that the container must run as a non-root
+                      user. If true, the Kubelet will validate the image at runtime
+                      to ensure that it does not run as UID 0 (root) and fail to start
+                      the container if it does. If unset or false, no such validation
+                      will be performed. May also be set in PodSecurityContext.  If
+                      set in both SecurityContext and PodSecurityContext, the value
+                      specified in SecurityContext takes precedence.
+                    type: boolean
+                  runAsUser:
+                    description: The UID to run the entrypoint of the container process.
+                      Defaults to user specified in image metadata if unspecified.
+                      May also be set in PodSecurityContext.  If set in both SecurityContext
+                      and PodSecurityContext, the value specified in SecurityContext
+                      takes precedence.
+                    format: int64
+                    type: integer
+                  seLinuxOptions:
+                    description: The SELinux context to be applied to the container.
+                      If unspecified, the container runtime will allocate a random
+                      SELinux context for each container.  May also be set in PodSecurityContext.  If
+                      set in both SecurityContext and PodSecurityContext, the value
+                      specified in SecurityContext takes precedence.
+                    properties:
+                      level:
+                        description: Level is SELinux level label that applies to
+                          the container.
+                        type: string
+                      role:
+                        description: Role is a SELinux role label that applies to
+                          the container.
+                        type: string
+                      type:
+                        description: Type is a SELinux type label that applies to
+                          the container.
+                        type: string
+                      user:
+                        description: User is a SELinux user label that applies to
+                          the container.
+                        type: string
+                    type: object
+                  seccompProfile:
+                    description: The seccomp options to use by this container. If
+                      seccomp options are provided at both the pod & container level,
+                      the container options override the pod options.
+                    properties:
+                      localhostProfile:
+                        description: localhostProfile indicates a profile defined
+                          in a file on the node should be used. The profile must be
+                          preconfigured on the node to work. Must be a descending
+                          path, relative to the kubelet's configured seccomp profile
+                          location. Must only be set if type is "Localhost".
+                        type: string
+                      type:
+                        description: "type indicates which kind of seccomp profile
+                          will be applied. Valid options are: \n Localhost - a profile
+                          defined in a file on the node should be used. RuntimeDefault
+                          - the container runtime default profile should be used.
+                          Unconfined - no profile should be applied."
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  windowsOptions:
+                    description: The Windows specific settings applied to all containers.
+                      If unspecified, the options from the PodSecurityContext will
+                      be used. If set in both SecurityContext and PodSecurityContext,
+                      the value specified in SecurityContext takes precedence.
+                    properties:
+                      gmsaCredentialSpec:
+                        description: GMSACredentialSpec is where the GMSA admission
+                          webhook (https://github.com/kubernetes-sigs/windows-gmsa)
+                          inlines the contents of the GMSA credential spec named by
+                          the GMSACredentialSpecName field.
+                        type: string
+                      gmsaCredentialSpecName:
+                        description: GMSACredentialSpecName is the name of the GMSA
+                          credential spec to use.
+                        type: string
+                      hostProcess:
+                        description: HostProcess determines if a container should
+                          be run as a 'Host Process' container. This field is alpha-level
+                          and will only be honored by components that enable the WindowsHostProcessContainers
+                          feature flag. Setting this field without the feature flag
+                          will result in errors when validating the Pod. All of a
+                          Pod's containers must have the same effective HostProcess
+                          value (it is not allowed to have a mix of HostProcess containers
+                          and non-HostProcess containers).  In addition, if HostProcess
+                          is true then HostNetwork must also be set to true.
+                        type: boolean
+                      runAsUserName:
+                        description: The UserName in Windows to run the entrypoint
+                          of the container process. Defaults to the user specified
+                          in image metadata if unspecified. May also be set in PodSecurityContext.
+                          If set in both SecurityContext and PodSecurityContext, the
+                          value specified in SecurityContext takes precedence.
+                        type: string
+                    type: object
+                type: object
+              storageProperties:
+                description: Provides all storage backend related properties for backups.
+                properties:
+                  apiProfile:
+                    description: AWS Profile to use for authentication.
+                    type: string
+                  backupGracePeriodInDays:
+                    description: Age after which orphan sstables can be deleted from
+                      the storage backend. Protects from race conditions between purge
+                      and ongoing backups. Defaults to 10 days.
+                    type: integer
+                  bucketName:
+                    description: The name of the bucket to use for the backups.
+                    type: string
+                  concurrentTransfers:
+                    default: 1
+                    description: Number of concurrent uploads. Helps maximizing the
+                      speed of uploads but puts more pressure on the network. Defaults
+                      to 1.
+                    type: integer
+                  host:
+                    description: Host to connect to for the storage backend.
+                    type: string
+                  maxBackupAge:
+                    default: 0
+                    description: Maximum backup age that the purge process should
+                      observe.
+                    type: integer
+                  maxBackupCount:
+                    default: 0
+                    description: Maximum number of backups to keep (used by the purge
+                      process). Default is unlimited.
+                    type: integer
+                  multiPartUploadThreshold:
+                    default: 104857600
+                    description: File size over which cloud specific cli tools are
+                      used for transfer. Defaults to 100 MB.
+                    type: integer
+                  port:
+                    description: Port to connect to for the storage backend.
+                    type: integer
+                  prefix:
+                    description: Name of the top level folder in the backup bucket.
+                      If empty, the cluster name will be used.
+                    type: string
+                  region:
+                    description: Region of the storage bucket. Defaults to "default".
+                    type: string
+                  secure:
+                    description: Whether to use SSL for the storage backend.
+                    type: boolean
+                  storageProvider:
+                    description: The storage backend to use for the backups.
+                    enum:
+                    - local
+                    - google_storage
+                    - azure_blobs
+                    - s3
+                    - s3_compatible
+                    - s3_rgw
+                    - ibm_storage
+                    type: string
+                  storageSecretRef:
+                    description: Kubernetes Secret that stores the key file for the
+                      storage provider's API. If using 'local' storage, this value
+                      is ignored.
+                    type: string
+                  transferMaxBandwidth:
+                    default: 50MB/s
+                    description: Max upload bandwidth in MB/s. Defaults to 50 MB/s.
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -210,4 +211,52 @@ func Coalesce(clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.Cas
 	}
 
 	return dcConfig
+}
+
+func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
+	if dcPodTemplateSpec.Spec.Containers != nil {
+		for i, container := range dcPodTemplateSpec.Spec.Containers {
+			if container.Name == containerName {
+				return i, true
+			}
+		}
+	}
+
+	return -1, false
+}
+
+func FindInitContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
+	if dcPodTemplateSpec != nil {
+		for i, container := range dcPodTemplateSpec.Spec.InitContainers {
+			if container.Name == containerName {
+				return i, true
+			}
+		}
+	}
+
+	return -1, false
+}
+
+func FindVolume(dcPodTemplateSpec *corev1.PodTemplateSpec, volumeName string) (int, bool) {
+	if dcPodTemplateSpec != nil {
+		for i, volume := range dcPodTemplateSpec.Spec.Volumes {
+			if volume.Name == volumeName {
+				return i, true
+			}
+		}
+	}
+
+	return -1, false
+}
+
+func FindAdditionalVolume(dcConfig *DatacenterConfig, volumeName string) (int, bool) {
+	if dcConfig.StorageConfig.AdditionalVolumes != nil {
+		for i, volume := range dcConfig.StorageConfig.AdditionalVolumes {
+			if volume.Name == volumeName {
+				return i, true
+			}
+		}
+	}
+
+	return -1, false
 }
