@@ -138,7 +138,7 @@ func (cfg PrometheusResourcer) NewStargateServiceMonitor() (promapi.ServiceMonit
 		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					k8ssandraapi.ManagedByLabel: "k8ssandra-operator",
+					k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueStargateController,
 					stargateapi.StargateLabel:   cfg.MonitoringTargetName,
 				},
 			},
