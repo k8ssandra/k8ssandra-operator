@@ -6,5 +6,5 @@ resources:
   - ../../../cass-operator
 
 components:
+
   - ../../../components/cluster-scope
-  - ../../../components/namespace
