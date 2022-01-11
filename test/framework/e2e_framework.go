@@ -210,26 +210,65 @@ components:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: {{ .Namespace }}
-
 resources:
 - ../../../../config/deployments/control-plane
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
+
+
+patches:
+- target:
+    kind: Namespace
+    labelSelector: "control-plane=k8ssandra-operator"
+  options:
+    allowNameChange: true
+  patch: |
+    - op: replace
+      path: /metadata/name
+      value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: test-ns
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+    - metadata.namespace
 `
 
 		dataPlaneTmpl = `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: {{ .Namespace }}
-
 resources:
 - ../../../../config/deployments/data-plane
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
+
+patches:
+- target:
+    kind: Namespace
+    labelSelector: "control-plane=k8ssandra-operator"
+  options:
+    allowNameChange: true
+  patch: |
+    - op: replace
+      path: /metadata/name
+      value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: test-ns
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+    - metadata.namespace
 `
 	}
 
