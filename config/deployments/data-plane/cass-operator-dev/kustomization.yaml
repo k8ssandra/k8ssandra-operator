@@ -5,7 +5,7 @@ namespace: k8ssandra-operator
 
 resources:
   - ../../default
-  - ../../../../../cass-operator/config/deployments/default
+  - ../../../cass-operator
 
 components:
   - ../../../components/data-plane

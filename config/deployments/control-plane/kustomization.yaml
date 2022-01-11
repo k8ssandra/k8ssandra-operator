@@ -5,8 +5,7 @@ namespace: k8ssandra-operator
 
 resources:
   - ../default
-  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
-
+  - ../../cass-operator
 images:
   - name: k8ssandra/cass-operator
-    newTag: 9d1c58a5
+    newTag: 6a78a823
