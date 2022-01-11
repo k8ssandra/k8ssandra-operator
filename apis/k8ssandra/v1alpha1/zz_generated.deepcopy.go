@@ -1259,31 +1259,6 @@ func (in *CassandraYaml) DeepCopyInto(out *CassandraYaml) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.RpcKeepalive != nil {
-		in, out := &in.RpcKeepalive, &out.RpcKeepalive
-		*out = new(bool)
-		**out = **in
-	}
-	if in.RpcMaxThreads != nil {
-		in, out := &in.RpcMaxThreads, &out.RpcMaxThreads
-		*out = new(int)
-		**out = **in
-	}
-	if in.RpcMinThreads != nil {
-		in, out := &in.RpcMinThreads, &out.RpcMinThreads
-		*out = new(int)
-		**out = **in
-	}
-	if in.RpcRecvBuffSizeInBytes != nil {
-		in, out := &in.RpcRecvBuffSizeInBytes, &out.RpcRecvBuffSizeInBytes
-		*out = new(int)
-		**out = **in
-	}
-	if in.RpcSendBuffSizeInBytes != nil {
-		in, out := &in.RpcSendBuffSizeInBytes, &out.RpcSendBuffSizeInBytes
-		*out = new(int)
-		**out = **in
-	}
 	if in.SlowQueryLogTimeoutInMs != nil {
 		in, out := &in.SlowQueryLogTimeoutInMs, &out.SlowQueryLogTimeoutInMs
 		*out = new(int)

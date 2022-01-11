@@ -891,21 +891,6 @@ spec:
                           row_cache_size_in_mb:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
-                          rpc_keepalive:
-                            description: Exists in 3.11, 4.0, trunk
-                            type: boolean
-                          rpc_max_threads:
-                            description: Exists in 3.11
-                            type: integer
-                          rpc_min_threads:
-                            description: Exists in 3.11
-                            type: integer
-                          rpc_recv_buff_size_in_bytes:
-                            description: Exists in 3.11
-                            type: integer
-                          rpc_send_buff_size_in_bytes:
-                            description: Exists in 3.11
-                            type: integer
                           slow_query_log_timeout_in_ms:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
@@ -1877,21 +1862,6 @@ spec:
                                   type: integer
                                 row_cache_size_in_mb:
                                   description: Exists in 3.11, 4.0, trunk
-                                  type: integer
-                                rpc_keepalive:
-                                  description: Exists in 3.11, 4.0, trunk
-                                  type: boolean
-                                rpc_max_threads:
-                                  description: Exists in 3.11
-                                  type: integer
-                                rpc_min_threads:
-                                  description: Exists in 3.11
-                                  type: integer
-                                rpc_recv_buff_size_in_bytes:
-                                  description: Exists in 3.11
-                                  type: integer
-                                rpc_send_buff_size_in_bytes:
-                                  description: Exists in 3.11
                                   type: integer
                                 slow_query_log_timeout_in_ms:
                                   description: Exists in 3.11, 4.0, trunk

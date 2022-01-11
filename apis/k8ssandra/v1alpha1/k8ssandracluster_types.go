@@ -1143,26 +1143,6 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RpcKeepalive *bool `json:"rpc_keepalive,omitempty"`
-
-	// Exists in 3.11
-	// +optional
-	RpcMaxThreads *int `json:"rpc_max_threads,omitempty"`
-
-	// Exists in 3.11
-	// +optional
-	RpcMinThreads *int `json:"rpc_min_threads,omitempty"`
-
-	// Exists in 3.11
-	// +optional
-	RpcRecvBuffSizeInBytes *int `json:"rpc_recv_buff_size_in_bytes,omitempty"`
-
-	// Exists in 3.11
-	// +optional
-	RpcSendBuffSizeInBytes *int `json:"rpc_send_buff_size_in_bytes,omitempty"`
-
-	// Exists in 3.11, 4.0, trunk
-	// +optional
 	SlowQueryLogTimeoutInMs *int `json:"slow_query_log_timeout_in_ms,omitempty"`
 
 	// Exists in 3.11, 4.0, trunk
