@@ -219,14 +219,15 @@ multi-deploy:
 	kubectl -n $(NS) apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
 
 cleanup:
-	kind delete cluster --name k8ssandra-0
-	kind delete cluster --name k8ssandra-1
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kind delete cluster --name k8ssandra-$$i; \
+	done
 
 create-kind-cluster:
 	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes 4
 
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \

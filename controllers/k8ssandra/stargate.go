@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileStargate(
@@ -166,18 +165,9 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 		return result.Continue()
 	}
 
-	kcCopy := kc.DeepCopy()
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	if err := r.ClientCache.GetLocalClient().Patch(ctx, kc, patch); err != nil {
-		if errors.IsConflict(err) {
-			return result.RequeueSoon(1 * time.Second)
-		}
-		logger.Error(err, "version check failed")
-		return result.Error(err)
+	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
+		return recResult
 	}
-	// Need to copy the status here as in-memory status updates can be lost by results
-	// returned from the api server.
-	kc.Status = kcCopy.Status
 
 	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 		logger.Error(err, "Failed to get remote client")

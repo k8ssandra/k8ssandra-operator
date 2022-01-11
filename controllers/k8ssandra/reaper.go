@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
@@ -47,18 +46,9 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 
 	logger.Info("Reconciling Reaper schema")
 
-	kcCopy := kc.DeepCopy()
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	if err := r.ClientCache.GetLocalClient().Patch(ctx, kc, patch); err != nil {
-		if errors.IsConflict(err) {
-			return result.RequeueSoon(1 * time.Second)
-		}
-		logger.Error(err, "version check failed")
-		return result.Error(err)
+	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
+		return recResult
 	}
-	// Need to copy the status here as in-memory status updates can be lost by results
-	// returned from the api server.
-	kc.Status = kcCopy.Status
 
 	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
