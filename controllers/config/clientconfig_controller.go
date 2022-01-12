@@ -53,12 +53,38 @@ type ClientConfigReconciler struct {
 			- Security /  user rights? If a namespace is allowed to add a K8ssandraCluster, but not new Kubernetes clusters to connect to?
 */
 
-/*
-	TODO Add a channel that other controllers listen? So that they can add new Watches?
-	TODO Expose new cluster loading watchers in each controller?
-*/
-
 func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	clientConfig := configapi.ClientConfig{}
+	if err := r.Client.Get(ctx, req.NamespacedName, &clientConfig); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// ClientConfig was deleted, shutdown to refresh correct list
+	if clientConfig.GetDeletionTimestamp() != nil {
+		r.shutdownFunc()
+		return ctrl.Result{}, nil
+	}
+
+	// ClientConfig without proper annotations, must be a new item, shutdown to refresh correct list
+	if !metav1.HasAnnotation(clientConfig.ObjectMeta, ClientConfigHashAnnotation) ||
+		metav1.HasAnnotation(clientConfig.ObjectMeta, KubeSecretHashAnnotation) {
+		r.shutdownFunc()
+		return ctrl.Result{}, nil
+	}
+
+	cCfgHash, secretHash, err := calculateHashes(ctx, r.Client, clientConfig)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Verify hashes are still original
+	if clientConfig.Annotations[ClientConfigHashAnnotation] != cCfgHash ||
+		clientConfig.Annotations[KubeSecretHashAnnotation] != secretHash {
+		// Hashes do not match, something was modified, shutdown to refresh
+		r.shutdownFunc()
+		return ctrl.Result{}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
