@@ -180,11 +180,17 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 			return result.Error(err)
 		}
 
-		replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
-		if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
-			logger.Error(err, "Failed to ensure keyspace replication")
-			return result.Error(err)
+	datacenters := make([]api.CassandraDatacenterTemplate, 0)
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
+			datacenters = append(datacenters, dc)
 		}
+	}
+	replication := cassandra.ComputeReplication(3, datacenters...)
+	if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
+		logger.Error(err, "Failed to ensure keyspace replication")
+		return result.Error(err)
+	}
 
 		if err = stargate.ReconcileAuthTable(managementApi, logger); err != nil {
 			logger.Error(err, "Failed to reconcile Stargate auth table")

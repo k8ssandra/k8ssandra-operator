@@ -7,6 +7,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -885,9 +886,14 @@ func checkKeyspaceExists(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace string,
 ) {
-	keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
-	require.NoError(t, err, "failed to describe keyspaces")
-	assert.Contains(t, keyspaces, keyspace)
+	assert.Eventually(t, func() bool {
+		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
+		if err != nil {
+			t.Logf("failed to desctibe keyspaces: %v", err)
+			return false
+		}
+		return strings.Contains(keyspaces, keyspace)
+	}, 1*time.Minute, 3*time.Second)
 }
 
 func configureZeroLog() {

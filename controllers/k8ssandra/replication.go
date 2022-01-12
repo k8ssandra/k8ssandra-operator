@@ -69,20 +69,20 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 		return recResult
 	}
 
-	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
 		logger.Error(err, "Failed to create ManagementApiFacade")
 		return result.Error(err)
 	}
 
-	keyspaces := getReplicatedInternalKeyspaces(kc)
+	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
 	datacenters := cassandra.GetDatacentersForReplication(kc)
 	replication := cassandra.ComputeReplication(3, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 
 	for _, ks := range keyspaces {
-		if err := managementApiFacade.EnsureKeyspaceReplication(ks, replication); err != nil {
+		if err := mgmtApi.EnsureKeyspaceReplication(ks, replication); err != nil {
 			logger.Error(err, "Failed to update replication", "keyspace", ks)
 			return result.Error(err)
 		}
