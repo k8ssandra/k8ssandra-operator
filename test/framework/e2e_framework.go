@@ -230,7 +230,7 @@ patches:
 replacements:
 - source: 
     kind: Namespace
-    name: test-ns
+    name: {{ .Namespace }}
     fieldPath: metadata.name
   targets:
   - select:
@@ -262,7 +262,7 @@ patches:
 replacements:
 - source: 
     kind: Namespace
-    name: test-ns
+    name: {{ .Namespace }}
     fieldPath: metadata.name
   targets:
   - select:
