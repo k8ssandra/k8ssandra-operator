@@ -22,7 +22,7 @@ spec:
         nodeAffinityLabels:
           "topology.kubernetes.io/zone": rack2
     config:
-      cassandraYaml:
+      cassandra-yaml:
         auto_snapshot: false
         memtable_flush_writers: 1
         commitlog_segment_size_in_mb: 2

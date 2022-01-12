@@ -3,6 +3,7 @@ package cassandra
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -63,7 +64,7 @@ const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, logger logr.Logger) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace
@@ -73,6 +74,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info("Cassandra config JSON", "config", string(rawConfig))
 
 	if template.StorageConfig == nil {
 		return nil, DCConfigIncomplete{"template.StorageConfig"}
@@ -116,6 +119,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	if template.MgmtAPIHeap != nil {
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
+
+	logger.Info("DC Config JSON", "config", string(dc.Spec.Config))
 
 	return dc, nil
 }

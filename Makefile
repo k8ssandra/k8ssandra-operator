@@ -161,8 +161,8 @@ single-up: cleanup build manifests kustomize docker-build create-kind-cluster ki
 single-reload: build manifests kustomize docker-build kind-load-image cert-manager
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
-	kubectl delete pod -l control-plane=k8ssandra-operator
-	kubectl rollout status deployment k8ssandra-operator
+	kubectl delete pod -l control-plane=k8ssandra-operator -n k8ssandra-operator
+	kubectl rollout status deployment k8ssandra-operator -n k8ssandra-operator
 ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) delete pod -l name=cass-operator
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager

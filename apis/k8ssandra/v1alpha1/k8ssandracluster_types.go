@@ -327,7 +327,7 @@ type EmbeddedObjectMeta struct {
 // TODO Implement Stringer interface. It will helpful for debugging and testing.
 type CassandraConfig struct {
 	// +optional
-	CassandraYaml CassandraYaml `json:"cassandraYaml,omitempty"`
+	CassandraYaml CassandraYaml `json:"cassandra-yaml,omitempty"`
 
 	// +optional
 	JvmOptions JvmOptions `json:"jvmOptions,omitempty"`

@@ -141,6 +141,10 @@ func validateConfig(config *api.CassandraConfig) error {
 			return fmt.Errorf("RangeTombstoneListGrowthFactor must be a valid float: %v", err)
 		}
 	}
+
+	if config.CassandraYaml.CommitlogSyncPeriodInMs != nil && config.CassandraYaml.CommitlogSyncBatchWindowInMs != nil {
+		return fmt.Errorf("CommitlogSyncPeriodInMs and CommitlogSyncBatchWindowInMs are mutually exclusive")
+	}
 	return nil
 }
 
