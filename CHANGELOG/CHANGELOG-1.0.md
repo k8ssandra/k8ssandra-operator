@@ -36,6 +36,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#267](https://github.com/k8ssandra/k8ssandra-operator/issues/267) Use the K8ssandraCluster name as cluster name for CassandraDatacenter objects
 * [ENHANCEMENT] [#297](https://github.com/k8ssandra/k8ssandra-operator/issues/297) Reconcile standalone Stargate auth schema
 * [TESTING] [#299](https://github.com/k8ssandra/k8ssandra-operator/issues/299) Cluster-scoped e2e test failing
+* [FEATURE] [#178](https://github.com/k8ssandra/k8ssandra-operator/issues/178) If ClientConfig is modified, automatically restart the k8ssandra-operator
 
 ## v1.0.0-alpha.2 - 2021-12-03
 
