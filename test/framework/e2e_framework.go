@@ -324,7 +324,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: defaultControlPlaneContext, ServerSide: true}
+		options := kubectl.Options{Context: defaultControlPlaneContext, ServerSide: true}
 		return kubectl.Apply(options, buf)
 	}
 
@@ -337,7 +337,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: ctx, ServerSide: true}
+		options := kubectl.Options{Context: ctx, ServerSide: true}
 		if err := kubectl.Apply(options, buf); err != nil {
 			return err
 		}
