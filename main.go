@@ -145,17 +145,19 @@ func main() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
 
-		additionalClusters, err := config.InitClientConfigs(ctx, mgr, clientCache, scheme, watchNamespace)
+		configCtrler := &configctrl.ClientConfigReconciler{
+			Client:      mgr.GetClient(),
+			Scheme:      mgr.GetScheme(),
+			ClientCache: clientCache,
+		}
+
+		additionalClusters, err := configCtrler.InitClientConfigs(ctx, mgr, watchNamespace)
 		if err != nil {
 			setupLog.Error(err, "unable to create manager cluster connections")
 			os.Exit(1)
 		}
 
-		if err = (&configctrl.ClientConfigReconciler{
-			Client:      mgr.GetClient(),
-			Scheme:      mgr.GetScheme(),
-			ClientCache: clientCache,
-		}).SetupWithManager(mgr, cancel); err != nil {
+		if err = configCtrler.SetupWithManager(mgr, cancel); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ClientConfig")
 			os.Exit(1)
 		}
