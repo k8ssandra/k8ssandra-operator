@@ -4,15 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
@@ -331,7 +332,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		return err
 	}
 
-	if err := f.WaitForCassOperatorToBeReady(opts.operatorNamespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+	if err := f.WaitForCassOperatorToBeReady("cass-operator", polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
 		return err
 	}
