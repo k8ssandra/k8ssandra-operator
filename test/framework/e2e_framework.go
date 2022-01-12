@@ -312,10 +312,10 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 		return err
 	}
 
-	if err := kustomize.SetNamespace(kdir, namespace); err != nil {
-		f.logger.Error(err, "failed to set namespace for kustomization directory", "dir", kdir)
-		return err
-	}
+	// if err := kustomize.SetNamespace(kdir, namespace); err != nil {
+	// 	f.logger.Error(err, "failed to set namespace for kustomization directory", "dir", kdir)
+	// 	return err
+	// }
 
 	if len(contexts) == 0 {
 		buf, err := kustomize.BuildDir(kdir)
