@@ -1,9 +1,20 @@
 package config
 
 import (
+	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+
+	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 )
 
 type ReconcilerConfig struct {
@@ -51,4 +62,61 @@ func InitConfig() *ReconcilerConfig {
 		DefaultDelay: defaultDelay,
 		LongDelay:    longDelay,
 	}
+}
+
+// InitClientConfigs will fetch clientConfigs from the current cluster (control plane cluster) and create all the required Cluster objects for
+// other controllers to use
+func InitClientConfigs(ctx context.Context, mgr ctrl.Manager, clientCache *clientcache.ClientCache, scheme *runtime.Scheme, watchNamespace string) ([]cluster.Cluster, error) {
+	uncachedClient := clientCache.GetLocalNonCacheClient()
+	clientConfigs := make([]configapi.ClientConfig, 0)
+	namespaces := strings.Split(watchNamespace, ",")
+
+	for _, ns := range namespaces {
+		cConfigs := configapi.ClientConfigList{}
+		err := uncachedClient.List(ctx, &cConfigs, client.InNamespace(ns))
+		if err != nil {
+			return nil, err
+		}
+		clientConfigs = append(clientConfigs, cConfigs.Items...)
+	}
+
+	additionalClusters := make([]cluster.Cluster, 0, len(clientConfigs))
+
+	for _, cCfg := range clientConfigs {
+		// TODO If the cCfg does not have hash annotation, add it
+		// Create clients and add them to the client cache
+		cfg, err := clientCache.GetRestConfig(&cCfg)
+		if err != nil {
+			return nil, err
+		}
+
+		// Add cluster to the manager
+		var c cluster.Cluster
+		if strings.Contains(watchNamespace, ",") {
+			c, err = cluster.New(cfg, func(o *cluster.Options) {
+				o.Scheme = scheme
+				o.Namespace = ""
+				o.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+			})
+		} else {
+			c, err = cluster.New(cfg, func(o *cluster.Options) {
+				o.Scheme = scheme
+				o.Namespace = watchNamespace
+			})
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		clientCache.AddClient(cCfg.GetContextName(), c.GetClient())
+
+		err = mgr.Add(c)
+		if err != nil {
+			return nil, err
+		}
+
+		additionalClusters = append(additionalClusters, c)
+	}
+
+	return additionalClusters, nil
 }

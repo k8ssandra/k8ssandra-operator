@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -42,7 +43,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -52,6 +52,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	configctrl "github.com/k8ssandra/k8ssandra-operator/controllers/config"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
@@ -137,63 +138,27 @@ func main() {
 		setupLog.Error(err, "unable to fetch config connection")
 		os.Exit(1)
 	}
-	ctx := ctrl.SetupSignalHandler()
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	reconcilerConfig := config.InitConfig()
 
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
 
-		cConfigs := configapi.ClientConfigList{}
-		err = uncachedClient.List(ctx, &cConfigs, client.InNamespace(watchNamespace))
+		additionalClusters, err := config.InitClientConfigs(ctx, mgr, clientCache, scheme, watchNamespace)
 		if err != nil {
-			setupLog.Error(err, "unable to fetch cluster connections")
+			setupLog.Error(err, "unable to create manager cluster connections")
 			os.Exit(1)
 		}
 
-		additionalClusters := make([]cluster.Cluster, 0, len(cConfigs.Items))
-		contextNames := make([]string, 0, len(cConfigs.Items))
-
-		for _, cCfg := range cConfigs.Items {
-			// Create clients and add them to the client cache
-			cfg, err := clientCache.GetRestConfig(&cCfg)
-			if err != nil {
-				setupLog.Error(err, "unable to setup cluster connections")
-				os.Exit(1)
-			}
-
-			// Add cluster to the manager
-			var c cluster.Cluster
-			if strings.Contains(watchNamespace, ",") {
-				c, err = cluster.New(cfg, func(o *cluster.Options) {
-					o.Scheme = scheme
-					o.Namespace = ""
-					o.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-				})
-			} else {
-				c, err = cluster.New(cfg, func(o *cluster.Options) {
-					o.Scheme = scheme
-					o.Namespace = watchNamespace
-				})
-			}
-			if err != nil {
-				setupLog.Error(err, "unable to create manager cluster connection")
-				os.Exit(1)
-			}
-
-			clientCache.AddClient(cCfg.GetContextName(), c.GetClient())
-
-			err = mgr.Add(c)
-			if err != nil {
-				setupLog.Error(err, "unable to add cluster to manager")
-				os.Exit(1)
-			}
-
-			additionalClusters = append(additionalClusters, c)
-			contextNames = append(contextNames, cCfg.GetContextName())
+		if err = (&configctrl.ClientConfigReconciler{
+			Client:      mgr.GetClient(),
+			Scheme:      mgr.GetScheme(),
+			ClientCache: clientCache,
+		}).SetupWithManager(mgr, cancel); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "ClientConfig")
+			os.Exit(1)
 		}
-
-		// Create the reconciler and start it
 
 		if err = (&k8ssandractrl.K8ssandraClusterReconciler{
 			ReconcilerConfig: reconcilerConfig,
@@ -236,6 +201,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO Are these really behaving correctly? Or is backup per cluster manual job?
 	if err = (&medusactrl.CassandraBackupReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
