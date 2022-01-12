@@ -73,8 +73,8 @@ func TestK8ssandraCluster(t *testing.T) {
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 1 * time.Second
-	reconcilerConfig.LongDelay = 5 * time.Second
+	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
+	reconcilerConfig.LongDelay = 300 * time.Millisecond
 
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&K8ssandraClusterReconciler{

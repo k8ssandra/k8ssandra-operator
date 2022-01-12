@@ -356,10 +356,6 @@ func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 }
 
 func TestDatacentersReplication(t *testing.T) {
-	t.Run("EachDcContainsKeyspaces", testEachDcContainsKeyspaces)
-}
-
-func testEachDcContainsKeyspaces(t *testing.T) {
 	assert := assert.New(t)
 
 	replication := &Replication{

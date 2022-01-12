@@ -71,6 +71,7 @@ jobs:
       matrix:
         e2e_test:
           - CreateMultiDatacenterCluster
+          - AddDcToCluster
           - CheckStargateApisWithMultiDcCluster
           - CreateMultiStargateAndDatacenter
           - CreateMultiReaper
