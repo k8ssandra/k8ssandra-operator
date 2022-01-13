@@ -3,8 +3,9 @@ package reaper
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"net/url"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -12,7 +13,7 @@ import (
 )
 
 type Manager interface {
-	Connect(reaper *api.Reaper) error
+	Connect(ctx context.Context, reaper *api.Reaper, username, password string) error
 	AddClusterToReaper(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) error
 	VerifyClusterIsConfigured(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) (bool, error)
 }
@@ -25,7 +26,7 @@ type restReaperManager struct {
 	reaperClient reaperclient.Client
 }
 
-func (r *restReaperManager) Connect(reaper *api.Reaper) error {
+func (r *restReaperManager) Connect(ctx context.Context, reaper *api.Reaper, username, password string) error {
 	// Include the namespace in case Reaper is deployed in a different namespace than
 	// the CassandraDatacenter.
 	reaperSvc := GetServiceName(reaper.Name) + "." + reaper.Namespace
@@ -34,6 +35,12 @@ func (r *restReaperManager) Connect(reaper *api.Reaper) error {
 		return err
 	}
 	r.reaperClient = reaperclient.NewClient(u)
+	if username != "" && password != "" {
+		if err := r.reaperClient.Login(ctx, username, password); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

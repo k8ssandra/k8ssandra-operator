@@ -161,11 +161,11 @@ single-up: cleanup build manifests kustomize docker-build create-kind-cluster ki
 single-reload: build manifests kustomize docker-build kind-load-image cert-manager
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
-	kubectl delete pod -l control-plane=k8ssandra-operator -n k8ssandra-operator
-	kubectl rollout status deployment k8ssandra-operator -n k8ssandra-operator
+	kubectl delete pod -l control-plane=k8ssandra-operator -n $(NS)
+	kubectl rollout status deployment k8ssandra-operator -n $(NS)
 ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n $(NS) delete pod -l name=cass-operator
-	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
+	kubectl -n $(NS) delete pod -l name=cass-operator -n $(NS)
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager -n $(NS)
 endif
 
 multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
@@ -354,3 +354,8 @@ install-kuttl:
   	ARCH="$$(uname -m | sed -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$$/arm64/')" ; \
 	curl -LO https://github.com/kudobuilder/kuttl/releases/download/v0.11.1/kuttl_0.11.1_$${OS}_$${ARCH}.tar.gz ; \
 	tar -zxvf kuttl_0.11.1_$${OS}_$${ARCH}.tar.gz ; 
+
+# Regenerate the mocks using mockery
+mocks:
+	mockery --dir=./pkg/cassandra --output=./pkg/mocks --name=ManagementApiFacade
+	mockery --dir=./pkg/reaper --output=./pkg/mocks --name=Manager  --filename=reaper_manager.go --structname=ReaperManager

@@ -18,6 +18,7 @@ package reaper
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -161,6 +162,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 		logger.Error(err, "Failed to collect Reaper auth variables")
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	}
+	logger.Info("Collected Reaper auth variables", "authVars", authVars)
 
 	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, authVars...)
 
@@ -271,63 +273,95 @@ func (r *ReaperReconciler) reconcileService(
 
 func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *reaperapi.Reaper, actualDc *cassdcapi.CassandraDatacenter, logger logr.Logger) (ctrl.Result, error) {
 	manager := r.NewManager()
-	if err := manager.Connect(actualReaper); err != nil {
-		logger.Error(err, "failed to connect to reaper instance")
+	// Get the Reaper UI secret username and password values if auth is enabled
+	if username, password, err := r.getReaperUISecret(ctx, actualReaper, logger); err != nil {
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
-	} else if found, err := manager.VerifyClusterIsConfigured(ctx, actualDc); err != nil {
-		logger.Error(err, "failed to verify the cluster is registered with reaper")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
-	} else if !found {
-		logger.Info("registering cluster with reaper")
-		if err = manager.AddClusterToReaper(ctx, actualDc); err != nil {
-			logger.Error(err, "failed to register cluster with reaper")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+	} else {
+		if err := manager.Connect(ctx, actualReaper, username, password); err != nil {
+			logger.Info("Reaper doesn't seem to be running yet")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		} else if found, err := manager.VerifyClusterIsConfigured(ctx, actualDc); err != nil {
+			logger.Info("failed to verify the cluster is registered with reaper. Maybe reaper is still starting up.")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		} else if !found {
+			logger.Info("registering cluster with reaper")
+			if err = manager.AddClusterToReaper(ctx, actualDc); err != nil {
+				logger.Error(err, "failed to register cluster with reaper")
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			}
 		}
 	}
 	return ctrl.Result{}, nil
 }
 
+func (r *ReaperReconciler) getReaperUISecret(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
+	secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.ReaperUiSecretRef.Name}
+	if secret, err := r.getSecret(ctx, secretKey); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Reaper ui secret does not exist")
+			return "", "", nil
+		} else {
+			logger.Error(err, "failed to get reaper ui secret")
+			return "", "", err
+		}
+	} else {
+		return string(secret.Data["username"]), string(secret.Data["password"]), nil
+	}
+}
+
 func (r *ReaperReconciler) collectAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
-	cqlVars, err := r.collectCqlAuthVars(ctx, actualReaper, logger)
+	cqlVars, err := r.collectAuthVarsForType(ctx, actualReaper, logger, "cql")
 	if err != nil {
 		return nil, err
 	}
-	jmxVars, err := r.collectJmxAuthVars(ctx, actualReaper, logger)
+	jmxVars, err := r.collectAuthVarsForType(ctx, actualReaper, logger, "jmx")
 	if err != nil {
 		return nil, err
 	}
-	return append(cqlVars, jmxVars...), nil
+	uiVars, err := r.collectAuthVarsForType(ctx, actualReaper, logger, "ui")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(uiVars) == 0 {
+		// if there are no ui vars, we need to disable auth in the reaper UI
+		uiVars = []*corev1.EnvVar{reaper.DisableAuthVar}
+	}
+
+	authVars := append(cqlVars, jmxVars...)
+	authVars = append(authVars, uiVars...)
+	return authVars, nil
 }
 
-func (r *ReaperReconciler) collectCqlAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
-	if len(actualReaper.Spec.CassandraUserSecretRef.Name) > 0 {
-		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.CassandraUserSecretRef.Name}
-		if secret, err := r.getSecret(ctx, secretKey); err != nil {
-			logger.Error(err, "Failed to get Cassandra authentication secret", "CassandraUserSecretName", secretKey)
-			return nil, err
-		} else if usernameEnvVar, passwordEnvVar, err := reaper.GetCassandraAuthEnvironmentVars(secret); err != nil {
-			logger.Error(err, "Failed to get Cassandra authentication env vars", "CassandraUserSecretName", secretKey)
-			return nil, err
-		} else {
-			return []*corev1.EnvVar{usernameEnvVar, passwordEnvVar, reaper.EnableCassAuthVar}, nil
-		}
+func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger, authType string) ([]*corev1.EnvVar, error) {
+	var secretRef *corev1.LocalObjectReference
+	var envVars []*corev1.EnvVar
+	switch authType {
+	case "cql":
+		secretRef = &actualReaper.Spec.CassandraUserSecretRef
+		envVars = []*corev1.EnvVar{reaper.EnableCassAuthVar}
+	case "jmx":
+		secretRef = &actualReaper.Spec.JmxUserSecretRef
+		envVars = []*corev1.EnvVar{}
+	case "ui":
+		secretRef = &actualReaper.Spec.ReaperUiSecretRef
+		envVars = []*corev1.EnvVar{reaper.EnableAuthVar}
 	}
-	return nil, nil
-}
 
-func (r *ReaperReconciler) collectJmxAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
-	if len(actualReaper.Spec.JmxUserSecretRef.Name) > 0 {
-		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.JmxUserSecretRef.Name}
+	if len(secretRef.Name) > 0 {
+		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: secretRef.Name}
 		if secret, err := r.getSecret(ctx, secretKey); err != nil {
-			logger.Error(err, "Failed to get JMX authentication secret", "JmxUserSecretName", secretKey)
+			logger.Error(err, "Failed to get Cassandra authentication secret", authType, secretKey)
 			return nil, err
-		} else if usernameEnvVar, passwordEnvVar, err := reaper.GetJmxAuthEnvironmentVars(secret); err != nil {
-			logger.Error(err, "Failed to get JMX authentication env vars", "JmxUserSecretName", secretKey)
+		} else if usernameEnvVar, passwordEnvVar, err := reaper.GetAuthEnvironmentVars(secret, authType); err != nil {
+			logger.Error(err, "Failed to get Cassandra authentication env vars", authType, secretKey)
 			return nil, err
 		} else {
-			return []*corev1.EnvVar{usernameEnvVar, passwordEnvVar}, nil
+			logger.Info("Found authentication secret", authType, secretKey.Name)
+			return append(envVars, usernameEnvVar, passwordEnvVar), nil
 		}
 	}
+	logger.Info("No authentication secret found", "authType", authType)
 	return nil, nil
 }
 

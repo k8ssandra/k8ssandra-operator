@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
@@ -51,6 +52,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			if jmxUserSecretRef.Name == "" {
 				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
+			reaperUiSecretRef := kc.Spec.Reaper.ReaperUiSecretRef
+			if reaperUiSecretRef.Name == "" {
+				reaperUiSecretRef.Name = reaper.DefaultUiSecretName(kc.Spec.Cassandra.Cluster)
+			}
 			kcKey := utils.GetKey(kc)
 			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
 				logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
@@ -58,6 +63,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			}
 			if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef.Name, kcKey); err != nil {
 				logger.Error(err, "Failed to reconcile Reaper JMX user secret", "ReaperJmxUserSecretRef", jmxUserSecretRef)
+				return result.Error(err)
+			}
+			if err := secret.ReconcileSecret(ctx, r.Client, reaperUiSecretRef.Name, kcKey); err != nil {
+				logger.Error(err, "Failed to reconcile Reaper UI secret", "ReaperUiSecretRef", reaperUiSecretRef)
 				return result.Error(err)
 			}
 			logger.Info("Reaper user secrets successfully reconciled")

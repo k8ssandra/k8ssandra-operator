@@ -2,6 +2,8 @@ package reaper
 
 import (
 	"fmt"
+	"strings"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -12,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strings"
 )
 
 const (
@@ -63,11 +64,6 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
 			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
-		},
-		{
-			// Reaper web UI authentication is currently always disabled
-			Name:  "REAPER_AUTH_ENABLED",
-			Value: "false",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",

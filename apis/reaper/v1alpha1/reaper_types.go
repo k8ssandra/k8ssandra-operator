@@ -172,6 +172,10 @@ type ReaperClusterTemplate struct {
 	// and "password".
 	// +optional
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
+
+	// Defines the secret which contains the shiro.ini file controlling the Reaper UI and REST API authentication.
+	// +optional
+	ReaperUiSecretRef corev1.LocalObjectReference `json:"reaperUiSecretRef,omitempty"`
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.

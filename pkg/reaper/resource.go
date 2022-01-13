@@ -57,6 +57,9 @@ func NewReaper(
 		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
 			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Name)
 		}
+		if desiredReaper.Spec.ReaperUiSecretRef.Name == "" {
+			desiredReaper.Spec.ReaperUiSecretRef.Name = DefaultUiSecretName(kc.Spec.Cassandra.Cluster)
+		}
 	}
 	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper
