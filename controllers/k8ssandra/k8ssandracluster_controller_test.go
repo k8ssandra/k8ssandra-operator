@@ -12,6 +12,7 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,6 +97,8 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
+	//t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
+
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -1193,6 +1196,114 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, sg1Key, &stargateapi.Stargate{})
 	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
+}
+
+// changeNumTokensValue creates a Datacenter and then changes the numTokens value
+// Such change is prohibited and should fail
+func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	k8sCtx := "cluster-1"
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Cluster: "test",
+				CassandraConfig: &api.CassandraConfig{
+					CassandraYaml: api.CassandraYaml{
+						NumTokens: pointer.Int(16),
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext:    k8sCtx,
+						Size:          1,
+						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	lastTransitionTime := metav1.Now()
+
+	t.Log("update datacenter status to scaling up")
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: lastTransitionTime,
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	t.Log("update datacenter status to ready")
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		lastTransitionTime = metav1.Now()
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: lastTransitionTime,
+		})
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionFalse,
+			LastTransitionTime: lastTransitionTime,
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	// Update the datacenter with a different num_tokens value and check that it failed
+	initialNumTokens := kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
+	kcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}, K8sContext: k8sCtx}
+	kcPatch := client.MergeFrom(kc.DeepCopy())
+	kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = pointer.Int(256)
+	err = f.Patch(ctx, kc, kcPatch, kcKey)
+	require.NoError(err, "got error patching num_tokens")
+
+	err = f.Client.Get(ctx, kcKey.NamespacedName, kc)
+	require.NoError(err, "failed to get K8ssandraCluster")
+	dc := cassdcapi.CassandraDatacenter{}
+	err = f.Client.Get(ctx, dcKey.NamespacedName, &dc)
+	require.NoError(err, "failed to get CassandraDatacenter")
+	dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
+	dcConfigYaml, _ := dcConfig["cassandra-yaml"].(map[string]interface{})
+	require.NotEqual(dcConfigYaml["num_tokens"], kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens, "num_tokens should not be updated")
+	require.Equal(dcConfigYaml["num_tokens"], initialNumTokens, "num_tokens should not be updated")
+
+	// Test cluster deletion
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
 }
 
 func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
