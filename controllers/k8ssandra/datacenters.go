@@ -66,7 +66,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
-		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig, logger)
+		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return result.Error(err), actualDcs
