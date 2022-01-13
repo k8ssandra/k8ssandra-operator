@@ -1,7 +1,6 @@
 package reaper
 
 import (
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
@@ -13,7 +12,7 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate
 	}
 	enableRemoteJmxAccess(dcConfig)
 	if authEnabled {
-		addCqlUser(reaperTemplate, dcConfig)
+		cassandra.AddCqlUser(reaperTemplate.CassandraUserSecretRef, dcConfig, DefaultUserSecretName(dcConfig.Cluster))
 		enableJmxAuth(reaperTemplate, dcConfig)
 	}
 }
@@ -25,19 +24,6 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate
 func enableRemoteJmxAccess(dcConfig *cassandra.DatacenterConfig) {
 	cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(c.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
-	})
-}
-
-// If auth is enabled in this cluster, we need to allow Reaper to access the cluster through CQL. This is done by
-// declaring a Cassandra user whose credentials are pulled from CassandraUserSecretRef.
-func addCqlUser(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig) {
-	cassandraUserSecretRef := reaperTemplate.CassandraUserSecretRef
-	if cassandraUserSecretRef.Name == "" {
-		cassandraUserSecretRef.Name = DefaultUserSecretName(dcConfig.Cluster)
-	}
-	dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
-		SecretName: cassandraUserSecretRef.Name,
-		Superuser:  true,
 	})
 }
 
