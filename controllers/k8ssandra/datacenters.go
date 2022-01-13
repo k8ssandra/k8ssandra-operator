@@ -2,7 +2,6 @@ package k8ssandra
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -39,8 +38,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		conf, _ := json.Marshal(dcTemplate)
-		logger.Info("DC template config", "dcTemplate", string(conf))
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -51,8 +48,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
-		conf, _ = json.Marshal(dcConfig.CassandraConfig.CassandraYaml)
-		logger.Info("dcConfig value", "dcConfig", string(conf))
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
@@ -110,6 +105,25 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
 				}
 
+				desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+				if err != nil {
+					return result.Error(err), actualDcs
+				}
+				actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+				if err != nil {
+					return result.Error(err), actualDcs
+				}
+
+				actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+				desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+				if foundActualYaml && foundDesiredYaml {
+					if actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
+						err = fmt.Errorf("tried to change num_tokens in an existing datacenter")
+						return result.Error(err), actualDcs
+					}
+				}
+
 				actualDc = actualDc.DeepCopy()
 				resourceVersion := actualDc.GetResourceVersion()
 				desiredDc.DeepCopyInto(actualDc)
@@ -136,8 +150,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		} else {
 			if errors.IsNotFound(err) {
 				// cassdc doesn't exist, we'll create it
-				logger.Info(fmt.Sprintf("Creating new CassandraDatacenter with config %v", desiredDc.Spec.Config))
-				logger.Info(fmt.Sprintf("Creating new CassandraDatacenter with config %s", string(desiredDc.Spec.Config)))
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
 					logger.Error(err, "Failed to create datacenter")
 					return result.Error(err), actualDcs

@@ -5,11 +5,11 @@ metadata:
 spec:
   cassandra:
     cluster: test
-    serverVersion: "3.11.11"
+    serverVersion: 3.11.11
     datacenters:
       - metadata:
           name: dc1
-        #k8sContext: kind-k8ssandra-0
+        k8sContext: kind-k8ssandra-0
         size: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -21,20 +21,15 @@ spec:
                 storage: 5Gi
         config:
           cassandra-yaml:
-            allocate_tokens_for_keyspace: system_auth
             allocate_tokens_for_local_replication_factor: 3
             audit_logging_options:
               enabled: false
-            auth_read_consistency_level: ANY
-            auth_write_consistency_level: ANY
-            auto_hints_cleanup_enabled: true
             auto_optimise_full_repair_streams: false
             auto_optimise_inc_repair_streams: true
             auto_optimise_preview_repair_streams: false
             auto_snapshot: true
             autocompaction_on_startup_enabled: false
             automatic_sstable_upgrade: true
-            available_processors: 17
             back_pressure_enabled: false
             batch_size_fail_threshold_in_kb: 20
             batch_size_warn_threshold_in_kb: 21
@@ -55,13 +50,10 @@ spec:
             commitlog_periodic_queue_size: 44
             commitlog_segment_size_in_mb: 45
             commitlog_sync: periodic
-            commitlog_sync_batch_window_in_ms: "47.1"
-            commitlog_sync_group_window_in_ms: 48
             commitlog_sync_period_in_ms: 49
             commitlog_total_space_in_mb: 50
             compaction_large_partition_warning_threshold_mb: 51
             compaction_throughput_mb_per_sec: 52
-            compaction_tombstone_warning_threshold: 53
             concurrent_compactors: 54
             concurrent_counter_writes: 55
             concurrent_materialized_view_builders: 56
@@ -80,46 +72,37 @@ spec:
             credentials_update_interval_in_ms: 69
             credentials_validity_in_ms: 70
             cross_node_timeout: false
-            default_keyspace_rf: 73
-            denylist_consistency_level: ANY
-            denylist_initial_load_retry_seconds: 75
-            denylist_max_keys_per_table: 76
-            denylist_max_keys_total: 77
-            denylist_refresh_seconds: 78
             diagnostic_events_enabled: false
             disk_access_mode: auto
-            disk_optimization_estimate_percentile: "82.1"
-            disk_optimization_page_cross_chance: "83.1"
+            disk_optimization_estimate_percentile: "0.1"
+            disk_optimization_page_cross_chance: "0.1"
             disk_optimization_strategy: ssd
             dynamic_snitch: false
             dynamic_snitch_badness_threshold: "86.1"
             dynamic_snitch_reset_interval_in_ms: 87
             dynamic_snitch_update_interval_in_ms: 88
-            enable_denylist_range_reads: false
-            enable_denylist_reads: true
-            enable_denylist_writes: false
             enable_drop_compact_storage: true
             enable_materialized_views: false
-            enable_partition_denylist: true
             enable_sasi_indexes: false
             enable_scripted_user_defined_functions: true
             enable_transient_replication: false
             enable_user_defined_functions: true
             enable_user_defined_functions_threads: false
-            failure_detector: FakeFailureDetector
             file_cache_enabled: false
             file_cache_round_up: true
             file_cache_size_in_mb: 105
             flush_compression: none
+            full_query_logging_options:
+              log_dir: /tmp
+              block: false
             gc_log_threshold_in_ms: 108
             gc_warn_threshold_in_ms: 109
-            hint_window_persistent_enabled: true
             hinted_handoff_disabled_datacenters:
               - dc1
             hinted_handoff_enabled: true
             hinted_handoff_throttle_in_kb: 113
             hints_flush_period_in_ms: 116
-            ideal_consistency_level: ANY
+            ideal_consistency_level: ONE
             index_summary_capacity_in_mb: 120
             index_summary_resize_interval_in_minutes: 121
             initial_range_tombstone_list_allocation_size: 122
@@ -150,13 +133,12 @@ spec:
             max_mutation_size_in_kb: 157
             max_streaming_retries: 158
             max_value_size_in_mb: 159
-            memtable_allocation_type: unslabbed_heap_buffers
-            memtable_cleanup_threshold: "161.1"
+            memtable_allocation_type: heap_buffers
+            memtable_cleanup_threshold: "0.1"
             memtable_flush_writers: 162
             memtable_heap_space_in_mb: 163
             memtable_offheap_space_in_mb: 164
             min_free_space_per_drive_in_mb: 165
-            minimum_keyspace_rf: 166
             native_transport_allow_older_protocols: false
             native_transport_flush_in_batches_legacy: true
             native_transport_idle_timeout_in_ms: 169
@@ -165,21 +147,18 @@ spec:
             native_transport_max_concurrent_requests_in_bytes: 172
             native_transport_max_concurrent_requests_in_bytes_per_ip: 173
             native_transport_max_frame_size_in_mb: 174
-            native_transport_max_negotiable_protocol_version: 175
-            native_transport_max_requests_per_second: 176
+            native_transport_max_negotiable_protocol_version: 4
             native_transport_max_threads: 177
-            native_transport_rate_limiting_enabled: true
             native_transport_receive_queue_capacity_in_bytes: 181
             networking_cache_size_in_mb: 183
-            num_tokens: 184
-            otc_coalescing_enough_coalesced_messages: 186
+            num_tokens: 186
+            otc_coalescing_enough_coalesced_messages: 10
             otc_coalescing_window_us: 188
-            paxos_cache_size_in_mb: 190
             periodic_commitlog_sync_lag_block_in_ms: 191
             permissions_cache_max_entries: 192
             permissions_update_interval_in_ms: 193
             permissions_validity_in_ms: 194
-            phi_convict_threshold: "195.1"
+            phi_convict_threshold: "8.1"
             prepared_statements_cache_size_mb: 196
             range_request_timeout_in_ms: 197
             range_tombstone_list_growth_factor: "198.1"
@@ -191,6 +170,9 @@ spec:
             repair_session_space_in_mb: 204
             repaired_data_tracking_for_partition_reads_enabled: false
             repaired_data_tracking_for_range_reads_enabled: true
+            replica_filtering_protection:
+              cached_rows_warn_threshold: 100
+              cached_rows_fail_threshold: 200
             report_unconfirmed_repaired_data_mismatches: true
             request_timeout_in_ms: 212
             roles_cache_max_entries: 214
@@ -214,15 +196,13 @@ spec:
             tombstone_warn_threshold: 255
             tracetype_query_ttl: 256
             tracetype_repair_ttl: 257
-            traverse_auth_from_root: true
             trickle_fsync: false
             trickle_fsync_interval_in_kb: 262
             truncate_request_timeout_in_ms: 263
             unlogged_batch_across_partitions_warn_threshold: 264
-            use_deterministic_table_id: false
             use_offheap_merkle_trees: true
-            user_defined_function_fail_timeout: 267
-            user_defined_function_warn_timeout: 268
+            user_defined_function_fail_timeout: 20
+            user_defined_function_warn_timeout: 10
             user_function_timeout_policy: ignore
             validation_preview_purge_head_start_in_sec: 270
             windows_timer_interval: 271

@@ -75,8 +75,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, 
 		return nil, err
 	}
 
-	logger.Info("Cassandra config JSON", "config", string(rawConfig))
-
 	if template.StorageConfig == nil {
 		return nil, DCConfigIncomplete{"template.StorageConfig"}
 	}
@@ -119,8 +117,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, 
 	if template.MgmtAPIHeap != nil {
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
-
-	logger.Info("DC Config JSON", "config", string(dc.Spec.Config))
 
 	return dc, nil
 }
