@@ -6,7 +6,6 @@ import (
 	"text/template"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -360,17 +359,4 @@ func addOrUpdateAdditionalVolume(dcConfig *cassandra.DatacenterConfig, volume *v
 		// Overwrite existing volume
 		dcConfig.StorageConfig.AdditionalVolumes[volumeIndex] = *volume
 	}
-}
-
-// If auth is enabled in this cluster, we need to allow Medusa to access the cluster through CQL. This is done by
-// declaring a Cassandra user whose credentials are pulled from CassandraUserSecretRef.
-func AddCqlUser(medusaTemplate *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, clusterName string) {
-	cassandraUserSecretRef := medusaTemplate.CassandraUserSecretRef
-	if cassandraUserSecretRef.Name == "" {
-		cassandraUserSecretRef.Name = CassandraUserSecretName(medusaTemplate, clusterName)
-	}
-	dcConfig.Users = append(dcConfig.Users, cassdcapi.CassandraUser{
-		SecretName: cassandraUserSecretRef.Name,
-		Superuser:  true,
-	})
 }
