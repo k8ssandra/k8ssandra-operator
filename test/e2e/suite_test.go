@@ -77,7 +77,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("AddDcToCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: addDcToCluster,
-		fixture: "add-dc",
+		fixture:  "add-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -641,7 +641,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name: "dc1",
+			Name:      "dc1",
 		},
 	}
 	checkDatacenterReady(t, ctx, dc1Key, f)
@@ -650,7 +650,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name: "test-dc1-stargate",
+			Name:      "test-dc1-stargate",
 		},
 	}
 	checkStargateReady(t, f, ctx, sg1Key)
@@ -659,7 +659,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name: "test-dc1-reaper",
+			Name:      "test-dc1-reaper",
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper1Key)
@@ -682,7 +682,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			Name: "dc2",
 		},
 		K8sContext: k8sCtx1,
-		Size: 1,
+		Size:       1,
 	})
 	annotations.AddAnnotation(kc, api.DcReplicationAnnotation, `{"dc2": {"ks1": 1, "ks2": 1}}`)
 
@@ -719,14 +719,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				return false
 			}
 			return strings.Contains(output, "'dc1': '1'") && strings.Contains(output, "'dc2': '1'")
-		}, 1 * time.Minute, 5 * time.Second, "failed to verify replication updated for keyspace %s", ks)
+		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 
 	sg2Key := framework.ClusterKey{
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name: "test-dc2-stargate",
+			Name:      "test-dc2-stargate",
 		},
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
@@ -735,7 +735,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name: "test-dc2-reaper",
+			Name:      "test-dc2-reaper",
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)

@@ -3,7 +3,6 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -102,6 +101,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			// cassdc already exists, we'll update it
 
+			// We need to reevaluate rebuildNeeded again. After the CassandraDatacenter is
+			// created, rebuildNeeded will be false on a subsequent reconciliation when we hit this
+			// point, so we have to check for the presence of the rebuild label on the actual
+			// CassandraDatacenter.
 			if _, rebuildNeeded = actualDc.Labels[api.RebuildLabel]; rebuildNeeded {
 				desiredDc.Labels[api.RebuildLabel] = "true"
 				// We need to recompute and reset the resource annotation here. On the
