@@ -3,5 +3,14 @@ kind: Kustomization
 
 resources:
   - ../../default
-  - ../../cass-operator
-
+  - ../../cass-operator/ns-scoped
+replacements:
+  - source: 
+      kind: Namespace
+      name: k8ssandra-operator
+      fieldPath: metadata.name
+    targets:
+    - select:
+        namespace: cass-operator
+      fieldPaths:
+      - metadata.namespace

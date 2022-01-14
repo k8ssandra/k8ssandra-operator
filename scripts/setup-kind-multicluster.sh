@@ -163,7 +163,7 @@ function deploy_cass_operator() {
 
   for ((i=0; i<$num_clusters; i++))
   do
-    kustomize build config/cass-operator | kubectl --context kind-k8ssandra-$i apply -f -
+    kustomize build config/cass-operator/cluster-scoped | kubectl --context kind-k8ssandra-$i apply -f -
   done
 }
 

@@ -3,7 +3,17 @@ kind: Kustomization
 
 resources:
   - ../default
-  - ../../cass-operator
+  - ../../cass-operator/ns-scoped
 images:
   - name: k8ssandra/cass-operator
     newTag: 6a78a823
+replacements:
+  - source: 
+      kind: Namespace
+      name: k8ssandra-operator
+      fieldPath: metadata.name
+    targets:
+    - select:
+        namespace: cass-operator
+      fieldPaths:
+      - metadata.namespace

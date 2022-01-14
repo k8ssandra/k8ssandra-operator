@@ -216,7 +216,6 @@ resources:
 components:
 - ../../../../config/components/mgmt-api-heap-size
 
-
 patches:
 - target:
     kind: Namespace
@@ -237,6 +236,18 @@ replacements:
       namespace: k8ssandra-operator
     fieldPaths:
     - metadata.namespace
+	- source: 
+    kind: Namespace
+    name: k8ssandra-operator
+    fieldPath: metadata.name
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+	kind: ClusterRoleBinding
+	fieldPaths:
+	- subjects.0.namespace
 `
 
 		dataPlaneTmpl = `
@@ -269,6 +280,14 @@ replacements:
       namespace: k8ssandra-operator
     fieldPaths:
     - metadata.namespace
+  - select:
+	namespace: cass-operator
+	fieldPaths:
+	- metadata.namespace
+  - select:
+	kind: ClusterRoleBinding
+	fieldPaths:
+	- subjects.0.namespace
 `
 	}
 
