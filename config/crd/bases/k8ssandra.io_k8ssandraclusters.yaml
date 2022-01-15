@@ -84,7 +84,7 @@ spec:
                       applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
                       for 4.x.
                     properties:
-                      cassandra-yaml:
+                      cassandraYaml:
                         description: 'CassandraYaml defines the contents of the cassandra.yaml
                           file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                         properties:
@@ -1056,7 +1056,7 @@ spec:
                             are applied to cassandra.yaml and jvm-options for 3.11.x
                             or jvm-server-options for 4.x.
                           properties:
-                            cassandra-yaml:
+                            cassandraYaml:
                               description: 'CassandraYaml defines the contents of
                                 the cassandra.yaml file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                               properties:

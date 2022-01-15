@@ -20,7 +20,7 @@ spec:
               requests:
                 storage: 5Gi
         config:
-          cassandra-yaml:
+          cassandraYaml:
             allocate_tokens_for_local_replication_factor: 3
             audit_logging_options:
               enabled: false

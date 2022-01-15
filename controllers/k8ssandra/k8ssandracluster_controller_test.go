@@ -97,8 +97,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
-	//t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
-
+	t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -1203,7 +1202,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	k8sCtx := "cluster-1"
+	k8sCtx := "cluster-0"
 
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1249,6 +1248,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
+
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
@@ -1281,8 +1281,8 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to patch datacenter status")
 
 	// Update the datacenter with a different num_tokens value and check that it failed
-	initialNumTokens := kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
-	kcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}, K8sContext: k8sCtx}
+	initialNumTokens := *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
+	kcKey := framework.ClusterKey{NamespacedName: utils.GetKey(kc), K8sContext: k8sCtx}
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = pointer.Int(256)
 	err = f.Patch(ctx, kc, kcPatch, kcKey)
@@ -1296,8 +1296,11 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
 	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
 	dcConfigYaml, _ := dcConfig["cassandra-yaml"].(map[string]interface{})
-	require.NotEqual(dcConfigYaml["num_tokens"], kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens, "num_tokens should not be updated")
-	require.Equal(dcConfigYaml["num_tokens"], initialNumTokens, "num_tokens should not be updated")
+	t.Logf("Initial num_tokens value: %d", initialNumTokens)
+	t.Logf("Spec num_tokens value: %d", *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens)
+	t.Logf("dcConfigYaml num tokens: %v", dcConfigYaml["num_tokens"].(float64))
+	require.NotEqual(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens), "num_tokens should not be updated")
+	require.Equal(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", initialNumTokens), "num_tokens should not be updated")
 
 	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")
