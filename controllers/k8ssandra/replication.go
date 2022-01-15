@@ -20,6 +20,22 @@ import (
 	"time"
 )
 
+func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.ManagementApiFacade, logger logr.Logger) result.ReconcileResult {
+
+	versions, err := mgmtApi.GetSchemaVersions()
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if len(versions) == 1 {
+		return result.Continue()
+	}
+
+	logger.Info("There is schema disagreement", "versions", len(versions))
+
+	return result.RequeueSoon(r.DefaultDelay)
+}
+
 // checkSystemReplication checks for the SystemReplicationAnnotation on kc. If found, the
 // JSON value is unmarshalled and returned. If not found, the SystemReplication is computed
 // and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
@@ -61,18 +77,11 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
+	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
 
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
-	}
-
-	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-	if err != nil {
-		logger.Error(err, "Failed to create ManagementApiFacade")
-		return result.Error(err)
 	}
 
 	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
@@ -103,7 +112,7 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
+	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
 
 	jsonReplication := annotations.GetAnnotation(kc, api.DcReplicationAnnotation)
@@ -113,12 +122,6 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	}
 
 	logger.Info("Updating replication for user keyspaces")
-
-	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-	if err != nil {
-		logger.Error(err, "Failed to create ManagementApiFacade")
-		return result.Error(err)
-	}
 
 	userKeyspaces, err := getUserKeyspaces(mgmtApi, kc)
 	if err != nil {
