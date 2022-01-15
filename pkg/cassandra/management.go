@@ -3,6 +3,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -91,6 +92,10 @@ type ManagementApiFacade interface {
 	// EnsureKeyspaceReplication checks if the given keyspace has the given replication, and if it does not,
 	// alters it to match the desired replication.
 	EnsureKeyspaceReplication(keyspaceName string, replication map[string]int) error
+
+	// GetSchemaVersions list all of the schema versions know to this node. The map keys are schema version UUIDs.
+	// The values are list of node IPs.
+	GetSchemaVersions() (map[string][]string, error)
 }
 
 type defaultManagementApiFacade struct {
@@ -289,4 +294,21 @@ func (r *defaultManagementApiFacade) EnsureKeyspaceReplication(keyspaceName stri
 			}
 		}
 	}
+}
+
+func (r *defaultManagementApiFacade) GetSchemaVersions() (map[string][]string, error) {
+	pods, err := r.fetchDatacenterPods()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pod := range pods {
+		if schemaVersions, err := r.nodeMgmtClient.CallSchemaVersionsEndpoint(&pod); err != nil {
+			r.logger.V(4).Error(err, "failed to list schema versions", "Pod", pod.Name)
+		} else {
+			return schemaVersions, nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to get schema version on all pods in CassandraDatacenter %v", utils.GetKey(r.dc))
 }

@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
@@ -26,12 +25,13 @@ var defaultAdapater ManagementApiFactoryAdapter = func(
 	logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 
 	m := new(mocks.ManagementApiFacade)
-	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
-	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
-	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
+	m.On(EnsureKeyspaceReplication, mock.Anything, mock.Anything).Return(nil)
+	m.On(ListTables, stargate.AuthKeyspace).Return([]string{"token"}, nil)
+	m.On(CreateTable, mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
 		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
 	})).Return(nil)
-	m.On("ListKeyspaces", "").Return([]string{}, nil)
+	m.On(ListKeyspaces, "").Return([]string{}, nil)
+	m.On(GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 	return m, nil
 }
 
@@ -40,7 +40,6 @@ type FakeManagementApiFactory struct {
 }
 
 func (f *FakeManagementApiFactory) Reset() {
-	fmt.Println("RESET")
 	f.adapter = nil
 }
 
@@ -68,7 +67,9 @@ const (
 	CreateKeyspaceIfNotExists = "CreateKeyspaceIfNotExists"
 	AlterKeyspace             = "AlterKeyspace"
 	ListKeyspaces             = "ListKeyspaces"
+	CreateTable               = "CreateTable"
 	ListTables                = "ListTables"
+	GetSchemaVersions         = "GetSchemaVersions"
 )
 
 type FakeManagementApiFacade struct {

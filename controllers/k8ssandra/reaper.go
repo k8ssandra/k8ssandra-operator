@@ -37,8 +37,7 @@ import (
 func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dc *cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
+	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
 
 	if !kc.HasReapers() {
@@ -51,11 +50,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 		return recResult
 	}
 
-	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-	if err != nil {
-		logger.Error(err, "Failed to create ManagementApiFacade")
-		return result.Error(err)
-	}
 	keyspace := reaperapi.DefaultKeyspace
 
 	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
@@ -68,7 +62,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 			datacenters = append(datacenters, dc)
 		}
 	}
-	err = managementApiFacade.EnsureKeyspaceReplication(
+	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
 		cassandra.ComputeReplication(3, datacenters...),
 	)

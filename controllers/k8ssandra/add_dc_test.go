@@ -137,6 +137,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	for _, ks := range userKeyspaces {
 		mockMgmtApi.On(testutils.EnsureKeyspaceReplication, ks, updatedReplication).Return(nil)
@@ -195,6 +196,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, reaperapi.DefaultKeyspace, updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListTables, stargate.AuthKeyspace).Return([]string{stargate.AuthTable}, nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 		return mockMgmtApi, nil
@@ -303,6 +305,7 @@ func failSystemKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fr
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(replicationCheckErr)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(replicationCheckErr)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 		return mockMgmtApi, nil
@@ -348,6 +351,7 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	for _, ks := range userKeyspaces {
 		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(updatedReplicationStr, nil)

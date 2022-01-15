@@ -169,22 +169,31 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			actualDcs = append(actualDcs, actualDc)
 
-			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+			mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger)
+			if err != nil {
+				return result.Error(err), actualDcs
+			}
+
+			if recResult := r.checkSchemaAgreement(mgmtApi, logger); recResult.Completed() {
 				return recResult, actualDcs
 			}
 
-			if recResult := r.reconcileStargateAuthSchema(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, mgmtApi, logger); recResult.Completed() {
 				return recResult, actualDcs
 			}
 
-			if recResult := r.reconcileReaperSchema(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+			if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+				return recResult, actualDcs
+			}
+
+			if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
 				return recResult, actualDcs
 			}
 
 			if rebuildNeeded {
 				// TODO We need to handle the Stargate auth and Reaper keyspaces here.
 
-				if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+				if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, mgmtApi, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}
 
