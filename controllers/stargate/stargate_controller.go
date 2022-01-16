@@ -215,7 +215,10 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	// TODO Add comment to explain this and/or refactor into a self-documenting method
+	// The following check makes sure that when Stargate is deployed on its own that the
+	// first deployed pod reaches the ready state before deploying more in order to avoid
+	// concurrent schema updates which Cassandra doesn't do well with. See
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/297 for details.
 	if _, found := stargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]; !found && len(actualDeployments.Items) > 0 &&
 		(readyReplicas == 0 && !stargate.Status.IsReady()) {
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
