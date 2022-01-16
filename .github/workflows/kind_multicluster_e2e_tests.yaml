@@ -115,7 +115,9 @@ jobs:
       - name: Sanitize test name
         id: vars
         shell: bash
-        run: echo ::set-output name=test_name::${matrix.e2e_test//\//_}
+        run: |
+          e2e_test=${{ matrix.e2e_test }}
+          echo ::set-output name=test_name::${e2e_test//\//_}
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
