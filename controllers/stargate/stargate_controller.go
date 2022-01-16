@@ -220,7 +220,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// concurrent schema updates which Cassandra doesn't do well with. See
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/297 for details.
 	if _, found := stargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]; !found && len(actualDeployments.Items) > 0 &&
-		(readyReplicas == 0 && !stargate.Status.IsReady()) {
+		(replicas > 0 && readyReplicas == 0 && !stargate.Status.IsReady()) {
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
