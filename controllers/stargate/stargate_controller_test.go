@@ -331,12 +331,30 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 			client.InNamespace(namespace),
 			client.MatchingLabels{api.StargateLabel: stargate.Name},
 		)
-		return err == nil
+		return err == nil || len(deploymentList.Items) == 1
 	}, timeout, interval)
 
-	assert.Len(t, deploymentList.Items, 3)
-
 	deployment1 := deploymentList.Items[0]
+
+	deployment1.Status.ReadyReplicas = 1
+	deployment1.Status.Replicas = 1
+	deployment1.Status.AvailableReplicas = 1
+	deployment1.Status.UpdatedReplicas = 1
+	err = testClient.Status().Update(ctx, &deployment1)
+	require.NoError(t, err)
+
+	deploymentList = &appsv1.DeploymentList{}
+	require.Eventually(t, func() bool {
+		err := testClient.List(
+			ctx,
+			deploymentList,
+			client.InNamespace(namespace),
+			client.MatchingLabels{api.StargateLabel: stargate.Name},
+		)
+		return err == nil || len(deploymentList.Items) == 3
+	}, timeout, interval)
+
+	deployment1 = deploymentList.Items[0]
 	assert.Equal(t, "cluster1-dc2-rack1-stargate-deployment", deployment1.Name)
 	assert.EqualValues(t, 1, *deployment1.Spec.Replicas)
 	requirement1 := deployment1.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]

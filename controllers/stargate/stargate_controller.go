@@ -19,8 +19,8 @@ package stargate
 import (
 	"context"
 	"fmt"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -213,6 +213,12 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			updatedReplicas += actualDeployment.Status.UpdatedReplicas
 			availableReplicas += actualDeployment.Status.AvailableReplicas
 		}
+	}
+
+	// TODO Add comment to explain this and/or refactor into a self-documenting method
+	if _, found := stargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]; !found && len(actualDeployments.Items) > 0 &&
+		(readyReplicas == 0 && !stargate.Status.IsReady()) {
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	for _, desiredDeployment := range desiredDeployments {
