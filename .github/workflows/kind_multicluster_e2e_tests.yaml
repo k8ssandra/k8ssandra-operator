@@ -117,6 +117,7 @@ jobs:
         shell: bash
         run: |
           e2e_test=${{ matrix.e2e_test }}
+          echo "e2e_test = $e2e_test"
           echo ::set-output name=test_name::${e2e_test//\//_}
       - name: Archive k8s logs
         if: ${{ failure() }}
