@@ -58,16 +58,16 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) []appsv1.Deployment {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
+	dnsPolicy := computeDNSPolicy(dc)
 
 	racks := dc.GetRacks()
 	replicasByRack := cassdcapi.SplitRacks(int(stargate.Spec.Size), len(racks))
-	dnsPolicy := computeDNSPolicy(dc)
 
-	var deployments = make(map[string]appsv1.Deployment)
+	deployments := make([]appsv1.Deployment, 0)
 	for i, rack := range racks {
 
 		replicas := int32(replicasByRack[i])
@@ -76,148 +76,173 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		}
 
 		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
-
 		deploymentName := DeploymentName(dc, &rack)
-		image := computeImage(template, clusterVersion)
-		resources := computeResourceRequirements(template)
-		livenessProbe := computeLivenessProbe(template)
-		readinessProbe := computeReadinessProbe(template)
-		jvmOptions := computeJvmOptions(template)
-		volumes := computeVolumes(template)
-		volumeMounts := computeVolumeMounts(template)
-		serviceAccountName := computeServiceAccount(template)
-		nodeSelector := computeNodeSelector(template, dc)
-		tolerations := computeTolerations(template, dc)
-		affinity := computeAffinity(template, dc, &rack)
 
-		deployment := appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        deploymentName,
-				Namespace:   stargate.Namespace,
-				Annotations: map[string]string{},
-				Labels: map[string]string{
-					coreapi.NameLabel:      coreapi.NameLabelValue,
-					coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-					coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-					coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-					api.StargateLabel:      stargate.Name,
+		// make sure the first deployment in the slice targets exactly one replica
+		if i == 0 && replicas > 1 {
+			first := newDeployment(deploymentName+"-1", stargate, template, dc, &rack, 1, clusterVersion, seedService, dnsPolicy)
+			deployments = append(deployments, first)
+			replicas--
+			deploymentName = deploymentName + "-2"
+		}
+
+		deployment := newDeployment(deploymentName, stargate, template, dc, &rack, replicas, clusterVersion, seedService, dnsPolicy)
+		deployments = append(deployments, deployment)
+
+	}
+	return deployments
+}
+
+func newDeployment(
+	deploymentName string,
+	stargate *api.Stargate,
+	template *api.StargateTemplate,
+	dc *cassdcapi.CassandraDatacenter,
+	rack *cassdcapi.Rack,
+	replicas int32,
+	clusterVersion ClusterVersion,
+	seedService string,
+	dnsPolicy corev1.DNSPolicy,
+) appsv1.Deployment {
+
+	image := computeImage(template, clusterVersion)
+	resources := computeResourceRequirements(template)
+	livenessProbe := computeLivenessProbe(template)
+	readinessProbe := computeReadinessProbe(template)
+	jvmOptions := computeJvmOptions(template)
+	volumes := computeVolumes(template)
+	volumeMounts := computeVolumeMounts(template)
+	serviceAccountName := computeServiceAccount(template)
+	nodeSelector := computeNodeSelector(template, dc)
+	tolerations := computeTolerations(template, dc)
+	affinity := computeAffinity(template, dc, rack)
+
+	deployment := appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        deploymentName,
+			Namespace:   stargate.Namespace,
+			Annotations: map[string]string{},
+			Labels: map[string]string{
+				coreapi.NameLabel:      coreapi.NameLabelValue,
+				coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+				coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+				coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+				api.StargateLabel:      stargate.Name,
+			},
+		},
+
+		Spec: appsv1.DeploymentSpec{
+
+			Replicas: &replicas,
+
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					api.StargateDeploymentLabel: deploymentName,
 				},
 			},
 
-			Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
 
-				Replicas: &replicas,
-
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						coreapi.NameLabel:           coreapi.NameLabelValue,
+						coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
+						coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
+						coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
+						api.StargateLabel:           stargate.Name,
 						api.StargateDeploymentLabel: deploymentName,
 					},
 				},
 
-				Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
 
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							coreapi.NameLabel:           coreapi.NameLabelValue,
-							coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
-							coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
-							coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
-							api.StargateLabel:           stargate.Name,
-							api.StargateDeploymentLabel: deploymentName,
+					ServiceAccountName: serviceAccountName,
+
+					HostNetwork:      dc.IsHostNetworkEnabled(),
+					DNSPolicy:        dnsPolicy,
+					ImagePullSecrets: images.CollectPullSecrets(image),
+
+					Containers: []corev1.Container{{
+
+						Name:            deploymentName,
+						Image:           image.String(),
+						ImagePullPolicy: image.PullPolicy,
+
+						Ports: []corev1.ContainerPort{
+							{ContainerPort: 8080, Name: "graphql"},
+							{ContainerPort: 8081, Name: "authorization"},
+							{ContainerPort: 8082, Name: "rest"},
+							{ContainerPort: 8084, Name: "health"},
+							{ContainerPort: 8085, Name: "metrics"},
+							{ContainerPort: 8090, Name: "http-schemaless"},
+							{ContainerPort: 9042, Name: "native"},
+							{ContainerPort: 8609, Name: "inter-node-msg"},
+							{ContainerPort: 7000, Name: "intra-node"},
+							{ContainerPort: 7001, Name: "tls-intra-node"},
 						},
-					},
 
-					Spec: corev1.PodSpec{
+						Resources: resources,
 
-						ServiceAccountName: serviceAccountName,
-
-						HostNetwork:      dc.IsHostNetworkEnabled(),
-						DNSPolicy:        dnsPolicy,
-						ImagePullSecrets: images.CollectPullSecrets(image),
-
-						Containers: []corev1.Container{{
-
-							Name:            deploymentName,
-							Image:           image.String(),
-							ImagePullPolicy: image.PullPolicy,
-
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: 8080, Name: "graphql"},
-								{ContainerPort: 8081, Name: "authorization"},
-								{ContainerPort: 8082, Name: "rest"},
-								{ContainerPort: 8084, Name: "health"},
-								{ContainerPort: 8085, Name: "metrics"},
-								{ContainerPort: 8090, Name: "http-schemaless"},
-								{ContainerPort: 9042, Name: "native"},
-								{ContainerPort: 8609, Name: "inter-node-msg"},
-								{ContainerPort: 7000, Name: "intra-node"},
-								{ContainerPort: 7001, Name: "tls-intra-node"},
-							},
-
-							Resources: resources,
-
-							Env: []corev1.EnvVar{
-								{
-									Name: "LISTEN",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
+						Env: []corev1.EnvVar{
+							{
+								Name: "LISTEN",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "status.podIP",
 									},
 								},
-								{Name: "JAVA_OPTS", Value: jvmOptions},
-								{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
-								{Name: "CLUSTER_VERSION", Value: string(clusterVersion)},
-								{Name: "SEED", Value: seedService},
-								{Name: "DATACENTER_NAME", Value: dc.Name},
-								{Name: "RACK_NAME", Value: rack.Name},
-								// Watching bundles is unnecessary in a k8s deployment. See
-								// https://github.com/stargate/stargate/issues/1286 for
-								// details.
-								{Name: "DISABLE_BUNDLES_WATCH", Value: "true"},
 							},
+							{Name: "JAVA_OPTS", Value: jvmOptions},
+							{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
+							{Name: "CLUSTER_VERSION", Value: string(clusterVersion)},
+							{Name: "SEED", Value: seedService},
+							{Name: "DATACENTER_NAME", Value: dc.Name},
+							{Name: "RACK_NAME", Value: rack.Name},
+							// Watching bundles is unnecessary in a k8s deployment. See
+							// https://github.com/stargate/stargate/issues/1286 for
+							// details.
+							{Name: "DISABLE_BUNDLES_WATCH", Value: "true"},
+						},
 
-							LivenessProbe:  &livenessProbe,
-							ReadinessProbe: &readinessProbe,
+						LivenessProbe:  &livenessProbe,
+						ReadinessProbe: &readinessProbe,
 
-							VolumeMounts: volumeMounts,
-						}},
+						VolumeMounts: volumeMounts,
+					}},
 
-						NodeSelector: nodeSelector,
-						Tolerations:  tolerations,
-						Affinity:     affinity,
-						Volumes:      volumes,
-					},
+					NodeSelector: nodeSelector,
+					Tolerations:  tolerations,
+					Affinity:     affinity,
+					Volumes:      volumes,
 				},
 			},
-		}
-
-		klusterName, nameFound := stargate.Labels[coreapi.K8ssandraClusterNameLabel]
-		klusterNamespace, namespaceFound := stargate.Labels[coreapi.K8ssandraClusterNamespaceLabel]
-
-		if nameFound && namespaceFound {
-			deployment.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
-			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
-			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
-		}
-
-		if stargate.Spec.IsAuthEnabled() {
-			// Stargate reacts to the sole presence of this variable, regardless of its contents.
-			// When this variable is absent, Stargate will use AllowAllAuthenticator.
-			// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden
-			// by the stargate.authenticator_class_name system property (see below, computeJvmOptions).
-			// Note that any other authenticator than PasswordAuthenticator will cause the REST APIs to be unusable,
-			// however the CQL API will still be usable.
-			deployment.Spec.Template.Spec.Containers[0].Env = append(
-				deployment.Spec.Template.Spec.Containers[0].Env,
-				corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
-			)
-		}
-
-		annotations.AddHashAnnotation(&deployment)
-		deployments[deploymentName] = deployment
+		},
 	}
-	return deployments
+
+	klusterName, nameFound := stargate.Labels[coreapi.K8ssandraClusterNameLabel]
+	klusterNamespace, namespaceFound := stargate.Labels[coreapi.K8ssandraClusterNamespaceLabel]
+
+	if nameFound && namespaceFound {
+		deployment.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
+		deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNameLabel] = klusterName
+		deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
+	}
+
+	if stargate.Spec.IsAuthEnabled() {
+		// Stargate reacts to the sole presence of this variable, regardless of its contents.
+		// When this variable is absent, Stargate will use AllowAllAuthenticator.
+		// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden
+		// by the stargate.authenticator_class_name system property (see below, computeJvmOptions).
+		// Note that any other authenticator than PasswordAuthenticator will cause the REST APIs to be unusable,
+		// however the CQL API will still be usable.
+		deployment.Spec.Template.Spec.Containers[0].Env = append(
+			deployment.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
+		)
+	}
+
+	annotations.AddHashAnnotation(&deployment)
+	return deployment
 }
 
 func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {

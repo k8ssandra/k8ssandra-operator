@@ -5,7 +5,11 @@ metadata:
 spec:
   datacenterRef:
     name: dc1
-  size: 3
+  # First rack will get 2 Stargate pods, each in a distinct deployment, so that
+  # the very first Stargate deployment contains exactly one replica.
+  # Second rack with get 2 Stargate pods, both grouped together in one single
+  # deployment.
+  size: 4
   allowStargateOnDataNodes: true
   heapSize: 384Mi
   resources:

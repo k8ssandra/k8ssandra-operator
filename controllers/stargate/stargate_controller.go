@@ -19,7 +19,6 @@ package stargate
 import (
 	"context"
 	"fmt"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -178,7 +177,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	for _, actualDeployment := range actualDeployments.Items {
 		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: actualDeployment.Name}
-		if desiredDeployment, found := desiredDeployments[actualDeployment.Name]; !found {
+		if desiredDeployment := findDeployment(desiredDeployments, actualDeployment.Name); desiredDeployment == nil {
 			// Deployment exists but is not desired anymore: delete it
 			logger.Info("Deleting Stargate Deployment", "Deployment", deploymentKey)
 			if err := r.Delete(ctx, &actualDeployment); err != nil {
@@ -190,7 +189,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		} else {
 			// Deployment already exists: check if it needs to be updated
-			if !annotations.CompareHashAnnotations(&desiredDeployment, &actualDeployment) {
+			if !annotations.CompareHashAnnotations(desiredDeployment, &actualDeployment) {
 				logger.Info("Updating Stargate Deployment", "Deployment", deploymentKey)
 				resourceVersion := actualDeployment.GetResourceVersion()
 				desiredDeployment.DeepCopyInto(&actualDeployment)
@@ -207,7 +206,6 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 				}
 			}
-			delete(desiredDeployments, actualDeployment.Name)
 			replicas += actualDeployment.Status.Replicas
 			readyReplicas += actualDeployment.Status.ReadyReplicas
 			updatedReplicas += actualDeployment.Status.UpdatedReplicas
@@ -215,26 +213,47 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	for _, desiredDeployment := range desiredDeployments {
-		// Deployment does not exist yet: create a new one
+	for i, desiredDeployment := range desiredDeployments {
 		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: desiredDeployment.Name}
-		logger.Info("Stargate Deployment not found, creating a new one", "Deployment", deploymentKey)
-		// Set Stargate instance as the owner and controller
-		if err := ctrl.SetControllerReference(stargate, &desiredDeployment, r.Scheme); err != nil {
-			logger.Error(err, "Failed to set controller reference on new Stargate Deployment", "Deployment", deploymentKey)
-			return ctrl.Result{}, err
-		} else if err := r.Create(ctx, &desiredDeployment); err != nil {
-			if errors.IsAlreadyExists(err) {
-				// the read from the local cache didn't catch that the resource was created
-				// already; simply requeue until the cache is up-to-date
-				return ctrl.Result{Requeue: true}, nil
-			} else {
-				logger.Error(err, "Failed to create new Stargate Deployment", "Deployment", deploymentKey)
+		// Deployment does not exist yet: create a new one
+		if actualDeployment := findDeployment(actualDeployments.Items, desiredDeployment.Name); actualDeployment == nil {
+			logger.Info("Stargate Deployment not found, creating a new one", "Deployment", deploymentKey)
+			// Set Stargate instance as the owner and controller
+			if err := ctrl.SetControllerReference(stargate, &desiredDeployment, r.Scheme); err != nil {
+				logger.Error(err, "Failed to set controller reference on new Stargate Deployment", "Deployment", deploymentKey)
 				return ctrl.Result{}, err
+			} else if err := r.Create(ctx, &desiredDeployment); err != nil {
+				if errors.IsAlreadyExists(err) {
+					// the read from the local cache didn't catch that the resource was created
+					// already; simply requeue until the cache is up-to-date
+					return ctrl.Result{Requeue: true}, nil
+				} else {
+					logger.Error(err, "Failed to create new Stargate Deployment", "Deployment", deploymentKey)
+					return ctrl.Result{}, err
+				}
+			} else {
+				if i == 0 {
+					// we need to wait until the first deployment is fully rolled out before creating the other ones,
+					// so pause now and resume later
+					logger.Info("First Stargate Deployment created successfully, waiting until it is fully rolled out", "Deployment", deploymentKey)
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
+				} else {
+					// subsequent deployments can all be created in a single reconcile pass, so don't return here; we
+					// will check that all deployments are rolled out later one
+					logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
+					continue
+				}
 			}
 		} else {
-			logger.Info("Stargate Deployment created successfully", "Deployment", deploymentKey)
-			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
+			// deployment already exists: if it's the first one, we need to wait until it is fully rolled out
+			if i == 0 {
+				if actualDeployment.Status.ReadyReplicas != 1 || actualDeployment.Status.AvailableReplicas != 1 {
+					logger.Info("Waiting until first Stargate Deployment fully rolled out", "Deployment", deploymentKey)
+					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
+				} else {
+					logger.Info("First Stargate Deployment fully rolled out, proceeding with the other ones", "Deployment", deploymentKey)
+				}
+			}
 		}
 	}
 
@@ -345,6 +364,15 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	logger.Info("Stargate successfully reconciled", "Stargate", req.NamespacedName)
 	return ctrl.Result{}, nil
+}
+
+func findDeployment(deployments []appsv1.Deployment, name string) *appsv1.Deployment {
+	for _, deployment := range deployments {
+		if deployment.Name == name {
+			return &deployment
+		}
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

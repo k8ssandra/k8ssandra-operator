@@ -33,7 +33,7 @@ spec:
   serverVersion: 3.11.11
   networking:
     hostNetwork: false
-  size: 3
+  size: 2
   racks:
     - name: rack1
       nodeAffinityLabels:
@@ -41,9 +41,6 @@ spec:
     - name: rack2
       nodeAffinityLabels:
         "topology.kubernetes.io/zone": rack2
-    - name: rack3
-      nodeAffinityLabels:
-        "topology.kubernetes.io/zone": rack3
   storageConfig:
     cassandraDataVolumeClaimSpec:
       accessModes:

@@ -59,10 +59,9 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 
 	deployments := NewDeployments(stargate, dc)
 	require.Len(t, deployments, 1)
-	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
-	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+	deployment := deployments[0]
 
-	assert.Equal(t, "cluster1-dc1-default-stargate-deployment", deployment.Name)
+	assert.Equal(t, "cluster1-dc1-default-stargate", deployment.Name)
 	assert.Equal(t, namespace, deployment.Namespace)
 	assert.Contains(t, deployment.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
@@ -70,12 +69,12 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.EqualValues(t, 1, *deployment.Spec.Replicas)
 
 	assert.Contains(t, deployment.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-default-stargate-deployment", deployment.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-default-stargate", deployment.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 
 	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-default-stargate-deployment", deployment.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-default-stargate", deployment.Spec.Template.Labels[api.StargateDeploymentLabel])
 
 	assert.Equal(t, "default", deployment.Spec.Template.Spec.ServiceAccountName)
 	assert.Equal(t, affinityForRack(dc, "default"), deployment.Spec.Template.Spec.Affinity)
@@ -148,39 +147,53 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 3
 
 	deployments := NewDeployments(stargate, dc)
-	require.Len(t, deployments, 1)
-	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
-	deployment := deployments["cluster1-dc1-rack1-stargate-deployment"]
+	require.Len(t, deployments, 2)
 
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment.Name)
-	assert.Equal(t, namespace, deployment.Namespace)
-	assert.Contains(t, deployment.Labels, api.StargateLabel)
-	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
-
-	assert.EqualValues(t, 3, *deployment.Spec.Replicas)
-
-	assert.Contains(t, deployment.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
-
-	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateLabel)
-	assert.Equal(t, "s1", deployment.Spec.Template.Labels[api.StargateLabel])
-	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment.Spec.Template.Labels[api.StargateDeploymentLabel])
-
-	assert.Equal(t, affinityForRack(dc, "rack1"), deployment.Spec.Template.Spec.Affinity)
-	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
-
-	container := findContainer(&deployment, deployment.Name)
+	deployment1a := deployments[0]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Name)
+	assert.EqualValues(t, 1, *deployment1a.Spec.Replicas)
+	assert.Equal(t, namespace, deployment1a.Namespace)
+	assert.Contains(t, deployment1a.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1a.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1a.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1a.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1a.Spec.Template.Spec.Affinity)
+	assert.Nil(t, deployment1a.Spec.Template.Spec.Tolerations)
+	container := findContainer(&deployment1a, deployment1a.Name)
 	require.NotNil(t, container, "failed to find stargate container")
-
 	rackName := findEnvVar(container, "RACK_NAME")
 	require.NotNil(t, rackName, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack1", rackName.Value)
-
 	seed := findEnvVar(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
 	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
 
+	deployment1b := deployments[1]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Name)
+	assert.EqualValues(t, 2, *deployment1b.Spec.Replicas)
+	assert.Equal(t, namespace, deployment1b.Namespace)
+	assert.Contains(t, deployment1b.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1b.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1b.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1b.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1b.Spec.Template.Spec.Affinity)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.Tolerations)
+	container = findContainer(&deployment1b, deployment1b.Name)
+	require.NotNil(t, container, "failed to find stargate container")
+	rackName = findEnvVar(container, "RACK_NAME")
+	require.NotNil(t, rackName, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName.Value)
+	seed = findEnvVar(container, "SEED")
+	require.NotNil(t, seed, "failed to find SEED env var")
+	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
 }
 
 func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
@@ -197,59 +210,74 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployments := NewDeployments(stargate, dc)
 
-	require.Len(t, deployments, 3)
-	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack3-stargate-deployment")
+	require.Len(t, deployments, 4)
 
-	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
-	assert.EqualValues(t, 3, *deployment1.Spec.Replicas)
-	assert.Contains(t, deployment1.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateLabel)
-	assert.Equal(t, "s1", deployment1.Spec.Template.Labels[api.StargateLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Template.Labels[api.StargateDeploymentLabel])
-	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
-	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
-	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
-	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
-	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
-	assert.Equal(t, "rack1", rackName1.Value)
+	deployment1a := deployments[0]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Name)
+	assert.EqualValues(t, 1, *deployment1a.Spec.Replicas)
+	assert.Contains(t, deployment1a.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1a.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1a.Spec.Template.Spec.Affinity)
+	assert.Nil(t, deployment1a.Spec.Template.Spec.NodeSelector)
+	assert.Nil(t, deployment1a.Spec.Template.Spec.Tolerations)
+	container1a := findContainer(&deployment1a, deployment1a.Name)
+	require.NotNil(t, container1a, "failed to find stargate container")
+	rackName1a := findEnvVar(container1a, "RACK_NAME")
+	require.NotNil(t, rackName1a, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1a.Value)
 
-	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
+	deployment1b := deployments[1]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Name)
+	assert.EqualValues(t, 2, *deployment1b.Spec.Replicas)
+	assert.Contains(t, deployment1b.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1b.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1b.Spec.Template.Spec.Affinity)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.NodeSelector)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.Tolerations)
+	container1b := findContainer(&deployment1b, deployment1b.Name)
+	require.NotNil(t, container1b, "failed to find stargate container")
+	rackName1b := findEnvVar(container1b, "RACK_NAME")
+	require.NotNil(t, rackName1b, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1b.Value)
+
+	deployment2 := deployments[2]
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Name)
 	assert.EqualValues(t, 3, *deployment2.Spec.Replicas)
 	assert.Contains(t, deployment2.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment2.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
-	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
-	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.NodeSelector)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.Tolerations)
 	container2 := findContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
 	rackName2 := findEnvVar(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
-	deployment3 := deployments["cluster1-dc1-rack3-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Name)
+	deployment3 := deployments[3]
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Name)
 	assert.EqualValues(t, 2, *deployment3.Spec.Replicas)
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment3.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, affinityForRack(dc, "rack3"), deployment3.Spec.Template.Spec.Affinity)
-	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
-	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.NodeSelector)
+	assert.Nil(t, deployment1b.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
 	rackName3 := findEnvVar(container3, "RACK_NAME")
@@ -279,38 +307,53 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	deployments := NewDeployments(stargate, dc)
-	require.Len(t, deployments, 3)
-	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack3-stargate-deployment")
+	require.Len(t, deployments, 4)
 
-	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
-	assert.EqualValues(t, 3, *deployment1.Spec.Replicas)
-	assert.Contains(t, deployment1.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateLabel)
-	assert.Equal(t, "s1", deployment1.Spec.Template.Labels[api.StargateLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Template.Labels[api.StargateDeploymentLabel])
-	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
-	assert.Equal(t, dc.Spec.NodeSelector, deployment1.Spec.Template.Spec.NodeSelector)
-	assert.Equal(t, dc.Spec.Tolerations, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
-	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
-	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
-	assert.Equal(t, "rack1", rackName1.Value)
+	deployment1a := deployments[0]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Name)
+	assert.EqualValues(t, 1, *deployment1a.Spec.Replicas)
+	assert.Contains(t, deployment1a.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1a.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1a.Spec.Template.Spec.Affinity)
+	assert.Equal(t, dc.Spec.NodeSelector, deployment1a.Spec.Template.Spec.NodeSelector)
+	assert.Equal(t, dc.Spec.Tolerations, deployment1a.Spec.Template.Spec.Tolerations)
+	container1a := findContainer(&deployment1a, deployment1a.Name)
+	require.NotNil(t, container1a, "failed to find stargate container")
+	rackName1a := findEnvVar(container1a, "RACK_NAME")
+	require.NotNil(t, rackName1a, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1a.Value)
 
-	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
+	deployment1b := deployments[1]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Name)
+	assert.EqualValues(t, 2, *deployment1b.Spec.Replicas)
+	assert.Contains(t, deployment1b.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1b.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1b.Spec.Template.Spec.Affinity)
+	assert.Equal(t, dc.Spec.NodeSelector, deployment1b.Spec.Template.Spec.NodeSelector)
+	assert.Equal(t, dc.Spec.Tolerations, deployment1b.Spec.Template.Spec.Tolerations)
+	container1b := findContainer(&deployment1b, deployment1b.Name)
+	require.NotNil(t, container1b, "failed to find stargate container")
+	rackName1b := findEnvVar(container1b, "RACK_NAME")
+	require.NotNil(t, rackName1b, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1b.Value)
+
+	deployment2 := deployments[2]
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Name)
 	assert.EqualValues(t, 3, *deployment2.Spec.Replicas)
 	assert.Contains(t, deployment2.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment2.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Equal(t, dc.Spec.NodeSelector, deployment2.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, dc.Spec.Tolerations, deployment2.Spec.Template.Spec.Tolerations)
@@ -320,15 +363,15 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
-	deployment3 := deployments["cluster1-dc1-rack3-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Name)
+	deployment3 := deployments[3]
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Name)
 	assert.EqualValues(t, 2, *deployment3.Spec.Replicas)
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment3.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, affinityForRack(dc, "rack3"), deployment3.Spec.Template.Spec.Affinity)
 	assert.Equal(t, dc.Spec.NodeSelector, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, dc.Spec.Tolerations, deployment3.Spec.Template.Spec.Tolerations)
@@ -391,38 +434,53 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	}}
 
 	deployments := NewDeployments(stargate, dc)
-	require.Len(t, deployments, 3)
-	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack3-stargate-deployment")
+	require.Len(t, deployments, 4)
 
-	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
-	assert.EqualValues(t, 3, *deployment1.Spec.Replicas)
-	assert.Contains(t, deployment1.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateLabel)
-	assert.Equal(t, "s1", deployment1.Spec.Template.Labels[api.StargateLabel])
-	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Template.Labels[api.StargateDeploymentLabel])
-	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
-	assert.Equal(t, stargate.Spec.NodeSelector, deployment1.Spec.Template.Spec.NodeSelector)
-	assert.Equal(t, stargate.Spec.Tolerations, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
-	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
-	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
-	assert.Equal(t, "rack1", rackName1.Value)
+	deployment1a := deployments[0]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Name)
+	assert.EqualValues(t, 1, *deployment1a.Spec.Replicas)
+	assert.Contains(t, deployment1a.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1a.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1a.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-1", deployment1a.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1a.Spec.Template.Spec.Affinity)
+	assert.Equal(t, stargate.Spec.NodeSelector, deployment1a.Spec.Template.Spec.NodeSelector)
+	assert.Equal(t, stargate.Spec.Tolerations, deployment1a.Spec.Template.Spec.Tolerations)
+	container1a := findContainer(&deployment1a, deployment1a.Name)
+	require.NotNil(t, container1a, "failed to find stargate container")
+	rackName1a := findEnvVar(container1a, "RACK_NAME")
+	require.NotNil(t, rackName1a, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1a.Value)
 
-	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
+	deployment1b := deployments[1]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Name)
+	assert.EqualValues(t, 2, *deployment1b.Spec.Replicas)
+	assert.Contains(t, deployment1b.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "s1", deployment1b.Spec.Template.Labels[api.StargateLabel])
+	assert.Contains(t, deployment1b.Spec.Template.Labels, api.StargateDeploymentLabel)
+	assert.Equal(t, "cluster1-dc1-rack1-stargate-2", deployment1b.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1b.Spec.Template.Spec.Affinity)
+	assert.Equal(t, stargate.Spec.NodeSelector, deployment1b.Spec.Template.Spec.NodeSelector)
+	assert.Equal(t, stargate.Spec.Tolerations, deployment1b.Spec.Template.Spec.Tolerations)
+	container1b := findContainer(&deployment1b, deployment1b.Name)
+	require.NotNil(t, container1b, "failed to find stargate container")
+	rackName1b := findEnvVar(container1b, "RACK_NAME")
+	require.NotNil(t, rackName1b, "failed to find RACK_NAME env var")
+	assert.Equal(t, "rack1", rackName1b.Value)
+
+	deployment2 := deployments[2]
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Name)
 	assert.EqualValues(t, 3, *deployment2.Spec.Replicas)
 	assert.Contains(t, deployment2.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment2.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Equal(t, stargate.Spec.NodeSelector, deployment2.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Tolerations, deployment2.Spec.Template.Spec.Tolerations)
@@ -432,15 +490,15 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
-	deployment3 := deployments["cluster1-dc1-rack3-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Name)
+	deployment3 := deployments[3]
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Name)
 	assert.EqualValues(t, 2, *deployment3.Spec.Replicas)
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment3.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
-	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "cluster1-dc1-rack3-stargate", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, stargate.Spec.Racks[0].Affinity, deployment3.Spec.Template.Spec.Affinity)
 	assert.Equal(t, stargate.Spec.Racks[0].NodeSelector, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Racks[0].Tolerations, deployment3.Spec.Template.Spec.Tolerations)
@@ -466,15 +524,13 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 
 	deployments := NewDeployments(stargate, dc)
 	require.Len(t, deployments, 2)
-	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
-	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
 
-	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
+	deployment1 := deployments[0]
+	assert.Equal(t, "cluster1-dc1-rack1-stargate", deployment1.Name)
 	assert.EqualValues(t, 1, *deployment1.Spec.Replicas)
 
-	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
-	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
+	deployment2 := deployments[1]
+	assert.Equal(t, "cluster1-dc1-rack2-stargate", deployment2.Name)
 	assert.EqualValues(t, 1, *deployment2.Spec.Replicas)
 }
 
@@ -486,7 +542,7 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 
 	deployments := NewDeployments(stargate, dc)
 	require.Len(t, deployments, 1)
-	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+	deployment := deployments[0]
 
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
@@ -519,7 +575,7 @@ func testImages(t *testing.T) {
 		stargate.Spec.ContainerImage = nil
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -531,7 +587,7 @@ func testImages(t *testing.T) {
 		dc.Spec.ServerVersion = "4.0.1"
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -544,7 +600,7 @@ func testImages(t *testing.T) {
 		}
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -559,7 +615,7 @@ func testImages(t *testing.T) {
 		dc.Spec.ServerVersion = "4.0.1"
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -574,7 +630,7 @@ func testImages(t *testing.T) {
 		stargate.Spec.ContainerImage = image
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-3_11:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
@@ -592,7 +648,7 @@ func testImages(t *testing.T) {
 		dc.Spec.ServerVersion = "4.0.1"
 		deployments := NewDeployments(stargate, dc)
 		require.Len(t, deployments, 1)
-		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		deployment := deployments[0]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-4_0:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})

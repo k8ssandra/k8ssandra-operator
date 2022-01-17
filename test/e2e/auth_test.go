@@ -123,11 +123,11 @@ func waitForAllComponentsReady(
 	// pod that has authentication enabled while we just turned it off.
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-0"}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-1"}
-	err := kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-default-stargate-deployment")
+	err := kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-default-stargate")
 	assert.NoError(t, err)
 	err = kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-reaper")
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(options2, "deployment", "cluster1-dc2-default-stargate-deployment")
+	err = kubectl.RolloutStatus(options2, "deployment", "cluster1-dc2-default-stargate")
 	assert.NoError(t, err)
 	err = kubectl.RolloutStatus(options2, "deployment", "cluster1-dc2-reaper")
 	assert.NoError(t, err)

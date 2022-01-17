@@ -185,7 +185,7 @@ Status:
           Status:                True
           Type:                  Ready
         Deployment Refs:
-          demo-dc1-default-stargate-deployment
+          demo-dc1-default-stargate
         Progress:              Running
         Ready Replicas:        1
         Ready Replicas Ratio:  1/1
@@ -352,7 +352,7 @@ Status:
           Status:                True
           Type:                  Ready
         Deployment Refs:
-          demo-dc1-default-stargate-deployment
+          demo-dc1-default-stargate
         Progress:              Running
         Ready Replicas:        1
         Ready Replicas Ratio:  1/1
@@ -370,7 +370,7 @@ Status:
           Status:                True
           Type:                  Ready
         Deployment Refs:
-          demo-dc2-default-stargate-deployment
+          demo-dc2-default-stargate
         Progress:              Running
         Ready Replicas:        1
         Ready Replicas Ratio:  1/1
@@ -556,7 +556,7 @@ Status:
           Status:                True
           Type:                  Ready
         Deployment Refs:
-          demo-dc1-default-stargate-deployment
+          demo-dc1-default-stargate
         Progress:              Running
         Ready Replicas:        1
         Ready Replicas Ratio:  1/1
@@ -1005,7 +1005,7 @@ Status:
           Status:                True
           Type:                  Ready
         Deployment Refs:
-          demo-dc1-default-stargate-deployment
+          demo-dc1-default-stargate
         Progress:              Running
         Ready Replicas:        1
         Ready Replicas Ratio:  1/1

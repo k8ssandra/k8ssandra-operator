@@ -16,5 +16,5 @@ func ServiceName(dc *cassdcapi.CassandraDatacenter) string {
 
 func DeploymentName(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) string {
 	// FIXME sanitize name
-	return dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate-deployment"
+	return dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate"
 }

@@ -144,7 +144,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 		return err == nil && sg.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
-	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc1-default-stargate-deployment"}
+	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc1-default-stargate"}
 	deployment := &appsv1.Deployment{}
 	require.Eventually(t, func() bool {
 		err := testClient.Get(ctx, deploymentKey, deployment)
@@ -337,21 +337,21 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	assert.Len(t, deploymentList.Items, 3)
 
 	deployment1 := deploymentList.Items[0]
-	assert.Equal(t, "cluster1-dc2-rack1-stargate-deployment", deployment1.Name)
+	assert.Equal(t, "cluster1-dc2-rack1-stargate", deployment1.Name)
 	assert.EqualValues(t, 1, *deployment1.Spec.Replicas)
 	requirement1 := deployment1.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
 	assert.Equal(t, "topology.kubernetes.io/zone", requirement1.Key)
 	assert.Contains(t, requirement1.Values[0], "us-east-1a")
 
 	deployment2 := deploymentList.Items[1]
-	assert.Equal(t, "cluster1-dc2-rack2-stargate-deployment", deployment2.Name)
+	assert.Equal(t, "cluster1-dc2-rack2-stargate", deployment2.Name)
 	assert.EqualValues(t, 1, *deployment2.Spec.Replicas)
 	requirement2 := deployment2.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
 	assert.Equal(t, "topology.kubernetes.io/zone", requirement2.Key)
 	assert.Contains(t, requirement2.Values[0], "us-east-1b")
 
 	deployment3 := deploymentList.Items[2]
-	assert.Equal(t, "cluster1-dc2-rack3-stargate-deployment", deployment3.Name)
+	assert.Equal(t, "cluster1-dc2-rack3-stargate", deployment3.Name)
 	assert.EqualValues(t, 1, *deployment3.Spec.Replicas)
 	requirement3 := deployment3.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
 	assert.Equal(t, "topology.kubernetes.io/zone", requirement3.Key)
