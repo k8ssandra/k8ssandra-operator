@@ -158,3 +158,49 @@ make E2E_TEST=TestOperator/SingleDatacenterCluster e2e-test
 
 ### Resource Requirements
 Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests on a MacBook Pro is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.
+
+# Updating Dependencies
+Updating library, i.e., module dependencies requires updating `go.mod`. This can be done by running `go get`. 
+
+Suppose we have a dependency on `github.com/example/example` at v1.0.0 and we want to upgrade to v1.1.0. This can be done by running `go get "github.com/example/example@v1.1.0"`.
+
+If you want to upgrade to a specific commit, then you would run `go get "github.com/example/example@6a78a8237173d9322e6c0cab94c615b1f043a906"` where the long string at the end is the full commit hash.
+
+## cass-operator
+In additional to updting `go.mod` as previously described, there are several other changes that have to be made to completely upgrade cass-operator.
+
+### Integration Tests
+The integration test framework installs CRDs. We have to specify the version to install. There are constants in [testenv.go](https://github.com/k8ssandra/k8ssandra-operator/blob/main/pkg/test/testenv.go#L40):
+
+```go
+const (
+	clustersToCreate          = 3
+	clusterProtoName          = "cluster-%d"
+	cassOperatorVersion       = "6a78a8237173d9322e6c0cab94c615b1f043a906"
+	prometheusOperatorVersion = "v0.9.0"
+)
+```
+
+### Kustomize
+There are a couple of places in the Kustomize manifests that need to be updated. The first is `config/deployments/control-plane/kustomization.yaml`. Here is what it looks like:
+
+```yaml
+resources:
+  - ../default
+  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=6a78a8237173d9322e6c0cab94c615b1f043a906
+
+images:
+  - name: k8ssandra/cass-operator
+    newTag: 6a78a823
+```
+
+In this example the `resources` entry happens to specify a commit hash. Note that the full hash must be specified. The images transform specifies the corresponding image tag.
+
+Similar changes need to be made in `config/cass-operator-cluster-scope/kustomization.yaml`.
+
+### Helm
+If you want to apply the upgrade via Helm, then the cass-operator [chart](https://github.com/k8ssandra/k8ssandra/blob/main/charts/cass-operator) will need to be updated. The k8ssandra-operator [chart](https://github.com/k8ssandra/k8ssandra/tree/main/charts/k8ssandra-operator) will then need to have its chart dependency updated. 
+
+Not all cass-operator upgrades will require chart updates. If you are updating to a cass-operator version that only involves changes in the operator code and not in the CRD, then the cass-operator image tag can simply be set when installing/upgrade the k8ssandra-operator chart.
+
+If the upgrade does involve CRD changes, then chart updates will be required. The cass-operator chart will need to be updated with the CRD changes.

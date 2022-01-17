@@ -16,7 +16,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gruntwork-io/terratest v0.37.7
-	github.com/k8ssandra/cass-operator v1.9.0
+	github.com/k8ssandra/cass-operator v1.8.0-rc.2.0.20220114225934-6a78a8237173
 	github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
@@ -38,7 +38,7 @@ require (
 	k8s.io/component-base v0.22.3 // indirect
 	k8s.io/kubernetes v1.22.2
 	k8s.io/utils v0.0.0-20211208161948-7d6a63dca704
-	sigs.k8s.io/controller-runtime v0.9.2
+	sigs.k8s.io/controller-runtime v0.10.0
 )
 
 replace (
