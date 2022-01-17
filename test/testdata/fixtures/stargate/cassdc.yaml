@@ -5,7 +5,7 @@ metadata:
 spec:
   clusterName: test
   config:
-    cassandraYaml:
+    cassandra-yaml:
       auto_snapshot: false
       commitlog_segment_size_in_mb: 2
       compaction_throughput_mb_per_sec: 0
