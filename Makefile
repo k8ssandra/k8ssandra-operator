@@ -278,7 +278,12 @@ controller-gen: ## Download controller-gen locally if necessary.
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.4.0)
+	mkdir -p $$(pwd)/bin
+	cd $$(pwd)/bin && \
+	curl -LO https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.4.1/kustomize_v4.4.1_linux_amd64.tar.gz && \
+	tar -zxvf kustomize_v4.4.1_linux_amd64.tar.gz && \
+	rm kustomize_v4.4.1_linux_amd64.tar.gz
+
 
 ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
