@@ -323,6 +323,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 		return err == nil && stargate.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
+	t.Log("check that the first Stargate deployment was created")
 	deploymentList := &appsv1.DeploymentList{}
 	require.Eventually(t, func() bool {
 		err := testClient.List(
@@ -331,15 +332,39 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 			client.InNamespace(namespace),
 			client.MatchingLabels{api.StargateLabel: stargate.Name},
 		)
-		return err == nil
+		return err == nil && len(deploymentList.Items) == 1
 	}, timeout, interval)
-
-	assert.Len(t, deploymentList.Items, 3)
 
 	deployment1 := deploymentList.Items[0]
 	assert.Equal(t, "cluster1-dc2-rack1-stargate", deployment1.Name)
 	assert.EqualValues(t, 1, *deployment1.Spec.Replicas)
 	requirement1 := deployment1.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
+	assert.Equal(t, "topology.kubernetes.io/zone", requirement1.Key)
+	assert.Contains(t, requirement1.Values[0], "us-east-1a")
+
+	t.Log("update the first Stargate deployment to ready")
+	deployment1.Status.Replicas = 1
+	deployment1.Status.ReadyReplicas = 1
+	deployment1.Status.AvailableReplicas = 1
+	deployment1.Status.UpdatedReplicas = 1
+	err = testClient.Status().Update(ctx, &deployment1)
+	require.NoError(t, err, "failed to update deployment1")
+
+	t.Log("check that the other Stargate deployments were created")
+	require.Eventually(t, func() bool {
+		err := testClient.List(
+			ctx,
+			deploymentList,
+			client.InNamespace(namespace),
+			client.MatchingLabels{api.StargateLabel: stargate.Name},
+		)
+		return err == nil && len(deploymentList.Items) == 3
+	}, timeout, interval)
+
+	deployment1 = deploymentList.Items[0]
+	assert.Equal(t, "cluster1-dc2-rack1-stargate", deployment1.Name)
+	assert.EqualValues(t, 1, *deployment1.Spec.Replicas)
+	requirement1 = deployment1.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0]
 	assert.Equal(t, "topology.kubernetes.io/zone", requirement1.Key)
 	assert.Contains(t, requirement1.Values[0], "us-east-1a")
 
@@ -357,13 +382,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	assert.Equal(t, "topology.kubernetes.io/zone", requirement3.Key)
 	assert.Contains(t, requirement3.Values[0], "us-east-1c")
 
-	deployment1.Status.Replicas = 1
-	deployment1.Status.ReadyReplicas = 1
-	deployment1.Status.AvailableReplicas = 1
-	deployment1.Status.UpdatedReplicas = 1
-	err = testClient.Status().Update(ctx, &deployment1)
-	require.NoError(t, err, "failed to update deployment1")
-
+	t.Log("update the other Stargate deployments to ready")
 	deployment2.Status.Replicas = 1
 	deployment2.Status.ReadyReplicas = 1
 	deployment2.Status.AvailableReplicas = 1
@@ -378,6 +397,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	err = testClient.Status().Update(ctx, &deployment3)
 	require.NoError(t, err, "failed to update deployment3")
 
+	t.Log("check that the Stargate service was created")
 	serviceKey := types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate-service"}
 	service := &corev1.Service{}
 	require.Eventually(t, func() bool {
@@ -388,7 +408,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	t.Log("check that the Stargate resource is fully reconciled")
 	require.Eventually(t, func() bool {
 		err := testClient.Get(ctx, stargateKey, stargate)
-		return err == nil && stargate.Status.Progress == api.StargateProgressRunning
+		return err == nil && stargate.Status.Progress == api.StargateProgressRunning && stargate.Status.IsReady()
 	}, timeout, interval)
 
 	t.Log("check Stargate status")

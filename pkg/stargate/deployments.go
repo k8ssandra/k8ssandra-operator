@@ -231,8 +231,8 @@ func newDeployment(
 	if stargate.Spec.IsAuthEnabled() {
 		// Stargate reacts to the sole presence of this variable, regardless of its contents.
 		// When this variable is absent, Stargate will use AllowAllAuthenticator.
-		// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden
-		// by the stargate.authenticator_class_name system property (see below, computeJvmOptions).
+		// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden by the
+		// stargate.authenticator_class_name system property, but we currently do not allow this property to be set.
 		// Note that any other authenticator than PasswordAuthenticator will cause the REST APIs to be unusable,
 		// however the CQL API will still be usable.
 		deployment.Spec.Template.Spec.Containers[0].Env = append(
