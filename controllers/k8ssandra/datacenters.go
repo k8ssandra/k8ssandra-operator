@@ -38,7 +38,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	// Reconcile CassandraDatacenter objects only
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -49,7 +48,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
-
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
@@ -69,13 +67,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return medusaResult, actualDcs
 		}
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
-		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
-
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return result.Error(err), actualDcs
 		}
+		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
+		logger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
 
 		annotations.AddHashAnnotation(desiredDc)
 
@@ -106,6 +103,25 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
 					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
 					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
+				}
+
+				desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+				if err != nil {
+					return result.Error(err), actualDcs
+				}
+				actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+				if err != nil {
+					return result.Error(err), actualDcs
+				}
+
+				actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+				desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+				if foundActualYaml && foundDesiredYaml {
+					if actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
+						err = fmt.Errorf("tried to change num_tokens in an existing datacenter")
+						return result.Error(err), actualDcs
+					}
 				}
 
 				actualDc = actualDc.DeepCopy()

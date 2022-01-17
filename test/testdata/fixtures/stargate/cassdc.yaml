@@ -5,7 +5,7 @@ metadata:
 spec:
   clusterName: test
   config:
-    cassandra-yaml:
+    cassandraYaml:
       auto_snapshot: false
       commitlog_segment_size_in_mb: 2
       compaction_throughput_mb_per_sec: 0
@@ -19,7 +19,6 @@ spec:
       prepared_statements_cache_size_mb: 1
       slow_query_log_timeout_in_ms: 0
       sstable_preemptive_open_interval_in_mb: 0
-      start_rpc: false
       thrift_prepared_statements_cache_size_mb: 1
     jvm-options:
       additional-jvm-opts:

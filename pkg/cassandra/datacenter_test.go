@@ -1,18 +1,19 @@
 package cassandra
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"testing"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"k8s.io/utils/pointer"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestCoalesce(t *testing.T) {
