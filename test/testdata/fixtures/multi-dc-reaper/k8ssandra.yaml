@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: reaper-cql-secret
+  name: reaper-jmx-secret
 data:
   # username: reaper-cql
   username: cmVhcGVyLWNxbA==
@@ -16,9 +16,9 @@ spec:
   reaper:
     keyspace: reaper_ks # custom name
     cassandraUserSecretRef:
-      name: reaper-cql-secret # pre-existing secret
+      name: reaper-cql-secret # will be created with non-default name
     jmxUserSecretRef:
-      name: reaper-jmx-secret # will be created with non-default name
+      name: reaper-jmx-secret # pre-existing secret
   cassandra:
     serverVersion: "4.0.1"
     datacenters:
