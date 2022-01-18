@@ -4,7 +4,7 @@ package telemetry
 
 import (
 	"context"
-	"errors"
+
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,21 +86,17 @@ func (cfg PrometheusResourcer) UpdateResources(
 }
 
 // CleanupResources executes the cleanup of any resources on the cluster, once they are no longer required.
-// CleanupResources does not rely on user-defined CommonLabels to select which resources to delete. It uses only
-// k8ssandra-operator defined labels.
 func (cfg PrometheusResourcer) CleanupResources(ctx context.Context, client runtimeclient.Client) error {
-	if len(cfg.CommonLabels) < 1 {
-		return errors.New("no labels were found to target deletion request")
+	targetSM := promapi.ServiceMonitor{}
+	err := client.Get(ctx, types.NamespacedName{Name: cfg.ServiceMonitorName, Namespace: cfg.MonitoringTargetNS}, &targetSM)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil
+		} else {
+			return err
+		}
 	}
-	if err := cfg.validate(); err != nil {
-		return TelemetryConfigIncomplete{}
-	}
-	var deleteTargets promapi.ServiceMonitor
-	err := client.DeleteAllOf(ctx,
-		&deleteTargets,
-		runtimeclient.InNamespace(cfg.MonitoringTargetNS),
-		runtimeclient.MatchingLabels(cfg.CommonLabels),
-	)
+	err = client.Delete(ctx, &targetSM)
 	if err != nil {
 		return err
 	}
