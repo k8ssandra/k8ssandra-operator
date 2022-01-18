@@ -75,7 +75,7 @@ func init() {
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
 	utilruntime.Must(promapi.AddToScheme(scheme))
 	utilruntime.Must(medusav1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -218,6 +218,7 @@ func main() {
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
+		ManagementApi:    cassandra.NewManagementApiFactory(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Stargate")
 		os.Exit(1)
@@ -250,7 +251,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "CassandraRestore")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

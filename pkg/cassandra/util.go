@@ -45,11 +45,11 @@ func ComputeSystemReplication(kluster *api.K8ssandraCluster) SystemReplication {
 	return SystemReplication{Datacenters: dcNames, ReplicationFactor: int(rf)}
 }
 
-func ComputeReplication(maxReplicationPerDc int, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
+func ComputeReplication(maxReplicationPerDc int, datacenters ...*cassdcapi.CassandraDatacenter) map[string]int {
 	desiredReplication := make(map[string]int, len(datacenters))
 	for _, dcTemplate := range datacenters {
-		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Size)))
-		desiredReplication[dcTemplate.Meta.Name] = replicationFactor
+		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Spec.Size)))
+		desiredReplication[dcTemplate.Name] = replicationFactor
 	}
 	return desiredReplication
 }

@@ -19,11 +19,11 @@ package stargate
 import (
 	"context"
 	"fmt"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +51,8 @@ import (
 type StargateReconciler struct {
 	*config.ReconcilerConfig
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme        *runtime.Scheme
+	ManagementApi cassandra.ManagementApiFactory
 }
 
 func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -142,6 +143,17 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				racks,
 			),
 			"Stargate", req.NamespacedName)
+	}
+
+	if !labels.IsOwnedByK8ssandraController(stargate) {
+		logger.Info("Stargate resource is standalone, reconciling auth schema now")
+		managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, r.Client, logger)
+		if err != nil {
+			logger.Error(err, "Failed to create ManagementApiFacade")
+			return ctrl.Result{}, err
+		} else if err = stargateutil.ReconcileAuthKeyspace([]*cassdcapi.CassandraDatacenter{actualDc}, managementApi, logger); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Compute the desired deployments

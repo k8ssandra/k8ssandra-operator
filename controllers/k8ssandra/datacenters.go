@@ -143,7 +143,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			actualDcs = append(actualDcs, actualDc)
 
-			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, desiredDc, remoteClient, logger); recResult.Completed() {
+			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, actualDcs, remoteClient, logger); recResult.Completed() {
 				return recResult, actualDcs
 			}
 
