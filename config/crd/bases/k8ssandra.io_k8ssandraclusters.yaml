@@ -250,6 +250,109 @@ spec:
                           check_for_duplicate_rows_during_reads:
                             description: Exists in 3.11, 4.0, trunk
                             type: boolean
+                          client_encryption_options:
+                            description: Exists in 3.11, 4.0, trunk
+                            properties:
+                              acceptedProtocols:
+                                items:
+                                  type: string
+                                type: array
+                              algorithm:
+                                type: string
+                              cipherSuites:
+                                items:
+                                  type: string
+                                type: array
+                              enabled:
+                                type: boolean
+                              encryptionStores:
+                                properties:
+                                  keystoreConfigMapRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  keystorePasswordSecretRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  truststoreConfigMapRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  truststorePasswordSecretRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                required:
+                                - keystoreConfigMapRef
+                                - keystorePasswordSecretRef
+                                - truststoreConfigMapRef
+                                - truststorePasswordSecretRef
+                                type: object
+                              keystore:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              keystorePassword:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              optional:
+                                type: boolean
+                              protocol:
+                                type: string
+                              requireClientAuth:
+                                description: 'default: false'
+                                type: boolean
+                              storeType:
+                                type: string
+                              truststore:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              truststorePassword:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           client_error_reporting_exclusions:
                             description: Exists in trunk
                             properties:
@@ -888,6 +991,117 @@ spec:
                           row_cache_size_in_mb:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
+                          server_encryption_options:
+                            description: Exists in 3.11, 4.0, trunk
+                            properties:
+                              acceptedProtocols:
+                                items:
+                                  type: string
+                                type: array
+                              algorithm:
+                                type: string
+                              cipherSuites:
+                                items:
+                                  type: string
+                                type: array
+                              enableLegacySslStoragePort:
+                                type: boolean
+                              enabled:
+                                type: boolean
+                              encryptionStores:
+                                properties:
+                                  keystoreConfigMapRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  keystorePasswordSecretRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  truststoreConfigMapRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                  truststorePasswordSecretRef:
+                                    description: LocalObjectReference contains enough
+                                      information to let you locate the referenced
+                                      object inside the same namespace.
+                                    properties:
+                                      name:
+                                        description: 'Name of the referent. More info:
+                                          https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion,
+                                          kind, uid?'
+                                        type: string
+                                    type: object
+                                required:
+                                - keystoreConfigMapRef
+                                - keystorePasswordSecretRef
+                                - truststoreConfigMapRef
+                                - truststorePasswordSecretRef
+                                type: object
+                              internodeEncryption:
+                                description: 'default: none'
+                                type: string
+                              keystore:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              keystorePassword:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              optional:
+                                type: boolean
+                              protocol:
+                                type: string
+                              requireClientAuth:
+                                description: 'default: false'
+                                type: boolean
+                              requireEndpointVerification:
+                                description: 'default: false'
+                                type: boolean
+                              storeType:
+                                type: string
+                              truststore:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                              truststorePassword:
+                                description: Should not be set explicitly in the custom
+                                  resource. The operator will generate the right value
+                                  based on the EncryptionStores field.
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           slow_query_log_timeout_in_ms:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
@@ -1222,6 +1436,113 @@ spec:
                                 check_for_duplicate_rows_during_reads:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: boolean
+                                client_encryption_options:
+                                  description: Exists in 3.11, 4.0, trunk
+                                  properties:
+                                    acceptedProtocols:
+                                      items:
+                                        type: string
+                                      type: array
+                                    algorithm:
+                                      type: string
+                                    cipherSuites:
+                                      items:
+                                        type: string
+                                      type: array
+                                    enabled:
+                                      type: boolean
+                                    encryptionStores:
+                                      properties:
+                                        keystoreConfigMapRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        keystorePasswordSecretRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        truststoreConfigMapRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        truststorePasswordSecretRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                      required:
+                                      - keystoreConfigMapRef
+                                      - keystorePasswordSecretRef
+                                      - truststoreConfigMapRef
+                                      - truststorePasswordSecretRef
+                                      type: object
+                                    keystore:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    keystorePassword:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    optional:
+                                      type: boolean
+                                    protocol:
+                                      type: string
+                                    requireClientAuth:
+                                      description: 'default: false'
+                                      type: boolean
+                                    storeType:
+                                      type: string
+                                    truststore:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    truststorePassword:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                  required:
+                                  - enabled
+                                  type: object
                                 client_error_reporting_exclusions:
                                   description: Exists in trunk
                                   properties:
@@ -1860,6 +2181,121 @@ spec:
                                 row_cache_size_in_mb:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
+                                server_encryption_options:
+                                  description: Exists in 3.11, 4.0, trunk
+                                  properties:
+                                    acceptedProtocols:
+                                      items:
+                                        type: string
+                                      type: array
+                                    algorithm:
+                                      type: string
+                                    cipherSuites:
+                                      items:
+                                        type: string
+                                      type: array
+                                    enableLegacySslStoragePort:
+                                      type: boolean
+                                    enabled:
+                                      type: boolean
+                                    encryptionStores:
+                                      properties:
+                                        keystoreConfigMapRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        keystorePasswordSecretRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        truststoreConfigMapRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                        truststorePasswordSecretRef:
+                                          description: LocalObjectReference contains
+                                            enough information to let you locate the
+                                            referenced object inside the same namespace.
+                                          properties:
+                                            name:
+                                              description: 'Name of the referent.
+                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                                TODO: Add other useful fields. apiVersion,
+                                                kind, uid?'
+                                              type: string
+                                          type: object
+                                      required:
+                                      - keystoreConfigMapRef
+                                      - keystorePasswordSecretRef
+                                      - truststoreConfigMapRef
+                                      - truststorePasswordSecretRef
+                                      type: object
+                                    internodeEncryption:
+                                      description: 'default: none'
+                                      type: string
+                                    keystore:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    keystorePassword:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    optional:
+                                      type: boolean
+                                    protocol:
+                                      type: string
+                                    requireClientAuth:
+                                      description: 'default: false'
+                                      type: boolean
+                                    requireEndpointVerification:
+                                      description: 'default: false'
+                                      type: boolean
+                                    storeType:
+                                      type: string
+                                    truststore:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                    truststorePassword:
+                                      description: Should not be set explicitly in
+                                        the custom resource. The operator will generate
+                                        the right value based on the EncryptionStores
+                                        field.
+                                      type: string
+                                  required:
+                                  - enabled
+                                  type: object
                                 slow_query_log_timeout_in_ms:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer

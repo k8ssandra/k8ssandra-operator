@@ -266,7 +266,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 		},
 	}
 
-	addOrUpdateVolume(dcConfig, configVolume, configVolumeIndex, found)
+	cassandra.AddOrUpdateVolume(dcConfig, configVolume, configVolumeIndex, found)
 
 	// Medusa credentials volume using the referenced secret
 	if medusaSpec.StorageProperties.StorageProvider != "local" {
@@ -281,7 +281,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 			},
 		}
 
-		addOrUpdateVolume(dcConfig, secretVolume, secretVolumeIndex, found)
+		cassandra.AddOrUpdateVolume(dcConfig, secretVolume, secretVolumeIndex, found)
 	} else {
 		// We're using local storage for backups, which requires a volume for the local backup storage
 		backupVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "medusa-backups")
@@ -314,7 +314,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 			},
 		}
 
-		addOrUpdateAdditionalVolume(dcConfig, backupVolume, backupVolumeIndex, found)
+		cassandra.AddOrUpdateAdditionalVolume(dcConfig, backupVolume, backupVolumeIndex, found)
 	}
 
 	// Pod info volume
@@ -335,28 +335,5 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 		},
 	}
 
-	addOrUpdateVolume(dcConfig, podInfoVolume, podInfoVolumeIndex, found)
-}
-
-func addOrUpdateVolume(dcConfig *cassandra.DatacenterConfig, volume *corev1.Volume, volumeIndex int, found bool) {
-	if !found {
-		// volume doesn't exist, we need to add it
-		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, *volume)
-	} else {
-		// Overwrite existing volume
-		dcConfig.PodTemplateSpec.Spec.Volumes[volumeIndex] = *volume
-	}
-}
-
-func addOrUpdateAdditionalVolume(dcConfig *cassandra.DatacenterConfig, volume *v1beta1.AdditionalVolumes, volumeIndex int, found bool) {
-	if dcConfig.StorageConfig.AdditionalVolumes == nil {
-		dcConfig.StorageConfig.AdditionalVolumes = make(v1beta1.AdditionalVolumesSlice, 0)
-	}
-	if !found {
-		// volume doesn't exist, we need to add it
-		dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, *volume)
-	} else {
-		// Overwrite existing volume
-		dcConfig.StorageConfig.AdditionalVolumes[volumeIndex] = *volume
-	}
+	cassandra.AddOrUpdateVolume(dcConfig, podInfoVolume, podInfoVolumeIndex, found)
 }

@@ -328,6 +328,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,
+		EncryptionStoresPasswords{},
 	)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999000000")
@@ -339,6 +340,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,
+		EncryptionStoresPasswords{},
 	)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
@@ -362,6 +364,7 @@ func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 	_, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,
+		EncryptionStoresPasswords{},
 	)
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }

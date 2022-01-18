@@ -102,6 +102,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 	t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
+	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -733,7 +734,7 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 		[]string{dcNamesOpt, rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},
 		config.JvmOptions.AdditionalOptions...,
 	)
-	json, err := cassandra.CreateJsonConfig(*config, serverVersion)
+	json, err := cassandra.CreateJsonConfig(*config, serverVersion, cassandra.EncryptionStoresPasswords{})
 	if err != nil {
 		return nil, err
 	}
@@ -1348,6 +1349,260 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
+}
+
+// applyClusterTemplateAndDatacenterTemplateConfigs specifies settings in the cluster
+// template and verifies that they are applied to dc1. It specifies dc template settings
+// for dc2 and verifies that they are applied.
+func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	k8sCtx0 := "cluster-0"
+	k8sCtx1 := "cluster-1"
+
+	clusterName := "cluster-with-encryption"
+	serverVersion := "4.0.0"
+	dc1Size := int32(3)
+	dc2Size := int32(3)
+
+	// Create the client keystore and truststore configmaps
+	clientKeystore := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-keystore-configmap",
+			Namespace: namespace,
+		},
+		BinaryData: map[string][]byte{
+			"keystore": []byte("keystore content"),
+		},
+	}
+
+	clientTruststore := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-truststore-configmap",
+			Namespace: namespace,
+		},
+		BinaryData: map[string][]byte{
+			"truststore": []byte("truststore content"),
+		},
+	}
+
+	// Create the server keystore and truststore configmaps
+	serverKeystore := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-keystore-configmap",
+			Namespace: namespace,
+		},
+		BinaryData: map[string][]byte{
+			"keystore": []byte("keystore content"),
+		},
+	}
+
+	serverTruststore := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-truststore-configmap",
+			Namespace: namespace,
+		},
+		BinaryData: map[string][]byte{
+			"truststore": []byte("truststore content"),
+		},
+	}
+
+	// Loop over the created configmaps and create them
+	for _, store := range []*corev1.ConfigMap{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
+		storeKey := utils.GetKey(store)
+		storeClusterKey0 := framework.ClusterKey{NamespacedName: storeKey, K8sContext: k8sCtx0}
+		storeClusterKey1 := framework.ClusterKey{NamespacedName: storeKey, K8sContext: k8sCtx1}
+		f.Create(ctx, storeClusterKey0, store)
+		f.Create(ctx, storeClusterKey1, store)
+	}
+
+	// Create the client keystore and truststore secrets
+	clientKeystoreSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-keystore-password-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"password": []byte("keystore password"),
+		},
+	}
+
+	clientTruststoreSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-truststore-password-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"password": []byte("truststore password"),
+		},
+	}
+
+	// Create the server keystore and truststore secrets
+	serverKeystoreSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-keystore-password-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"password": []byte("keystore password"),
+		},
+	}
+
+	serverTruststoreSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-truststore-password-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"password": []byte("truststore password"),
+		},
+	}
+
+	// Loop over the created secrets and create them
+	for _, secret := range []*corev1.Secret{clientKeystoreSecret, clientTruststoreSecret, serverKeystoreSecret, serverTruststoreSecret} {
+		secretKey := utils.GetKey(secret)
+		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: k8sCtx0}
+		secretClusterKey1 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: k8sCtx1}
+		f.Create(ctx, secretClusterKey0, secret)
+		f.Create(ctx, secretClusterKey1, secret)
+	}
+
+	// Create the cluster template with encryption enabled
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      clusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				ServerVersion: serverVersion,
+				StorageConfig: &cassdcapi.StorageConfig{
+					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &defaultStorageClass,
+					},
+				},
+				CassandraConfig: &api.CassandraConfig{
+					CassandraYaml: api.CassandraYaml{
+						ClientEncryptionOptions: &api.ClientEncryptionOptions{
+							Enabled: true,
+							EncryptionStores: &api.EncryptionStores{
+								KeystoreConfigMapRef: corev1.LocalObjectReference{
+									Name: "client-keystore-configmap",
+								},
+								KeystorePasswordSecretRef: corev1.LocalObjectReference{
+									Name: "client-keystore-password-secret",
+								},
+								TruststoreConfigMapRef: corev1.LocalObjectReference{
+									Name: "client-truststore-configmap",
+								},
+								TruststorePasswordSecretRef: corev1.LocalObjectReference{
+									Name: "client-truststore-password-secret",
+								},
+							},
+						},
+						ServerEncryptionOptions: &api.ServerEncryptionOptions{
+							Enabled: true,
+							EncryptionStores: &api.EncryptionStores{
+								KeystoreConfigMapRef: corev1.LocalObjectReference{
+									Name: "server-keystore-configmap",
+								},
+								KeystorePasswordSecretRef: corev1.LocalObjectReference{
+									Name: "server-keystore-password-secret",
+								},
+								TruststoreConfigMapRef: corev1.LocalObjectReference{
+									Name: "server-truststore-configmap",
+								},
+								TruststorePasswordSecretRef: corev1.LocalObjectReference{
+									Name: "server-truststore-password-secret",
+								},
+							},
+						},
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: k8sCtx0,
+						Size:       dc1Size,
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						K8sContext: k8sCtx1,
+						Size:       dc2Size,
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that dc1 was created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("verify configuration of dc1")
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(err, "failed to get dc1")
+	cassContainerIdx, foundCassandra := cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "cassandra")
+	require.True(foundCassandra, "failed to find cassandra container in dc1")
+	cassContainer := dc1.Spec.PodTemplateSpec.Spec.Containers[cassContainerIdx]
+	// Get the cassandra container's volume mounts
+	var clientKeystoreMount *corev1.VolumeMount
+	var clientTruststoreMount *corev1.VolumeMount
+	var serverKeystoreMount *corev1.VolumeMount
+	var serverTruststoreMount *corev1.VolumeMount
+	for _, mount := range cassContainer.VolumeMounts {
+		if mount.Name == "client-keystore" {
+			clientKeystoreMount = &mount
+			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
+		} else if mount.Name == "client-truststore" {
+			clientTruststoreMount = &mount
+			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
+		} else if mount.Name == "server-keystore" {
+			serverKeystoreMount = &mount
+			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
+		} else if mount.Name == "server-truststore" {
+			serverTruststoreMount = &mount
+			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
+		}
+	}
+
+	assert.NotNil(clientKeystoreMount, "client-keystore volume mount not found")
+	assert.NotNil(clientTruststoreMount, "client-truststore volume mount not found")
+	assert.NotNil(serverKeystoreMount, "server-keystore volume mount not found")
+	assert.NotNil(serverTruststoreMount, "server-truststore volume mount not found")
+
+	_, foundClientKeystore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "client-keystore")
+	assert.True(foundClientKeystore, "failed to find client-keystore volume in dc1")
+	_, foundClientTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "client-truststore")
+	assert.True(foundClientTruststore, "failed to find client-truststore volume in dc1")
+	_, foundServerKeystore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-keystore")
+	assert.True(foundServerKeystore, "failed to find server-keystore volume in dc1")
+	_, foundServerTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-truststore")
+	assert.True(foundServerTruststore, "failed to find server-truststore volume in dc1")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
 func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {

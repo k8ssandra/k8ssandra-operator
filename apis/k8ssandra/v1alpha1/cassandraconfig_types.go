@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -155,6 +156,10 @@ type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +optional
 	CheckForDuplicateRowsDuringReads *bool `json:"check_for_duplicate_rows_during_reads,omitempty"`
+
+	// Exists in 3.11, 4.0, trunk
+	// +optional
+	ClientEncryptionOptions *ClientEncryptionOptions `json:"client_encryption_options,omitempty"`
 
 	// Exists in trunk
 	// +optional
@@ -841,6 +846,10 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
+	ServerEncryptionOptions *ServerEncryptionOptions `json:"server_encryption_options,omitempty"`
+
+	// Exists in 3.11, 4.0, trunk
+	// +optional
 	SlowQueryLogTimeoutInMs *int `json:"slow_query_log_timeout_in_ms,omitempty"`
 
 	// Exists in 3.11, 4.0, trunk
@@ -1040,4 +1049,123 @@ type TrackWarnings struct {
 	CoordinatorReadSize *int `json:"coordinator_read_size,omitempty"`
 	LocalReadSize       *int `json:"local_read_size,omitempty"`
 	RowIndexSize        *int `json:"row_index_size,omitempty"`
+}
+
+type ClientEncryptionOptions struct {
+	Enabled bool `json:"enabled"`
+
+	// +optional
+	Optional *bool `json:"optional,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	Keystore *string `json:"keystore,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	KeystorePassword *string `json:"keystorePassword,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	Truststore *string `json:"truststore,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	TruststorePassword *string `json:"truststorePassword,omitempty"`
+
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+
+	// +optional
+	AcceptedProtocols *[]string `json:"acceptedProtocols,omitempty"`
+
+	// +optional
+	Algorithm *string `json:"algorithm,omitempty"`
+
+	// +optional
+	StoreType *string `json:"storeType,omitempty"`
+
+	// +optional
+	CipherSuites *[]string `json:"cipherSuites,omitempty"`
+
+	// default: false
+	// +optional
+	RequireClientAuth *bool `json:"requireClientAuth,omitempty"`
+
+	// +optional
+	EncryptionStores *EncryptionStores `json:"encryptionStores,omitempty"`
+}
+
+type ServerEncryptionOptions struct {
+	Enabled bool `json:"enabled"`
+
+	// +optional
+	Optional *bool `json:"optional,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	Keystore *string `json:"keystore,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	KeystorePassword *string `json:"keystorePassword,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	Truststore *string `json:"truststore,omitempty"`
+
+	// Should not be set explicitly in the custom resource.
+	// The operator will generate the right value based on the EncryptionStores field.
+	// +optional
+	TruststorePassword *string `json:"truststorePassword,omitempty"`
+
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+
+	// +optional
+	AcceptedProtocols *[]string `json:"acceptedProtocols,omitempty"`
+
+	// +optional
+	Algorithm *string `json:"algorithm,omitempty"`
+
+	// +optional
+	StoreType *string `json:"storeType,omitempty"`
+
+	// +optional
+	CipherSuites *[]string `json:"cipherSuites,omitempty"`
+
+	// default: false
+	// +optional
+	RequireClientAuth *bool `json:"requireClientAuth,omitempty"`
+
+	// default: none
+	// +optional
+	InternodeEncryption *string `json:"internodeEncryption,omitempty"`
+
+	// default: false
+	// +optional
+	RequireEndpointVerification *bool `json:"requireEndpointVerification,omitempty"`
+
+	// +optional
+	EnableLegacySslStoragePort *bool `json:"enableLegacySslStoragePort,omitempty"`
+
+	// +optional
+	EncryptionStores *EncryptionStores `json:"encryptionStores,omitempty"`
+}
+
+type EncryptionStores struct {
+	KeystoreConfigMapRef corev1.LocalObjectReference `json:"keystoreConfigMapRef"`
+
+	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystorePasswordSecretRef"`
+
+	TruststoreConfigMapRef corev1.LocalObjectReference `json:"truststoreConfigMapRef"`
+
+	TruststorePasswordSecretRef corev1.LocalObjectReference `json:"truststorePasswordSecretRef"`
 }

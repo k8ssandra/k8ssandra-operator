@@ -3,6 +3,7 @@ package cassandra
 import (
 	"fmt"
 
+	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -111,13 +112,18 @@ const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, encryptionStoresSecrets EncryptionStoresPasswords) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace
 	}
 
-	rawConfig, err := CreateJsonConfig(template.CassandraConfig, template.ServerVersion)
+	// If client or server encryption is enabled, create the required volumes and mounts
+	if err := HandleEncryptionOptions(template); err != nil {
+		return nil, err
+	}
+
+	rawConfig, err := CreateJsonConfig(template.CassandraConfig, template.ServerVersion, encryptionStoresSecrets)
 	if err != nil {
 		return nil, err
 	}
@@ -385,4 +391,43 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 	}
 
 	return nil
+}
+
+func AddOrUpdateVolume(dcConfig *DatacenterConfig, volume *corev1.Volume, volumeIndex int, found bool) {
+	if !found {
+		// volume doesn't exist, we need to add it
+		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, *volume)
+	} else {
+		// Overwrite existing volume
+		dcConfig.PodTemplateSpec.Spec.Volumes[volumeIndex] = *volume
+	}
+}
+
+func AddOrUpdateAdditionalVolume(dcConfig *DatacenterConfig, volume *v1beta1.AdditionalVolumes, volumeIndex int, found bool) {
+	if dcConfig.StorageConfig.AdditionalVolumes == nil {
+		dcConfig.StorageConfig.AdditionalVolumes = make(v1beta1.AdditionalVolumesSlice, 0)
+	}
+	if !found {
+		// volume doesn't exist, we need to add it
+		dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, *volume)
+	} else {
+		// Overwrite existing volume
+		dcConfig.StorageConfig.AdditionalVolumes[volumeIndex] = *volume
+	}
+}
+
+func AddOrUpdateVolumeMount(container *corev1.Container, volume *corev1.Volume, mountPath string) {
+	newVolumeMount := corev1.VolumeMount{
+		Name:      volume.Name,
+		MountPath: mountPath,
+	}
+	for i, volumeMount := range container.VolumeMounts {
+		if volumeMount.Name == volume.Name {
+			container.VolumeMounts[i] = newVolumeMount
+			return
+		}
+	}
+
+	// Volume mount doesn't exist yet, we'll create it.
+	container.VolumeMounts = append(container.VolumeMounts, newVolumeMount)
 }
