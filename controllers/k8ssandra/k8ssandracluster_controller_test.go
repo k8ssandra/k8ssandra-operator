@@ -114,7 +114,6 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -236,7 +235,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
-	//Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
+	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[0].CassandraTelemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
@@ -309,11 +308,10 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:            clusterName,
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				ServerVersion:      serverVersion,
 				StorageConfig: &cassdcapi.StorageConfig{
@@ -374,7 +372,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
@@ -400,7 +398,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
@@ -437,11 +435,10 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:       clusterName,
 				ServerVersion: serverVersion,
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
@@ -532,7 +529,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[0].Networking, dc1.Spec.Networking)
@@ -558,7 +555,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
@@ -596,11 +593,10 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:       clusterName,
 				ServerVersion: serverVersion,
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
@@ -687,7 +683,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err = f.Get(ctx, dc1Key, dc1)
 	require.NoError(err, "failed to get dc1")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc1.Spec.ClusterName)
+	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Networking, dc1.Spec.Networking)
@@ -713,7 +709,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
 
-	assert.Equal(kc.Spec.Cassandra.Cluster, dc2.Spec.ClusterName)
+	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
@@ -758,14 +754,14 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
 
+	clusterName := "cluster-multi"
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "cluster-multi",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -823,7 +819,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -927,14 +923,14 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	k8sCtx0 := "cluster-0"
 	k8sCtx1 := "cluster-1"
 
+	clusterName := "cluster-multi-stargate"
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "test",
+			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "cluster-multi-stargate",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -1002,7 +998,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -1036,7 +1032,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-" + dc1Key.Name + "-stargate"},
+			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
 	}
 
 	t.Logf("check that stargate %s has not been created", sg1Key)
@@ -1068,7 +1064,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-" + dc2Key.Name + "-stargate"},
+			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
 	}
 
 	t.Log("update dc2 status to ready")
@@ -1211,7 +1207,6 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
 				CassandraConfig: &api.CassandraConfig{
 					CassandraYaml: api.CassandraYaml{
 						NumTokens: pointer.Int(16),
@@ -1317,7 +1312,7 @@ func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 func superuserSecretExists(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) func() bool {
 	secretName := kluster.Spec.Cassandra.SuperuserSecretRef.Name
 	if secretName == "" {
-		secretName = secret.DefaultSuperuserSecretName(kluster.Spec.Cassandra.Cluster)
+		secretName = secret.DefaultSuperuserSecretName(kluster.Name)
 	}
 	return secretExists(f, ctx, kluster.Namespace, secretName)
 }

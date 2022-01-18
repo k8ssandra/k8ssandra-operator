@@ -39,7 +39,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     [storage]
     storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
     {{- if eq .Spec.Medusa.StorageProperties.StorageProvider "local" }}
-    bucket_name = {{ .Spec.Cassandra.Cluster }}
+    bucket_name = {{ .Name }}
     base_path = /mnt/backups
     {{- else }}
     bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
@@ -48,7 +48,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     {{- if .Spec.Medusa.StorageProperties.Prefix }}
     prefix = {{ .Spec.Medusa.StorageProperties.Prefix }}
     {{- else }}
-    prefix = {{ .Spec.Cassandra.Cluster }}
+    prefix = {{ .Name }}
     {{- end }}
     max_backup_age = {{ .Spec.Medusa.StorageProperties.MaxBackupAge }}
     max_backup_count = {{ .Spec.Medusa.StorageProperties.MaxBackupCount }}

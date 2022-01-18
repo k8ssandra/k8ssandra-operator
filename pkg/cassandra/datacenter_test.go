@@ -21,24 +21,21 @@ func TestCoalesce(t *testing.T) {
 	mgmtAPIHeap := resource.MustParse("999M")
 
 	type test struct {
-		name string
-
+		name            string
+		clusterName     string
 		clusterTemplate *api.CassandraClusterTemplate
-
-		dcTemplate *api.CassandraDatacenterTemplate
-
-		got *DatacenterConfig
-
-		want *DatacenterConfig
+		dcTemplate      *api.CassandraDatacenterTemplate
+		got             *DatacenterConfig
+		want            *DatacenterConfig
 	}
 
 	tests := []test{
 		{
 			// There are some properties that should only be set at the cluster-level
 			// and should not differ among DCs.
-			name: "Set non-override configs",
+			name:        "Set non-override configs",
+			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:            "k8ssandra",
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
@@ -239,9 +236,9 @@ func TestCoalesce(t *testing.T) {
 			},
 		},
 		{
-			name: "set management api heap size from DatacenterTemplate",
+			name:        "set management api heap size from DatacenterTemplate",
+			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:            "k8ssandra",
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
@@ -270,9 +267,9 @@ func TestCoalesce(t *testing.T) {
 			},
 		},
 		{
-			name: "set management api heap size from CassandraClusterTemplate",
+			name:        "set management api heap size from CassandraClusterTemplate",
+			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Cluster:            "k8ssandra",
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				MgmtAPIHeap:        &mgmtAPIHeap,
 			},
@@ -316,7 +313,7 @@ func TestCoalesce(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.got = Coalesce(tc.clusterTemplate, tc.dcTemplate)
+			tc.got = Coalesce(tc.clusterName, tc.clusterTemplate, tc.dcTemplate)
 			require.Equal(t, tc.want, tc.got)
 		})
 	}

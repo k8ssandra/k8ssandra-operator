@@ -20,7 +20,6 @@ spec:
     jmxUserSecretRef:
       name: reaper-jmx-secret # will be created with non-default name
   cassandra:
-    cluster: test
     serverVersion: "4.0.1"
     datacenters:
       - metadata:

@@ -4,7 +4,6 @@ metadata:
   name: test
 spec:
   cassandra:
-    cluster: test
     serverVersion: "3.11.11"
     datacenters:
       - metadata:

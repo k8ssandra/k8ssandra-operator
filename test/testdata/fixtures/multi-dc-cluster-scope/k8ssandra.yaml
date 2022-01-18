@@ -5,7 +5,6 @@ metadata:
   namespace: test-0
 spec:
   cassandra:
-    cluster: test
     serverVersion: "3.11.11"
     storageConfig:
       cassandraDataVolumeClaimSpec:

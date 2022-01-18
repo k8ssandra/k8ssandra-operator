@@ -98,11 +98,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		medusaIni := medusa.CreateMedusaIni(kc)
 		configMapKey := client.ObjectKey{
 			Namespace: kc.Namespace,
-			Name:      fmt.Sprintf("%s-medusa", kc.Spec.Cassandra.Cluster),
+			Name:      fmt.Sprintf("%s-medusa", kc.Name),
 		}
 
 		logger := logger.WithValues("MedusaConfigMap", configMapKey)
-		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.Spec.Cassandra.Cluster, medusaIni)
+		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.Name, medusaIni)
 		// Compute a hash which will allow to compare desired and actual configMaps
 		annotations.AddHashAnnotation(desiredConfigMap)
 		actualConfigMap := &corev1.ConfigMap{}

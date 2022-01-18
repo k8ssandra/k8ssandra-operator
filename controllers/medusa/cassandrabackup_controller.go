@@ -1,6 +1,7 @@
 /*
 
 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -214,7 +215,7 @@ func (r *CassandraBackupReconciler) addCassdcSpecToStatus(ctx context.Context, b
 			// I had to comment out the following line because it was causing the backup to fail as it seems to expect bytes for the config
 			// The next version of k8ssandra backup/restore will remove all references to a cassdc anyway and rather rely on the token map stored
 			// in the medusa backups.
-			//Config:                 cassdc.Spec.Config,
+			// Config:                 cassdc.Spec.Config,
 			ManagementApiAuth:      cassdc.Spec.ManagementApiAuth,
 			Resources:              cassdc.Spec.Resources,
 			SystemLoggerResources:  cassdc.Spec.SystemLoggerResources,

@@ -21,7 +21,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 		// Note that we do not persist this change because doing so would prevent us from
 		// differentiating between a default secret by the operator vs one provided by the
 		// client that happens to have the same name as the default name.
-		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Spec.Cassandra.Cluster)
+		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Name)
 		logger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretRef.Name)
 	}
 
@@ -40,11 +40,11 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			logger.Info("Reconciling Reaper user secrets")
 			cassandraUserSecretRef := kc.Spec.Reaper.CassandraUserSecretRef
 			if cassandraUserSecretRef.Name == "" {
-				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Spec.Cassandra.Cluster)
+				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
 			}
 			jmxUserSecretRef := kc.Spec.Reaper.JmxUserSecretRef
 			if jmxUserSecretRef.Name == "" {
-				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Spec.Cassandra.Cluster)
+				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
 			kcKey := utils.GetKey(kc)
 			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
