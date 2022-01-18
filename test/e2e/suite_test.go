@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,19 +62,19 @@ func TestOperator(t *testing.T) {
 		fixture:       "single-dc",
 		deployTraefik: true,
 	}))
-	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createStargateAndDatacenter,
-		fixture:                      "stargate",
-		deployTraefik:                true,
-		skipK8ssandraClusterCleanup:  true,
-		doCassandraDatacenterCleanup: true,
-	}))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
 		fixture:  "multi-dc",
 	}))
+	t.Run("CreateSingleStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleStargateAndDatacenter,
+		fixture:                      "single-stargate",
+		deployTraefik:                true,
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createStargateAndDatacenter,
+		testFunc:                     createMultiStargateAndDatacenter,
 		fixture:                      "multi-stargate",
 		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
@@ -522,12 +524,72 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 }
 
-// createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
+// createSingleStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 Stargate
+// node, deployed in the local cluster. Note that no K8ssandraCluster object is created.
+func createSingleStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	testStandaloneStargate(t, f, ctx, namespace, 1)
+}
+
+// createMultiStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
-func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+func createMultiStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	testStandaloneStargate(t, f, ctx, namespace, 3)
+}
+
+func testStandaloneStargate(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string, stargateSize int) {
 
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
+
+	t.Log("create Stargate auth keyspace")
+	_, err := f.ExecuteCql(ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0",
+		"CREATE KEYSPACE data_endpoint_auth WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3} ")
+	require.NoError(t, err, "failed to create Stargate auth keyspace")
+
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-rack1-sts-0", "data_endpoint_auth")
+
+	heap := resource.MustParse("384Mi")
+	memory := resource.MustParse("512Mi")
+	stargate := &stargateapi.Stargate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "s1",
+			Namespace: namespace,
+		},
+		Spec: stargateapi.StargateSpec{
+			DatacenterRef: corev1.LocalObjectReference{Name: "dc1"},
+			StargateDatacenterTemplate: stargateapi.StargateDatacenterTemplate{
+				StargateClusterTemplate: stargateapi.StargateClusterTemplate{
+					Size: int32(stargateSize),
+					StargateTemplate: stargateapi.StargateTemplate{
+						AllowStargateOnDataNodes: true,
+						HeapSize:                 &heap,
+						Resources: &corev1.ResourceRequirements{
+							Limits: map[corev1.ResourceName]resource.Quantity{
+								corev1.ResourceMemory: memory,
+							},
+						},
+						CassandraConfigMapRef: &corev1.LocalObjectReference{Name: "cassandra-config"},
+						LivenessProbe: &corev1.Probe{
+							InitialDelaySeconds: 100,
+							TimeoutSeconds:      20,
+							PeriodSeconds:       10,
+							SuccessThreshold:    1,
+							FailureThreshold:    20,
+						},
+						ReadinessProbe: &corev1.Probe{
+							InitialDelaySeconds: 100,
+							TimeoutSeconds:      20,
+							PeriodSeconds:       10,
+							SuccessThreshold:    1,
+							FailureThreshold:    20,
+						},
+					},
+				},
+			},
+		},
+	}
+	err = f.Client.Create(ctx, stargate)
+	require.NoError(t, err, "failed to create Stargate resource")
 
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
 	checkStargateReady(t, f, ctx, stargateKey)
