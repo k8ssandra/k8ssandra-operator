@@ -168,6 +168,35 @@ func TestComputeReplication(t *testing.T) {
 	}
 }
 
+func TestComputeReplicationFromDcTemplates(t *testing.T) {
+	tests := []struct {
+		name     string
+		dcs      []api.CassandraDatacenterTemplate
+		expected map[string]int
+	}{
+		{"one dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+		}, map[string]int{"dc1": 3}},
+		{"small dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 1},
+		}, map[string]int{"dc1": 1}},
+		{"large dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 10},
+		}, map[string]int{"dc1": 3}},
+		{"many dcs", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, Size: 1},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, Size: 10},
+		}, map[string]int{"dc1": 3, "dc2": 1, "dc3": 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ComputeReplicationFromDcTemplates(3, tt.dcs...)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestCompareReplications(t *testing.T) {
 	tests := []struct {
 		name     string
