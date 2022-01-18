@@ -3,6 +3,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"testing"
+	"time"
+
 	cqlclient "github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -16,10 +20,7 @@ import (
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 )
 
 func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -55,7 +56,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	pod2Name := "cluster1-dc2-default-sts-0"
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
+	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name, kcKey)
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
@@ -67,7 +68,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	toggleAuthentication(t, f, ctx, kcKey, false)
 	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
+	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name, kcKey)
 }
 
 func checkSecrets(
@@ -151,6 +152,7 @@ func testAuthenticationDisabled(
 	namespace string,
 	replication map[string]int,
 	pod1Name, pod2Name string,
+	kcKey types.NamespacedName,
 ) {
 	t.Run("TestJmxAccessAuthDisabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
@@ -175,8 +177,8 @@ func testAuthenticationDisabled(
 			testStargateNativeApi(t, ctx, 1, "", "", replication)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace)
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, f, kcKey)
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, f, kcKey)
 		})
 	})
 }
@@ -230,8 +232,8 @@ func testAuthenticationEnabled(
 		})
 		t.Run("Reaper", func(t *testing.T) {
 			// Note: reaper REST api is currently always unauthenticated
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace)
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, f, kcKey)
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, f, kcKey)
 		})
 	})
 }

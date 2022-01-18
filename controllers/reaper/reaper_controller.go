@@ -274,7 +274,7 @@ func (r *ReaperReconciler) reconcileService(
 func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *reaperapi.Reaper, actualDc *cassdcapi.CassandraDatacenter, logger logr.Logger) (ctrl.Result, error) {
 	manager := r.NewManager()
 	// Get the Reaper UI secret username and password values if auth is enabled
-	if username, password, err := r.getReaperUISecret(ctx, actualReaper, logger); err != nil {
+	if username, password, err := r.getReaperUICredentials(ctx, actualReaper, logger); err != nil {
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	} else {
 		if err := manager.Connect(ctx, actualReaper, username, password); err != nil {
@@ -294,7 +294,7 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 	return ctrl.Result{}, nil
 }
 
-func (r *ReaperReconciler) getReaperUISecret(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
+func (r *ReaperReconciler) getReaperUICredentials(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
 	secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.ReaperUiSecretRef.Name}
 	if secret, err := r.getSecret(ctx, secretKey); err != nil {
 		if errors.IsNotFound(err) {

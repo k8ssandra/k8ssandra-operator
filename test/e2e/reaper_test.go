@@ -3,6 +3,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"testing"
+
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -11,11 +14,10 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -40,7 +42,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context kind-k8ssandra-0")
-		testReaperApi(t, ctx, 0, "test", "reaper_db")
+		testReaperApi(t, ctx, 0, "test", "reaper_db", f, kcKey)
 	})
 }
 
@@ -105,10 +107,10 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
-		testReaperApi(t, ctx, 0, "test", "reaper_ks")
+		testReaperApi(t, ctx, 0, "test", "reaper_ks", f, kcKey)
 	})
 	t.Run("TestReaperApi[1]", func(t *testing.T) {
-		testReaperApi(t, ctx, 1, "test", "reaper_ks")
+		testReaperApi(t, ctx, 1, "test", "reaper_ks", f, kcKey)
 	})
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
@@ -122,7 +124,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 }
 
 func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
 
@@ -143,7 +145,7 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context kind-k8ssandra-0")
-		testReaperApi(t, ctx, 0, "test", "reaper_db")
+		testReaperApi(t, ctx, 0, "test", "reaper_db", f, kcKey)
 	})
 }
 
@@ -253,16 +255,28 @@ func testRemoveReaperFromK8ssandraCluster(
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 }
 
-func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName, keyspace string) {
+func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName, keyspace string, f *framework.E2eFramework, kcKey types.NamespacedName) {
 	t.Logf("Testing Reaper API in context kind-k8ssandra-%v...", k8sContextIdx)
 	var reaperURL, _ = url.Parse(fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%d080", k8sContextIdx))
 	var reaperClient = reaperclient.NewClient(reaperURL)
+	if authEnabled(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: kcKey}) {
+		reaperUiSecret := getReaperUiSecret(t, f, ctx, kcKey)
+		reaperClient.Login(ctx, string(reaperUiSecret.Data["username"]), string(reaperUiSecret.Data["password"]))
+	}
+
 	checkClusterIsRegisteredInReaper(t, ctx, clusterName, reaperClient)
 	repairId := triggerRepair(t, ctx, clusterName, keyspace, reaperClient)
 	t.Log("Waiting for one segment to be repaired and canceling run")
 	waitForOneSegmentToBeDone(t, ctx, repairId, reaperClient)
 	err := reaperClient.AbortRepairRun(ctx, repairId)
 	require.NoErrorf(t, err, "Failed to abort repair run %s: %s", repairId, err)
+}
+
+func getReaperUiSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName) *corev1.Secret {
+	t.Log("get Reaper UI secret")
+	uiSecretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: kcKey.Namespace, Name: "test-reaper-ui"}}
+	reaperSecret := getSecret(t, f, ctx, kcKey, uiSecretKey)
+	return reaperSecret
 }
 
 func checkClusterIsRegisteredInReaper(t *testing.T, ctx context.Context, clusterName string, reaperClient reaperclient.Client) {

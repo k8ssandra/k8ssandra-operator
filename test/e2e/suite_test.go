@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
@@ -840,6 +841,10 @@ func checkNodeToolStatusUN(
 }
 
 func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
+	getSecret(t, f, ctx, kcKey, secretKey)
+}
+
+func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) *corev1.Secret {
 	secret := &corev1.Secret{}
 	require.Eventually(
 		t,
@@ -851,6 +856,7 @@ func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Cont
 		"secret %s does not exist or is not managed by k8c",
 		secretKey,
 	)
+	return secret
 }
 
 func checkSecretDoesNotExist(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
@@ -884,4 +890,10 @@ func configureZeroLog() {
 		Out:        os.Stderr,
 		TimeFormat: zerolog.TimeFormatUnix,
 	})
+}
+
+func authEnabled(t *testing.T, f *framework.E2eFramework, ctx context.Context, clusterKey framework.ClusterKey) bool {
+	k8ssandra := &api.K8ssandraCluster{}
+	require.NoError(t, f.Get(ctx, clusterKey, k8ssandra))
+	return k8ssandra.Spec.IsAuthEnabled()
 }
