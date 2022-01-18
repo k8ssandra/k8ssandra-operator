@@ -50,20 +50,15 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 // updateReplicationOfSystemKeyspaces ensures that the replication for the system_auth,
 // system_traces, and system_distributed keyspaces is up to date. It ensures that there are
 // replicas for each DC and that there is a max of 3 replicas per DC.
-func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
-	ctx context.Context,
-	dcs []*cassdcapi.CassandraDatacenter,
-	remoteClient client.Client,
-	logger logr.Logger,
-) result.ReconcileResult {
-	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dcs[0], remoteClient, logger)
+func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(ctx context.Context, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+	managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
 		logger.Error(err, "Failed to create ManagementApiFacade")
 		return result.Error(err)
 	}
 
 	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
-	replication := cassandra.ComputeReplication(3, dcs...)
+	replication := cassandra.ComputeReplicationFromDcTemplates(3, kc.Spec.Cassandra.Datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 
