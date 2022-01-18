@@ -149,11 +149,11 @@ func TestComputeReplication(t *testing.T) {
 					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 3},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "dc2"},
 					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 1},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "dc3"},
 					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 10},
 				},
 			},
