@@ -260,7 +260,7 @@ func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, cluster
 	var reaperURL, _ = url.Parse(fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%d080", k8sContextIdx))
 	var reaperClient = reaperclient.NewClient(reaperURL)
 	if authEnabled(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: kcKey}) {
-		reaperUiSecret := getReaperUiSecret(t, f, ctx, kcKey)
+		reaperUiSecret := getReaperUiSecret(t, f, ctx, kcKey, clusterName)
 		reaperClient.Login(ctx, string(reaperUiSecret.Data["username"]), string(reaperUiSecret.Data["password"]))
 	}
 
@@ -272,9 +272,9 @@ func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, cluster
 	require.NoErrorf(t, err, "Failed to abort repair run %s: %s", repairId, err)
 }
 
-func getReaperUiSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName) *corev1.Secret {
+func getReaperUiSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName, clusterName string) *corev1.Secret {
 	t.Log("get Reaper UI secret")
-	uiSecretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: kcKey.Namespace, Name: "test-reaper-ui"}}
+	uiSecretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: kcKey.Namespace, Name: fmt.Sprintf("%s-reaper-ui", clusterName)}}
 	reaperSecret := getSecret(t, f, ctx, kcKey, uiSecretKey)
 	return reaperSecret
 }
