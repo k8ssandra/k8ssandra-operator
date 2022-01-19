@@ -166,8 +166,6 @@ Suppose we have a dependency on `github.com/example/example` at v1.0.0 and we wa
 
 If you want to upgrade to a specific commit, then you would run `go get "github.com/example/example@6a78a8237173d9322e6c0cab94c615b1f043a906"` where the long string at the end is the full commit hash.
 
-**Note:** Sometimes `go get` puts the wrong version in `go.mod` so check and make sure that the updated version is correct.
-
 ## cass-operator
 In addition to updating `go.mod` as previously described, there are several other changes that have to be made to completely upgrade cass-operator.
 
