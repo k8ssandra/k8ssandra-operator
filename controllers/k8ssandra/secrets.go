@@ -48,10 +48,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			if cassandraUserSecretRef.Name == "" {
 				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
 			}
-			var jmxUserSecretRef corev1.LocalObjectReference
-			if kc.Spec.Reaper != nil {
-				jmxUserSecretRef = kc.Spec.Reaper.JmxUserSecretRef
-			}
 			if jmxUserSecretRef.Name == "" {
 				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
