@@ -47,7 +47,6 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster: "test",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -68,7 +67,7 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 	}
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 
-	createSuperuserSecret(ctx, t, f, kcKey, kc.Spec.Cassandra.Cluster)
+	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
 	createReplicatedSecret(ctx, t, f, kcKey, "cluster-0")
 	setReplicationStatusDone(ctx, t, f, kcKey)
@@ -110,7 +109,6 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				Cluster:       "test",
 				ServerVersion: "4.0.1",
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
@@ -138,7 +136,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	}
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 
-	createSuperuserSecret(ctx, t, f, kcKey, kc.Spec.Cassandra.Cluster)
+	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
 	createReplicatedSecret(ctx, t, f, kcKey, "cluster-0", "cluster-1")
 	setReplicationStatusDone(ctx, t, f, kcKey)
@@ -357,7 +355,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-dc1-stargate",
+			Name:      kc.Name + "-dc1-stargate",
 		},
 	}
 
@@ -372,7 +370,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 		K8sContext: k8sCtx0,
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-dc1-reaper",
+			Name:      kc.Name + "-dc1-reaper",
 		},
 	}
 
@@ -415,7 +413,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-dc2-stargate"},
+			Name:      kc.Name + "-dc2-stargate"},
 	}
 
 	t.Log("check that stargate sg2 is created")
@@ -429,7 +427,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
-			Name:      kc.Spec.Cassandra.Cluster + "-dc2-reaper",
+			Name:      kc.Name + "-dc2-reaper",
 		},
 	}
 
@@ -679,7 +677,7 @@ func verifyRebuildTaskNotCreated(ctx context.Context, t *testing.T, f *framework
 
 func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcIdx int) {
 	dcTemplate := kc.Spec.Cassandra.Datacenters[dcIdx]
-	dcConfig := cassandra.Coalesce(kc.Spec.Cassandra, &dcTemplate)
+	dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)
 	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig)
 
 	require.NoError(t, err, "failed to create CassandraDatacenter")

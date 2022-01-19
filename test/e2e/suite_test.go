@@ -693,7 +693,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Spec.Cassandra.Cluster)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
