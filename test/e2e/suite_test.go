@@ -841,19 +841,19 @@ func checkNodeToolStatusUN(
 }
 
 func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
-	getSecret(t, f, ctx, kcKey, secretKey)
+	require.True(t, labels.IsManagedBy(getSecret(t, f, ctx, secretKey), kcKey), "secret %s/%s is not managed by %s", secretKey.Namespace, secretKey.Name, kcKey.Name)
 }
 
-func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) *corev1.Secret {
+func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) *corev1.Secret {
 	secret := &corev1.Secret{}
 	require.Eventually(
 		t,
 		func() bool {
-			return f.Get(ctx, secretKey, secret) == nil && labels.IsManagedBy(secret, kcKey)
+			return f.Get(ctx, secretKey, secret) == nil
 		},
 		time.Minute,
 		time.Second,
-		"secret %s does not exist or is not managed by k8c",
+		"secret %s does not exist",
 		secretKey,
 	)
 	return secret

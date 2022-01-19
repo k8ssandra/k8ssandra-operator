@@ -61,12 +61,12 @@ spec:
             - name: "REAPER_JMX_USERNAME"
               valueFrom:
                 secretKeyRef:
-                  name: reaper-jmx-secret
+                  name: test-jmx-secret
                   key: "username"
             - name: "REAPER_JMX_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: reaper-jmx-secret
+                  name: test-jmx-secret
                   key: "password"
           args:
             - "/bin/sh"
