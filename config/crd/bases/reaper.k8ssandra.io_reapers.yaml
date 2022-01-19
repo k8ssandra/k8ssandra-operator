@@ -1886,8 +1886,6 @@ spec:
                 - Configuring
                 - Running
                 type: string
-            required:
-            - progress
             type: object
         type: object
     served: true

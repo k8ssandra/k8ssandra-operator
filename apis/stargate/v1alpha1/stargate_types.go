@@ -208,7 +208,8 @@ type StargateStatus struct {
 
 	// Progress is the progress of this Stargate object.
 	// +kubebuilder:validation:Enum=Pending;Deploying;Running
-	Progress StargateProgress `json:"progress"`
+	// +optional
+	Progress StargateProgress `json:"progress,omitempty"`
 
 	// +optional
 	Conditions []StargateCondition `json:"conditions,omitempty"`
