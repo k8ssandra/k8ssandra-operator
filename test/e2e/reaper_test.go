@@ -124,7 +124,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 }
 
 func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "reaper1"}
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
 
