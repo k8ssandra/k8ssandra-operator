@@ -8,6 +8,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
@@ -34,15 +35,19 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	if kc.Spec.Reaper != nil {
+	if kc.HasReapers() {
 		// Reaper secrets are only required when authentication is enabled on the cluster
 		if kc.Spec.IsAuthEnabled() {
 			logger.Info("Reconciling Reaper user secrets")
-			cassandraUserSecretRef := kc.Spec.Reaper.CassandraUserSecretRef
+			var cassandraUserSecretRef corev1.LocalObjectReference
+			var jmxUserSecretRef corev1.LocalObjectReference
+			if kc.Spec.Reaper != nil {
+				cassandraUserSecretRef = kc.Spec.Reaper.CassandraUserSecretRef
+				jmxUserSecretRef = kc.Spec.Reaper.JmxUserSecretRef
+			}
 			if cassandraUserSecretRef.Name == "" {
 				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
 			}
-			jmxUserSecretRef := kc.Spec.Reaper.JmxUserSecretRef
 			if jmxUserSecretRef.Name == "" {
 				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
