@@ -29,15 +29,16 @@ import (
 // addDc tests scenarios that involve adding a new CassandraDatacenter to an existing
 // K8ssandraCluster.
 func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-	t.Run("WithUserKeyspaces", addDcTest(ctx, f, withUserKeyspaces))
-	t.Run("WithStargateAndReaper", addDcTest(ctx, f, withStargateAndReaper))
-	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate))
-	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate))
+	t.Run("WithUserKeyspaces", addDcTest(ctx, f, withUserKeyspaces, true))
+	t.Run("WithStargateAndReaper", addDcTest(ctx, f, withStargateAndReaper, true))
+	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate, true))
+	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
+	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
 }
 
 type addDcTestFunc func(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster)
 
-func addDcSetup(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
+func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
 	require := require.New(t)
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -100,13 +101,97 @@ func addDcSetup(ctx context.Context, t *testing.T, f *framework.Framework, names
 	return kc
 }
 
-func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc) func(*testing.T) {
+func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
+	require := require.New(t)
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "add-dc-test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Cluster:       "test",
+				ServerVersion: "4.0.1",
+				StorageConfig: &cassdcapi.StorageConfig{
+					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &defaultStorageClass,
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: k8sCtx0,
+						Size:       3,
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						K8sContext: k8sCtx1,
+						Size:       3,
+					},
+				},
+			},
+		},
+	}
+	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+
+	createSuperuserSecret(ctx, t, f, kcKey, kc.Spec.Cassandra.Cluster)
+
+	createReplicatedSecret(ctx, t, f, kcKey, "cluster-0", "cluster-1")
+	setReplicationStatusDone(ctx, t, f, kcKey)
+
+	createCassandraDatacenter(ctx, t, f, kc, 0)
+
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dc1Key, dc)
+	require.NoError(err)
+
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
+	require.NoError(err, "failed to set dc1 status ready")
+
+	createCassandraDatacenter(ctx, t, f, kc, 1)
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc = &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc)
+	require.NoError(err)
+
+	err = f.SetDatacenterStatusReady(ctx, dc2Key)
+	require.NoError(err, "failed to set dc2 status ready")
+
+	err = f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	t.Log("wait for the CassandraInitialized condition to be set")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err := f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			return false
+		}
+		initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
+		return initialized && len(kc.Status.Datacenters) > 1
+	}, timeout, interval, "timed out waiting for CassandraInitialized condition check")
+
+	return kc
+}
+
+func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, single bool) func(*testing.T) {
 	return func(t *testing.T) {
 		namespace := rand.String(9)
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
-		kc := addDcSetup(ctx, t, f, namespace)
+		var kc *api.K8ssandraCluster
+		if single {
+			kc = addDcSetupForSingleDc(ctx, t, f, namespace)
+		} else {
+			kc = addDcSetupForMultiDc(ctx, t, f, namespace)
+		}
 		managementApiFactory.Reset()
 		test(ctx, t, f, kc)
 
@@ -149,12 +234,13 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	addDcToCluster(ctx, t, f, kc)
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
 
 	t.Log("update dc2 status to ready")
@@ -170,6 +256,68 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: k8sCtx0}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+}
+
+// configureSrcDcForRebuild tests adding a DC to a cluster and setting the
+// api.RebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
+// configured with the specified source dc.
+func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	replication := map[string]int{"dc1": 3, "dc2": 3}
+	updatedReplication := map[string]int{"dc1": 3, "dc2": 3, "dc3": 3}
+
+	mockMgmtApi := testutils.NewFakeManagementApiFacade()
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
+	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
+
+	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+		return mockMgmtApi, nil
+	}
+	managementApiFactory.SetAdapter(adapter)
+
+	dc3Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc3"}, K8sContext: k8sCtx2}
+
+	kcKey := utils.GetKey(kc)
+	kc = &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster")
+
+	kc.Annotations[api.RebuildSourceDcAnnotation] = "dc2"
+	err = f.Client.Update(ctx, kc)
+	require.NoError(err, "failed to add %s annotation to K8ssandraCluster", api.RebuildSourceDcAnnotation)
+
+	addDcToCluster(ctx, t, f, kc, dc3Key)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("check that dc3 was created")
+	require.Eventually(f.DatacenterExists(ctx, dc3Key), timeout, interval, "failed to verify dc2 was created")
+
+	t.Log("update dc3 status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dc3Key)
+	require.NoError(err, "failed to set dc3 status ready")
+
+	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc2Key)
+
+	rebuildTaskKey := framework.ClusterKey{
+		K8sContext: k8sCtx2,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      "dc3-rebuild",
+		},
+	}
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey)
 }
 
 // withStargateAndReaper tests adding a DC to a cluster that also has Stargate and Reaper
@@ -235,12 +383,13 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
 
-	addDcToCluster(ctx, t, f, kc)
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
 
 	t.Log("update dc2 status to ready")
@@ -312,12 +461,13 @@ func failSystemKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fr
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	addDcToCluster(ctx, t, f, kc)
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
 
 	t.Log("update dc2 status to ready")
@@ -366,12 +516,13 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 	kcKey := utils.GetKey(kc)
 	namespace := kcKey.Namespace
 
-	addDcToCluster(ctx, t, f, kc)
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
 
 	t.Log("update dc2 status to ready")
@@ -399,8 +550,8 @@ func addStargateAndReaperToCluster(ctx context.Context, t *testing.T, f *framewo
 	require.NoError(t, err, "failed to add Stargate and Reaper")
 }
 
-func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
-	t.Log("add dc2 to cluster")
+func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcKey framework.ClusterKey) {
+	t.Logf("add %s to cluster", dcKey.Name)
 
 	key := utils.GetKey(kc)
 	err := f.Client.Get(ctx, key, kc)
@@ -408,9 +559,10 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 
 	kc.Spec.Cassandra.Datacenters = append(kc.Spec.Cassandra.Datacenters, api.CassandraDatacenterTemplate{
 		Meta: api.EmbeddedObjectMeta{
-			Name: "dc2",
+			Name:      dcKey.Name,
+			Namespace: dcKey.Namespace,
 		},
-		K8sContext:    k8sCtx1,
+		K8sContext:    dcKey.K8sContext,
 		Size:          3,
 		ServerVersion: "4.0.1",
 		StorageConfig: &cassdcapi.StorageConfig{
@@ -419,7 +571,7 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 			},
 		},
 	})
-	annotations.AddAnnotation(kc, api.DcReplicationAnnotation, `{"dc2": {"ks1": 3, "ks2": 3}}`)
+	annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
 
 	err = f.Client.Update(ctx, kc)
 	require.NoError(t, err, "failed to add dc to K8ssandraCluster")
@@ -523,4 +675,29 @@ func verifyRebuildTaskNotCreated(ctx context.Context, t *testing.T, f *framework
 		err := f.Get(ctx, taskKey, &cassctlapi.CassandraTask{})
 		return err == nil
 	}, timeout, interval, "Failed to verify that the rebuild task was not created")
+}
+
+func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcIdx int) {
+	dcTemplate := kc.Spec.Cassandra.Datacenters[dcIdx]
+	dcConfig := cassandra.Coalesce(kc.Spec.Cassandra, &dcTemplate)
+	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig)
+
+	require.NoError(t, err, "failed to create CassandraDatacenter")
+
+	annotations.AddHashAnnotation(dc)
+
+	namespace := kc.Namespace
+	if dcTemplate.Meta.Namespace != "" {
+		namespace = dcTemplate.Meta.Namespace
+	}
+
+	dcKey := framework.ClusterKey{
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      dcTemplate.Meta.Name,
+		},
+		K8sContext: dcTemplate.K8sContext,
+	}
+	err = f.Create(ctx, dcKey, dc)
+	require.NoError(t, err, "failed to create cassandradatacenter")
 }

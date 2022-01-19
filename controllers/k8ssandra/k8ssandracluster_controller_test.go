@@ -23,7 +23,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -978,30 +977,6 @@ func setReplicationStatusDone(ctx context.Context, t *testing.T, f *framework.Fr
 	err = f.Client.Status().Update(ctx, rsec)
 
 	require.NoError(t, err, "Failed to update ReplicationSecret status", "key", key)
-}
-
-func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcIdx int) {
-	dcTemplate := kc.Spec.Cassandra.Datacenters[dcIdx]
-	dcConfig := cassandra.Coalesce(kc.Spec.Cassandra, &dcTemplate)
-
-	dc := &cassdcapi.CassandraDatacenter{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: kc.Namespace,
-			Name:      dcConfig.Meta.Name,
-		},
-		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName:   dcConfig.Cluster,
-			Size:          dcConfig.Size,
-			ServerVersion: dcConfig.ServerVersion,
-			ServerType:    "cassandra",
-			StorageConfig: *dcConfig.StorageConfig,
-		},
-	}
-	labels.SetManagedBy(dc, utils.GetKey(kc))
-	annotations.AddHashAnnotation(dc)
-
-	err := f.Client.Create(ctx, dc)
-	require.NoError(t, err, "failed to create cassandradatacenter")
 }
 
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
