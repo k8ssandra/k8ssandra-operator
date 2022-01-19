@@ -47,9 +47,13 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType string, encry
 	keystoreVolume := &corev1.Volume{
 		Name: fmt.Sprintf("%s-keystore", storeType),
 		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: encryptionStores.KeystoreConfigMapRef.Name,
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: encryptionStores.KeystoreSecretRef.Name,
+				Items: []corev1.KeyToPath{
+					{
+						Key:  "keystore",
+						Path: "keystore",
+					},
 				},
 			},
 		},
@@ -62,9 +66,13 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType string, encry
 	truststoreVolume := &corev1.Volume{
 		Name: fmt.Sprintf("%s-truststore", storeType),
 		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: encryptionStores.TruststoreConfigMapRef.Name,
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: encryptionStores.TruststoreSecretRef.Name,
+				Items: []corev1.KeyToPath{
+					{
+						Key:  "truststore",
+						Path: "truststore",
+					},
 				},
 			},
 		},
@@ -109,14 +117,14 @@ func checkMandatoryEncryptionFields(encryptionStores *v1alpha1.EncryptionStores)
 	if encryptionStores == nil {
 		return fmt.Errorf("EncryptionStores is required to set up encryption")
 	}
-	if encryptionStores.KeystoreConfigMapRef.Name == "" {
-		return fmt.Errorf("keystore config map ref was not set")
+	if encryptionStores.KeystoreSecretRef.Name == "" {
+		return fmt.Errorf("keystore secret ref was not set")
 	}
 	if encryptionStores.KeystorePasswordSecretRef.Name == "" {
 		return fmt.Errorf("keystore password secret ref was not set")
 	}
-	if encryptionStores.TruststoreConfigMapRef.Name == "" {
-		return fmt.Errorf("truststore config map ref was not set")
+	if encryptionStores.TruststoreSecretRef.Name == "" {
+		return fmt.Errorf("truststore secret ref was not set")
 	}
 	if encryptionStores.TruststorePasswordSecretRef.Name == "" {
 		return fmt.Errorf("truststore password secret ref was not set")

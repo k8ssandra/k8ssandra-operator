@@ -15,14 +15,14 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-truststore-password-secret",
@@ -32,11 +32,11 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-keystore-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-truststore-secret",
 						},
 					},
 				},
@@ -61,14 +61,14 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-truststore-password-secret",
@@ -78,14 +78,14 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-truststore-password-secret",
@@ -101,7 +101,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "client-keystore-configmap",
+					Name: "client-keystore-secret",
 				},
 			},
 		},
@@ -112,7 +112,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "client-truststore-configmap",
+					Name: "client-truststore-secret",
 				},
 			},
 		},
@@ -130,7 +130,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "server-keystore-configmap",
+					Name: "server-keystore-secret",
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "server-truststore-configmap",
+					Name: "server-truststore-secret",
 				},
 			},
 		},
@@ -163,14 +163,14 @@ func TestAddVolumesForEncryption(t *testing.T) {
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-truststore-password-secret",
@@ -180,14 +180,14 @@ func TestAddVolumesForEncryption(t *testing.T) {
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-truststore-password-secret",
@@ -201,16 +201,16 @@ func TestAddVolumesForEncryption(t *testing.T) {
 	addVolumesForEncryption(dcConfig, "client", *dcConfig.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
-	assert.Equal(t, "client-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
-	assert.Equal(t, "client-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
 
 	addVolumesForEncryption(dcConfig, "server", *dcConfig.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
-	assert.Equal(t, "server-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[3].Name)
-	assert.Equal(t, "server-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.Secret.SecretName)
 }
 
 func TestHandleEncryptionOptions(t *testing.T) {
@@ -224,14 +224,14 @@ func TestHandleEncryptionOptions(t *testing.T) {
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-truststore-password-secret",
@@ -241,14 +241,14 @@ func TestHandleEncryptionOptions(t *testing.T) {
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-truststore-password-secret",
@@ -262,13 +262,13 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	HandleEncryptionOptions(dcConfig)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
-	assert.Equal(t, "client-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
-	assert.Equal(t, "client-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
-	assert.Equal(t, "server-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[3].Name)
-	assert.Equal(t, "server-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.Secret.SecretName)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[0].Name)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
@@ -296,14 +296,14 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "client-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "client-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "client-truststore-password-secret",
@@ -313,14 +313,14 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: true,
 					EncryptionStores: &api.EncryptionStores{
-						KeystoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-keystore-configmap",
+						KeystoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-keystore-secret",
 						},
 						KeystorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-password-secret",
 						},
-						TruststoreConfigMapRef: corev1.LocalObjectReference{
-							Name: "server-truststore-configmap",
+						TruststoreSecretRef: corev1.LocalObjectReference{
+							Name: "server-truststore-secret",
 						},
 						TruststorePasswordSecretRef: corev1.LocalObjectReference{
 							Name: "server-truststore-password-secret",
@@ -334,13 +334,13 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 	HandleEncryptionOptions(dcConfig)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
-	assert.Equal(t, "client-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
-	assert.Equal(t, "client-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
-	assert.Equal(t, "server-keystore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[3].Name)
-	assert.Equal(t, "server-truststore-configmap", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.ConfigMap.LocalObjectReference.Name)
+	assert.Equal(t, "server-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.Secret.SecretName)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[0].Name)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)

@@ -1161,11 +1161,11 @@ type ServerEncryptionOptions struct {
 }
 
 type EncryptionStores struct {
-	KeystoreConfigMapRef corev1.LocalObjectReference `json:"keystoreConfigMapRef"`
+	KeystoreSecretRef corev1.LocalObjectReference `json:"keystoreConfigMapRef"`
 
 	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystorePasswordSecretRef"`
 
-	TruststoreConfigMapRef corev1.LocalObjectReference `json:"truststoreConfigMapRef"`
+	TruststoreSecretRef corev1.LocalObjectReference `json:"truststoreConfigMapRef"`
 
 	TruststorePasswordSecretRef corev1.LocalObjectReference `json:"truststorePasswordSecretRef"`
 }

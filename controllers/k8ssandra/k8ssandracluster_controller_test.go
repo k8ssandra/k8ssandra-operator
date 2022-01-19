@@ -1366,50 +1366,50 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	dc1Size := int32(3)
 	dc2Size := int32(3)
 
-	// Create the client keystore and truststore configmaps
-	clientKeystore := &corev1.ConfigMap{
+	// Create the client keystore and truststore secrets
+	clientKeystore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-keystore-configmap",
+			Name:      "client-keystore-secret",
 			Namespace: namespace,
 		},
-		BinaryData: map[string][]byte{
+		Data: map[string][]byte{
 			"keystore": []byte("keystore content"),
 		},
 	}
 
-	clientTruststore := &corev1.ConfigMap{
+	clientTruststore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-truststore-configmap",
+			Name:      "client-truststore",
 			Namespace: namespace,
 		},
-		BinaryData: map[string][]byte{
+		Data: map[string][]byte{
 			"truststore": []byte("truststore content"),
 		},
 	}
 
 	// Create the server keystore and truststore configmaps
-	serverKeystore := &corev1.ConfigMap{
+	serverKeystore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "server-keystore-configmap",
+			Name:      "server-keystore-secret",
 			Namespace: namespace,
 		},
-		BinaryData: map[string][]byte{
+		Data: map[string][]byte{
 			"keystore": []byte("keystore content"),
 		},
 	}
 
-	serverTruststore := &corev1.ConfigMap{
+	serverTruststore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "server-truststore-configmap",
+			Name:      "server-truststore",
 			Namespace: namespace,
 		},
-		BinaryData: map[string][]byte{
+		Data: map[string][]byte{
 			"truststore": []byte("truststore content"),
 		},
 	}
 
 	// Loop over the created configmaps and create them
-	for _, store := range []*corev1.ConfigMap{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
+	for _, store := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
 		storeKey := utils.GetKey(store)
 		storeClusterKey0 := framework.ClusterKey{NamespacedName: storeKey, K8sContext: k8sCtx0}
 		storeClusterKey1 := framework.ClusterKey{NamespacedName: storeKey, K8sContext: k8sCtx1}
@@ -1487,13 +1487,13 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						ClientEncryptionOptions: &api.ClientEncryptionOptions{
 							Enabled: true,
 							EncryptionStores: &api.EncryptionStores{
-								KeystoreConfigMapRef: corev1.LocalObjectReference{
+								KeystoreSecretRef: corev1.LocalObjectReference{
 									Name: "client-keystore-configmap",
 								},
 								KeystorePasswordSecretRef: corev1.LocalObjectReference{
 									Name: "client-keystore-password-secret",
 								},
-								TruststoreConfigMapRef: corev1.LocalObjectReference{
+								TruststoreSecretRef: corev1.LocalObjectReference{
 									Name: "client-truststore-configmap",
 								},
 								TruststorePasswordSecretRef: corev1.LocalObjectReference{
@@ -1504,13 +1504,13 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						ServerEncryptionOptions: &api.ServerEncryptionOptions{
 							Enabled: true,
 							EncryptionStores: &api.EncryptionStores{
-								KeystoreConfigMapRef: corev1.LocalObjectReference{
+								KeystoreSecretRef: corev1.LocalObjectReference{
 									Name: "server-keystore-configmap",
 								},
 								KeystorePasswordSecretRef: corev1.LocalObjectReference{
 									Name: "server-keystore-password-secret",
 								},
-								TruststoreConfigMapRef: corev1.LocalObjectReference{
+								TruststoreSecretRef: corev1.LocalObjectReference{
 									Name: "server-truststore-configmap",
 								},
 								TruststorePasswordSecretRef: corev1.LocalObjectReference{
@@ -1597,6 +1597,9 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	assert.True(foundServerKeystore, "failed to find server-keystore volume in dc1")
 	_, foundServerTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-truststore")
 	assert.True(foundServerTruststore, "failed to find server-truststore volume in dc1")
+
+	// Check that the encryption settings are correct in the datacenters
+	//assert.Equal(, "server-keystore-configmap", "keystore configmap name is incorrect")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
