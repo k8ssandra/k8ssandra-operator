@@ -58,7 +58,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(ctx cont
 	}
 
 	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
-	replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
+	replication := cassandra.ComputeReplicationFromDcTemplates(3, kc.Spec.Cassandra.Datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 

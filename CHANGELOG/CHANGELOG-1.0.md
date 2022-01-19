@@ -26,6 +26,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 * [ENHANCEMENT] [#170](https://github.com/k8ssandra/k8ssandra-operator/issues/170) Enforce cluster-wide authentication by default 
 * [ENHANCEMENT] [#267](https://github.com/k8ssandra/k8ssandra-operator/issues/267) Use the K8ssandraCluster name as cluster name for CassandraDatacenter objects
+* [ENHANCEMENT] [#297](https://github.com/k8ssandra/k8ssandra-operator/issues/297) Reconcile standalone Stargate auth schema
 
 ## v1.0.0-alpha.2 - 2021-12-03
 

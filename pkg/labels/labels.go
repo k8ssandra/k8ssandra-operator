@@ -24,6 +24,10 @@ func GetLabel(component Labeled, labelKey string) string {
 	return m[labelKey]
 }
 
+func HasLabel(component Labeled, labelKey string) bool {
+	return GetLabel(component, labelKey) != ""
+}
+
 func HasLabelWithValue(component Labeled, labelKey string, labelValue string) bool {
 	return GetLabel(component, labelKey) == labelValue
 }
@@ -54,22 +58,30 @@ func ManagedByLabels(klusterKey client.ObjectKey) map[string]string {
 	}
 }
 
-// IsCreatedByK8ssandraController returns true if this component was created by the k8ssandra-cluster controller, and
-// belongs to the K8ssandraCluster resource specified by klusterKey. klusterKey referns to the namespace and
-// name of the K8ssandraCluster.
-func IsCreatedByK8ssandraController(component Labeled, klusterKey client.ObjectKey) bool {
+// IsPartOf returns true if this component was created by the k8ssandra-cluster controller, and belongs to the
+// K8ssandraCluster resource specified by klusterKey. klusterKey refers to the namespace and name of the
+// K8ssandraCluster.
+func IsPartOf(component Labeled, klusterKey client.ObjectKey) bool {
 	return HasLabelWithValue(component, k8ssandraapi.CreatedByLabel, k8ssandraapi.CreatedByLabelValueK8ssandraClusterController) &&
 		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
 		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
 }
 
-// CreatedByK8ssandraControllerLabels returns the labels used to identify a component created by the k8ssandra-cluster
-// controller, and belonging to the K8ssandraCluster resource specified by klusterKey, which is namespace and name
-// of the K8ssandraCluster.
-func CreatedByK8ssandraControllerLabels(klusterKey client.ObjectKey) map[string]string {
+// PartOfLabels returns the labels used to identify a component created by the k8ssandra-cluster controller, and
+// belonging to the K8ssandraCluster resource specified by klusterKey, which is namespace and name of the
+// K8ssandraCluster.
+func PartOfLabels(klusterKey client.ObjectKey) map[string]string {
+	// TODO add k8ssandraapi.PartOfLabel entry here, already done for telemetry objects elsewhere
 	return map[string]string{
 		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 	}
+}
+
+// IsOwnedByK8ssandraController returns true if this component was created by the k8ssandra-cluster controller.
+func IsOwnedByK8ssandraController(component Labeled) bool {
+	return HasLabelWithValue(component, k8ssandraapi.CreatedByLabel, k8ssandraapi.CreatedByLabelValueK8ssandraClusterController) &&
+		HasLabel(component, k8ssandraapi.K8ssandraClusterNameLabel) &&
+		HasLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel)
 }

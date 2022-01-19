@@ -1,7 +1,9 @@
 package cassandra
 
 import (
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -106,6 +108,69 @@ func TestComputeSystemReplication(t *testing.T) {
 func TestComputeReplication(t *testing.T) {
 	tests := []struct {
 		name     string
+		dcs      []*cassdcapi.CassandraDatacenter
+		expected map[string]int
+	}{
+		{
+			"one dc",
+			[]*cassdcapi.CassandraDatacenter{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 3},
+				},
+			},
+			map[string]int{"dc1": 3},
+		},
+		{
+			"small dc",
+			[]*cassdcapi.CassandraDatacenter{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 1},
+				},
+			},
+			map[string]int{"dc1": 1},
+		},
+		{
+			"large dc",
+			[]*cassdcapi.CassandraDatacenter{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 10},
+				},
+			},
+			map[string]int{"dc1": 3},
+		},
+		{
+			"many dcs",
+			[]*cassdcapi.CassandraDatacenter{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc1"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 3},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc2"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 1},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "dc3"},
+					Spec:       cassdcapi.CassandraDatacenterSpec{Size: 10},
+				},
+			},
+			map[string]int{"dc1": 3, "dc2": 1, "dc3": 3},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ComputeReplication(3, tt.dcs...)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestComputeReplicationFromDcTemplates(t *testing.T) {
+	tests := []struct {
+		name     string
 		dcs      []api.CassandraDatacenterTemplate
 		expected map[string]int
 	}{
@@ -126,7 +191,7 @@ func TestComputeReplication(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ComputeReplication(3, tt.dcs...)
+			actual := ComputeReplicationFromDcTemplates(3, tt.dcs...)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

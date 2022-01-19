@@ -60,7 +60,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			hasErrors = true
 		}
 
-		selector := k8ssandralabels.CreatedByK8ssandraControllerLabels(kcKey)
+		selector := k8ssandralabels.PartOfLabels(kcKey)
 		stargateList := &stargateapi.StargateList{}
 		options := client.ListOptions{
 			Namespace:     namespace,

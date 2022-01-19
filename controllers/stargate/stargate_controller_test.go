@@ -2,9 +2,14 @@ package stargate
 
 import (
 	"context"
+	"github.com/go-logr/logr"
+	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"testing"
 	"time"
@@ -32,6 +37,8 @@ const (
 	interval = time.Millisecond * 500
 )
 
+var managementApi = &fakeManagementApiFactory{}
+
 func TestStargate(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
@@ -41,6 +48,7 @@ func TestStargate(t *testing.T) {
 			ReconcilerConfig: config.InitConfig(),
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
+			ManagementApi:    managementApi,
 		}).SetupWithManager(mgr)
 		return err
 	})
@@ -405,4 +413,17 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	assert.Equal(t, api.StargateReady, stargate.Status.Conditions[0].Type)
 	assert.Equal(t, corev1.ConditionTrue, stargate.Status.Conditions[0].Status)
 
+}
+
+type fakeManagementApiFactory struct {
+}
+
+func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
+	m := new(mocks.ManagementApiFacade)
+	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
+	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
+	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
+		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
+	})).Return(nil)
+	return m, nil
 }

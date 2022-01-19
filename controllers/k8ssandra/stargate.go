@@ -7,7 +7,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -89,7 +88,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate")
 				return result.Error(err)
 			}
-		} else if labels.IsCreatedByK8ssandraController(actualStargate, kcKey) {
+		} else if labels.IsPartOf(actualStargate, kcKey) {
 			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
 				logger.Error(err, "Failed to delete Stargate")
 				return result.Error(err)
@@ -155,12 +154,16 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcs []*cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+) result.ReconcileResult {
 	if !kc.HasStargates() {
 		return result.Continue()
 	}
 
-	logger.Info("Reconciling Stargate auth schema")
 	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
 
 	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
@@ -173,21 +176,11 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(ctx context.Con
 			logger.Error(err, "Failed to create ManagementApiFacade")
 			return result.Error(err)
 		}
-
-		replication := cassandra.ComputeReplication(3, kc.Spec.Cassandra.Datacenters...)
-		if err = managementApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
-			logger.Error(err, "Failed to ensure keyspace replication")
+		if err = stargate.ReconcileAuthKeyspace(dcs, managementApi, logger); err != nil {
 			return result.Error(err)
 		}
-
-		if err = stargate.ReconcileAuthTable(managementApi, logger); err != nil {
-			logger.Error(err, "Failed to reconcile Stargate auth table")
-			return result.Error(err)
-		}
-
 		return result.Continue()
 	}
-
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
