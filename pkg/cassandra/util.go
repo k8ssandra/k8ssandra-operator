@@ -54,7 +54,7 @@ func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.Cassandr
 	return datacenters
 }
 
-func ComputeSystemReplication(kc *api.K8ssandraCluster) SystemReplication {
+func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication {
 	rf := 3.0
 
 	datacenters := GetDatacentersForSystemReplication(kc)

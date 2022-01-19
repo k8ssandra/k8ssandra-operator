@@ -156,6 +156,18 @@ func (in *K8ssandraCluster) HasReapers() bool {
 	return false
 }
 
+func (in *K8ssandraCluster) GetReadyDatacenters() []CassandraDatacenterTemplate {
+	datacenters := make([]CassandraDatacenterTemplate, 0)
+	if in != nil && in.Spec.Cassandra != nil {
+		for _, dc := range in.Spec.Cassandra.Datacenters {
+			if status, found := in.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
+				datacenters = append(datacenters, dc)
+			}
+		}
+	}
+	return datacenters
+}
+
 // +kubebuilder:object:root=true
 
 // K8ssandraClusterList contains a list of K8ssandraCluster

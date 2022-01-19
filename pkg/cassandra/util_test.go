@@ -99,7 +99,7 @@ func TestComputeSystemReplication(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.got = ComputeSystemReplication(tc.kluster)
+			tc.got = ComputeInitialSystemReplication(tc.kluster)
 			require.Equal(t, tc.want, tc.got)
 		})
 	}

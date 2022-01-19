@@ -36,12 +36,16 @@ func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.Mana
 	return result.RequeueSoon(r.DefaultDelay)
 }
 
-// checkSystemReplication checks for the SystemReplicationAnnotation on kc. If found, the
+// checkInitialSystemReplication checks for the InitialSystemReplicationAnnotation on kc. If found, the
 // JSON value is unmarshalled and returned. If not found, the SystemReplication is computed
-// and is stored in the SystemReplicationAnnotation on kc. The value is JSON-encoded.
+// and is stored in the InitialSystemReplicationAnnotation on kc. The value is JSON-encoded.
 // Lastly, kc is patched so that the changes are persisted,
-func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (*cassandra.SystemReplication, error) {
-	if val := annotations.GetAnnotation(kc, api.SystemReplicationAnnotation); val != "" {
+func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	logger logr.Logger) (*cassandra.SystemReplication, error) {
+
+	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
 		replication := &cassandra.SystemReplication{}
 		if err := json.Unmarshal([]byte(val), replication); err == nil {
 			return replication, nil
@@ -50,7 +54,7 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 		}
 	}
 
-	replication := cassandra.ComputeSystemReplication(kc)
+	replication := cassandra.ComputeInitialSystemReplication(kc)
 	bytes, err := json.Marshal(replication)
 
 	if err != nil {
@@ -62,9 +66,9 @@ func (r *K8ssandraClusterReconciler) checkSystemReplication(ctx context.Context,
 	if kc.Annotations == nil {
 		kc.Annotations = make(map[string]string)
 	}
-	kc.Annotations[api.SystemReplicationAnnotation] = string(bytes)
+	kc.Annotations[api.InitialSystemReplicationAnnotation] = string(bytes)
 	if err = r.Patch(ctx, kc, patch); err != nil {
-		logger.Error(err, "Failed to apply "+api.SystemReplicationAnnotation+" patch")
+		logger.Error(err, "Failed to apply "+api.InitialSystemReplicationAnnotation+" patch")
 		return nil, err
 	}
 
@@ -86,7 +90,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 
 	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
-	replication := cassandra.ComputeReplication(3, datacenters...)
+	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 
