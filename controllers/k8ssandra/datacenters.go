@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
@@ -197,7 +198,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return recResult, actualDcs
 				}
 
-				if recResult := reconcileDcRebuild(ctx, actualDc, actualDcs, remoteClient, logger); recResult.Completed() {
+				if recResult := reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}
 			}
@@ -256,20 +257,55 @@ func datacenterAddedToExistingCluster(kc *api.K8ssandraCluster, dcName string) b
 	return kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue && !found
 }
 
-func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, dcs []*cassdcapi.CassandraDatacenter) string {
-	for _, dc := range dcs {
-		if dc.Name != targetDc.Name {
-			return dc.Name
+func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8ssandraCluster) (string, error) {
+	dcNames := make([]string, 0)
+
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if dcStatus, found := kc.Status.Datacenters[dc.Meta.Name]; found {
+			if dcStatus.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
+				dcNames = append(dcNames, dc.Meta.Name)
+			}
 		}
 	}
-	// TODO This should never happen. Should we also return an error here?
-	return ""
+
+	if rebuildFrom, found := kc.Annotations[api.RebuildSourceDcAnnotation]; found {
+		if rebuildFrom == targetDc.Name {
+			return "", fmt.Errorf("rebuild error: src dc and target dc cannot be the same")
+		}
+
+		for _, dc := range dcNames {
+			if rebuildFrom == dc {
+				return dc, nil
+			}
+		}
+
+		return "", fmt.Errorf("rebuild error: src dc must a ready dc")
+	}
+
+	for _, dc := range dcNames {
+		if dc != targetDc.Name {
+			return dc, nil
+		}
+	}
+
+	return "", fmt.Errorf("rebuild error: unable to determine src dc for target dc (%s) from dc list (%s)",
+		targetDc.Name, strings.Trim(fmt.Sprint(dcNames), "[]"))
 }
 
-func reconcileDcRebuild(ctx context.Context, dc *cassdcapi.CassandraDatacenter, dcs []*cassdcapi.CassandraDatacenter, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+func reconcileDcRebuild(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
 	logger.Info("Reconciling rebuild")
 
-	srcDc := getSourceDatacenterName(dc, dcs)
+	srcDc, err := getSourceDatacenterName(dc, kc)
+	if err != nil {
+		return result.Error(err)
+	}
+
 	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc)
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
@@ -286,9 +322,7 @@ func reconcileDcRebuild(ctx context.Context, dc *cassdcapi.CassandraDatacenter, 
 			}
 			return result.Continue()
 		} else {
-			//logger.Info("Waiting for datacenter rebuild to complete", "Active", task.Status.Active,
-			//	"Succeeded", task.Status.Succeeded, "Failed", task.Status.Failed)
-			logger.Info("Waiting for datacenter rebuild to complete", "Task", task)
+			logger.Info("Waiting for datacenter rebuild to complete", "Task", taskKey)
 			return result.RequeueSoon(15)
 		}
 	} else {

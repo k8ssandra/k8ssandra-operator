@@ -20,6 +20,12 @@ const (
 	// are still deployed serially).
 	DcReplicationAnnotation = "k8ssandra.io/dc-replication"
 
+	// RebuildSourceDcAnnotation tells the operation the DC from which to stream when
+	// rebuilding a DC. If not set the operator will choose the first DC. The value for
+	// this annotation must specify the name of a CassandraDatacenter whose Ready
+	// condition is true.
+	RebuildSourceDcAnnotation = "k8ssandra.io/rebuild-src-dc"
+
 	RebuildLabel = "k8ssandra.io/rebuild"
 
 	NameLabel      = "app.kubernetes.io/name"
