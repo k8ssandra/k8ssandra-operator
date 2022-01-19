@@ -40,8 +40,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 		if kc.Spec.IsAuthEnabled() {
 			logger.Info("Reconciling Reaper user secrets")
 			var cassandraUserSecretRef corev1.LocalObjectReference
+			var jmxUserSecretRef corev1.LocalObjectReference
 			if kc.Spec.Reaper != nil {
 				cassandraUserSecretRef = kc.Spec.Reaper.CassandraUserSecretRef
+				jmxUserSecretRef = kc.Spec.Reaper.JmxUserSecretRef
 			}
 			if cassandraUserSecretRef.Name == "" {
 				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
