@@ -192,8 +192,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			}
 
 			if rebuildNeeded {
-				// TODO We need to handle the Stargate auth and Reaper keyspaces here.
-
 				if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, mgmtApi, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}

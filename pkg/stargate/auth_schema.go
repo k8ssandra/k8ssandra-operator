@@ -3,7 +3,6 @@ package stargate
 import (
 	"fmt"
 	"github.com/go-logr/logr"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 )
@@ -25,8 +24,7 @@ var authTableDefinition = &httphelper.TableDefinition{
 
 // ReconcileAuthKeyspace ensures that the Stargate auth schema exists, has the appropriate replication, and contains the
 // appropriate tables.
-func ReconcileAuthKeyspace(dcs []*cassdcapi.CassandraDatacenter, managementApi cassandra.ManagementApiFacade, logger logr.Logger) error {
-	replication := cassandra.ComputeReplication(3, dcs...)
+func ReconcileAuthKeyspace(managementApi cassandra.ManagementApiFacade, replication map[string]int, logger logr.Logger) error {
 	logger.Info(fmt.Sprintf("Reconciling Stargate auth keyspace %v", AuthKeyspace))
 	if err := managementApi.EnsureKeyspaceReplication(AuthKeyspace, replication); err != nil {
 		logger.Error(err, "Failed to ensure keyspace replication")

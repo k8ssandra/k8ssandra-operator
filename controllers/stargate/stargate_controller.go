@@ -151,7 +151,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 			logger.Error(err, "Failed to create ManagementApiFacade")
 			return ctrl.Result{}, err
-		} else if err = stargateutil.ReconcileAuthKeyspace([]*cassdcapi.CassandraDatacenter{actualDc}, managementApi, logger); err != nil {
+		} else if err = stargateutil.ReconcileAuthKeyspace(managementApi, cassandra.ComputeReplication(3, actualDc), logger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -168,26 +169,14 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 		return recResult
 	}
 
-	datacenters := make([]api.CassandraDatacenterTemplate, 0)
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
-			datacenters = append(datacenters, dc)
-		}
-	}
-	replication := cassandra.ComputeReplication(3, datacenters...)
-	if err := mgmtApi.EnsureKeyspaceReplication(stargate.AuthKeyspace, replication); err != nil {
-		logger.Error(err, "Failed to ensure keyspace replication")
+	datacenters := kc.GetReadyDatacenters()
+	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
+
+	if err := stargate.ReconcileAuthKeyspace(mgmtApi, replication, logger); err != nil {
 		return result.Error(err)
 	}
 
-	if err := stargate.ReconcileAuthTable(mgmtApi, logger); err != nil {
-		logger.Error(err, "Failed to reconcile Stargate auth table")
-		return result.Error(err)
-	}
-
-		return result.Continue()
-	}
-
+	return result.Continue()
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

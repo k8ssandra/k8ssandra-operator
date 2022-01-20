@@ -27,7 +27,6 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,15 +55,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 		keyspace = kc.Spec.Reaper.Keyspace
 	}
 
-	datacenters := make([]api.CassandraDatacenterTemplate, 0)
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
-			datacenters = append(datacenters, dc)
-		}
-	}
+	datacenters := kc.GetReadyDatacenters()
 	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
-		cassandra.ComputeReplication(3, datacenters...),
+		cassandra.ComputeReplicationFromDcTemplates(3, datacenters...),
 	)
 	if err != nil {
 		logger.Error(err, "Failed to ensure keyspace replication")
