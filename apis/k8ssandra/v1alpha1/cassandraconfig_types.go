@@ -1065,7 +1065,7 @@ type ClientEncryptionOptions struct {
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
 	// +optional
-	KeystorePassword *string `json:"keystorePassword,omitempty"`
+	KeystorePassword *string `json:"keystore_password,omitempty"`
 
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
@@ -1075,33 +1075,33 @@ type ClientEncryptionOptions struct {
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
 	// +optional
-	TruststorePassword *string `json:"truststorePassword,omitempty"`
+	TruststorePassword *string `json:"truststore_password,omitempty"`
 
 	// +optional
 	Protocol *string `json:"protocol,omitempty"`
 
 	// +optional
-	AcceptedProtocols *[]string `json:"acceptedProtocols,omitempty"`
+	AcceptedProtocols *[]string `json:"accepted_protocols,omitempty"`
 
 	// +optional
 	Algorithm *string `json:"algorithm,omitempty"`
 
 	// +optional
-	StoreType *string `json:"storeType,omitempty"`
+	StoreType *string `json:"store_type,omitempty"`
 
 	// +optional
-	CipherSuites *[]string `json:"cipherSuites,omitempty"`
+	CipherSuites *[]string `json:"cipher_suites,omitempty"`
 
 	// default: false
 	// +optional
-	RequireClientAuth *bool `json:"requireClientAuth,omitempty"`
+	RequireClientAuth *bool `json:"require_client_auth,omitempty"`
 
 	// +optional
-	EncryptionStores *EncryptionStores `json:"encryptionStores,omitempty"`
+	EncryptionStores *EncryptionStores `json:"encryption_stores,omitempty"`
 }
 
 type ServerEncryptionOptions struct {
-	Enabled bool `json:"enabled"`
+	Enabled *bool `json:"enabled,omitempty"`
 
 	// +optional
 	Optional *bool `json:"optional,omitempty"`
@@ -1114,7 +1114,7 @@ type ServerEncryptionOptions struct {
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
 	// +optional
-	KeystorePassword *string `json:"keystorePassword,omitempty"`
+	KeystorePassword *string `json:"keystore_password,omitempty"`
 
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
@@ -1124,48 +1124,48 @@ type ServerEncryptionOptions struct {
 	// Should not be set explicitly in the custom resource.
 	// The operator will generate the right value based on the EncryptionStores field.
 	// +optional
-	TruststorePassword *string `json:"truststorePassword,omitempty"`
+	TruststorePassword *string `json:"truststore_password,omitempty"`
 
 	// +optional
 	Protocol *string `json:"protocol,omitempty"`
 
 	// +optional
-	AcceptedProtocols *[]string `json:"acceptedProtocols,omitempty"`
+	AcceptedProtocols *[]string `json:"accepted_protocols,omitempty"`
 
 	// +optional
 	Algorithm *string `json:"algorithm,omitempty"`
 
 	// +optional
-	StoreType *string `json:"storeType,omitempty"`
+	StoreType *string `json:"store_type,omitempty"`
 
 	// +optional
-	CipherSuites *[]string `json:"cipherSuites,omitempty"`
+	CipherSuites *[]string `json:"cipher_suites,omitempty"`
 
 	// default: false
 	// +optional
-	RequireClientAuth *bool `json:"requireClientAuth,omitempty"`
+	RequireClientAuth *bool `json:"require_client_auth,omitempty"`
 
 	// default: none
 	// +optional
-	InternodeEncryption *string `json:"internodeEncryption,omitempty"`
+	InternodeEncryption *string `json:"internode_encryption,omitempty"`
 
 	// default: false
 	// +optional
-	RequireEndpointVerification *bool `json:"requireEndpointVerification,omitempty"`
+	RequireEndpointVerification *bool `json:"require_endpoint_verification,omitempty"`
 
 	// +optional
-	EnableLegacySslStoragePort *bool `json:"enableLegacySslStoragePort,omitempty"`
+	EnableLegacySslStoragePort *bool `json:"enable_legacy_ssl_storage_port,omitempty"`
 
 	// +optional
-	EncryptionStores *EncryptionStores `json:"encryptionStores,omitempty"`
+	EncryptionStores *EncryptionStores `json:"encryption_stores,omitempty"`
 }
 
 type EncryptionStores struct {
-	KeystoreSecretRef corev1.LocalObjectReference `json:"keystoreConfigMapRef"`
+	KeystoreSecretRef corev1.LocalObjectReference `json:"keystore_secret_ref"`
 
-	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystorePasswordSecretRef"`
+	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystore_password_secret_ref"`
 
-	TruststoreSecretRef corev1.LocalObjectReference `json:"truststoreConfigMapRef"`
+	TruststoreSecretRef corev1.LocalObjectReference `json:"truststore_secret_ref"`
 
-	TruststorePasswordSecretRef corev1.LocalObjectReference `json:"truststorePasswordSecretRef"`
+	TruststorePasswordSecretRef corev1.LocalObjectReference `json:"truststore_password_secret_ref"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -141,7 +142,7 @@ func ClientEncryptionEnabled(template *DatacenterConfig) bool {
 }
 
 func ServerEncryptionEnabled(template *DatacenterConfig) bool {
-	return template.CassandraConfig.CassandraYaml.ServerEncryptionOptions != nil && template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.Enabled
+	return template.CassandraConfig.CassandraYaml.ServerEncryptionOptions != nil && template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.Enabled != nil && *template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.Enabled
 }
 
 type EncryptionStoresPasswords struct {
@@ -151,9 +152,13 @@ type EncryptionStoresPasswords struct {
 	ServerTruststorePassword string
 }
 
-func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.NamespacedName, template *DatacenterConfig, remoteClient client.Client) (EncryptionStoresPasswords, error) {
+func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.NamespacedName, template *DatacenterConfig, remoteClient client.Client, logger logr.Logger) (EncryptionStoresPasswords, error) {
 	encryptionStoresPasswords := EncryptionStoresPasswords{}
 	if ClientEncryptionEnabled(template) {
+		if template.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores == nil || template.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores.KeystorePasswordSecretRef.Name == "" {
+			return encryptionStoresPasswords, fmt.Errorf("client encryption stores are not properly configured")
+		}
+		logger.Info("Client to node encryption is enabled, reading client encryption stores secrets")
 		// Read client keystore password
 		clientKeystoreSecret := &corev1.Secret{}
 		secretKey := types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores.KeystorePasswordSecretRef.Name}
@@ -172,7 +177,12 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 	}
 
 	if ServerEncryptionEnabled(template) {
+		logger.Info("Internode encryption is enabled, reading server encryption stores secrets")
 		// Read server keystore password
+		if template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores == nil || template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores.KeystorePasswordSecretRef.Name == "" {
+			return encryptionStoresPasswords, fmt.Errorf("server encryption stores are not properly configured")
+		}
+
 		serverKeystoreSecret := &corev1.Secret{}
 		secretKey := types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores.KeystorePasswordSecretRef.Name}
 		if err := remoteClient.Get(ctx, secretKey, serverKeystoreSecret); err != nil {

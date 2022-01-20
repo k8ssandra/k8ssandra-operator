@@ -6,6 +6,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestCheckMandatoryEncryptionFields(t *testing.T) {
@@ -30,7 +31,7 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: true,
+					Enabled: pointer.Bool(true),
 					EncryptionStores: &api.EncryptionStores{
 						KeystoreSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-secret",
@@ -76,7 +77,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: true,
+					Enabled: pointer.Bool(true),
 					EncryptionStores: &api.EncryptionStores{
 						KeystoreSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-secret",
@@ -178,7 +179,7 @@ func TestAddVolumesForEncryption(t *testing.T) {
 					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: true,
+					Enabled: pointer.Bool(true),
 					EncryptionStores: &api.EncryptionStores{
 						KeystoreSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-secret",
@@ -239,7 +240,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: true,
+					Enabled: pointer.Bool(true),
 					EncryptionStores: &api.EncryptionStores{
 						KeystoreSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-secret",
@@ -311,7 +312,7 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: true,
+					Enabled: pointer.Bool(true),
 					EncryptionStores: &api.EncryptionStores{
 						KeystoreSecretRef: corev1.LocalObjectReference{
 							Name: "server-keystore-secret",
@@ -361,7 +362,7 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 					Enabled: false,
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: false,
+					Enabled: pointer.Bool(false),
 				},
 			},
 		},
@@ -385,7 +386,7 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 					Enabled: true,
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
-					Enabled: false,
+					Enabled: pointer.Bool(false),
 				},
 			},
 		},

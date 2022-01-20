@@ -1502,7 +1502,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 							},
 						},
 						ServerEncryptionOptions: &api.ServerEncryptionOptions{
-							Enabled: true,
+							Enabled: pointer.Bool(true),
 							EncryptionStores: &api.EncryptionStores{
 								KeystoreSecretRef: corev1.LocalObjectReference{
 									Name: "server-keystore-configmap",
@@ -1598,8 +1598,16 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	_, foundServerTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-truststore")
 	assert.True(foundServerTruststore, "failed to find server-truststore volume in dc1")
 
-	// Check that the encryption settings are correct in the datacenters
-	//assert.Equal(, "server-keystore-configmap", "keystore configmap name is incorrect")
+	dcConfig, err := utils.UnmarshalToMap(dc1.Spec.Config)
+	require.NoError(err, "failed to unmarshal dc1 config")
+
+	cassYaml, foundYaml := dcConfig["cassandra-yaml"].(map[string]interface{})
+
+	assert.True(foundYaml, "failed to find cassandra-yaml in dcConfig")
+
+	serverEncryptionOptions := cassYaml["server_encryption_options"].(map[string]interface{})
+
+	assert.True(serverEncryptionOptions["enabled"].(bool), "server_encryption_options is not enabled")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})

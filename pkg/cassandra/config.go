@@ -95,7 +95,7 @@ func NewIRYaml(cassAPIYaml api.CassandraYaml) CassYamlIR {
 
 func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptionStoresSecrets EncryptionStoresPasswords) (config, error) {
 	// Filters out config element which do not exist in the Cassandra version in use
-	apiConfig = addEncryptionOptions(&apiConfig, encryptionStoresSecrets)
+	apiConfig = addEncryptionOptions(&apiConfig, encryptionStoresSecrets, cassandraVersion)
 	apiConfig = *apiConfig.DeepCopy()
 	irCfgYaml := NewIRYaml(apiConfig.CassandraYaml)
 	filterConfigForVersion(cassandraVersion, &irCfgYaml)
@@ -122,7 +122,7 @@ func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptio
 	return cfg, nil
 }
 
-func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecrets EncryptionStoresPasswords) api.CassandraConfig {
+func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecrets EncryptionStoresPasswords, cassandraVersion string) api.CassandraConfig {
 	updatedConfig := apiConfig.DeepCopy()
 	if updatedConfig.CassandraYaml.ClientEncryptionOptions == nil && updatedConfig.CassandraYaml.ServerEncryptionOptions == nil {
 		return *updatedConfig
@@ -137,15 +137,23 @@ func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecret
 			updatedConfig.CassandraYaml.ClientEncryptionOptions.KeystorePassword = &encryptionStoresSecrets.ClientKeystorePassword
 			updatedConfig.CassandraYaml.ClientEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ClientTruststorePassword
 		}
+		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
+		updatedConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores = nil
 	}
 	if updatedConfig.CassandraYaml.ServerEncryptionOptions != nil {
-		if updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled {
+		if *updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled {
 			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "keystore"), "keystore")
 			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "truststore"), "truststore")
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.Keystore = pointer.String(keystorePath)
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.Truststore = pointer.String(truststorePath)
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.KeystorePassword = &encryptionStoresSecrets.ServerKeystorePassword
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ServerTruststorePassword
+		}
+		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
+		updatedConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores = nil
+		if IsCassandra3(cassandraVersion) {
+			// Remove properties that don't exist in Cassandra 3.x
+			updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled = nil
 		}
 	}
 	return *updatedConfig

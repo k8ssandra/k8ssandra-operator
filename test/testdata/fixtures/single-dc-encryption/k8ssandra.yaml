@@ -1,0 +1,53 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 3.11.11
+    datacenters:
+      - metadata:
+          name: dc1
+        #k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          cassandraYaml:
+            server_encryption_options:
+              enabled: true
+              internode_encryption: all
+              encryption_stores:
+                keystore_secret_ref:
+                  name: encryption-stores
+                truststore_secret_ref:
+                  name: encryption-stores
+                keystore_password_secret_ref:
+                  name: keystore-password
+                truststore_password_secret_ref:
+                  name: truststore-password
+          jvmOptions:
+            heapSize: 384Mi
+        stargate:
+          size: 1
+          heapSize: 384Mi
+          livenessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          readinessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          cassandraConfigMapRef:
+            name: cassandra-config

@@ -253,21 +253,21 @@ spec:
                           client_encryption_options:
                             description: Exists in 3.11, 4.0, trunk
                             properties:
-                              acceptedProtocols:
+                              accepted_protocols:
                                 items:
                                   type: string
                                 type: array
                               algorithm:
                                 type: string
-                              cipherSuites:
+                              cipher_suites:
                                 items:
                                   type: string
                                 type: array
                               enabled:
                                 type: boolean
-                              encryptionStores:
+                              encryption_stores:
                                 properties:
-                                  keystoreConfigMapRef:
+                                  keystore_password_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -279,7 +279,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  keystorePasswordSecretRef:
+                                  keystore_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -291,7 +291,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  truststoreConfigMapRef:
+                                  truststore_password_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -303,7 +303,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  truststorePasswordSecretRef:
+                                  truststore_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -316,17 +316,17 @@ spec:
                                         type: string
                                     type: object
                                 required:
-                                - keystoreConfigMapRef
-                                - keystorePasswordSecretRef
-                                - truststoreConfigMapRef
-                                - truststorePasswordSecretRef
+                                - keystore_password_secret_ref
+                                - keystore_secret_ref
+                                - truststore_password_secret_ref
+                                - truststore_secret_ref
                                 type: object
                               keystore:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
                                 type: string
-                              keystorePassword:
+                              keystore_password:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
@@ -335,17 +335,17 @@ spec:
                                 type: boolean
                               protocol:
                                 type: string
-                              requireClientAuth:
+                              require_client_auth:
                                 description: 'default: false'
                                 type: boolean
-                              storeType:
+                              store_type:
                                 type: string
                               truststore:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
                                 type: string
-                              truststorePassword:
+                              truststore_password:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
@@ -994,23 +994,23 @@ spec:
                           server_encryption_options:
                             description: Exists in 3.11, 4.0, trunk
                             properties:
-                              acceptedProtocols:
+                              accepted_protocols:
                                 items:
                                   type: string
                                 type: array
                               algorithm:
                                 type: string
-                              cipherSuites:
+                              cipher_suites:
                                 items:
                                   type: string
                                 type: array
-                              enableLegacySslStoragePort:
+                              enable_legacy_ssl_storage_port:
                                 type: boolean
                               enabled:
                                 type: boolean
-                              encryptionStores:
+                              encryption_stores:
                                 properties:
-                                  keystoreConfigMapRef:
+                                  keystore_password_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -1022,7 +1022,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  keystorePasswordSecretRef:
+                                  keystore_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -1034,7 +1034,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  truststoreConfigMapRef:
+                                  truststore_password_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -1046,7 +1046,7 @@ spec:
                                           kind, uid?'
                                         type: string
                                     type: object
-                                  truststorePasswordSecretRef:
+                                  truststore_secret_ref:
                                     description: LocalObjectReference contains enough
                                       information to let you locate the referenced
                                       object inside the same namespace.
@@ -1059,12 +1059,12 @@ spec:
                                         type: string
                                     type: object
                                 required:
-                                - keystoreConfigMapRef
-                                - keystorePasswordSecretRef
-                                - truststoreConfigMapRef
-                                - truststorePasswordSecretRef
+                                - keystore_password_secret_ref
+                                - keystore_secret_ref
+                                - truststore_password_secret_ref
+                                - truststore_secret_ref
                                 type: object
-                              internodeEncryption:
+                              internode_encryption:
                                 description: 'default: none'
                                 type: string
                               keystore:
@@ -1072,7 +1072,7 @@ spec:
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
                                 type: string
-                              keystorePassword:
+                              keystore_password:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
@@ -1081,26 +1081,24 @@ spec:
                                 type: boolean
                               protocol:
                                 type: string
-                              requireClientAuth:
+                              require_client_auth:
                                 description: 'default: false'
                                 type: boolean
-                              requireEndpointVerification:
+                              require_endpoint_verification:
                                 description: 'default: false'
                                 type: boolean
-                              storeType:
+                              store_type:
                                 type: string
                               truststore:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
                                 type: string
-                              truststorePassword:
+                              truststore_password:
                                 description: Should not be set explicitly in the custom
                                   resource. The operator will generate the right value
                                   based on the EncryptionStores field.
                                 type: string
-                            required:
-                            - enabled
                             type: object
                           slow_query_log_timeout_in_ms:
                             description: Exists in 3.11, 4.0, trunk
@@ -1439,21 +1437,21 @@ spec:
                                 client_encryption_options:
                                   description: Exists in 3.11, 4.0, trunk
                                   properties:
-                                    acceptedProtocols:
+                                    accepted_protocols:
                                       items:
                                         type: string
                                       type: array
                                     algorithm:
                                       type: string
-                                    cipherSuites:
+                                    cipher_suites:
                                       items:
                                         type: string
                                       type: array
                                     enabled:
                                       type: boolean
-                                    encryptionStores:
+                                    encryption_stores:
                                       properties:
-                                        keystoreConfigMapRef:
+                                        keystore_password_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -1465,7 +1463,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        keystorePasswordSecretRef:
+                                        keystore_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -1477,7 +1475,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        truststoreConfigMapRef:
+                                        truststore_password_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -1489,7 +1487,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        truststorePasswordSecretRef:
+                                        truststore_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -1502,10 +1500,10 @@ spec:
                                               type: string
                                           type: object
                                       required:
-                                      - keystoreConfigMapRef
-                                      - keystorePasswordSecretRef
-                                      - truststoreConfigMapRef
-                                      - truststorePasswordSecretRef
+                                      - keystore_password_secret_ref
+                                      - keystore_secret_ref
+                                      - truststore_password_secret_ref
+                                      - truststore_secret_ref
                                       type: object
                                     keystore:
                                       description: Should not be set explicitly in
@@ -1513,7 +1511,7 @@ spec:
                                         the right value based on the EncryptionStores
                                         field.
                                       type: string
-                                    keystorePassword:
+                                    keystore_password:
                                       description: Should not be set explicitly in
                                         the custom resource. The operator will generate
                                         the right value based on the EncryptionStores
@@ -1523,10 +1521,10 @@ spec:
                                       type: boolean
                                     protocol:
                                       type: string
-                                    requireClientAuth:
+                                    require_client_auth:
                                       description: 'default: false'
                                       type: boolean
-                                    storeType:
+                                    store_type:
                                       type: string
                                     truststore:
                                       description: Should not be set explicitly in
@@ -1534,7 +1532,7 @@ spec:
                                         the right value based on the EncryptionStores
                                         field.
                                       type: string
-                                    truststorePassword:
+                                    truststore_password:
                                       description: Should not be set explicitly in
                                         the custom resource. The operator will generate
                                         the right value based on the EncryptionStores
@@ -2184,23 +2182,23 @@ spec:
                                 server_encryption_options:
                                   description: Exists in 3.11, 4.0, trunk
                                   properties:
-                                    acceptedProtocols:
+                                    accepted_protocols:
                                       items:
                                         type: string
                                       type: array
                                     algorithm:
                                       type: string
-                                    cipherSuites:
+                                    cipher_suites:
                                       items:
                                         type: string
                                       type: array
-                                    enableLegacySslStoragePort:
+                                    enable_legacy_ssl_storage_port:
                                       type: boolean
                                     enabled:
                                       type: boolean
-                                    encryptionStores:
+                                    encryption_stores:
                                       properties:
-                                        keystoreConfigMapRef:
+                                        keystore_password_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -2212,7 +2210,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        keystorePasswordSecretRef:
+                                        keystore_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -2224,7 +2222,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        truststoreConfigMapRef:
+                                        truststore_password_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -2236,7 +2234,7 @@ spec:
                                                 kind, uid?'
                                               type: string
                                           type: object
-                                        truststorePasswordSecretRef:
+                                        truststore_secret_ref:
                                           description: LocalObjectReference contains
                                             enough information to let you locate the
                                             referenced object inside the same namespace.
@@ -2249,12 +2247,12 @@ spec:
                                               type: string
                                           type: object
                                       required:
-                                      - keystoreConfigMapRef
-                                      - keystorePasswordSecretRef
-                                      - truststoreConfigMapRef
-                                      - truststorePasswordSecretRef
+                                      - keystore_password_secret_ref
+                                      - keystore_secret_ref
+                                      - truststore_password_secret_ref
+                                      - truststore_secret_ref
                                       type: object
-                                    internodeEncryption:
+                                    internode_encryption:
                                       description: 'default: none'
                                       type: string
                                     keystore:
@@ -2263,7 +2261,7 @@ spec:
                                         the right value based on the EncryptionStores
                                         field.
                                       type: string
-                                    keystorePassword:
+                                    keystore_password:
                                       description: Should not be set explicitly in
                                         the custom resource. The operator will generate
                                         the right value based on the EncryptionStores
@@ -2273,13 +2271,13 @@ spec:
                                       type: boolean
                                     protocol:
                                       type: string
-                                    requireClientAuth:
+                                    require_client_auth:
                                       description: 'default: false'
                                       type: boolean
-                                    requireEndpointVerification:
+                                    require_endpoint_verification:
                                       description: 'default: false'
                                       type: boolean
-                                    storeType:
+                                    store_type:
                                       type: string
                                     truststore:
                                       description: Should not be set explicitly in
@@ -2287,14 +2285,12 @@ spec:
                                         the right value based on the EncryptionStores
                                         field.
                                       type: string
-                                    truststorePassword:
+                                    truststore_password:
                                       description: Should not be set explicitly in
                                         the custom resource. The operator will generate
                                         the right value based on the EncryptionStores
                                         field.
                                       type: string
-                                  required:
-                                  - enabled
                                   type: object
                                 slow_query_log_timeout_in_ms:
                                   description: Exists in 3.11, 4.0, trunk
