@@ -3,6 +3,10 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"testing"
+	"time"
+
 	cqlclient "github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -16,10 +20,7 @@ import (
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 )
 
 func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -38,9 +39,10 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	superuserSecretKey := types.NamespacedName{Namespace: namespace, Name: secret.DefaultSuperuserSecretName("cluster1")}
 	reaperCqlSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUserSecretName("cluster1")}
 	reaperJmxSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultJmxUserSecretName("cluster1")}
+	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
 	// cluster has auth turned off initially
-	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, false)
+	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, false)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
@@ -59,13 +61,13 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
-	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, true)
+	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, replication, pod1Name, pod2Name)
+	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
 
 	// turn auth off again
 	toggleAuthentication(t, f, ctx, kcKey, false)
-	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, true)
+	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
 }
@@ -78,6 +80,7 @@ func checkSecrets(
 	superuserSecretKey types.NamespacedName,
 	reaperCqlSecretKey types.NamespacedName,
 	reaperJmxSecretKey types.NamespacedName,
+	reaperUiSecretKey types.NamespacedName,
 	expectReaperSecretsCreated bool,
 ) {
 	t.Log("check that superuser secret exists in both contexts")
@@ -90,6 +93,9 @@ func checkSecrets(
 		t.Log("check that reaper JMX secret exists in both contexts")
 		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
 		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
+		t.Log("check that reaper UI secret exists in both contexts")
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
 	} else {
 		t.Log("check that reaper CQL secret wasn't created in neither context")
 		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
@@ -97,6 +103,9 @@ func checkSecrets(
 		t.Log("check that reaper JMX secret wasn't created in neither context")
 		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
 		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
+		t.Log("check that reaper UI secret wasn't created in neither context")
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
 	}
 }
 
@@ -175,8 +184,8 @@ func testAuthenticationDisabled(
 			testStargateNativeApi(t, ctx, 1, "", "", replication)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace)
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, "", "")
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, "", "")
 		})
 	})
 }
@@ -186,7 +195,7 @@ func testAuthenticationEnabled(
 	f *framework.E2eFramework,
 	ctx context.Context,
 	namespace string,
-	kcKey types.NamespacedName,
+	kcKey, reaperUiSecretKey types.NamespacedName,
 	replication map[string]int,
 	pod1Name, pod2Name string,
 ) {
@@ -229,9 +238,9 @@ func testAuthenticationEnabled(
 			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, 1)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			// Note: reaper REST api is currently always unauthenticated
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace)
+			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, username, password)
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, username, password)
 		})
 	})
 }

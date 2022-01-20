@@ -8,6 +8,16 @@ data:
   # password: R3ap3r
   password: UjNhcDNy
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-ui-secret
+data:
+  # username: reaper-ui
+  username: cmVhcGVyLWpteA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
@@ -16,9 +26,11 @@ spec:
   reaper:
     keyspace: reaper_ks # custom name
     cassandraUserSecretRef:
-      name: reaper-cql-secret # pre-existing secret
+      name: reaper-cql-secret # pre-existing secret with non-default name
     jmxUserSecretRef:
       name: reaper-jmx-secret # will be created with non-default name
+    uiUserSecretRef:
+      name: reaper-ui-secret # pre-existing secret with non-default name
   cassandra:
     serverVersion: "4.0.1"
     datacenters:

@@ -10430,6 +10430,15 @@ spec:
                           type: string
                       type: object
                     type: array
+                  uiUserSecretRef:
+                    description: Defines the secret which contains the shiro.ini file
+                      controlling the Reaper UI and REST API authentication.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                 type: object
               stargate:
                 description: Stargate defines the desired deployment characteristics

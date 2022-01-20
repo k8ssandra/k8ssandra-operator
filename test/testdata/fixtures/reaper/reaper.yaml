@@ -10,6 +10,8 @@ spec:
     name: reaper-cql-secret
   jmxUserSecretRef:
     name: reaper-jmx-secret
+  uiUserSecretRef:
+    name: reaper-ui-secret
   containerImage:
     repository: thelastpickle
     name: cassandra-reaper

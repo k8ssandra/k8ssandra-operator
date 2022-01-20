@@ -172,6 +172,10 @@ type ReaperClusterTemplate struct {
 	// and "password".
 	// +optional
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
+
+	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
+	// +optional
+	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.

@@ -31,13 +31,13 @@ func (_m *ReaperManager) AddClusterToReaper(ctx context.Context, cassdc *v1beta1
 	return r0
 }
 
-// Connect provides a mock function with given fields: _a0
-func (_m *ReaperManager) Connect(_a0 *v1alpha1.Reaper) error {
-	ret := _m.Called(_a0)
+// Connect provides a mock function with given fields: ctx, _a1, username, password
+func (_m *ReaperManager) Connect(ctx context.Context, _a1 *v1alpha1.Reaper, username string, password string) error {
+	ret := _m.Called(ctx, _a1, username, password)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(*v1alpha1.Reaper) error); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.Reaper, string, string) error); ok {
+		r0 = rf(ctx, _a1, username, password)
 	} else {
 		r0 = ret.Error(0)
 	}

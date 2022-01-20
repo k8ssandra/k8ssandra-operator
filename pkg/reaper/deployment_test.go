@@ -1,6 +1,8 @@
 package reaper
 
 import (
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -9,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
 )
 
 func TestNewDeployment(t *testing.T) {
@@ -68,10 +69,6 @@ func TestNewDeployment(t *testing.T) {
 			Value: "[cluster1-dc1-service]",
 		},
 		{
-			Name:  "REAPER_AUTH_ENABLED",
-			Value: "false",
-		},
-		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: DatacenterAvailabilityLocal,
 		},
@@ -102,10 +99,6 @@ func TestNewDeployment(t *testing.T) {
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
 			Value: "[cluster1-dc1-service]",
-		},
-		{
-			Name:  "REAPER_AUTH_ENABLED",
-			Value: "false",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -140,7 +133,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter())
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 7)
+	assert.Len(t, container.Env, 6)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -151,7 +144,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter())
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 17)
+	assert.Len(t, container.Env, 16)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
