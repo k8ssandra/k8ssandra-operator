@@ -173,7 +173,7 @@ type ReaperClusterTemplate struct {
 	// +optional
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
 
-	// Defines the secret which contains the shiro.ini file controlling the Reaper UI and REST API authentication.
+	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
 	// +optional
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 }
