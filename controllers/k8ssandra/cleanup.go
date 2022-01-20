@@ -2,7 +2,7 @@ package k8ssandra
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -10,8 +10,10 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -119,4 +121,68 @@ func (r *K8ssandraClusterReconciler) checkFinalizer(ctx context.Context, kc *api
 	}
 
 	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+	dcNames := make([]string, 0)
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		dcNames = append(dcNames, dc.Meta.Name)
+	}
+
+	for dcName, _ := range kc.Status.Datacenters {
+		if !slices.Contains(dcNames, dcName) {
+			return r.deleteDc(ctx, kc, dcName, logger)
+		}
+	}
+
+	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
+	kcKey := utils.GetKey(kc)
+
+	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if dc == nil {
+		logger.Info("dc deletion finished", "CassandraDatacenter", dcName)
+		r.removeDatacenterStatus(kc, dcName)
+		return result.Continue()
+	}
+
+	if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
+		logger.Info("dc decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
+		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+		return result.Done()
+	}
+
+	logger.Info("Deleting dc", "CassandraDatacenter", utils.GetKey(dc))
+	if err := remoteClient.Delete(ctx, dc); err != nil {
+		return result.Error(fmt.Errorf("failed to delete dc (%s): %v", dcName, err))
+	}
+	// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+	return result.Done()
+}
+
+func (r *K8ssandraClusterReconciler) findDcForDeletion(ctx context.Context, kcKey client.ObjectKey, dcName string) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	dcList := &cassdcapi.CassandraDatacenterList{}
+
+	for _, remoteClient := range r.ClientCache.GetRemoteClients() {
+		err := remoteClient.List(ctx, dcList, options)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to delete CassandraDatacenter: %v", err)
+		}
+
+		for _, dc := range dcList.Items {
+			if dc.Name == dcName {
+				return &dc, remoteClient, nil
+			}
+		}
+	}
+
+	return nil, nil, nil
 }

@@ -66,6 +66,10 @@ func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.Mana
 		return result.Continue()
 	}
 
+	if _, found := versions["UNREACHABLE"]; len(versions) == 2 && found {
+		return result.Continue()
+	}
+
 	logger.Info("There is schema disagreement", "versions", len(versions))
 
 	return result.RequeueSoon(r.DefaultDelay)

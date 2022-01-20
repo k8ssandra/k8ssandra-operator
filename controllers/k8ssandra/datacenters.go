@@ -25,6 +25,10 @@ import (
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
 	kcKey := utils.GetKey(kc)
 
+	if recResult := r.checkDcDeletion(ctx, kc, logger); recResult.Completed() {
+		return recResult, nil
+	}	
+
 	systemReplication, err := r.checkInitialSystemReplication(ctx, kc, logger)
 	if err != nil {
 		logger.Error(err, "System replication check failed")
@@ -194,6 +198,20 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 	} else {
 		kc.Status.Datacenters[dc.Name] = api.K8ssandraStatus{
 			Cassandra: dc.Status.DeepCopy(),
+		}
+	}
+}
+
+func (r *K8ssandraClusterReconciler) removeDatacenterStatus(kc *api.K8ssandraCluster, dcName string) {
+	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
+		if kdcStatus.Stargate == nil {
+			delete(kc.Status.Datacenters, dcName)
+		} else {
+			kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
+				Stargate:  kdcStatus.Stargate.DeepCopy(),
+				Cassandra: nil,
+				Reaper:    kdcStatus.Reaper.DeepCopy(),
+			}
 		}
 	}
 }
