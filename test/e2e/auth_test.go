@@ -57,19 +57,19 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	pod2Name := "cluster1-dc2-default-sts-0"
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name, kcKey)
+	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
 	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, replication, pod1Name, pod2Name)
+	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
 
 	// turn auth off again
 	toggleAuthentication(t, f, ctx, kcKey, false)
 	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name, kcKey)
+	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
 }
 
 func checkSecrets(
@@ -160,7 +160,6 @@ func testAuthenticationDisabled(
 	namespace string,
 	replication map[string]int,
 	pod1Name, pod2Name string,
-	kcKey types.NamespacedName,
 ) {
 	t.Run("TestJmxAccessAuthDisabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
@@ -185,8 +184,8 @@ func testAuthenticationDisabled(
 			testStargateNativeApi(t, ctx, 1, "", "", replication)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, f, namespace, false)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, f, namespace, false)
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, "", "")
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, "", "")
 		})
 	})
 }
@@ -196,7 +195,7 @@ func testAuthenticationEnabled(
 	f *framework.E2eFramework,
 	ctx context.Context,
 	namespace string,
-	kcKey types.NamespacedName,
+	kcKey, reaperUiSecretKey types.NamespacedName,
 	replication map[string]int,
 	pod1Name, pod2Name string,
 ) {
@@ -239,9 +238,9 @@ func testAuthenticationEnabled(
 			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, 1)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			// Note: reaper REST api is currently always unauthenticated
-			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, f, namespace, true)
-			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, f, namespace, true)
+			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, username, password)
+			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, username, password)
 		})
 	})
 }

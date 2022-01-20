@@ -113,14 +113,9 @@ func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.Reaper
 
 	if clusterTemplate != nil {
 		coalesced.Keyspace = clusterTemplate.Keyspace
-	}
-
-	if clusterTemplate != nil {
 		coalesced.CassandraUserSecretRef = clusterTemplate.CassandraUserSecretRef
-	}
-
-	if clusterTemplate != nil {
 		coalesced.JmxUserSecretRef = clusterTemplate.JmxUserSecretRef
+		coalesced.ReaperUiSecretRef = clusterTemplate.ReaperUiSecretRef
 	}
 
 	// FIXME do we want to drill down on auto scheduling properties?

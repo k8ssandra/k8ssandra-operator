@@ -4,12 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
@@ -841,7 +840,14 @@ func checkNodeToolStatusUN(
 }
 
 func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
-	require.True(t, labels.IsManagedBy(getSecret(t, f, ctx, secretKey), kcKey), "secret %s/%s is not managed by %s", secretKey.Namespace, secretKey.Name, kcKey.Name)
+	secret := getSecret(t, f, ctx, secretKey)
+	require.True(t, labels.IsManagedBy(secret, kcKey), "secret %s/%s is not managed by %s", secretKey.Namespace, secretKey.Name, kcKey.Name)
+}
+
+// FIXME there is some overlap with E2eFramework.RetrieveDatabaseCredentials()
+func retrieveCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) (string, string) {
+	secret := getSecret(t, f, ctx, secretKey)
+	return string(secret.Data["username"]), string(secret.Data["password"])
 }
 
 func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) *corev1.Secret {
@@ -890,10 +896,4 @@ func configureZeroLog() {
 		Out:        os.Stderr,
 		TimeFormat: zerolog.TimeFormatUnix,
 	})
-}
-
-func authEnabled(t *testing.T, f *framework.E2eFramework, ctx context.Context, clusterKey framework.ClusterKey) bool {
-	k8ssandra := &api.K8ssandraCluster{}
-	require.NoError(t, f.Get(ctx, clusterKey, k8ssandra))
-	return k8ssandra.Spec.IsAuthEnabled()
 }
