@@ -377,7 +377,7 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 	rpr := newReaper(testNamespace)
 	rpr.Spec.CassandraUserSecretRef.Name = "top-secret-cass"
 	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx"
-	rpr.Spec.ReaperUiSecretRef.Name = "top-secret-ui"
+	rpr.Spec.UiUserSecretRef.Name = "top-secret-ui"
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)
 

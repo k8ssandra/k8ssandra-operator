@@ -10,7 +10,7 @@ spec:
     name: reaper-cql-secret
   jmxUserSecretRef:
     name: reaper-jmx-secret
-  reaperUiSecretRef:
+  uiUserSecretRef:
     name: reaper-ui-secret
   containerImage:
     repository: thelastpickle

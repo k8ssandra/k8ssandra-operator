@@ -57,8 +57,8 @@ func NewReaper(
 		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
 			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Name)
 		}
-		if desiredReaper.Spec.ReaperUiSecretRef.Name == "" {
-			desiredReaper.Spec.ReaperUiSecretRef.Name = DefaultUiSecretName(kc.Name)
+		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
+			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.Name)
 		}
 	}
 	annotations.AddHashAnnotation(desiredReaper)
@@ -115,7 +115,7 @@ func Coalesce(clusterTemplate *api.ReaperClusterTemplate, dcTemplate *api.Reaper
 		coalesced.Keyspace = clusterTemplate.Keyspace
 		coalesced.CassandraUserSecretRef = clusterTemplate.CassandraUserSecretRef
 		coalesced.JmxUserSecretRef = clusterTemplate.JmxUserSecretRef
-		coalesced.ReaperUiSecretRef = clusterTemplate.ReaperUiSecretRef
+		coalesced.UiUserSecretRef = clusterTemplate.UiUserSecretRef
 	}
 
 	// FIXME do we want to drill down on auto scheduling properties?

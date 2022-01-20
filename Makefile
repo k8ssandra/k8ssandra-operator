@@ -164,8 +164,8 @@ single-reload: build manifests kustomize docker-build kind-load-image cert-manag
 	kubectl delete pod -l control-plane=k8ssandra-operator -n k8ssandra-operator
 	kubectl rollout status deployment k8ssandra-operator -n k8ssandra-operator
 ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n k8ssandra-operator delete pod -l name=cass-operator
-	kubectl -n k8ssandra-operator rollout status deployment cass-operator-controller-manager
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
 multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
@@ -179,40 +179,40 @@ multi-up: cleanup build manifests kustomize docker-build create-kind-multicluste
 	make create-client-config
 ## Restart the control plane
 	kubectl config use-context kind-k8ssandra-0
-	kubectl -n k8ssandra-operator delete pod -l control-plane=k8ssandra-operator
-	kubectl -n k8ssandra-operator rollout status deployment k8ssandra-operator
+	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
+	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n k8ssandra-operator delete pod -l name=cass-operator
-	kubectl -n k8ssandra-operator rollout status deployment cass-operator-controller-manager
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
 multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
 # Reload the operator on the control-plane
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
-	kubectl -n k8ssandra-operator delete pod -l control-plane=k8ssandra-operator
-	kubectl -n k8ssandra-operator rollout status deployment k8ssandra-operator
+	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
+	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n k8ssandra-operator delete pod -l name=cass-operator
-	kubectl -n k8ssandra-operator rollout status deployment cass-operator-controller-manager
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 # Reload the operator on the data-plane
 	kubectl config use-context kind-k8ssandra-1
 	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
-	kubectl -n k8ssandra-operator delete pod -l control-plane=k8ssandra-operator
-	kubectl -n k8ssandra-operator rollout status deployment k8ssandra-operator
+	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
+	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n k8ssandra-operator delete pod -l name=cass-operator
-	kubectl -n k8ssandra-operator rollout status deployment cass-operator-controller-manager
+	kubectl -n $(NS) delete pod -l name=cass-operator
+	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
 single-deploy:
 	kubectl config use-context kind-k8ssandra-0
-	kubectl -n k8ssandra-operator apply -f test/testdata/samples/k8ssandra-single-kind.yaml
+	kubectl -n $(NS) apply -f test/testdata/samples/k8ssandra-single-kind.yaml
 
 multi-deploy:
 	kubectl config use-context kind-k8ssandra-0
-	kubectl -n k8ssandra-operator apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
+	kubectl -n $(NS) apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
 
 cleanup:
 	kind delete cluster --name k8ssandra-0

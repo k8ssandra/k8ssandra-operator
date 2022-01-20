@@ -278,7 +278,7 @@ func prepareCRDs() error {
 		return err
 	}
 
-	promOperatorCrd := "github.com/prometheus-operator/kube-prometheus?ref=" + prometheusOperatorVersion
+	promOperatorCrd := "https://github.com/prometheus-operator/kube-prometheus?ref=" + prometheusOperatorVersion
 	buf, err = kustomize.BuildUrl(promOperatorCrd)
 	if err != nil {
 		return err

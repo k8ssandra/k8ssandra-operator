@@ -57,7 +57,7 @@ func GetAuthEnvironmentVars(secret *corev1.Secret, authType string) (*corev1.Env
 	case "ui":
 		return secretToEnvVars(secret, uiAuthEnvUsernameName, uiAuthEnvPasswordName)
 	default:
-		return nil, nil, fmt.Errorf("Unsupported auth type %s", authType)
+		return nil, nil, fmt.Errorf("unsupported auth type %s", authType)
 	}
 }
 

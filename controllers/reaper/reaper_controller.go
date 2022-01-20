@@ -295,11 +295,16 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 }
 
 func (r *ReaperReconciler) getReaperUICredentials(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
-	secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.ReaperUiSecretRef.Name}
+	if actualReaper.Spec.UiUserSecretRef.Name == "" {
+		// The UI user secret doesn't exist, meaning auth is disabled
+		return "", "", nil
+	}
+
+	secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.UiUserSecretRef.Name}
 	if secret, err := r.getSecret(ctx, secretKey); err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("Reaper ui secret does not exist")
-			return "", "", nil
+			return "", "", err
 		} else {
 			logger.Error(err, "failed to get reaper ui secret")
 			return "", "", err
@@ -344,7 +349,7 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 		secretRef = &actualReaper.Spec.JmxUserSecretRef
 		envVars = []*corev1.EnvVar{}
 	case "ui":
-		secretRef = &actualReaper.Spec.ReaperUiSecretRef
+		secretRef = &actualReaper.Spec.UiUserSecretRef
 		envVars = []*corev1.EnvVar{reaper.EnableAuthVar}
 	}
 

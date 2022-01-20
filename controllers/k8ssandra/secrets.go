@@ -42,11 +42,11 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			logger.Info("Reconciling Reaper user secrets")
 			var cassandraUserSecretRef corev1.LocalObjectReference
 			var jmxUserSecretRef corev1.LocalObjectReference
-			var reaperUiSecretRef corev1.LocalObjectReference
+			var uiUserSecretRef corev1.LocalObjectReference
 			if kc.Spec.Reaper != nil {
 				cassandraUserSecretRef = kc.Spec.Reaper.CassandraUserSecretRef
 				jmxUserSecretRef = kc.Spec.Reaper.JmxUserSecretRef
-				reaperUiSecretRef = kc.Spec.Reaper.ReaperUiSecretRef
+				uiUserSecretRef = kc.Spec.Reaper.UiUserSecretRef
 			}
 			if cassandraUserSecretRef.Name == "" {
 				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
@@ -54,8 +54,8 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			if jmxUserSecretRef.Name == "" {
 				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
 			}
-			if reaperUiSecretRef.Name == "" {
-				reaperUiSecretRef.Name = reaper.DefaultUiSecretName(kc.Name)
+			if uiUserSecretRef.Name == "" {
+				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.Name)
 			}
 			kcKey := utils.GetKey(kc)
 			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
@@ -66,8 +66,8 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				logger.Error(err, "Failed to reconcile Reaper JMX user secret", "ReaperJmxUserSecretRef", jmxUserSecretRef)
 				return result.Error(err)
 			}
-			if err := secret.ReconcileSecret(ctx, r.Client, reaperUiSecretRef.Name, kcKey); err != nil {
-				logger.Error(err, "Failed to reconcile Reaper UI secret", "ReaperUiSecretRef", reaperUiSecretRef)
+			if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kcKey); err != nil {
+				logger.Error(err, "Failed to reconcile Reaper UI secret", "ReaperUiUserSecretRef", uiUserSecretRef)
 				return result.Error(err)
 			}
 			logger.Info("Reaper user secrets successfully reconciled")
