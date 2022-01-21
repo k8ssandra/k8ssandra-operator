@@ -20,6 +20,43 @@ import (
 	"time"
 )
 
+func (r *K8ssandraClusterReconciler) checkSchemas(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
+	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if recResult := r.checkSchemaAgreement(mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dc.Name) {
+		if recResult := r.updateUserKeyspacesReplication(ctx, kc, dc, mgmtApi, logger); recResult.Completed() {
+			return recResult
+		}
+	}
+
+	return result.Continue()
+}
+
 func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.ManagementApiFacade, logger logr.Logger) result.ReconcileResult {
 
 	versions, err := mgmtApi.GetSchemaVersions()
