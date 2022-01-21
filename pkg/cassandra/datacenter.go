@@ -2,7 +2,6 @@ package cassandra
 
 import (
 	"fmt"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -353,4 +352,24 @@ func FindAdditionalVolume(dcConfig *DatacenterConfig, volumeName string) (int, b
 	}
 
 	return -1, false
+}
+
+func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
+	desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+	actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+
+	actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+	desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+	if (foundActualYaml && foundDesiredYaml) && actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
+			return fmt.Errorf("tried to change num_tokens in an existing datacenter")
+	}
+
+	return nil
 }

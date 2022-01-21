@@ -3,16 +3,16 @@ package v1alpha1
 const (
 	ResourceHashAnnotation = "k8ssandra.io/resource-hash"
 
-	// SystemReplicationAnnotation provides the initial replication of system keyspaces
+	// InitialSystemReplicationAnnotation provides the initial replication of system keyspaces
 	// (system_auth, system_distributed, system_traces) encoded as JSON. This annotation
 	// is set on a K8ssandraCluster when it is first created. The value does not change
 	// regardless of whether the replication of the system keyspaces changes.
-	SystemReplicationAnnotation = "k8ssandra.io/system-replication"
+	InitialSystemReplicationAnnotation = "k8ssandra.io/initial-system-replication"
 
 	// DcReplicationAnnotation tells the operator the replication settings to apply to user
 	// keyspaces when adding a DC to an existing cluster. The value should be serialized
 	// JSON, e.g., {"dc2": {"ks1": 3, "ks2": 3}}. All user keyspaces must be specified;
-	// otherwise, reconcilation will fail with a validation error. If you do not want to
+	// otherwise, reconciliation will fail with a validation error. If you do not want to
 	// replicate a particular keyspace, specify a value of 0. Replication settings can be
 	// specified for multiple DCs; however, existing DCs won't be modified, and only the DC
 	// currently being added will be updated. Specifying multiple DCs can be useful though
@@ -25,6 +25,8 @@ const (
 	// this annotation must specify the name of a CassandraDatacenter whose Ready
 	// condition is true.
 	RebuildSourceDcAnnotation = "k8ssandra.io/rebuild-src-dc"
+
+	RebuildDcAnnotation = "k8ssandra.io/rebuild-dc"
 
 	RebuildLabel = "k8ssandra.io/rebuild"
 

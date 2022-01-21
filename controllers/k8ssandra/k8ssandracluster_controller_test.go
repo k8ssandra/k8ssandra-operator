@@ -1386,21 +1386,21 @@ func secretExists(f *framework.Framework, ctx context.Context, namespace, secret
 }
 
 func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
-	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+	t.Logf("check that the %s annotation is set", api.InitialSystemReplicationAnnotation)
 	assert.Eventually(t, systemReplicationAnnotationIsSet(t, f, ctx, kc), timeout, interval, "Failed to verify that the system replication annotation was set correctly")
 }
 
 func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) func() bool {
 	return func() bool {
 		key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-		expectedReplication := cassandra.ComputeSystemReplication(kc)
+		expectedReplication := cassandra.ComputeInitialSystemReplication(kc)
 		kc = &api.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, key, kc); err != nil {
 			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
 			return false
 		}
 
-		val, found := kc.Annotations[api.SystemReplicationAnnotation]
+		val, found := kc.Annotations[api.InitialSystemReplicationAnnotation]
 		if !found {
 			return false
 		}

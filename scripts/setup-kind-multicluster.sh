@@ -62,7 +62,7 @@ function create_cluster() {
   num_workers=$3
   node_version=$4
 
-cat <<EOF | kind create cluster --name $cluster_name -v 5 --image kindest/node:$node_version --config=-
+cat <<EOF | kind create cluster --name $cluster_name --image kindest/node:$node_version --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
