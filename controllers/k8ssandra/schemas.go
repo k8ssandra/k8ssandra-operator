@@ -236,7 +236,7 @@ func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 		keyspaces = append(keyspaces, stargate.AuthKeyspace)
 	}
 
-	if kc.HasReapers() {
+	if kc.Spec.Reaper != nil {
 		keyspaces = append(keyspaces, getReaperKeyspace(kc))
 	}
 

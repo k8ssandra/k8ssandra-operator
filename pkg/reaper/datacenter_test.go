@@ -162,8 +162,10 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 		{
 			"existing objects auth",
 			&reaperapi.ReaperClusterTemplate{
-				CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
-				JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
+				ReaperTemplate: reaperapi.ReaperTemplate{
+					CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
+					JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
+				},
 			},
 			&cassandra.DatacenterConfig{
 				Meta:               api.EmbeddedObjectMeta{Name: "dc1"},
@@ -310,9 +312,11 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 		{
 			"existing objects no auth",
 			&reaperapi.ReaperClusterTemplate{
-				// should be ignored
-				CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
-				JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
+				ReaperTemplate: reaperapi.ReaperTemplate{
+					// should be ignored
+					CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
+					JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
+				},
 			},
 			&cassandra.DatacenterConfig{
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},

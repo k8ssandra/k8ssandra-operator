@@ -30,7 +30,33 @@ const (
 	DefaultKeyspace = "reaper_db"
 )
 
-type ReaperDatacenterTemplate struct {
+type ReaperTemplate struct {
+
+	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
+	// does not exist, and if this Reaper resource is managed by K8ssandra.
+	// +kubebuilder:default="reaper_db"
+	// +optional
+	Keyspace string `json:"keyspace,omitempty"`
+
+	// Defines the username and password that Reaper will use to authenticate CQL connections to Cassandra clusters.
+	// These credentials will be automatically turned into CQL roles by cass-operator when bootstrapping the datacenter,
+	// then passed to the Reaper instance, so that it can authenticate against nodes in the datacenter using CQL. If CQL
+	// authentication is not required, leave this field empty. The secret must be in the same namespace as Reaper itself
+	// and must contain two keys: "username" and "password".
+	// +optional
+	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
+
+	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra clusters.
+	// These credentials will be automatically passed to each Cassandra node in the datacenter, as well as to the Reaper
+	// instance, so that the latter can authenticate against the former. If JMX authentication is not required, leave
+	// this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys: "username"
+	// and "password".
+	// +optional
+	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
+
+	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
+	// +optional
+	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// The image to use for the Reaper pod main container.
 	// The default is "thelastpickle/cassandra-reaper:3.1.0".
@@ -149,33 +175,12 @@ type AutoScheduling struct {
 }
 
 type ReaperClusterTemplate struct {
-	ReaperDatacenterTemplate `json:",inline"`
+	ReaperTemplate `json:",inline"`
 
-	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
-	// does not exist, and if this Reaper resource is managed by K8ssandra.
-	// +kubebuilder:default="reaper_db"
 	// +optional
-	Keyspace string `json:"keyspace,omitempty"`
-
-	// Defines the username and password that Reaper will use to authenticate CQL connections to Cassandra clusters.
-	// These credentials will be automatically turned into CQL roles by cass-operator when bootstrapping the datacenter,
-	// then passed to the Reaper instance, so that it can authenticate against nodes in the datacenter using CQL. If CQL
-	// authentication is not required, leave this field empty. The secret must be in the same namespace as Reaper itself
-	// and must contain two keys: "username" and "password".
-	// +optional
-	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
-
-	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra clusters.
-	// These credentials will be automatically passed to each Cassandra node in the datacenter, as well as to the Reaper
-	// instance, so that the latter can authenticate against the former. If JMX authentication is not required, leave
-	// this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys: "username"
-	// and "password".
-	// +optional
-	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
-
-	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
-	// +optional
-	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
+	// +kubebuilder:default="PER_DC"
+	// +kubebuilder:validation:Enum:=PER_DC;SINGLE
+	DeploymentMode string `json:"deploymentMode,omitempty"`
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.
@@ -194,7 +199,7 @@ type CassandraDatacenterRef struct {
 
 // ReaperSpec defines the desired state of Reaper
 type ReaperSpec struct {
-	ReaperClusterTemplate `json:",inline"`
+	ReaperTemplate `json:",inline"`
 
 	// DatacenterRef is the reference of a CassandraDatacenter resource that this Reaper instance should manage. It will
 	// also be used as the backend for persisting Reaper's state. Reaper must be able to access the JMX port (7199 by
@@ -203,13 +208,12 @@ type ReaperSpec struct {
 	DatacenterRef CassandraDatacenterRef `json:"datacenterRef"`
 
 	// DatacenterAvailability indicates to Reaper its deployment in relation to the target datacenter's network.
-	// For single-DC clusters, the default (LOCAL) is fine. For multi-DC clusters, it is recommended to use EACH,
+	// For single-DC clusters, the default (ALL) is fine. For multi-DC clusters, it is recommended to use EACH,
 	// provided that there is one Reaper instance managing each DC in the cluster; otherwise, if one single Reaper
-	// instance is going to manage more than one DC in the cluster, use LOCAL and remote DCs will be handled internally
-	// by Cassandra itself.
+	// instance is going to manage more than one DC in the cluster, use ALL.
 	// See https://cassandra-reaper.io/docs/usage/multi_dc/.
 	// +optional
-	// +kubebuilder:default="LOCAL"
+	// +kubebuilder:default="ALL"
 	// +kubebuilder:validation:Enum:=LOCAL;ALL;EACH
 	DatacenterAvailability string `json:"datacenterAvailability,omitempty"`
 }

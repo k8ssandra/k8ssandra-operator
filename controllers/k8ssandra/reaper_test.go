@@ -43,9 +43,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Reaper: &reaperapi.ReaperDatacenterTemplate{
-							AutoScheduling: reaperapi.AutoScheduling{Enabled: true},
-						},
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -59,10 +56,12 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 							},
 						},
-						Reaper: &reaperapi.ReaperDatacenterTemplate{
-							AutoScheduling: reaperapi.AutoScheduling{Enabled: true},
-						},
 					},
+				},
+			},
+			Reaper: &reaperapi.ReaperClusterTemplate{
+				ReaperTemplate: reaperapi.ReaperTemplate{
+					AutoScheduling: reaperapi.AutoScheduling{Enabled: true},
 				},
 			},
 		},
@@ -221,8 +220,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	t.Log("remove both reapers from kc spec")
 	err = f.Get(ctx, kcKey, kc)
 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].Reaper = nil
-	kc.Spec.Cassandra.Datacenters[1].Reaper = nil
+	kc.Spec.Reaper = nil
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(err, "failed to update K8ssandraCluster")
 

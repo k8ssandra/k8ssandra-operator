@@ -138,24 +138,6 @@ func (in *K8ssandraCluster) HasStargates() bool {
 	return false
 }
 
-// HasReapers returns true if at least one Reaper resource will be created as part of the creation
-// of this K8ssandraCluster object.
-func (in *K8ssandraCluster) HasReapers() bool {
-	if in == nil {
-		return false
-	} else if in.Spec.Reaper != nil {
-		return true
-	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
-		return false
-	}
-	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
-		if dcTemplate.Reaper != nil {
-			return true
-		}
-	}
-	return false
-}
-
 func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTemplate {
 	datacenters := make([]CassandraDatacenterTemplate, 0)
 	if in != nil && in.Spec.Cassandra != nil {
@@ -314,11 +296,6 @@ type CassandraDatacenterTemplate struct {
 	// deploying Stargate in this datacenter.
 	// +optional
 	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
-
-	// Reaper defines the desired deployment characteristics for Reaper in this datacenter. Leave nil to skip
-	// deploying Reaper in this datacenter.
-	// +optional
-	Reaper *reaperapi.ReaperDatacenterTemplate `json:"reaper,omitempty"`
 
 	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
