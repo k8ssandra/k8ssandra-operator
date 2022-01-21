@@ -369,11 +369,37 @@ func TestDatacentersReplication(t *testing.T) {
 				"ks2": 1,
 				"ks3": 7,
 			},
+			"dc4": {
+				"ks1": 1,
+				"ks2": 3,
+				"ks3": 3,
+				"ks4": 1,
+			},
 		},
 	}
 
 	assert.True(replication.EachDcContainsKeyspaces("ks1", "ks2"))
 	assert.False(replication.EachDcContainsKeyspaces("ks1", "ks2", "ks3"))
+
+	expected := &Replication{
+		datacenters: map[string]keyspacesReplication{
+			"dc3": {
+				"ks1": 5,
+				"ks2": 1,
+				"ks3": 7,
+			},
+			"dc4": {
+				"ks1": 1,
+				"ks2": 3,
+				"ks3": 3,
+				"ks4": 1,
+			},
+		},
+	}
+	assert.Equal(expected, replication.ForDcs("dc3", "dc4", "dc5"))
+
+	expected = &Replication{datacenters: map[string]keyspacesReplication{}}
+	assert.Equal(expected, replication.ForDcs("dc5", "dc6"))
 }
 
 // GetDatacenterConfig returns a minimum viable DataCenterConfig.

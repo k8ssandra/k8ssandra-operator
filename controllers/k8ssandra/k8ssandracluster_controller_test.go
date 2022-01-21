@@ -57,8 +57,6 @@ var (
 	defaultStorageClass  = "default"
 	testEnv              *testutils.MultiClusterTestEnv
 	managementApiFactory = &testutils.FakeManagementApiFactory{}
-
-	systemKeyspaces = []string{"system_auth", "system_distributed", "system_traces"}
 )
 
 func TestK8ssandraCluster(t *testing.T) {

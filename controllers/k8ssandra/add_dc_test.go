@@ -577,7 +577,7 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 
 func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
 	require.Eventually(t, func() bool {
-		for _, ks := range systemKeyspaces {
+		for _, ks := range api.SystemKeyspaces {
 			if mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, ks, updatedReplication) < 0 {
 				return false
 			}
@@ -586,7 +586,7 @@ func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testut
 		return true
 	}, timeout, interval, "Failed to verify system keyspaces replication updated")
 
-	for _, ks := range systemKeyspaces {
+	for _, ks := range api.SystemKeyspaces {
 		lastCallOriginalReplication := mockMgmtApi.GetLastCall(testutils.EnsureKeyspaceReplication, ks, replication)
 		firstCallUpdatedReplication := mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, ks, updatedReplication)
 		assert.True(t, firstCallUpdatedReplication > lastCallOriginalReplication)
@@ -594,7 +594,7 @@ func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testut
 }
 
 func verifyReplicationOfInternalKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
-	internalKeyspaces := append(systemKeyspaces, stargate.AuthKeyspace, reaperapi.DefaultKeyspace)
+	internalKeyspaces := append(api.SystemKeyspaces, stargate.AuthKeyspace, reaperapi.DefaultKeyspace)
 
 	require.Eventually(t, func() bool {
 		for _, ks := range internalKeyspaces {

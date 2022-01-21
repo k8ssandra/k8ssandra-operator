@@ -140,10 +140,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			}
 
 			if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
-				//if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, mgmtApi, logger); recResult.Completed() {
-				//	return recResult, actualDcs
-				//}
-
 				if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}

@@ -54,6 +54,7 @@ func (r *Replication) EachDcContainsKeyspaces(keyspaces ...string) bool {
 	return true
 }
 
+// ForDcs returns a new Replication that contains only the specifics dcs.
 func (r *Replication) ForDcs(dcs ...string) *Replication {
 	replication := &Replication{datacenters: map[string]keyspacesReplication{}}
 
