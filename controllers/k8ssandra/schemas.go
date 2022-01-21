@@ -7,18 +7,53 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"time"
 )
+
+func (r *K8ssandraClusterReconciler) checkSchemas(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
+	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if recResult := r.checkSchemaAgreement(mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+		return recResult
+	}
+
+	if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dc.Name) {
+		if recResult := r.updateUserKeyspacesReplication(kc, dc, mgmtApi, logger); recResult.Completed() {
+			return recResult
+		}
+	}
+
+	return result.Continue()
+}
 
 func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.ManagementApiFacade, logger logr.Logger) result.ReconcileResult {
 
@@ -88,13 +123,12 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 		return recResult
 	}
 
-	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
 	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 
-	for _, ks := range keyspaces {
+	for _, ks := range api.SystemKeyspaces {
 		if err := mgmtApi.EnsureKeyspaceReplication(ks, replication); err != nil {
 			logger.Error(err, "Failed to update replication", "keyspace", ks)
 			return result.Error(err)
@@ -113,7 +147,6 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 // specified; otherwise an error is returned. This is required to avoid surprises for the
 // user.
 func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
-	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
 	mgmtApi cassandra.ManagementApiFacade,
@@ -194,32 +227,20 @@ func getUserKeyspaces(mgmtApi cassandra.ManagementApiFacade, kc *api.K8ssandraCl
 	return userKeyspaces, nil
 }
 
-// getReplicatedInternalKeyspaces returns Cassandra, internal keyspaces that should be
-// replicated, namely system_auth. The slice also includes the Stargate auth keyspace if
-// Stargate is enabled and the Reaper keyspace if Reaper is enabled.
-func getReplicatedInternalKeyspaces(kc *api.K8ssandraCluster) []string {
-	keyspaces := []string{"system_traces", "system_distributed", "system_auth"}
+// getInternalKeyspaces returns all internal Cassandra keyspaces as well as the Stargate
+// auth and Reaper keyspaces if Stargate and Reaper are enabled.
+func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
+	keyspaces := api.SystemKeyspaces
 
 	if kc.HasStargates() {
 		keyspaces = append(keyspaces, stargate.AuthKeyspace)
 	}
 
 	if kc.HasReapers() {
-		if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
-			keyspaces = append(keyspaces, kc.Spec.Reaper.Keyspace)
-		} else {
-			keyspaces = append(keyspaces, reaperapi.DefaultKeyspace)
-		}
+		keyspaces = append(keyspaces, getReaperKeyspace(kc))
 	}
 
-	return keyspaces
-}
-
-// getInternalKeyspaces returns all internal Cassandra keyspaces as well as the Stargate
-// auth and Reaper keyspaces if Stargate and Reaper are enabled.
-func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
-	keyspaces := getReplicatedInternalKeyspaces(kc)
-	keyspaces = append(keyspaces, "system", "system_schema")
+	keyspaces = append(keyspaces, "system", "system_schema", "system_views", "system_virtual_schema")
 	return keyspaces
 }
 
@@ -227,10 +248,8 @@ func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 // been deployed. The replication argument may include DCs that have not yet been deployed.
 func getReplicationForDeployedDcs(kc *api.K8ssandraCluster, replication *cassandra.Replication) *cassandra.Replication {
 	dcNames := make([]string, 0)
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterInitialized) == corev1.ConditionTrue {
-			dcNames = append(dcNames, dc.Meta.Name)
-		}
+	for _, template := range kc.GetInitializedDatacenters() {
+		dcNames = append(dcNames, template.Meta.Name)
 	}
 
 	return replication.ForDcs(dcNames...)

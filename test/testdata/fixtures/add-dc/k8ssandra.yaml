@@ -4,9 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    cluster: test
     serverVersion: "4.0.1"
-    serverImage: "k8ssandra/cass-management-api:4.0.1-v0.1.34"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -26,7 +24,6 @@ spec:
         key_cache_size_in_mb: 0
         thrift_prepared_statements_cache_size_mb: 1
         prepared_statements_cache_size_mb: 1
-        start_rpc: false
         slow_query_log_timeout_in_ms: 0
         counter_cache_size_in_mb: 0
         concurrent_reads: 2

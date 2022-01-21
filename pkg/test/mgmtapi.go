@@ -18,7 +18,7 @@ type ManagementApiFactoryAdapter func(
 	client client.Client,
 	logger logr.Logger) (cassandra.ManagementApiFacade, error)
 
-var defaultAdapater ManagementApiFactoryAdapter = func(
+var defaultAdapter ManagementApiFactoryAdapter = func(
 	ctx context.Context,
 	datacenter *cassdcapi.CassandraDatacenter,
 	client client.Client,
@@ -56,7 +56,7 @@ func (f *FakeManagementApiFactory) NewManagementApiFacade(
 	if f.adapter != nil {
 		return f.adapter(ctx, dc, client, logger)
 	}
-	return defaultAdapater(ctx, dc, client, logger)
+	return defaultAdapter(ctx, dc, client, logger)
 }
 
 type ManagementApiMethod string

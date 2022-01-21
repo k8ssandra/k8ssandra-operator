@@ -57,8 +57,6 @@ var (
 	defaultStorageClass  = "default"
 	testEnv              *testutils.MultiClusterTestEnv
 	managementApiFactory = &testutils.FakeManagementApiFactory{}
-
-	systemKeyspaces = []string{"system_auth", "system_distributed", "system_traces"}
 )
 
 func TestK8ssandraCluster(t *testing.T) {
@@ -1488,41 +1486,3 @@ func parseResource(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
 }
-
-//type ManagementApiFactoryAdapter func(
-//	ctx context.Context,
-//	datacenter *cassdcapi.CassandraDatacenter,
-//	client client.Client,
-//	logger logr.Logger) (cassandra.ManagementApiFacade, error)
-//
-//var defaultAdapater ManagementApiFactoryAdapter = func(
-//	ctx context.Context,
-//	datacenter *cassdcapi.CassandraDatacenter,
-//	client client.Client,
-//	logger logr.Logger) (cassandra.ManagementApiFacade, error) {
-//
-//	m := new(mocks.ManagementApiFacade)
-//	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
-//	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
-//	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
-//		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
-//	})).Return(nil)
-//	m.On("ListKeyspaces", "").Return([]string{}, nil)
-//	return m, nil
-//}
-//
-//type fakeManagementApiFactory struct {
-//	adapter ManagementApiFactoryAdapter
-//}
-//
-//func (f fakeManagementApiFactory) NewManagementApiFacade(
-//	ctx context.Context,
-//	dc *cassdcapi.CassandraDatacenter,
-//	client client.Client,
-//	logger logr.Logger) (cassandra.ManagementApiFacade, error) {
-//
-//	if f.adapter != nil {
-//		return f.adapter(ctx, dc, client, logger)
-//	}
-//	return defaultAdapater(ctx, dc, client, logger)
-//}

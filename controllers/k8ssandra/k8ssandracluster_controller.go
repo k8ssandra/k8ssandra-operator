@@ -138,15 +138,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 
 	kcLogger.Info("All dcs reconciled")
 
-	//if recResult := r.reconcileStargateAuthSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
-	//	return recResult.Output()
-	//}
-	//
-	//if recResult := r.reconcileReaperSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
-	//	return recResult.Output()
-	//}
-
-	if recResult := r.reconcileStargateAndReaper(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
+	if recResult := r.afterCassandraReconciled(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()
 	}
 
@@ -155,7 +147,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	return result.Done().Output()
 }
 
-func (r *K8ssandraClusterReconciler) reconcileStargateAndReaper(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		dc := dcs[i]
 		dcKey := utils.GetKey(dc)

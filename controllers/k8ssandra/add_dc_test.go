@@ -138,7 +138,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
-	createReplicatedSecret(ctx, t, f, kcKey, "cluster-0", "cluster-1")
+	createReplicatedSecret(ctx, t, f, kcKey, k8sCtx0, k8sCtx1)
 	setReplicationStatusDone(ctx, t, f, kcKey)
 
 	createCassandraDatacenter(ctx, t, f, kc, 0)
@@ -208,7 +208,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	updatedReplication := map[string]int{"dc1": 3, "dc2": 3}
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	updatedReplicationStr := map[string]string{"dc1": "3", "dc2": "3"}
+	updatedReplicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 
@@ -485,7 +485,7 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	updatedReplicationStr := map[string]string{"dc1": "3", "dc2": "3"}
+	updatedReplicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 
@@ -577,7 +577,7 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 
 func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
 	require.Eventually(t, func() bool {
-		for _, ks := range systemKeyspaces {
+		for _, ks := range api.SystemKeyspaces {
 			if mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, ks, updatedReplication) < 0 {
 				return false
 			}
@@ -586,7 +586,7 @@ func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testut
 		return true
 	}, timeout, interval, "Failed to verify system keyspaces replication updated")
 
-	for _, ks := range systemKeyspaces {
+	for _, ks := range api.SystemKeyspaces {
 		lastCallOriginalReplication := mockMgmtApi.GetLastCall(testutils.EnsureKeyspaceReplication, ks, replication)
 		firstCallUpdatedReplication := mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, ks, updatedReplication)
 		assert.True(t, firstCallUpdatedReplication > lastCallOriginalReplication)
@@ -594,7 +594,7 @@ func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testut
 }
 
 func verifyReplicationOfInternalKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
-	internalKeyspaces := append(systemKeyspaces, stargate.AuthKeyspace, reaperapi.DefaultKeyspace)
+	internalKeyspaces := append(api.SystemKeyspaces, stargate.AuthKeyspace, reaperapi.DefaultKeyspace)
 
 	require.Eventually(t, func() bool {
 		for _, ks := range internalKeyspaces {

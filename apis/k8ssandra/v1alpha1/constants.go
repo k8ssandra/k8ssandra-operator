@@ -56,3 +56,7 @@ const (
 
 	DatacenterLabel = "k8ssandra.io/datacenter"
 )
+
+var (
+	SystemKeyspaces = []string{"system_traces", "system_distributed", "system_auth"}
+)

@@ -275,7 +275,7 @@ func prepareCRDs() error {
 		return err
 	}
 
-	cassOperatorCrd := "github.com/burmanm/cass-operator/config/crd?ref=" + cassOperatorVersion
+	cassOperatorCrd := "github.com/k8ssandra/cass-operator/config/crd?ref=" + cassOperatorVersion
 	buf, err = kustomize.BuildUrl(cassOperatorCrd)
 	if err != nil {
 		return err

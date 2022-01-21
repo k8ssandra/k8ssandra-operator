@@ -49,11 +49,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 		return recResult
 	}
 
-	keyspace := reaperapi.DefaultKeyspace
-
-	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
-		keyspace = kc.Spec.Reaper.Keyspace
-	}
+	keyspace := getReaperKeyspace(kc)
 
 	datacenters := kc.GetReadyDatacenters()
 	err := mgmtApi.EnsureKeyspaceReplication(
@@ -216,4 +212,12 @@ func (r *K8ssandraClusterReconciler) removeReaperStatus(kc *api.K8ssandraCluster
 			Stargate:  kdcStatus.Stargate.DeepCopy(),
 		}
 	}
+}
+
+func getReaperKeyspace(kc *api.K8ssandraCluster) string {
+	keyspace := reaperapi.DefaultKeyspace
+	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
+		keyspace = kc.Spec.Reaper.Keyspace
+	}
+	return keyspace
 }

@@ -135,32 +135,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			actualDcs = append(actualDcs, actualDc)
 
-			mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, actualDc, remoteClient, logger)
-			if err != nil {
-				return result.Error(err), actualDcs
-			}
-
-			if recResult := r.checkSchemaAgreement(mgmtApi, logger); recResult.Completed() {
-				return recResult, actualDcs
-			}
-
-			if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, mgmtApi, logger); recResult.Completed() {
-				return recResult, actualDcs
-			}
-
-			if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
-				return recResult, actualDcs
-			}
-
-			if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+			if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
 				return recResult, actualDcs
 			}
 
 			if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
-				if recResult := r.updateUserKeyspacesReplication(ctx, kc, desiredDc, mgmtApi, logger); recResult.Completed() {
-					return recResult, actualDcs
-				}
-
 				if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}
