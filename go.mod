@@ -42,7 +42,6 @@ require (
 )
 
 replace (
-	github.com/k8ssandra/cass-operator => github.com/k8ssandra/cass-operator v1.8.0-rc.2.0.20220108141909-eb7bbb91f9bb
 	k8s.io/api => k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery => k8s.io/apimachinery v0.22.2
