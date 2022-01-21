@@ -21,7 +21,7 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.InitContainerImage = initImage
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
-	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityLocal
+	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
 
 	labels := createServiceAndDeploymentLabels(reaper)
 	deployment := NewDeployment(reaper, newTestDatacenter())
@@ -70,7 +70,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
-			Value: DatacenterAvailabilityLocal,
+			Value: DatacenterAvailabilityAll,
 		},
 		{
 			Name:  "REAPER_CASS_LOCAL_DC",
@@ -102,7 +102,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
-			Value: DatacenterAvailabilityLocal,
+			Value: DatacenterAvailabilityAll,
 		},
 		{
 			Name:  "REAPER_CASS_LOCAL_DC",

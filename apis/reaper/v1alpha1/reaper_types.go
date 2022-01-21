@@ -203,13 +203,12 @@ type ReaperSpec struct {
 	DatacenterRef CassandraDatacenterRef `json:"datacenterRef"`
 
 	// DatacenterAvailability indicates to Reaper its deployment in relation to the target datacenter's network.
-	// For single-DC clusters, the default (LOCAL) is fine. For multi-DC clusters, it is recommended to use EACH,
+	// For single-DC clusters, the default (ALL) is fine. For multi-DC clusters, it is recommended to use EACH,
 	// provided that there is one Reaper instance managing each DC in the cluster; otherwise, if one single Reaper
-	// instance is going to manage more than one DC in the cluster, use LOCAL and remote DCs will be handled internally
-	// by Cassandra itself.
+	// instance is going to manage more than one DC in the cluster, use ALL.
 	// See https://cassandra-reaper.io/docs/usage/multi_dc/.
 	// +optional
-	// +kubebuilder:default="LOCAL"
+	// +kubebuilder:default="ALL"
 	// +kubebuilder:validation:Enum:=LOCAL;ALL;EACH
 	DatacenterAvailability string `json:"datacenterAvailability,omitempty"`
 }

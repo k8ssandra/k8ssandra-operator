@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	DatacenterAvailabilityLocal = "LOCAL"
-	DatacenterAvailabilityEach  = "EACH"
+	DatacenterAvailabilityEach = "EACH"
+	DatacenterAvailabilityAll  = "ALL"
 )
 
 // DefaultResourceName generates a name for a new Reaper resource that is derived from the Cassandra cluster and DC
@@ -66,21 +66,18 @@ func NewReaper(
 }
 
 // See https://cassandra-reaper.io/docs/usage/multi_dc/.
-// If each DC has its own Reaper instance, use EACH, otherwise use LOCAL.
+// If we have more than one DC, and each DC has its own Reaper instance, use EACH; otherwise, use ALL.
 func computeReaperDcAvailability(kc *k8ssandraapi.K8ssandraCluster) string {
-	if kc.Spec.Reaper != nil {
-		return DatacenterAvailabilityEach
-	}
 	reapersCount := 0
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.Reaper != nil {
+		if kc.Spec.Reaper != nil || dcTemplate.Reaper != nil {
 			reapersCount++
 		}
 	}
-	if reapersCount == len(kc.Spec.Cassandra.Datacenters) {
+	if reapersCount > 1 && reapersCount == len(kc.Spec.Cassandra.Datacenters) {
 		return DatacenterAvailabilityEach
 	}
-	return DatacenterAvailabilityLocal
+	return DatacenterAvailabilityAll
 }
 
 // Coalesce combines the cluster and dc templates with override semantics. If a property is
