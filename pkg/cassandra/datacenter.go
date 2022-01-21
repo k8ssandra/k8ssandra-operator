@@ -368,7 +368,7 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 	desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
 
 	if (foundActualYaml && foundDesiredYaml) && actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
-			return fmt.Errorf("tried to change num_tokens in an existing datacenter")
+		return fmt.Errorf("tried to change num_tokens in an existing datacenter")
 	}
 
 	return nil
