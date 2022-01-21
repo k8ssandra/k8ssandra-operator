@@ -10,34 +10,34 @@ There are a few options for deploying the operator:
 ## Prerequisites
 Make sure you have the following installed before going through the rest of the guide. 
 
-* kind
-* kubectx
-* yq (YAML processor)
-* setup-kind-multicluster.sh
-* create-clientconfig.sh
+* [kind](#kind)
+* [kubectx](#kubectx)
+* [yq (YAML processor)](#yq)
+* [setup-kind-multicluster.sh](#setup-kind-multiclustersh)
+* [create-clientconfig.sh](#create-clientconfigsh)
 
-**kind**
+### **kind**
 
 The examples in this guide use [kind](https://kind.sigs.k8s.io/) clusters. Install it now if you have not already done so.
 
 By default kind clusters run on the same Docker network which means we will have routable pod IPs across clusters.
 
-**kubectx**
+### **kubectx**
 
 [kubectx](https://github.com/ahmetb/kubectx) is a really handy tool when you are dealing with multiple clusters. The examples will use it so go ahead and install it now.
 
-**yq**
+### **yq**
 
 [yq](https://github.com/mikefarah/yq#install) is lightweight and portable command-line YAML processor.
 
-**setup-kind-multicluster.sh**
+### **`setup-kind-multicluster.sh`**
 
 [setup-kind-multicluster.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/setup-kind-multicluster.sh) lives in the k8ssandra-operator repo. It is used extensively during development and testing. Not only does it configure and create kind clusters, it also generates kubeconfig files for each cluster.
 
 **Note:** kind generates a kubeconfig with the IP address of the API server set to 
 localhost since the cluster is intended for local development. We need a kubeconfig with the IP address set to the internal address of the api server. `setup-kind-mulitcluster.sh` takes care of this for us.
 
-**create-clientconfig.sh**
+### **`create-clientconfig.sh`**
 
 [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) lives in the k8ssandra-operator repo. It is used to configure access to remote clusters. 
 
