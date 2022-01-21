@@ -1856,8 +1856,8 @@ spec:
                   type: object
                 type: array
               uiUserSecretRef:
-                description: Defines the secret which contains the shiro.ini file
-                  controlling the Reaper UI and REST API authentication.
+                description: Defines the secret which contains the username and password
+                  for the Reaper UI and REST API authentication.
                 properties:
                   name:
                     description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names

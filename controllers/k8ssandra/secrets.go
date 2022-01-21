@@ -2,7 +2,7 @@ package k8ssandra
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
@@ -10,6 +10,9 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
@@ -20,9 +23,15 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 	// Finally, creating the superuser secret when auth is disabled does not do any harm: no credentials will be
 	// required to connect to Cassandra nodes by CQL nor JMX.
 	if kc.Spec.Cassandra.SuperuserSecretRef.Name == "" {
-		// Note that we do not persist this change because doing so would prevent us from
-		// differentiating between a default secret by the operator vs one provided by the
-		// client that happens to have the same name as the default name.
+		patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Name)
+		if err := r.Patch(ctx, kc, patch); err != nil {
+			if errors.IsConflict(err) {
+				return result.RequeueSoon(1 * time.Second)
+			}
+			return result.Error(fmt.Errorf("failed to set default superuser secret name: %v", err))
+		}
+
 		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Name)
 		logger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretRef.Name)
 	}

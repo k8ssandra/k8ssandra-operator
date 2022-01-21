@@ -13,21 +13,24 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## Unreleased
+* [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
+* [CHANGE] [#237](https://github.com/k8ssandra/k8ssandra-operator/issues/237) Add cass-operator 
 * [FEATURE] [#276](https://github.com/k8ssandra/k8ssandra-operator/issues/276) Enable Reaper UI authentication
 * [FEATURE] [#249](https://github.com/k8ssandra/k8ssandra-operator/issues/249) Expose all Cassandra yaml settings in a structured fashion in the k8c CRD
 * [FEATURE] [#45](https://github.com/k8ssandra/k8ssandra-operator/issues/45) Migrate the Medusa controllers to k8ssandra-operator
-* [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
-* [CHANGE] [#237](https://github.com/k8ssandra/k8ssandra-operator/issues/237) Add cass-operator dev kustomization deployment
+dev kustomization deployment
+* [FEATURE] [#45](https://github.com/k8ssandra/k8ssandra-operator/issues/45) Migrate the Medusa controllers to k8ssandra-operator
+* [FEATURE] [#249](https://github.com/k8ssandra/k8ssandra-operator/issues/249) Expose all Cassandra yaml settings in a structured fashion in the k8c CRD
 * [ENHANCEMENT] [#218](https://github.com/k8ssandra/k8ssandra-operator/issues/218) Add `CassandraInitialized` status condition
 * [ENHANCEMENT] [#24](https://github.com/k8ssandra/k8ssandra-operator/issues/24) Make Reaper images configurable and
   use same struct for both Reaper and Stargate images
 * [ENHANCEMENT] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 * [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Cassandra Datacenter.
 * [ENHANCEMENT] [#234](https://github.com/k8ssandra/k8ssandra-operator/issues/234) Add logic to configure and reconcile a Prometheus ServiceMonitor for each Stargate deployment.
-* [CHANGE] [#136](https://github.com/k8ssandra/k8ssandra-operator/issues/136) Add shortNames for the K8ssandraCluster CRD
 * [ENHANCEMENT] [#170](https://github.com/k8ssandra/k8ssandra-operator/issues/170) Enforce cluster-wide authentication by default 
 * [ENHANCEMENT] [#267](https://github.com/k8ssandra/k8ssandra-operator/issues/267) Use the K8ssandraCluster name as cluster name for CassandraDatacenter objects
 * [ENHANCEMENT] [#297](https://github.com/k8ssandra/k8ssandra-operator/issues/297) Reconcile standalone Stargate auth schema
+* [TESTING] [#299](https://github.com/k8ssandra/k8ssandra-operator/issues/299) Cluster-scoped e2e test failing
 
 ## v1.0.0-alpha.2 - 2021-12-03
 
