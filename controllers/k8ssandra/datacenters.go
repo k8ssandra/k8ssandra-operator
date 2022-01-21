@@ -27,7 +27,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	if recResult := r.checkDcDeletion(ctx, kc, logger); recResult.Completed() {
 		return recResult, nil
-	}	
+	}
 
 	systemReplication, err := r.checkInitialSystemReplication(ctx, kc, logger)
 	if err != nil {
