@@ -158,15 +158,6 @@ function create_in_cluster_kubeconfig() {
   yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/in_cluster_kubeconfig
 }
 
-function deploy_cass_operator() {
-  echo "Deploying Cass Operator"
-
-  for ((i=0; i<$num_clusters; i++))
-  do
-    kustomize build config/cass-operator/cluster-scoped | kubectl --context kind-k8ssandra-$i apply -f -
-  done
-}
-
 function create_k8s_contexts_secret() {
   echo "Creating Kubernetes contexts secrets"
 
