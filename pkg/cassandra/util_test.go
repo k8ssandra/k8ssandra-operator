@@ -207,11 +207,11 @@ func TestCompareReplications(t *testing.T) {
 		{"nil", nil, map[string]int{"dc1": 3}, false},
 		{"empty", map[string]string{}, map[string]int{"dc1": 3}, false},
 		{"wrong class", map[string]string{"class": "wrong"}, map[string]int{"dc1": 3}, false},
-		{"wrong length", map[string]string{"class": networkTopology, "dc1": "3", "dc2": "3"}, map[string]int{"dc1": 3}, false},
-		{"missing dc", map[string]string{"class": networkTopology, "dc2": "3"}, map[string]int{"dc1": 3}, false},
-		{"invalid rf", map[string]string{"class": networkTopology, "dc1": "not a number"}, map[string]int{"dc1": 3}, false},
-		{"wrong rf", map[string]string{"class": networkTopology, "dc1": "1"}, map[string]int{"dc1": 3}, false},
-		{"success", map[string]string{"class": networkTopology, "dc1": "1", "dc2": "3"}, map[string]int{"dc1": 1, "dc2": 3}, true},
+		{"wrong length", map[string]string{"class": NetworkTopology, "dc1": "3", "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"missing dc", map[string]string{"class": NetworkTopology, "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"invalid rf", map[string]string{"class": NetworkTopology, "dc1": "not a number"}, map[string]int{"dc1": 3}, false},
+		{"wrong rf", map[string]string{"class": NetworkTopology, "dc1": "1"}, map[string]int{"dc1": 3}, false},
+		{"success", map[string]string{"class": NetworkTopology, "dc1": "1", "dc2": "3"}, map[string]int{"dc1": 1, "dc2": 3}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

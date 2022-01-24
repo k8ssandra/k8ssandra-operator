@@ -138,7 +138,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
-	createReplicatedSecret(ctx, t, f, kcKey, "cluster-0", "cluster-1")
+	createReplicatedSecret(ctx, t, f, kcKey, k8sCtx0, k8sCtx1)
 	setReplicationStatusDone(ctx, t, f, kcKey)
 
 	createCassandraDatacenter(ctx, t, f, kc, 0)
@@ -208,7 +208,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	updatedReplication := map[string]int{"dc1": 3, "dc2": 3}
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	updatedReplicationStr := map[string]string{"dc1": "3", "dc2": "3"}
+	updatedReplicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 
@@ -485,7 +485,7 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	updatedReplicationStr := map[string]string{"dc1": "3", "dc2": "3"}
+	updatedReplicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 

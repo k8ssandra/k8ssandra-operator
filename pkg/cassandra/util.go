@@ -92,12 +92,12 @@ func ComputeReplicationFromDcTemplates(maxReplicationPerDc int, datacenters ...a
 	return desiredReplication
 }
 
-const networkTopology = "org.apache.cassandra.locator.NetworkTopologyStrategy"
+const NetworkTopology = "org.apache.cassandra.locator.NetworkTopologyStrategy"
 
 func CompareReplications(actualReplication map[string]string, desiredReplication map[string]int) bool {
 	if len(actualReplication) == 0 {
 		return false
-	} else if class := actualReplication["class"]; class != networkTopology {
+	} else if class := actualReplication["class"]; class != NetworkTopology {
 		return false
 	} else if len(actualReplication) != len(desiredReplication)+1 {
 		return false
