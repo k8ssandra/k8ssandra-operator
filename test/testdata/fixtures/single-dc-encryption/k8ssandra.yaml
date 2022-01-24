@@ -32,7 +32,7 @@ spec:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 3
+        size: 2
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard

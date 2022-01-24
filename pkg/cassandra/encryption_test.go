@@ -202,17 +202,17 @@ func TestAddVolumesForEncryption(t *testing.T) {
 
 	addVolumesForEncryption(dcConfig, "client", *dcConfig.ClientEncryptionStores)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Volumes))
-	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
-	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
-	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
-	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore", "client-truststore-secret"))
 
 	addVolumesForEncryption(dcConfig, "server", *dcConfig.ServerEncryptionStores)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
-	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
-	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
-	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[3].Name)
-	assert.Equal(t, "server-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.Secret.SecretName)
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore", "server-truststore-secret"))
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore", "server-keystore-secret"))
 }
 
 func TestHandleEncryptionOptions(t *testing.T) {
@@ -334,14 +334,16 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 	}
 	HandleEncryptionOptions(dcConfig)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
-	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
-	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
-	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
-	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
-	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
-	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
-	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[3].Name)
-	assert.Equal(t, "server-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[3].VolumeSource.Secret.SecretName)
+
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore", "client-truststore-secret"))
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore", "server-truststore-secret"))
+	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore", "server-keystore-secret"))
+
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[0].Name)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
