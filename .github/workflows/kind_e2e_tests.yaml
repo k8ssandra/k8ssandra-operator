@@ -80,6 +80,7 @@ jobs:
           - CreateReaperAndDatacenter
           - CreateSingleMedusa
           - ConfigControllerRestarts
+          - SingleDcEncryption
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
