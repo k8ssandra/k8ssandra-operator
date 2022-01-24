@@ -54,11 +54,11 @@ func (c config) MarshalJSON() ([]byte, error) {
 
 	// Even though we default to Cassandra's stock defaults for num_tokens, we need to
 	// explicitly set it because the config builder defaults to num_tokens: 1
-	if c.NumTokens == nil {
+	if c.CassandraYaml.NumTokens == nil {
 		if isCassandra4(c.cassandraVersion) {
-			c.NumTokens = pointer.Int(16)
+			c.CassandraYaml.NumTokens = pointer.Int(16)
 		} else {
-			c.NumTokens = pointer.Int(256)
+			c.CassandraYaml.NumTokens = pointer.Int(256)
 		}
 	}
 
@@ -137,8 +137,6 @@ func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecret
 			updatedConfig.CassandraYaml.ClientEncryptionOptions.KeystorePassword = &encryptionStoresSecrets.ClientKeystorePassword
 			updatedConfig.CassandraYaml.ClientEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ClientTruststorePassword
 		}
-		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
-		updatedConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores = nil
 	}
 	if updatedConfig.CassandraYaml.ServerEncryptionOptions != nil {
 		if *updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled {
@@ -150,7 +148,6 @@ func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecret
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ServerTruststorePassword
 		}
 		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
-		updatedConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores = nil
 		if IsCassandra3(cassandraVersion) {
 			// Remove properties that don't exist in Cassandra 3.x
 			updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled = nil

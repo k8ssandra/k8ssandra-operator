@@ -140,6 +140,16 @@ func TestOperator(t *testing.T) {
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
 		testFunc: controllerRestart,
 	}))
+	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createSingleDatacenterCluster,
+		fixture:       "single-dc-encryption",
+		deployTraefik: false,
+	}))
+	t.Run("MultiDcEncryption", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      checkStargateApisWithMultiDcCluster,
+		fixture:       "multi-dc-encryption",
+		deployTraefik: false,
+	}))
 }
 
 func beforeSuite(t *testing.T) {

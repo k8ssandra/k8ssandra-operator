@@ -23,6 +23,7 @@ package v1alpha1
 
 import (
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -169,6 +170,16 @@ func (in *StargateSpec) DeepCopyInto(out *StargateSpec) {
 	if in.Auth != nil {
 		in, out := &in.Auth, &out.Auth
 		*out = new(bool)
+		**out = **in
+	}
+	if in.ServerEncryptionStores != nil {
+		in, out := &in.ServerEncryptionStores, &out.ServerEncryptionStores
+		*out = new(encryption.EncryptionStores)
+		**out = **in
+	}
+	if in.ClientEncryptionStores != nil {
+		in, out := &in.ClientEncryptionStores, &out.ClientEncryptionStores
+		*out = new(encryption.EncryptionStores)
 		**out = **in
 	}
 }

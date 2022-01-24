@@ -3,6 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -18,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
@@ -102,6 +103,38 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, remoteClient, logger); recResult.Completed() {
 			return recResult, actualDcs
+		}
+
+		desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+		if err != nil {
+			return result.Error(err), actualDcs
+		}
+
+		logger.Info("About to reconcile stargate configmap")
+		if dcTemplate.Stargate != nil {
+			logger.Info("Stargate is not nil, reconciling configmap")
+			namespace := dcTemplate.Meta.Namespace
+			if namespace == "" {
+				namespace = kc.Namespace
+			}
+			// if a configmap is specified, we need to read its content to merge it with the generated one
+			userConfigMapContent := ""
+			if dcTemplate.Stargate.CassandraConfigMapRef != nil {
+				userConfigMap := &corev1.ConfigMap{}
+				configMapKey := types.NamespacedName{Namespace: namespace, Name: dcTemplate.Stargate.CassandraConfigMapRef.Name}
+				err := remoteClient.Get(ctx, configMapKey, userConfigMap)
+				if err != nil {
+					logger.Error(err, "Failed to get configmap")
+					return result.Error(err), actualDcs
+				}
+				userConfigMapContent = userConfigMap.Data["cassandra.yaml"]
+			}
+
+			logger.Info("Reconciling Stargate configmap")
+			// Reconcile the Stargate cassandra-config configmap using the desiredConfig content marshalled to yaml
+			if stargateConfigResult := r.reconcileStargateConfigMap(ctx, remoteClient, kc, desiredConfig, userConfigMapContent, namespace, logger); stargateConfigResult.Completed() {
+				return stargateConfigResult, actualDcs
+			}
 		}
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {

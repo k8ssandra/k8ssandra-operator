@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: server-encryption-stores
+  namespace: k8ssandra-operator
 data:
   keystore: >-
     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
@@ -27,44 +28,57 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 3.11.11
+    serverVersion: "3.11.11"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+    racks:
+      - name: rack1
+        nodeAffinityLabels:
+          "topology.kubernetes.io/zone": rack1
+      - name: rack2
+        nodeAffinityLabels:
+          "topology.kubernetes.io/zone": rack2
+    config:
+      cassandraYaml:
+        auto_snapshot: false
+        memtable_flush_writers: 1
+        commitlog_segment_size_in_mb: 2
+        concurrent_compactors: 1
+        compaction_throughput_mb_per_sec: 0
+        sstable_preemptive_open_interval_in_mb: 0
+        key_cache_size_in_mb: 0
+        thrift_prepared_statements_cache_size_mb: 1
+        prepared_statements_cache_size_mb: 1
+        slow_query_log_timeout_in_ms: 0
+        counter_cache_size_in_mb: 0
+        concurrent_reads: 2
+        concurrent_writes: 2
+        concurrent_counter_writes: 2
+        server_encryption_options:
+            enabled: true
+            internode_encryption: all
+      jvmOptions:
+        heapSize: 384Mi
+    resources:
+      limits:
+        memory: 512Mi
+    networking:
+      hostNetwork: true
     datacenters:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 1
-        storageConfig:
-          cassandraDataVolumeClaimSpec:
-            storageClassName: standard
-            accessModes:
-              - ReadWriteOnce
-            resources:
-              requests:
-                storage: 5Gi
-        config:
-          cassandraYaml:
-            server_encryption_options:
-              enabled: true
-              internode_encryption: all
-          jvmOptions:
-            heapSize: 384Mi
-        stargate:
-          size: 1
-          heapSize: 384Mi
-          livenessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          readinessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          cassandraConfigMapRef:
-            name: cassandra-config
+        size: 2
+      - metadata:
+          name: dc2
+        k8sContext: kind-k8ssandra-1
+        size: 2
     server_encryption_stores:
       keystore_secret_ref:
         name: server-encryption-stores
@@ -74,3 +88,32 @@ spec:
         name: server-encryption-stores
       truststore_password_secret_ref:
         name: server-encryption-stores
+  stargate:
+    size: 1
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: topology.kubernetes.io/zone
+                  operator: In
+                  values:
+                    - rack3
+    heapSize: 384Mi
+    cassandraConfigMapRef:
+      name: cassandra-config
+    resources:
+      limits:
+        memory: 512Mi
+    livenessProbe:
+      initialDelaySeconds: 100
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 100
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20

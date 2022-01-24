@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -1095,9 +1094,6 @@ type ClientEncryptionOptions struct {
 	// default: false
 	// +optional
 	RequireClientAuth *bool `json:"require_client_auth,omitempty"`
-
-	// +optional
-	EncryptionStores *EncryptionStores `json:"encryption_stores,omitempty"`
 }
 
 type ServerEncryptionOptions struct {
@@ -1155,17 +1151,4 @@ type ServerEncryptionOptions struct {
 
 	// +optional
 	EnableLegacySslStoragePort *bool `json:"enable_legacy_ssl_storage_port,omitempty"`
-
-	// +optional
-	EncryptionStores *EncryptionStores `json:"encryption_stores,omitempty"`
-}
-
-type EncryptionStores struct {
-	KeystoreSecretRef corev1.LocalObjectReference `json:"keystore_secret_ref"`
-
-	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystore_password_secret_ref"`
-
-	TruststoreSecretRef corev1.LocalObjectReference `json:"truststore_secret_ref"`
-
-	TruststorePasswordSecretRef corev1.LocalObjectReference `json:"truststore_password_secret_ref"`
 }

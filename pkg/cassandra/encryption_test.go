@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -15,40 +16,40 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 			CassandraYaml: api.CassandraYaml{
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-password-secret",
-						},
-					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: pointer.Bool(true),
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-secret",
-						},
-					},
 				},
+			},
+		},
+		ClientEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-password-secret",
+			},
+		},
+		ServerEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-secret",
 			},
 		},
 	}
 
-	noErr := checkMandatoryEncryptionFields(dcConfig.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores)
+	noErr := checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores)
 	assert.NoError(t, noErr)
 
-	err := checkMandatoryEncryptionFields(dcConfig.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores)
+	err := checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores)
 	assert.Error(t, err)
 }
 
@@ -61,38 +62,38 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 			CassandraYaml: api.CassandraYaml{
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-password-secret",
-						},
-					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: pointer.Bool(true),
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-password-secret",
-						},
-					},
 				},
+			},
+		},
+		ClientEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-password-secret",
+			},
+		},
+		ServerEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-password-secret",
 			},
 		},
 	}
@@ -119,7 +120,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		},
 	}
 
-	addEncryptionMountToCassandra(dcConfig, &clientKeystoreVolume, &clientTruststoreVolume, "client")
+	addEncryptionMountToCassandra(dcConfig, clientKeystoreVolume, clientTruststoreVolume, "client")
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, "cassandra", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
@@ -148,7 +149,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		},
 	}
 
-	addEncryptionMountToCassandra(dcConfig, &serverKeystoreVolume, &serverTruststoreVolume, "server")
+	addEncryptionMountToCassandra(dcConfig, serverKeystoreVolume, serverTruststoreVolume, "server")
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
@@ -163,50 +164,50 @@ func TestAddVolumesForEncryption(t *testing.T) {
 			CassandraYaml: api.CassandraYaml{
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-password-secret",
-						},
-					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: pointer.Bool(true),
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-password-secret",
-						},
-					},
 				},
+			},
+		},
+		ClientEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-password-secret",
+			},
+		},
+		ServerEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-password-secret",
 			},
 		},
 	}
 
-	addVolumesForEncryption(dcConfig, "client", *dcConfig.CassandraConfig.CassandraYaml.ClientEncryptionOptions.EncryptionStores)
+	addVolumesForEncryption(dcConfig, "client", *dcConfig.ClientEncryptionStores)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "client-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[0].Name)
 	assert.Equal(t, "client-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[0].VolumeSource.Secret.SecretName)
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Volumes[1].Name)
 	assert.Equal(t, "client-truststore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[1].VolumeSource.Secret.SecretName)
 
-	addVolumesForEncryption(dcConfig, "server", *dcConfig.CassandraConfig.CassandraYaml.ServerEncryptionOptions.EncryptionStores)
+	addVolumesForEncryption(dcConfig, "server", *dcConfig.ServerEncryptionStores)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Volumes[2].Name)
 	assert.Equal(t, "server-keystore-secret", dcConfig.PodTemplateSpec.Spec.Volumes[2].VolumeSource.Secret.SecretName)
@@ -224,38 +225,38 @@ func TestHandleEncryptionOptions(t *testing.T) {
 			CassandraYaml: api.CassandraYaml{
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-password-secret",
-						},
-					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: pointer.Bool(true),
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-password-secret",
-						},
-					},
 				},
+			},
+		},
+		ClientEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-password-secret",
+			},
+		},
+		ServerEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-password-secret",
 			},
 		},
 	}
@@ -296,38 +297,38 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			CassandraYaml: api.CassandraYaml{
 				ClientEncryptionOptions: &api.ClientEncryptionOptions{
 					Enabled: true,
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "client-truststore-password-secret",
-						},
-					},
 				},
 				ServerEncryptionOptions: &api.ServerEncryptionOptions{
 					Enabled: pointer.Bool(true),
-					EncryptionStores: &api.EncryptionStores{
-						KeystoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-secret",
-						},
-						KeystorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-keystore-password-secret",
-						},
-						TruststoreSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-secret",
-						},
-						TruststorePasswordSecretRef: corev1.LocalObjectReference{
-							Name: "server-truststore-password-secret",
-						},
-					},
 				},
+			},
+		},
+		ClientEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "client-truststore-password-secret",
+			},
+		},
+		ServerEncryptionStores: &encryption.EncryptionStores{
+			KeystoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-secret",
+			},
+			KeystorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-keystore-password-secret",
+			},
+			TruststoreSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-secret",
+			},
+			TruststorePasswordSecretRef: corev1.LocalObjectReference{
+				Name: "server-truststore-password-secret",
 			},
 		},
 	}

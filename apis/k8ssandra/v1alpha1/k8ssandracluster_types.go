@@ -22,6 +22,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -243,6 +244,14 @@ type CassandraClusterTemplate struct {
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
 	// the number of nodes required.
 	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
+
+	// Internode encryption stores which are used by Cassandra and Stargate.
+	// +optional
+	ServerEncryptionStores *encryption.EncryptionStores `json:"server_encryption_stores,omitempty"`
+
+	// Client encryption stores which are used by Cassandra and Reaper.
+	// +optional
+	ClientEncryptionStores *encryption.EncryptionStores `json:"client_encryption_stores,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
