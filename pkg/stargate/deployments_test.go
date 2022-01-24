@@ -163,10 +163,10 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Contains(t, javaOpts.Value, "-Xmx268435456")
 
 	volumeMount := findVolumeMount(container, "cassandra-config")
-	require.Nil(t, volumeMount)
+	require.NotNil(t, volumeMount)
 
 	volume := findVolume(&deployment, "cassandra-config")
-	require.Nil(t, volume)
+	require.NotNil(t, volume)
 }
 
 func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
@@ -511,6 +511,7 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 
 func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	configMapName := "cassandra-config"
+	generatedConfigMapName := "generated-cassandra-config"
 
 	stargate := stargate.DeepCopy()
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}
@@ -536,7 +537,7 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 		Name: "cassandra-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+				LocalObjectReference: corev1.LocalObjectReference{Name: generatedConfigMapName},
 			},
 		},
 	}
