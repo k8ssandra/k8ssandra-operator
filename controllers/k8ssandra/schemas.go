@@ -240,7 +240,7 @@ func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 		keyspaces = append(keyspaces, getReaperKeyspace(kc))
 	}
 
-	keyspaces = append(keyspaces, "system", "system_schema")
+	keyspaces = append(keyspaces, "system", "system_schema", "system_views", "system_virtual_schema")
 	return keyspaces
 }
 
