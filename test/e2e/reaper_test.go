@@ -53,12 +53,12 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: uiSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: uiSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: cqlSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: cqlSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: jmxSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: jmxSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: uiSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: uiSecretKey})
 
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}

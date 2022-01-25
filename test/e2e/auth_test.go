@@ -84,18 +84,18 @@ func checkSecrets(
 	expectReaperSecretsCreated bool,
 ) {
 	t.Log("check that superuser secret exists in both contexts")
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: superuserSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: superuserSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: superuserSecretKey})
+	checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: superuserSecretKey})
 	if expectReaperSecretsCreated {
 		t.Log("check that reaper CQL secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperCqlSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperCqlSecretKey})
 		t.Log("check that reaper JMX secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
 		t.Log("check that reaper UI secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+		checkSecretManagedBy(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
 	} else {
 		t.Log("check that reaper CQL secret wasn't created in neither context")
 		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
