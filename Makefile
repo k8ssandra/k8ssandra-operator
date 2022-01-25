@@ -343,8 +343,8 @@ catalog-push: ## Push a catalog image.
 
 # E2E tests from kuttl
 kuttl-test: install-kuttl docker-build
-	./bin/kubectl-kuttl test --kind-config=${KUTTL_KIND_CFG} --test test-servicemonitors
-	./bin/kubectl-kuttl test --kind-config=${KUTTL_KIND_CFG} --test test-config-control-plane
+	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-servicemonitors
+	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-config-control-plane
 
  # Install kuttl for e2e tests.
 install-kuttl: 

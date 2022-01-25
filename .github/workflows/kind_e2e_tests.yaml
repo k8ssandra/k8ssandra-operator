@@ -16,6 +16,8 @@ jobs:
   build_image:
     name: Build Image
     runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set_image_var.outputs.image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -28,6 +30,23 @@ jobs:
           key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-integ-
+      - name: Set build tags
+        id: set_build_tags
+        run: |
+          image="k8ssandra-operator/k8ssandra-operator:latest"
+          echo "build_tags=$image" >> $GITHUB_ENV
+          echo "image=$image" >> $GITHUB_ENV
+      - name: Update build tags
+        id: update_build_tags
+        if: startsWith(github.head_ref, 'prepare-release-')
+        run: |
+          branch_name=${{ github.head_ref }}
+          release_tag=k8ssandra/k8ssandra-operator:${branch_name:16}
+          echo "image=$release_tag" >> $GITHUB_ENV
+          echo "build_tags=k8ssandra/k8ssandra-operator:latest,$release_tag" >> $GITHUB_ENV
+      - name: Set immage output var
+        id: set_image_var
+        run: echo ::set-output name=image::${{ env.image }}
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
@@ -35,7 +54,7 @@ jobs:
           file: Dockerfile
           context: .
           push: false
-          tags: k8ssandra/k8ssandra-operator:latest
+          tags: ${{ env.build_tags }}
           platforms: linux/amd64
           outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -107,7 +126,7 @@ jobs:
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind cluster
-        run: make e2e-setup-single
+        run: make IMG=${{ needs.build_image.outputs.image }} e2e-setup-single
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
       - name: Archive k8s logs
