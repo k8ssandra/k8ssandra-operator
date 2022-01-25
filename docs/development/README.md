@@ -176,7 +176,7 @@ The integration test framework installs CRDs. We have to specify the version to 
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d"
-	cassOperatorVersion       = "6a78a8237173d9322e6c0cab94c615b1f043a906"
+	cassOperatorVersion       = "9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa"
 	prometheusOperatorVersion = "v0.9.0"
 )
 ```
@@ -187,11 +187,11 @@ There are a couple of places in the Kustomize manifests that need to be updated.
 ```yaml
 resources:
   - ../default
-  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=6a78a8237173d9322e6c0cab94c615b1f043a906
+  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
 
 images:
   - name: k8ssandra/cass-operator
-    newTag: 6a78a823
+    newTag: 9d1c58a5
 ```
 
 In this example the `resources` entry happens to specify a commit hash. Note that the full hash must be specified. The images transform specifies the corresponding image tag.
