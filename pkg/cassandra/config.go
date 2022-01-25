@@ -80,6 +80,11 @@ func (c config) MarshalJSON() ([]byte, error) {
 func newConfig(apiConfig api.CassandraConfig, cassandraVersion string) (config, error) {
 	// Filters out config element which do not exist in the Cassandra version in use
 	filteredConfig := apiConfig.DeepCopy()
+	if filteredConfig.CassandraYaml.StartRpc == nil {
+		// We need to set StartRpc false because start_rpc defaults true in the config builder.
+		f := false
+		filteredConfig.CassandraYaml.StartRpc = &f
+	}
 	filterConfigForVersion(cassandraVersion, filteredConfig)
 	cfg := config{CassandraYaml: filteredConfig.CassandraYaml, cassandraVersion: cassandraVersion}
 	err := validateConfig(filteredConfig)
