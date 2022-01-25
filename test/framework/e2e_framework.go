@@ -134,7 +134,10 @@ func generateCassOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=v1.9.0
+- github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=6a78a8237173d9322e6c0cab94c615b1f043a906
+images:
+  - name: k8ssandra/cass-operator
+    newTag: 6a78a823
 `
 	k := Kustomization{Namespace: namespace}
 
