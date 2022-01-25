@@ -2,7 +2,6 @@ package k8ssandra
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -216,7 +215,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargateConfigMap(
 			configYamlString = string(configYaml)
 		}
 	}
-	logger.Info(fmt.Sprintf("Stargate configMap content : %s", configYamlString))
 
 	if userConfigMapContent != "" {
 		separator := "\n"
@@ -224,7 +222,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargateConfigMap(
 			separator = ""
 		}
 		configYamlString = userConfigMapContent + separator + configYamlString
-		logger.Info(fmt.Sprintf("Stargate configMap updated content : %s", configYamlString))
 	}
 
 	configMapKey := client.ObjectKey{
@@ -249,14 +246,11 @@ func (r *K8ssandraClusterReconciler) reconcileStargateConfigMap(
 				return result.RequeueSoon(r.DefaultDelay)
 			}
 		}
-	} else {
-		logger.Info("Stargate configMap already exists")
 	}
 
 	actualConfigMap = actualConfigMap.DeepCopy()
 
 	if !annotations.CompareHashAnnotations(actualConfigMap, desiredConfigMap) {
-		logger.Info("Updating configMap on namespace " + actualConfigMap.ObjectMeta.Namespace)
 		resourceVersion := actualConfigMap.GetResourceVersion()
 		desiredConfigMap.DeepCopyInto(actualConfigMap)
 		actualConfigMap.SetResourceVersion(resourceVersion)

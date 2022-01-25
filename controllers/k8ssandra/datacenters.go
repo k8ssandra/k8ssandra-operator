@@ -110,9 +110,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		logger.Info("About to reconcile stargate configmap")
 		if dcTemplate.Stargate != nil {
-			logger.Info("Stargate is not nil, reconciling configmap")
 			namespace := dcTemplate.Meta.Namespace
 			if namespace == "" {
 				namespace = kc.Namespace

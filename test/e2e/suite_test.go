@@ -141,14 +141,14 @@ func TestOperator(t *testing.T) {
 		testFunc: controllerRestart,
 	}))
 	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleDatacenterCluster,
+		testFunc:      createSingleDatacenterClusterWithEncryption,
 		fixture:       "single-dc-encryption",
-		deployTraefik: false,
+		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryption", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      checkStargateApisWithMultiDcCluster,
+		testFunc:      checkStargateApisWithMultiDcEncryptedCluster,
 		fixture:       "multi-dc-encryption",
-		deployTraefik: false,
+		deployTraefik: true,
 	}))
 }
 
@@ -555,6 +555,56 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 }
 
+// createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
+// and one Stargate node that are deployed in the local cluster.
+func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+
+	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
+	require.Eventually(func() bool {
+		k8ssandra := &api.K8ssandraCluster{}
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		if err != nil {
+			return false
+		}
+
+		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		if !found {
+			return false
+		}
+		if kdcStatus.Cassandra == nil {
+			return false
+		}
+		return cassandraDatacenterReady(kdcStatus.Cassandra)
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+
+	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	checkStargateReady(t, f, ctx, stargateKey)
+
+	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("deploying Stargate ingress routes in kind-k8ssandra-0")
+	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+
+	replication := map[string]int{"dc1": 1}
+	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+}
+
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -768,6 +818,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
@@ -905,6 +956,13 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
 	testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
+}
+
+func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	checkStargateApisWithMultiDcCluster(t, ctx, namespace, f)
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

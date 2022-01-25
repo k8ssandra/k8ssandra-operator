@@ -373,6 +373,20 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	return nil
 }
 
+func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "encryption-secret.yaml")
+
+	for _, k8sContext := range f.getClusterContexts() {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
 // in the data plane cluster(s). Note that the control plane cluster can also be one of the
 // data plane clusters. It then deploys the operator in the data plane clusters with the

@@ -169,20 +169,17 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 		}
 		logger.Info("Client to node encryption is enabled, reading client encryption stores secrets")
 		// Read client keystore password
-		clientKeystoreSecret := &corev1.Secret{}
-		secretKey := types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.ClientEncryptionStores.KeystorePasswordSecretRef.Name}
-		if err := remoteClient.Get(ctx, secretKey, clientKeystoreSecret); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.KeystorePasswordSecretRef.Name, "keystore"); err != nil {
 			return encryptionStoresPasswords, err
+		} else {
+			encryptionStoresPasswords.ClientKeystorePassword = password
 		}
-		encryptionStoresPasswords.ClientKeystorePassword = string(clientKeystoreSecret.Data["keystore-password"])
 
-		// Read client truststore password
-		clientTruststoreSecret := &corev1.Secret{}
-		secretKey = types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.ClientEncryptionStores.TruststorePasswordSecretRef.Name}
-		if err := remoteClient.Get(ctx, secretKey, clientTruststoreSecret); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.TruststorePasswordSecretRef.Name, "truststore"); err != nil {
 			return encryptionStoresPasswords, err
+		} else {
+			encryptionStoresPasswords.ClientTruststorePassword = password
 		}
-		encryptionStoresPasswords.ClientTruststorePassword = string(clientTruststoreSecret.Data["truststore-password"])
 	}
 
 	if ServerEncryptionEnabled(template) {
@@ -192,21 +189,29 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 			return encryptionStoresPasswords, fmt.Errorf("server encryption stores are not properly configured")
 		}
 
-		serverKeystoreSecret := &corev1.Secret{}
-		secretKey := types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.ServerEncryptionStores.KeystorePasswordSecretRef.Name}
-		if err := remoteClient.Get(ctx, secretKey, serverKeystoreSecret); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.KeystorePasswordSecretRef.Name, "keystore"); err != nil {
 			return encryptionStoresPasswords, err
+		} else {
+			encryptionStoresPasswords.ServerKeystorePassword = password
 		}
-		encryptionStoresPasswords.ServerKeystorePassword = string(serverKeystoreSecret.Data["keystore-password"])
 
 		// Read server truststore password
-		serverTruststoreSecret := &corev1.Secret{}
-		secretKey = types.NamespacedName{Namespace: klusterKey.Namespace, Name: template.ServerEncryptionStores.TruststorePasswordSecretRef.Name}
-		if err := remoteClient.Get(ctx, secretKey, serverTruststoreSecret); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.TruststorePasswordSecretRef.Name, "truststore"); err != nil {
 			return encryptionStoresPasswords, err
+		} else {
+			encryptionStoresPasswords.ServerTruststorePassword = password
 		}
-		encryptionStoresPasswords.ServerTruststorePassword = string(serverTruststoreSecret.Data["truststore-password"])
 	}
 
 	return encryptionStoresPasswords, nil
+}
+
+func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteClient client.Client, secretName, storeType string) (string, error) {
+	clientKeystoreSecret := &corev1.Secret{}
+	secretKey := types.NamespacedName{Namespace: namespace, Name: secretName}
+	if err := remoteClient.Get(ctx, secretKey, clientKeystoreSecret); err != nil {
+		return "", err
+	}
+	password := string(clientKeystoreSecret.Data[fmt.Sprintf("%s-password", storeType)])
+	return password, nil
 }
