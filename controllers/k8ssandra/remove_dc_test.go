@@ -23,9 +23,9 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	//updatedReplicationStr := map[string]string{"dc1": "3", "dc2": "3"}
+	replicationStr := map[string]string{"dc1": "3", "dc2": "3"}
 
-	//userKeyspaces := []string{"ks1", "ks2"}
+	userKeyspaces := []string{"ks1", "ks2"}
 
 	mockMgmtApi := testutils.NewFakeManagementApiFacade()
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", replication).Return(nil)
@@ -34,13 +34,13 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
-	//mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
+	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
 	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
-	//for _, ks := range userKeyspaces {
-	//	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, ks, updatedReplication).Return(nil)
-	//	mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(updatedReplicationStr, nil)
-	//}
+	for _, ks := range userKeyspaces {
+		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(replicationStr, nil)
+		mockMgmtApi.On(testutils.AlterKeyspace, ks, updatedReplication).Return(nil)
+	}
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 		return mockMgmtApi, nil
@@ -68,9 +68,13 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 		}
 		_, found := kc.Status.Datacenters[dc2Key.Name]
 		return !found
-	}, timeout, interval, "timed out waiting for dc2 to be remove from K8ssandraCluster status")
+	}, timeout, interval, "timed out waiting for dc2 to be removed from K8ssandraCluster status")
 
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 
 	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
+
+	for _, ks := range userKeyspaces {
+		verifyKeyspaceReplicationAltered(t, mockMgmtApi, ks, updatedReplication)
+	}
 }

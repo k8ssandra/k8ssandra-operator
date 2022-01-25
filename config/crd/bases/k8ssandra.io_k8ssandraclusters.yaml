@@ -10117,6 +10117,8 @@ spec:
                           format: date-time
                           type: string
                       type: object
+                    decommissionProgress:
+                      type: string
                     reaper:
                       description: ReaperStatus defines the observed state of Reaper
                       properties:

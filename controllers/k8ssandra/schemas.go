@@ -9,6 +9,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -46,7 +47,21 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		return recResult
 	}
 
-	if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dc.Name) {
+	decommDcName := k8ssandra.GetDatacenterForDecommission(kc)
+	decommission := false
+	if decommDcName != "" {
+		decommission = kc.Status.Datacenters[decommDcName].DecommissionProgress == api.DecommUpdatingReplication
+	}
+	status := kc.Status.Datacenters[decommDcName]
+
+	if decommission {
+		if recResult := r.updateUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
+			return recResult
+		}
+		status.DecommissionProgress = api.DecommDeleting
+		kc.Status.Datacenters[decommDcName] = status
+		return result.RequeueSoon(r.DefaultDelay)
+	} else if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dc.Name) {
 		if recResult := r.updateUserKeyspacesReplication(kc, dc, mgmtApi, logger); recResult.Completed() {
 			return recResult
 		}
@@ -196,8 +211,6 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 
 	replication = getReplicationForDeployedDcs(kc, replication)
 
-	logger.Info("computed replication")
-
 	for _, ks := range userKeyspaces {
 		replicationFactor := replication.ReplicationFactor(dc.Name, ks)
 		logger.Info("computed replication factor", "keyspace", ks, "replication_factor", replicationFactor)
@@ -207,6 +220,39 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 		if err = ensureKeyspaceReplication(mgmtApi, ks, dc.Name, replicationFactor); err != nil {
 			logger.Error(err, "Keyspace replication check failed", "Keyspace", ks)
 			return result.Error(err)
+		}
+		// TODO should we check for schema agreement
+	}
+
+	return result.Continue()
+}
+
+// updateUserKeyspacesReplicationForDecommission updates the replication strategy for all user-defined
+// keyspaces by removing decommDc.
+func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplicationForDecommission(
+	kc *api.K8ssandraCluster,
+	decommDc string,
+	mgmtApi cassandra.ManagementApiFacade,
+	logger logr.Logger) result.ReconcileResult {
+
+	logger.Info("Updating replication for user keyspaces for decommission")
+
+	userKeyspaces, err := getUserKeyspaces(mgmtApi, kc)
+	if err != nil {
+		return result.Error(fmt.Errorf("failed to get user keyspaces: %v", err))
+	}
+
+	for _, ks := range userKeyspaces {
+		replication, err := getKeyspaceReplication(mgmtApi, ks)
+		if err != nil {
+			return result.Error(fmt.Errorf("failed to get replication for keyspace (%s): %v", ks, err))
+		}
+		if _, updateNeeded := replication[decommDc]; updateNeeded {
+			delete(replication, decommDc)
+			if err = mgmtApi.AlterKeyspace(ks, replication); err != nil {
+				return result.Error(fmt.Errorf("failed to update replication for keyspace (%s): %v", ks, err))
+			}
+			// TODO should we check for schema agreement
 		}
 	}
 
