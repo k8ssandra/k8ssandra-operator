@@ -4,9 +4,6 @@ kind: Kustomization
 resources:
   - ../default
   - ../../cass-operator/ns-scoped
-images:
-  - name: k8ssandra/cass-operator
-    newTag: 6a78a823
 replacements:
   - source: 
       kind: Namespace
