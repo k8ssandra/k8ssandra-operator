@@ -863,6 +863,10 @@ type CassandraYaml struct {
 	// +optional
 	SstablePreemptiveOpenIntervalInMb *int `json:"sstable_preemptive_open_interval_in_mb,omitempty"`
 
+	// Exists in 3.11
+	//+optional
+	StartRpc *bool `json:"start_rpc,omitempty"`
+
 	// Exists in: 4.0, trunk
 	// +optional
 	StreamEntireSstables *bool `json:"stream_entire_sstables,omitempty"`

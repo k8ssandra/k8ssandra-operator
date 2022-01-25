@@ -267,6 +267,7 @@ func filterConfigForVersion(cassandraVersion string, filteredConfig *api.Cassand
 		filteredConfig.CassandraYaml.RequestScheduler = nil
 		filteredConfig.CassandraYaml.RequestSchedulerId = nil
 		filteredConfig.CassandraYaml.RequestSchedulerOptions = nil
+		filteredConfig.CassandraYaml.StartRpc = nil
 		filteredConfig.CassandraYaml.StreamingSocketTimeoutInMs = nil
 		filteredConfig.CassandraYaml.ThriftFramedTransportSizeInMb = nil
 		filteredConfig.CassandraYaml.ThriftMaxMessageLengthInMb = nil
