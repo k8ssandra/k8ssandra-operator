@@ -8,5 +8,5 @@ resources:
 
 images:
   - name: k8ssandra/k8ssandra-operator
-    newTag: 1.0.0-alpha.3
+    newTag: latest
 
