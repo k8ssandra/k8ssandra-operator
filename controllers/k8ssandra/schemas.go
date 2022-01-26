@@ -100,6 +100,10 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		return nil, err
 	}
 
+	if initialized {
+		logger.Info("Before patching system replication annotation", "status", kc.Status)
+	}
+
 	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	if kc.Annotations == nil {
 		kc.Annotations = make(map[string]string)
@@ -127,11 +131,14 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	logger logr.Logger) result.ReconcileResult {
 
 	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
+	if initialized {
+		logger.Info("Before version check system keyspaces", "status", kc.Status)
+	}
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
 	}
 	if initialized {
-		logger.Info("after version check system keyspaces", "status", kc.Status)
+		logger.Info("After version check system keyspaces", "status", kc.Status)
 	}
 
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)

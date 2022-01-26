@@ -236,6 +236,9 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
 	if !annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcName) && datacenterAddedToExistingCluster(kc, dcName) {
+		if initialized {
+			logger.Info("Before rebuild annotation", "status", kc.Status)
+		}
 		patch := client.MergeFromWithOptions(kc.DeepCopy())
 		annotations.AddAnnotation(kc, api.RebuildDcAnnotation, dcName)
 		if err := r.Client.Patch(ctx, kc, patch); err != nil {
