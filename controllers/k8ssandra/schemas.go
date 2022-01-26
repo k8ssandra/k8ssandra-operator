@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
@@ -80,6 +81,8 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	kc *api.K8ssandraCluster,
 	logger logr.Logger) (*cassandra.SystemReplication, error) {
 
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
+
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
 		replication := &cassandra.SystemReplication{}
 		if err := json.Unmarshal([]byte(val), replication); err == nil {
@@ -107,6 +110,10 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		return nil, err
 	}
 
+	if initialized {
+		logger.Info("After patching system replication annotation", "status", kc.Status)
+	}
+
 	return &replication, nil
 }
 
@@ -119,8 +126,12 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
 
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
+	}
+	if initialized {
+		logger.Info("after version check system keyspaces", "status", kc.Status)
 	}
 
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)

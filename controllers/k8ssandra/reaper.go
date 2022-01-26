@@ -27,6 +27,7 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,8 +46,12 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 
 	logger.Info("Reconciling Reaper schema")
 
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
+	}
+	if initialized {
+		logger.Info("after version check reaper schema", "status", kc.Status)
 	}
 
 	keyspace := getReaperKeyspace(kc)

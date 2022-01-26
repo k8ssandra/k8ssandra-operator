@@ -70,14 +70,14 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          - CreateMultiDatacenterCluster
+#          - CreateMultiDatacenterCluster
           - AddDcToCluster
-          - CheckStargateApisWithMultiDcCluster
-          - CreateMultiStargateAndDatacenter
-          - CreateMultiReaper
-          - ClusterScoped/MultiDcMultiCluster
-          - CreateMultiMedusa
-          - MultiDcAuthOnOff
+#          - CheckStargateApisWithMultiDcCluster
+#          - CreateMultiStargateAndDatacenter
+#          - CreateMultiReaper
+#          - ClusterScoped/MultiDcMultiCluster
+#          - CreateMultiMedusa
+#          - MultiDcAuthOnOff
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

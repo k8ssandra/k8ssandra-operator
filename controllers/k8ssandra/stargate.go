@@ -165,8 +165,12 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 		return result.Continue()
 	}
 
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
+	}
+	if initialized {
+		logger.Info("after version check stargate schema", kc.Status)
 	}
 
 	datacenters := kc.GetReadyDatacenters()

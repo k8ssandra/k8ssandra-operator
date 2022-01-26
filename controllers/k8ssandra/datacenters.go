@@ -83,7 +83,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
 		}
 
-		if recResult := r.checkRebuildAnnotation(ctx, kc, dcKey.Name); recResult.Completed() {
+		if recResult := r.checkRebuildAnnotation(ctx, kc, dcKey.Name, logger); recResult.Completed() {
 			return recResult, actualDcs
 		}
 
@@ -171,6 +171,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: &now,
 		})
+		logger.Info("Cassandra initialized")
 	}
 
 	return result.Continue(), actualDcs
@@ -232,12 +233,17 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 		targetDc.Name, strings.Trim(fmt.Sprint(dcNames), "[]"))
 }
 
-func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context, kc *api.K8ssandraCluster, dcName string) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
 	if !annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcName) && datacenterAddedToExistingCluster(kc, dcName) {
 		patch := client.MergeFromWithOptions(kc.DeepCopy())
 		annotations.AddAnnotation(kc, api.RebuildDcAnnotation, dcName)
 		if err := r.Client.Patch(ctx, kc, patch); err != nil {
 			return result.Error(fmt.Errorf("failed to add rebuild annotation: %v", err))
+		}
+
+		if initialized {
+			logger.Info("After rebuild annotation", "status", kc.Status)
 		}
 	}
 

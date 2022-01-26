@@ -34,6 +34,7 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate, true))
 	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
+	t.Run("ApplyPatch", addDcTest(ctx, f, applyPatch, true))
 }
 
 type addDcTestFunc func(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster)
@@ -197,6 +198,65 @@ func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, 
 			t.Fatalf("failed to delete k8ssandracluster: %v", err)
 		}
 	}
+}
+
+func applyPatch(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	dc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: kc.Namespace,
+			Name:      "test",
+			Labels:    map[string]string{},
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:   "test",
+			ServerVersion: "4.0.1",
+			ServerType:    "cassandra",
+			Size:          1,
+		},
+	}
+
+	err := f.Client.Create(ctx, dc)
+	require.NoError(err)
+
+	t.Logf("labels = %v", dc.Labels)
+
+	clusterKey := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      dc.Name,
+		},
+	}
+
+	err = f.SetDatacenterStatusReady(ctx, clusterKey)
+	require.NoError(err)
+
+	dc2 := dc.DeepCopy()
+
+	patch := client.MergeFromWithOptions(dc.DeepCopy())
+	if dc.Labels == nil {
+		dc.Labels = make(map[string]string)
+	}
+	dc.Labels["foo"] = "bar"
+	err = f.Client.Patch(ctx, dc, patch)
+	require.NoError(err)
+
+	t.Logf("status = %+v", dc.Status)
+
+	patch = client.MergeFrom(dc2.DeepCopy())
+	if dc2.Labels == nil {
+		dc2.Labels = make(map[string]string)
+	}
+	dc2.Labels["x"] = "y"
+	err = f.Client.Patch(ctx, dc2, patch)
+	require.NoError(err)
+
+	t.Logf("Labels = %v", dc2.Labels)
+	t.Logf("status = %+v", dc.Status)
+
+	t.Error("end")
 }
 
 // withUserKeyspaces tests adding a DC to a cluster that has user-defined keyspaces. This
