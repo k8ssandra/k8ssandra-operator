@@ -3,6 +3,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"testing"
+
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -13,12 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
@@ -47,6 +50,8 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 }
 
 func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
 	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
@@ -92,7 +97,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, "test")
-	require.NoError(t, err, "failed to retrieve database credentials")
+	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, "-u", username, "-pw", password)

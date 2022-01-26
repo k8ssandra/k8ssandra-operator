@@ -140,14 +140,24 @@ func TestOperator(t *testing.T) {
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
 		testFunc: controllerRestart,
 	}))
-	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
+	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterClusterWithEncryption,
 		fixture:       "single-dc-encryption",
 		deployTraefik: true,
 	}))
-	t.Run("MultiDcEncryption", e2eTest(ctx, &e2eTestOpts{
+	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createSingleReaper,
+		fixture:       "single-dc-reaper-encryption",
+		deployTraefik: true,
+	}))
+	t.Run("MultiDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      checkStargateApisWithMultiDcEncryptedCluster,
 		fixture:       "multi-dc-encryption",
+		deployTraefik: true,
+	}))
+	t.Run("MultiDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      createMultiReaper,
+		fixture:       "multi-dc-reaper-encryption",
 		deployTraefik: true,
 	}))
 }
@@ -590,7 +600,6 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
-
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("retrieve database credentials")
@@ -603,6 +612,48 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
+}
+
+// createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
+// and one Reaper instance that are deployed in the local cluster with encryption on.
+func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+
+	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
+	require.Eventually(func() bool {
+		k8ssandra := &api.K8ssandraCluster{}
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		if err != nil {
+			return false
+		}
+
+		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+		if !found {
+			return false
+		}
+		if kdcStatus.Cassandra == nil {
+			return false
+		}
+		return cassandraDatacenterReady(kdcStatus.Cassandra)
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+
+	reaperKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
+	checkReaperReady(t, f, ctx, reaperKey)
+
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	t.Log("check Reaper keyspace created")
+	checkKeyspaceExists(t, f, ctx, "kind-k8ssandra-0", namespace, "test", "test-dc1-default-sts-0", "reaper_db")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate

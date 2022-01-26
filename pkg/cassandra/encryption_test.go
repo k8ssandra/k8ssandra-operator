@@ -1,10 +1,12 @@
 package cassandra
 
 import (
+	"fmt"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -261,7 +263,11 @@ func TestHandleEncryptionOptions(t *testing.T) {
 		},
 	}
 
-	HandleEncryptionOptions(dcConfig)
+	encryptionStoresSecrets := EncryptionStoresPasswords{
+		ClientKeystorePassword:   "test",
+		ClientTruststorePassword: "test",
+	}
+	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
@@ -276,6 +282,9 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
+	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath("client", "keystore")), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath("client", "truststore")), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword)} {
+		assert.True(t, utils.SliceContains(dcConfig.CassandraConfig.JvmOptions.AdditionalOptions, jvmOption), fmt.Sprintf("JVM option %s not found", jvmOption))
+	}
 }
 
 func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
@@ -332,7 +341,11 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			},
 		},
 	}
-	HandleEncryptionOptions(dcConfig)
+	encryptionStoresSecrets := EncryptionStoresPasswords{
+		ClientKeystorePassword:   "test",
+		ClientTruststorePassword: "test",
+	}
+	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
@@ -369,8 +382,12 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 			},
 		},
 	}
+	encryptionStoresSecrets := EncryptionStoresPasswords{
+		ClientKeystorePassword:   "test",
+		ClientTruststorePassword: "test",
+	}
 
-	err := HandleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -393,8 +410,12 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 			},
 		},
 	}
-
-	err := HandleEncryptionOptions(dcConfig)
+	encryptionStoresSecrets := EncryptionStoresPasswords{
+		ClientKeystorePassword:   "test",
+		ClientTruststorePassword: "test",
+	}
+	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
+	err := HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
 	assert.Error(t, err)
 }
 

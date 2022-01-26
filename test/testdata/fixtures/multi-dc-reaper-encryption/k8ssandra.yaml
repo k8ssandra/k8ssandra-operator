@@ -86,32 +86,4 @@ spec:
         name: client-encryption-stores
       truststore_password_secret_ref:
         name: client-encryption-stores
-  stargate:
-    size: 1
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: topology.kubernetes.io/zone
-                  operator: In
-                  values:
-                    - rack3
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    resources:
-      limits:
-        memory: 512Mi
-    livenessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
+

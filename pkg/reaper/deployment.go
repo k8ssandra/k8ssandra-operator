@@ -31,7 +31,7 @@ var defaultImage = images.Image{
 	Tag:        DefaultVersion,
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	labels := createServiceAndDeploymentLabels(reaper)
 
 	selector := metav1.LabelSelector{
@@ -127,6 +127,33 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		}
 	}
 
+	volumeMounts := []corev1.VolumeMount{}
+	volumes := []corev1.Volume{}
+	// if client encryption is turned on, we need to mount the keystore and truststore volumes
+	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
+		clientEncryptionVolumes := cassandra.EncryptionVolumes("client", *reaper.Spec.ClientEncryptionStores)
+		for _, volume := range clientEncryptionVolumes {
+			volumes = append(volumes, volume)
+		}
+
+		for _, volume := range volumes {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volume.Name,
+				MountPath: cassandra.StoreMountFullPath(strings.Split(volume.Name, "-")[0], strings.Split(volume.Name, "-")[1]),
+			})
+		}
+
+		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "JAVA_OPTS",
+			Value: javaOpts,
+		})
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		})
+	}
+
 	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
 	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
 
@@ -152,6 +179,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 							SecurityContext: reaper.Spec.InitContainerSecurityContext,
 							Env:             envVars,
 							Args:            []string{"schema-migration"},
+							VolumeMounts:    volumeMounts,
 						},
 					},
 					Containers: []corev1.Container{
@@ -175,12 +203,14 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 							ReadinessProbe: readinessProbe,
 							LivenessProbe:  livenessProbe,
 							Env:            envVars,
+							VolumeMounts:   volumeMounts,
 						},
 					},
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
 					ImagePullSecrets:   images.CollectPullSecrets(mainImage, initImage),
+					Volumes:            volumes,
 				},
 			},
 		},

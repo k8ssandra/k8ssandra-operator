@@ -6,11 +6,13 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 func TestNewDeployment(t *testing.T) {
@@ -22,9 +24,23 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
+	reaper.Spec.ClientEncryptionStores = &encryption.EncryptionStores{
+		KeystoreSecretRef: corev1.LocalObjectReference{
+			Name: "keystore-secret",
+		},
+		KeystorePasswordSecretRef: corev1.LocalObjectReference{
+			Name: "keystore-password-secret",
+		},
+		TruststoreSecretRef: corev1.LocalObjectReference{
+			Name: "truststore-secret",
+		},
+		TruststorePasswordSecretRef: corev1.LocalObjectReference{
+			Name: "truststore-password-secret",
+		},
+	}
 
 	labels := createServiceAndDeploymentLabels(reaper)
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"))
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)
@@ -80,6 +96,14 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: "reaper_db",
 		},
+		{
+			Name:  "JAVA_OPTS",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+		},
+		{
+			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		},
 	})
 
 	assert.Len(t, podSpec.InitContainers, 1)
@@ -112,6 +136,14 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: "reaper_db",
 		},
+		{
+			Name:  "JAVA_OPTS",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+		},
+		{
+			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
@@ -130,7 +162,7 @@ func TestNewDeployment(t *testing.T) {
 
 	reaper.Spec.Keyspace = "ks1"
 
-	deployment = NewDeployment(reaper, newTestDatacenter())
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 6)
@@ -141,7 +173,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	reaper.Spec.AutoScheduling.Enabled = true
-	deployment = NewDeployment(reaper, newTestDatacenter())
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 16)
@@ -211,7 +243,7 @@ func TestReadinessProbe(t *testing.T) {
 		},
 		InitialDelaySeconds: 123,
 	}
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	expected := &corev1.Probe{
 		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -235,7 +267,7 @@ func TestLivenessProbe(t *testing.T) {
 		},
 		InitialDelaySeconds: 123,
 	}
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	expected := &corev1.Probe{
 		Handler: corev1.Handler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -254,7 +286,7 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.InitContainerImage = nil
 		reaper.Spec.ContainerImage = nil
-		deployment := NewDeployment(reaper, newTestDatacenter())
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -269,7 +301,7 @@ func TestImages(t *testing.T) {
 			Tag:        DefaultVersion,
 		}
 		reaper.Spec.ContainerImage = nil
-		deployment := NewDeployment(reaper, newTestDatacenter())
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -286,7 +318,7 @@ func TestImages(t *testing.T) {
 		}
 		reaper.Spec.InitContainerImage = image
 		reaper.Spec.ContainerImage = image
-		deployment := NewDeployment(reaper, newTestDatacenter())
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -315,7 +347,7 @@ func TestTolerations(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Tolerations = tolerations
 
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	assert.ElementsMatch(t, tolerations, deployment.Spec.Template.Spec.Tolerations)
 }
 
@@ -340,7 +372,7 @@ func TestAffinity(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Affinity = affinity
 
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	assert.EqualValues(t, affinity, deployment.Spec.Template.Spec.Affinity, "affinity does not match")
 }
 
@@ -352,7 +384,7 @@ func TestContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.SecurityContext = securityContext
 
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.Len(t, podSpec.Containers, 1, "Expected a single container to exist")
@@ -373,7 +405,7 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 	reaper.Spec.SecurityContext = nonInitContainerSecurityContext
 	reaper.Spec.InitContainerSecurityContext = initContainerSecurityContext
 
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.Equal(t, podSpec.InitContainers[0].Name, "reaper-schema-init")
@@ -389,7 +421,7 @@ func TestPodSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.PodSecurityContext = podSecurityContext
 
-	deployment := NewDeployment(reaper, newTestDatacenter())
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.EqualValues(t, podSecurityContext, podSpec.SecurityContext, "podSecurityContext expected at pod level")

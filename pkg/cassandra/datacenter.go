@@ -122,7 +122,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, 
 	}
 
 	// If client or server encryption is enabled, create the required volumes and mounts
-	if err := HandleEncryptionOptions(template); err != nil {
+	if err := HandleEncryptionOptions(template, encryptionStoresSecrets); err != nil {
 		return nil, err
 	}
 

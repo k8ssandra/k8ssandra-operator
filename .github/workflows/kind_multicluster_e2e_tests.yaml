@@ -78,7 +78,8 @@ jobs:
           - ClusterScoped/MultiDcMultiCluster
           - CreateMultiMedusa
           - MultiDcAuthOnOff
-          - MultiDcEncryption
+          - MultiDcEncryptionWithStargate
+          - MultiDcEncryptionWithReaper
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

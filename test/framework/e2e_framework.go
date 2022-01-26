@@ -374,13 +374,15 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 }
 
 func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) error {
-	path := filepath.Join("..", "testdata", "fixtures", "encryption-secret.yaml")
+	for _, storeType := range []string{"server", "client"} {
+		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))
 
-	for _, k8sContext := range f.getClusterContexts() {
-		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
-			return err
+		for _, k8sContext := range f.getClusterContexts() {
+			options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+			f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
+			if err := kubectl.Apply(options, path); err != nil {
+				return err
+			}
 		}
 	}
 

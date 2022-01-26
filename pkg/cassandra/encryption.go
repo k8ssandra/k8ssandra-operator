@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,13 +18,15 @@ const (
 
 // Sets up encryption in the datacenter config template.
 // The keystore and truststore config maps are mounted into the datacenter pod and the secrets are read to be set in the datacenter config template.
-func HandleEncryptionOptions(template *DatacenterConfig) error {
+func HandleEncryptionOptions(template *DatacenterConfig, encryptionStoresSecrets EncryptionStoresPasswords) error {
 	if ClientEncryptionEnabled(template) {
 		if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
 			return err
 		} else {
 			// Create the volume and mount for the keystore
 			addVolumesForEncryption(template, "client", *template.ClientEncryptionStores)
+			// Add JMX encryption jvm options
+			addJmxEncryptionOptions(template, *template.ClientEncryptionStores, encryptionStoresSecrets)
 		}
 	}
 
@@ -214,4 +217,23 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 	}
 	password := string(clientKeystoreSecret.Data[fmt.Sprintf("%s-password", storeType)])
 	return password, nil
+}
+
+// Add JVM options required for turning on encryption
+func addJmxEncryptionOptions(template *DatacenterConfig, encryptionStores encryption.EncryptionStores, encryptionStoresSecrets EncryptionStoresPasswords) {
+	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
+	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath("client", "keystore"), "keystore"))
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/%s", StoreMountFullPath("client", "truststore"), "truststore"))
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword))
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword))
+}
+
+func addOptionIfMissing(template *DatacenterConfig, option string) {
+	if !utils.SliceContains(template.CassandraConfig.JvmOptions.AdditionalOptions, option) {
+		template.CassandraConfig.JvmOptions.AdditionalOptions = append(
+			[]string{option},
+			template.CassandraConfig.JvmOptions.AdditionalOptions...,
+		)
+	}
 }

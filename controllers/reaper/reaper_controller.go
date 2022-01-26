@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -164,7 +165,24 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 	logger.Info("Collected Reaper auth variables", "authVars", authVars)
 
-	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, authVars...)
+	var keystorePassword *string
+	var truststorePassword *string
+
+	if actualReaper.Spec.ClientEncryptionStores != nil {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.KeystorePasswordSecretRef.Name, "keystore"); err != nil {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else {
+			keystorePassword = pointer.String(password)
+		}
+
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.TruststorePasswordSecretRef.Name, "truststore"); err != nil {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else {
+			truststorePassword = pointer.String(password)
+		}
+	}
+
+	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, authVars...)
 
 	actualDeployment := &appsv1.Deployment{}
 	if err := r.Get(ctx, deploymentKey, actualDeployment); err != nil {
