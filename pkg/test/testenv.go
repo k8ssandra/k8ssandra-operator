@@ -211,6 +211,10 @@ func (e *MultiClusterTestEnv) Stop(t *testing.T) {
 	}
 }
 
+func (e *MultiClusterTestEnv) GetControlPlaneEnvTest() *envtest.Environment {
+	return e.testEnvs[0]
+}
+
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
 func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {

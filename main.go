@@ -146,7 +146,6 @@ func main() {
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
 
 		configCtrler := &configctrl.ClientConfigReconciler{
-			Client:      mgr.GetClient(),
 			Scheme:      mgr.GetScheme(),
 			ClientCache: clientCache,
 		}

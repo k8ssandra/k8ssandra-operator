@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -30,7 +32,6 @@ const (
 )
 
 type ClientConfigReconciler struct {
-	client.Client
 	Scheme       *runtime.Scheme
 	ClientCache  *clientcache.ClientCache
 	shutdownFunc context.CancelFunc
@@ -54,13 +55,16 @@ type ClientConfigReconciler struct {
 */
 
 func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+
 	clientConfig := configapi.ClientConfig{}
-	if err := r.Client.Get(ctx, req.NamespacedName, &clientConfig); err != nil {
+	if err := r.ClientCache.GetLocalClient().Get(ctx, req.NamespacedName, &clientConfig); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// ClientConfig was deleted, shutdown to refresh correct list
 	if clientConfig.GetDeletionTimestamp() != nil {
+		logger.Info(fmt.Sprintf("ClientConfig %v was deleted, shutting down the operator", req))
 		r.shutdownFunc()
 		return ctrl.Result{}, nil
 	}
@@ -68,11 +72,12 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// ClientConfig without proper annotations, must be a new item, shutdown to refresh correct list
 	if !metav1.HasAnnotation(clientConfig.ObjectMeta, ClientConfigHashAnnotation) ||
 		metav1.HasAnnotation(clientConfig.ObjectMeta, KubeSecretHashAnnotation) {
+		logger.Info(fmt.Sprintf("ClientConfig %v is missing hash annotations, shutting down the operator", req))
 		r.shutdownFunc()
 		return ctrl.Result{}, nil
 	}
 
-	cCfgHash, secretHash, err := calculateHashes(ctx, r.Client, clientConfig)
+	cCfgHash, secretHash, err := calculateHashes(ctx, r.ClientCache.GetLocalClient(), clientConfig)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -81,6 +86,7 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if clientConfig.Annotations[ClientConfigHashAnnotation] != cCfgHash ||
 		clientConfig.Annotations[KubeSecretHashAnnotation] != secretHash {
 		// Hashes do not match, something was modified, shutdown to refresh
+		logger.Info(fmt.Sprintf("ClientConfig %v or secret has been modified, shutting down the operator", req))
 		r.shutdownFunc()
 		return ctrl.Result{}, nil
 	}
@@ -91,11 +97,13 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // SetupWithManager will only set this controller to listen in control plane cluster
 func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc context.CancelFunc) error {
 	r.shutdownFunc = cancelFunc
+	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName)
 
 	// We should only reconcile objects that match the rules
 	toMatchingClientConfig := func(secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
-		if clientConfigName, found := r.secretFilter[types.NamespacedName{Name: secret.GetName(), Namespace: secret.GetNamespace()}]; found {
+		secretKey := types.NamespacedName{Name: secret.GetName(), Namespace: secret.GetNamespace()}
+		if clientConfigName, found := r.secretFilter[secretKey]; found {
 			requests = append(requests, reconcile.Request{NamespacedName: clientConfigName})
 		}
 		return requests
@@ -114,8 +122,6 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 	clientConfigs := make([]configapi.ClientConfig, 0)
 	namespaces := strings.Split(watchNamespace, ",")
-
-	secretMapper := make(map[types.NamespacedName]types.NamespacedName)
 
 	for _, ns := range namespaces {
 		cConfigs := configapi.ClientConfigList{}
@@ -146,7 +152,7 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 		}
 
 		// Add the Secret to the cache
-		secretMapper[secretName] = cCfgName
+		r.secretFilter[secretName] = cCfgName
 
 		// Create clients and add them to the client cache
 		cfg, err := r.ClientCache.GetRestConfig(&cCfg)
@@ -182,7 +188,6 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 		additionalClusters = append(additionalClusters, c)
 	}
 
-	r.secretFilter = secretMapper
 	return additionalClusters, nil
 }
 
