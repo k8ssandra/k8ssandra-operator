@@ -70,11 +70,11 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          - CreateSingleDatacenterCluster
-          - CreateStargateAndDatacenter
-          - CreateSingleReaper
-          - CreateReaperAndDatacenter
-          - CreateSingleMedusa
+#          - CreateSingleDatacenterCluster
+#          - CreateStargateAndDatacenter
+#          - CreateSingleReaper
+#          - CreateReaperAndDatacenter
+#          - CreateSingleMedusa
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
