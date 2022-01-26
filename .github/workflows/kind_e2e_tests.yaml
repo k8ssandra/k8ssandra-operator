@@ -19,8 +19,12 @@ jobs:
     outputs:
       image: ${{ steps.set_image_var.outputs.image }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
@@ -33,7 +37,7 @@ jobs:
       - name: Set build tags
         id: set_build_tags
         run: |
-          image="k8ssandra-operator/k8ssandra-operator:latest"
+          image="k8ssandra/k8ssandra-operator:latest"
           echo "build_tags=$image" >> $GITHUB_ENV
           echo "image=$image" >> $GITHUB_ENV
       - name: Update build tags
@@ -126,7 +130,7 @@ jobs:
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind cluster
-        run: make IMG=${{ needs.build_image.outputs.image }} e2e-setup-single
+        run: make IMG=${{ needs.build_image.outputs.image }} create-kind-cluster kind-load-image
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
       - name: Archive k8s logs

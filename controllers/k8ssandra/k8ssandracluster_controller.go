@@ -136,7 +136,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		actualDcs = dcs
 	}
 
-	kcLogger.Info("All dcs reconciled")
+	kcLogger.Info("All DCs reconciled")
 
 	if recResult := r.afterCassandraReconciled(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()

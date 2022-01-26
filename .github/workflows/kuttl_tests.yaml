@@ -12,6 +12,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'
+
 jobs:
   build_image:
     name: Build image
@@ -33,7 +34,7 @@ jobs:
       - name: Set build tags
         id: set_build_tags
         run: |
-          image="k8ssandra-operator/k8ssandra-operator:latest"
+          image="k8ssandra/k8ssandra-operator:latest"
           echo "build_tags=$image" >> $GITHUB_ENV
           echo "image=$image" >> $GITHUB_ENV
       - name: Update build tags
