@@ -4,7 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-type EncryptionStores struct {
+type Stores struct {
 	KeystoreSecretRef corev1.LocalObjectReference `json:"keystore_secret_ref"`
 
 	KeystorePasswordSecretRef corev1.LocalObjectReference `json:"keystore_password_secret_ref"`

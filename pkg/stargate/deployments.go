@@ -19,10 +19,9 @@ import (
 )
 
 const (
-	cassandraConfigDir     = "/config"
-	cassandraConfigPath    = "/config/cassandra.yaml"
-	CassandraConfigMap     = "generated-cassandra-config"
-	UserCassandraConfigMap = "cassandra-config"
+	cassandraConfigDir  = "/config"
+	cassandraConfigPath = "/config/cassandra.yaml"
+	CassandraConfigMap  = "generated-cassandra-config"
 
 	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
 	// "{{ .Values.clusterDomain | default \"cluster.local\" }}
@@ -341,7 +340,7 @@ func computeHeapSize(template *api.StargateTemplate) resource.Quantity {
 // This config map will always be created by the k8ssandra controller.
 // It will augment the user provided config map with encryption settings if enabled.
 func computeVolumes(template *api.StargateTemplate) []corev1.Volume {
-	volumes := []corev1.Volume{}
+	var volumes []corev1.Volume
 	volumes = append(volumes, corev1.Volume{
 		Name: "cassandra-config",
 		VolumeSource: corev1.VolumeSource{

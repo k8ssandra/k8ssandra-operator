@@ -169,7 +169,7 @@ func (in *ReaperSpec) DeepCopyInto(out *ReaperSpec) {
 	out.DatacenterRef = in.DatacenterRef
 	if in.ClientEncryptionStores != nil {
 		in, out := &in.ClientEncryptionStores, &out.ClientEncryptionStores
-		*out = new(encryption.EncryptionStores)
+		*out = new(encryption.Stores)
 		**out = **in
 	}
 }

@@ -24,7 +24,7 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
-	reaper.Spec.ClientEncryptionStores = &encryption.EncryptionStores{
+	reaper.Spec.ClientEncryptionStores = &encryption.Stores{
 		KeystoreSecretRef: corev1.LocalObjectReference{
 			Name: "keystore-secret",
 		},

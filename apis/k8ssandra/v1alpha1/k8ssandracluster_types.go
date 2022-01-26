@@ -247,11 +247,11 @@ type CassandraClusterTemplate struct {
 
 	// Internode encryption stores which are used by Cassandra and Stargate.
 	// +optional
-	ServerEncryptionStores *encryption.EncryptionStores `json:"server_encryption_stores,omitempty"`
+	ServerEncryptionStores *encryption.Stores `json:"server_encryption_stores,omitempty"`
 
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// +optional
-	ClientEncryptionStores *encryption.EncryptionStores `json:"client_encryption_stores,omitempty"`
+	ClientEncryptionStores *encryption.Stores `json:"client_encryption_stores,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields

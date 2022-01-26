@@ -1507,7 +1507,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						Size:       dc2Size,
 					},
 				},
-				ServerEncryptionStores: &encryption.EncryptionStores{
+				ServerEncryptionStores: &encryption.Stores{
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
 					},
@@ -1521,7 +1521,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						Name: "server-truststore-password-secret",
 					},
 				},
-				ClientEncryptionStores: &encryption.EncryptionStores{
+				ClientEncryptionStores: &encryption.Stores{
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
 					},
@@ -1724,7 +1724,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 						Size:       dc2Size,
 					},
 				},
-				ServerEncryptionStores: &encryption.EncryptionStores{
+				ServerEncryptionStores: &encryption.Stores{
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
 					},

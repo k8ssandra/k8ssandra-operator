@@ -107,8 +107,8 @@ type DatacenterConfig struct {
 	PodTemplateSpec        *corev1.PodTemplateSpec
 	MgmtAPIHeap            *resource.Quantity
 	SoftPodAntiAffinity    *bool
-	ServerEncryptionStores *encryption.EncryptionStores
-	ClientEncryptionStores *encryption.EncryptionStores
+	ServerEncryptionStores *encryption.Stores
+	ClientEncryptionStores *encryption.Stores
 }
 
 const (

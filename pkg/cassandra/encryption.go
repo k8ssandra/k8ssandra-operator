@@ -41,7 +41,7 @@ func HandleEncryptionOptions(template *DatacenterConfig, encryptionStoresSecrets
 	return nil
 }
 
-func addVolumesForEncryption(template *DatacenterConfig, storeType string, encryptionStores encryption.EncryptionStores) {
+func addVolumesForEncryption(template *DatacenterConfig, storeType string, encryptionStores encryption.Stores) {
 	// Initialize the volume array if it doesn't exist yet
 	if template.PodTemplateSpec.Spec.Volumes == nil {
 		template.PodTemplateSpec.Spec.Volumes = make([]corev1.Volume, 0)
@@ -58,7 +58,7 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType string, encry
 	addEncryptionMountToCassandra(template, volumes["keystore"], volumes["truststore"], storeType)
 }
 
-func EncryptionVolumes(storeType string, encryptionStores encryption.EncryptionStores) map[string]corev1.Volume {
+func EncryptionVolumes(storeType string, encryptionStores encryption.Stores) map[string]corev1.Volume {
 	volumes := map[string]corev1.Volume{}
 
 	// Create the volume for the keystore
@@ -126,7 +126,7 @@ func addEncryptionMountToCassandra(template *DatacenterConfig, keystoreVolume, t
 	}
 }
 
-func checkMandatoryEncryptionFields(encryptionStores *encryption.EncryptionStores) error {
+func checkMandatoryEncryptionFields(encryptionStores *encryption.Stores) error {
 	if encryptionStores == nil {
 		return fmt.Errorf("EncryptionStores is required to set up encryption")
 	}
@@ -220,7 +220,7 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 }
 
 // Add JVM options required for turning on encryption
-func addJmxEncryptionOptions(template *DatacenterConfig, encryptionStores encryption.EncryptionStores, encryptionStoresSecrets EncryptionStoresPasswords) {
+func addJmxEncryptionOptions(template *DatacenterConfig, encryptionStores encryption.Stores, encryptionStoresSecrets EncryptionStoresPasswords) {
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath("client", "keystore"), "keystore"))

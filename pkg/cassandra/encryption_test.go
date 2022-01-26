@@ -24,7 +24,7 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 				},
 			},
 		},
-		ClientEncryptionStores: &encryption.EncryptionStores{
+		ClientEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
@@ -38,7 +38,7 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 				Name: "client-truststore-password-secret",
 			},
 		},
-		ServerEncryptionStores: &encryption.EncryptionStores{
+		ServerEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
@@ -70,7 +70,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 				},
 			},
 		},
-		ClientEncryptionStores: &encryption.EncryptionStores{
+		ClientEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
@@ -84,7 +84,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 				Name: "client-truststore-password-secret",
 			},
 		},
-		ServerEncryptionStores: &encryption.EncryptionStores{
+		ServerEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
@@ -172,7 +172,7 @@ func TestAddVolumesForEncryption(t *testing.T) {
 				},
 			},
 		},
-		ClientEncryptionStores: &encryption.EncryptionStores{
+		ClientEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
@@ -186,7 +186,7 @@ func TestAddVolumesForEncryption(t *testing.T) {
 				Name: "client-truststore-password-secret",
 			},
 		},
-		ServerEncryptionStores: &encryption.EncryptionStores{
+		ServerEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
@@ -233,7 +233,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 				},
 			},
 		},
-		ClientEncryptionStores: &encryption.EncryptionStores{
+		ClientEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
@@ -247,7 +247,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 				Name: "client-truststore-password-secret",
 			},
 		},
-		ServerEncryptionStores: &encryption.EncryptionStores{
+		ServerEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
@@ -312,7 +312,7 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 				},
 			},
 		},
-		ClientEncryptionStores: &encryption.EncryptionStores{
+		ClientEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
@@ -326,7 +326,7 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 				Name: "client-truststore-password-secret",
 			},
 		},
-		ServerEncryptionStores: &encryption.EncryptionStores{
+		ServerEncryptionStores: &encryption.Stores{
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},

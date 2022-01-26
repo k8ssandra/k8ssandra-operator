@@ -221,7 +221,7 @@ type ReaperSpec struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// These should not be set explicitly by the user, they will be copied from the K8ssandraCluster object.
 	// +optional
-	ClientEncryptionStores *encryption.EncryptionStores `json:"client_encryption_stores,omitempty"`
+	ClientEncryptionStores *encryption.Stores `json:"client_encryption_stores,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

@@ -42,7 +42,7 @@ var (
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
 				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
 			},
-			ServerEncryptionStores: &encryption.EncryptionStores{
+			ServerEncryptionStores: &encryption.Stores{
 				KeystoreSecretRef: corev1.LocalObjectReference{
 					Name: "server-keystore-secret",
 				},
@@ -56,7 +56,7 @@ var (
 					Name: "server-truststore-password-secret",
 				},
 			},
-			ClientEncryptionStores: &encryption.EncryptionStores{
+			ClientEncryptionStores: &encryption.Stores{
 				KeystoreSecretRef: corev1.LocalObjectReference{
 					Name: "client-keystore-secret",
 				},
