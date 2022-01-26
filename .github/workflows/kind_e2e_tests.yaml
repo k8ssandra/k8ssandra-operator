@@ -19,8 +19,12 @@ jobs:
     outputs:
       image: ${{ steps.set_image_var.outputs.image }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
