@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -112,6 +113,8 @@ type MultiClusterTestEnv struct {
 	testEnvs []*envtest.Environment
 
 	clustersToCreate int
+
+	BeforeTest func()
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
@@ -221,6 +224,10 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
 
+		if e.BeforeTest != nil {
+			e.BeforeTest()
+		}
+
 		test(t, ctx, f, namespace)
 	}
 }
@@ -294,6 +301,10 @@ func registerApis() error {
 	}
 
 	if err := cassdcapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := cassctlapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 

@@ -69,8 +69,14 @@ TEST_ARGS=
 
 NS ?= k8ssandra-operator
 
-CLUSTER_SCOPE = false
+# DEPLOYMENT specifies a particular kustomization to use for configuring the operator
+# in a particular way, cluster-scoped for example. See config/deployments/README.md for
+# more info.
 DEPLOYMENT =
+
+# Indicates the number of kind clusters that are being used. Note that the clusters should
+# be created with scripts/setup-kind-multicluster.sh.
+NUM_CLUSTERS = 2
 
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
@@ -173,18 +179,18 @@ multi-up: cleanup build manifests kustomize docker-build create-kind-multicluste
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 ##install the data plane
-	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
+	for ((i = 1; i < $(NUM_CLUSTERS); ++i)); do \
+		kubectl config use-context kind-k8ssandra-$$i; \
+        $(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -; \
+	done
 ## Create a client config
-	make create-client-config
+	make create-clientconfig
 ## Restart the control plane
 	kubectl config use-context kind-k8ssandra-0
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
-ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) delete pod -l name=cass-operator
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
-endif
 
 multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
 # Reload the operator on the control-plane
@@ -192,19 +198,17 @@ multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
-ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) delete pod -l name=cass-operator
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
-endif
 # Reload the operator on the data-plane
-	kubectl config use-context kind-k8ssandra-1
-	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
-	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
-	kubectl -n $(NS) rollout status deployment k8ssandra-operator
-ifeq ($(DEPLOYMENT), cass-operator-dev)
-	kubectl -n $(NS) delete pod -l name=cass-operator
-	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
-endif
+	for ((i = 1; i < $(NUM_CLUSTERS); ++i)); do \
+    	kubectl config use-context kind-k8ssandra-$$i; \
+    	$(KUSTOMIZE) build config/deployments/data-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -; \
+        kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator; \
+        kubectl -n $(NS) rollout status deployment k8ssandra-operator; \
+		kubectl -n $(NS) delete pod -l name=cass-operator; \
+		kubectl -n $(NS) rollout status deployment cass-operator-controller-manager; \
+	done
 
 single-deploy:
 	kubectl config use-context kind-k8ssandra-0
@@ -215,18 +219,20 @@ multi-deploy:
 	kubectl -n $(NS) apply -f test/testdata/samples/k8ssandra-multi-kind.yaml
 
 cleanup:
-	kind delete cluster --name k8ssandra-0
-	kind delete cluster --name k8ssandra-1
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kind delete cluster --name k8ssandra-$$i; \
+	done
 
 create-kind-cluster:
 	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes 4
 
 kind-load-image-multi:
-	kind load docker-image --name k8ssandra-0 ${IMG}
-	kind load docker-image --name k8ssandra-1 ${IMG}
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kind load docker-image --name k8ssandra-$$i ${IMG}; \
+	done
 
 ##@ Deployment
 
@@ -249,15 +255,18 @@ cert-manager: ## Install cert-manager to the cluster
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
 
 cert-manager-multi: ## Install cert-manager to the clusters
-	kubectl config use-context kind-k8ssandra-0
-	make cert-manager
-	kubectl config use-context kind-k8ssandra-1
-	make cert-manager
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kubectl config use-context kind-k8ssandra-$$i; \
+		make cert-manager;  \
+	done
 
-create-client-config:
+create-clientconfig:
 	kubectl config use-context kind-k8ssandra-0
-	make install
-	scripts/create-clientconfig.sh --namespace $(NS) --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		make install; \
+		scripts/create-clientconfig.sh --namespace $(NS) --src-kubeconfig build/kubeconfigs/k8ssandra-$$i.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-$$i.yaml --output-dir clientconfig; \
+	done
+
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.

@@ -8,19 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/pointer"
 
 	"github.com/Jeffail/gabs"
-	"github.com/go-logr/logr"
-
 	"strconv"
 	"strings"
 
@@ -52,18 +47,26 @@ import (
 const (
 	timeout  = time.Second * 5
 	interval = time.Millisecond * 500
+
+	k8sCtx0 = "cluster-0"
+	k8sCtx1 = "cluster-1"
+	k8sCtx2 = "cluster-2"
 )
 
 var (
-	defaultStorageClass = "default"
-	testEnv             *testutils.MultiClusterTestEnv
-	managementApi       = &fakeManagementApiFactory{}
+	defaultStorageClass  = "default"
+	testEnv              *testutils.MultiClusterTestEnv
+	managementApiFactory = &testutils.FakeManagementApiFactory{}
 )
 
 func TestK8ssandraCluster(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
-	testEnv = &testutils.MultiClusterTestEnv{}
+	testEnv = &testutils.MultiClusterTestEnv{
+		BeforeTest: func() {
+			managementApiFactory.Reset()
+		},
+	}
 
 	reconcilerConfig := config.InitConfig()
 
@@ -76,7 +79,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
-			ManagementApi:    managementApi,
+			ManagementApi:    managementApiFactory,
 		}).SetupWithManager(mgr, clusters)
 		return err
 	})
@@ -89,6 +92,7 @@ func TestK8ssandraCluster(t *testing.T) {
 
 	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
 	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
+	t.Run("AddDcToExistingCluster", testEnv.ControllerTest(ctx, addDc))
 	t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
@@ -296,9 +300,6 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require := require.New(t)
 	assert := assert.New(t)
 
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
-
 	clusterName := "cluster-configs"
 	superUserSecretName := "test-superuser"
 	serverVersion := "4.0.0"
@@ -423,9 +424,6 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	assert := assert.New(t)
-
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
 
 	clusterName := "cluster-configs"
 	serverVersion := "4.0.0"
@@ -581,9 +579,6 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	assert := assert.New(t)
-
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
 
 	clusterName := "cluster-configs"
 	serverVersion := "4.0.0"
@@ -862,11 +857,6 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
-	t.Log("check that remote seeds are set on dc2")
-	dc2 = &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc2Key, dc2)
-	require.NoError(err, "failed to get dc2")
-
 	t.Log("update dc2 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to set dc2 status ready")
@@ -915,6 +905,76 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+}
+
+func createSuperuserSecret(ctx context.Context, t *testing.T, f *framework.Framework, kcKey client.ObjectKey, secretName string) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: kcKey.Namespace,
+			Name:      secretName,
+		},
+		Data: map[string][]byte{},
+	}
+	labels.SetManagedBy(secret, kcKey)
+
+	err := f.Client.Create(ctx, secret)
+	require.NoError(t, err, "failed to create superuser secret")
+}
+
+func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Framework, kcKey client.ObjectKey, replicationTargets ...string) {
+	rsec := &replicationapi.ReplicatedSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: kcKey.Namespace,
+			Name:      kcKey.Name,
+		},
+		Spec: replicationapi.ReplicatedSecretSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels.ManagedByLabels(kcKey),
+			},
+			ReplicationTargets: []replicationapi.ReplicationTarget{},
+		},
+		Status: replicationapi.ReplicatedSecretStatus{
+			Conditions: []replicationapi.ReplicationCondition{
+				{
+					Type:   replicationapi.ReplicationDone,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+	labels.SetManagedBy(rsec, kcKey)
+
+	for _, val := range replicationTargets {
+		rsec.Spec.ReplicationTargets = append(rsec.Spec.ReplicationTargets, replicationapi.ReplicationTarget{
+			Namespace:      kcKey.Namespace,
+			K8sContextName: val,
+		})
+	}
+
+	err := f.Client.Create(ctx, rsec)
+	require.NoError(t, err, "failed to create replicated secret")
+}
+
+func setReplicationStatusDone(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
+	rsec := &replicationapi.ReplicatedSecret{}
+	err := f.Client.Get(ctx, key, rsec)
+	require.NoError(t, err, "failed to get ReplicatedSecret", "key", key)
+
+	now := metav1.Now()
+	conditions := make([]replicationapi.ReplicationCondition, 0)
+
+	for _, target := range rsec.Spec.ReplicationTargets {
+		conditions = append(conditions, replicationapi.ReplicationCondition{
+			Cluster:            target.K8sContextName,
+			Type:               replicationapi.ReplicationDone,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	}
+	rsec.Status.Conditions = conditions
+	err = f.Client.Status().Update(ctx, rsec)
+
+	require.NoError(t, err, "Failed to update ReplicationSecret status", "key", key)
 }
 
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -1047,14 +1107,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
 	t.Log("update dc1 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to update dc1 status to ready")
 
 	t.Log("check that dc2 was created")
@@ -1068,14 +1121,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	}
 
 	t.Log("update dc2 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to update dc2 status to ready")
 
 	t.Log("check that stargate sg1 is created")
@@ -1338,21 +1384,21 @@ func secretExists(f *framework.Framework, ctx context.Context, namespace, secret
 }
 
 func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
-	t.Logf("check that the %s annotation is set", api.SystemReplicationAnnotation)
+	t.Logf("check that the %s annotation is set", api.InitialSystemReplicationAnnotation)
 	assert.Eventually(t, systemReplicationAnnotationIsSet(t, f, ctx, kc), timeout, interval, "Failed to verify that the system replication annotation was set correctly")
 }
 
 func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) func() bool {
 	return func() bool {
 		key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-		expectedReplication := cassandra.ComputeSystemReplication(kc)
+		expectedReplication := cassandra.ComputeInitialSystemReplication(kc)
 		kc = &api.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, key, kc); err != nil {
 			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
 			return false
 		}
 
-		val, found := kc.Annotations[api.SystemReplicationAnnotation]
+		val, found := kc.Annotations[api.InitialSystemReplicationAnnotation]
 		if !found {
 			return false
 		}
@@ -1439,17 +1485,4 @@ func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 func parseResource(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
-}
-
-type fakeManagementApiFactory struct {
-}
-
-func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
-	m := new(mocks.ManagementApiFacade)
-	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
-	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
-	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
-		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
-	})).Return(nil)
-	return m, nil
 }

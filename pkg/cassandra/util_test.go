@@ -99,7 +99,7 @@ func TestComputeSystemReplication(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.got = ComputeSystemReplication(tc.kluster)
+			tc.got = ComputeInitialSystemReplication(tc.kluster)
 			require.Equal(t, tc.want, tc.got)
 		})
 	}
@@ -207,11 +207,11 @@ func TestCompareReplications(t *testing.T) {
 		{"nil", nil, map[string]int{"dc1": 3}, false},
 		{"empty", map[string]string{}, map[string]int{"dc1": 3}, false},
 		{"wrong class", map[string]string{"class": "wrong"}, map[string]int{"dc1": 3}, false},
-		{"wrong length", map[string]string{"class": networkTopology, "dc1": "3", "dc2": "3"}, map[string]int{"dc1": 3}, false},
-		{"missing dc", map[string]string{"class": networkTopology, "dc2": "3"}, map[string]int{"dc1": 3}, false},
-		{"invalid rf", map[string]string{"class": networkTopology, "dc1": "not a number"}, map[string]int{"dc1": 3}, false},
-		{"wrong rf", map[string]string{"class": networkTopology, "dc1": "1"}, map[string]int{"dc1": 3}, false},
-		{"success", map[string]string{"class": networkTopology, "dc1": "1", "dc2": "3"}, map[string]int{"dc1": 1, "dc2": 3}, true},
+		{"wrong length", map[string]string{"class": NetworkTopology, "dc1": "3", "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"missing dc", map[string]string{"class": NetworkTopology, "dc2": "3"}, map[string]int{"dc1": 3}, false},
+		{"invalid rf", map[string]string{"class": NetworkTopology, "dc1": "not a number"}, map[string]int{"dc1": 3}, false},
+		{"wrong rf", map[string]string{"class": NetworkTopology, "dc1": "1"}, map[string]int{"dc1": 3}, false},
+		{"success", map[string]string{"class": NetworkTopology, "dc1": "1", "dc2": "3"}, map[string]int{"dc1": 1, "dc2": 3}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -219,4 +219,76 @@ func TestCompareReplications(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestParseReplication(t *testing.T) {
+	tests := []struct {
+		name        string
+		replication []byte
+		want        *Replication
+		valid       bool
+	}{
+		{
+			name:        "valid replication - single DC",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}}`),
+			want: &Replication{
+				datacenters: map[string]keyspacesReplication{
+					"dc2": {
+						"ks1": 3,
+						"ks2": 3,
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name:        "valid replication - multiple DCs",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": 1}}`),
+			want: &Replication{
+				datacenters: map[string]keyspacesReplication{
+					"dc2": {
+						"ks1": 3,
+						"ks2": 3,
+					},
+					"dc3": {
+						"ks1": 5,
+						"ks2": 1,
+					},
+				},
+			},
+			valid: true,
+		},
+		{
+			name:        "invalid replication - wrong type",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": "1"}}`),
+			want:        nil,
+			valid:       false,
+		},
+		{
+			name:        "invalid replication - replica count < 0",
+			replication: []byte(`{"dc2": {"ks1": 3, "ks2": 3}, "dc3": {"ks1": 5, "ks2": -1}}`),
+			want:        nil,
+			valid:       false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseReplication(tt.replication)
+			if tt.valid {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestReplicationFactor(t *testing.T) {
+	replication, err := ParseReplication([]byte(`{"dc2": {"ks1": 3, "ks2": 5}}`))
+	require.NoError(t, err)
+
+	assert.Equal(t, 3, replication.ReplicationFactor("dc2", "ks1"))
+	assert.Equal(t, 0, replication.ReplicationFactor("dc2", "ks3"))
+	assert.Equal(t, 0, replication.ReplicationFactor("dc3", "ks1"))
 }

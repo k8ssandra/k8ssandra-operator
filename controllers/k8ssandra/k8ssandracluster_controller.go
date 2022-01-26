@@ -62,6 +62,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
+// +kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=cassandratasks,verbs=get;list;watch;create;update;delete;patch
 // +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
@@ -135,17 +136,9 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		actualDcs = dcs
 	}
 
-	kcLogger.Info("All dcs reconciled")
+	kcLogger.Info("All DCs reconciled")
 
-	if recResult := r.reconcileStargateAuthSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
-		return recResult.Output()
-	}
-
-	if recResult := r.reconcileReaperSchema(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
-		return recResult.Output()
-	}
-
-	if recResult := r.reconcileStargateAndReaper(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
+	if recResult := r.afterCassandraReconciled(ctx, kc, actualDcs, kcLogger); recResult.Completed() {
 		return recResult.Output()
 	}
 
@@ -154,7 +147,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	return result.Done().Output()
 }
 
-func (r *K8ssandraClusterReconciler) reconcileStargateAndReaper(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		dc := dcs[i]
 		dcKey := utils.GetKey(dc)

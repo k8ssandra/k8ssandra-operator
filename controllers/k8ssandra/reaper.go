@@ -18,7 +18,6 @@ package k8ssandra
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -37,43 +36,32 @@ import (
 func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dcs []*cassdcapi.CassandraDatacenter,
-	logger logr.Logger,
-) result.ReconcileResult {
+	mgmtApi cassandra.ManagementApiFacade,
+	logger logr.Logger) result.ReconcileResult {
+
 	if !kc.HasReapers() {
 		return result.Continue()
 	}
 
 	logger.Info("Reconciling Reaper schema")
-	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
 
-	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
-		logger.Error(err, "Failed to get remote client")
-		return result.Error(err)
-	} else {
-		dc := dcs[0]
-		managementApiFacade, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create ManagementApiFacade")
-			return result.Error(err)
-		}
-		keyspace := reaperapi.DefaultKeyspace
-
-		if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
-			keyspace = kc.Spec.Reaper.Keyspace
-		}
-
-		err = managementApiFacade.EnsureKeyspaceReplication(
-			keyspace,
-			cassandra.ComputeReplication(3, dcs...),
-		)
-		if err != nil {
-			logger.Error(err, "Failed to ensure keyspace replication")
-			return result.Error(err)
-		}
-
-		return result.Continue()
+	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
+		return recResult
 	}
+
+	keyspace := getReaperKeyspace(kc)
+
+	datacenters := kc.GetReadyDatacenters()
+	err := mgmtApi.EnsureKeyspaceReplication(
+		keyspace,
+		cassandra.ComputeReplicationFromDcTemplates(3, datacenters...),
+	)
+	if err != nil {
+		logger.Error(err, "Failed to ensure keyspace replication")
+		return result.Error(err)
+	}
+
+	return result.Continue()
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaper(
@@ -224,4 +212,12 @@ func (r *K8ssandraClusterReconciler) removeReaperStatus(kc *api.K8ssandraCluster
 			Stargate:  kdcStatus.Stargate.DeepCopy(),
 		}
 	}
+}
+
+func getReaperKeyspace(kc *api.K8ssandraCluster) string {
+	keyspace := reaperapi.DefaultKeyspace
+	if kc.Spec.Reaper != nil && kc.Spec.Reaper.Keyspace != "" {
+		keyspace = kc.Spec.Reaper.Keyspace
+	}
+	return keyspace
 }

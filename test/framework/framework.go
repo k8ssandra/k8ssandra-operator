@@ -135,6 +135,32 @@ func (f *Framework) List(ctx context.Context, key ClusterKey, obj client.ObjectL
 	return remoteClient.List(ctx, obj, opts...)
 }
 
+func (f *Framework) Update(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+
+	return remoteClient.Update(ctx, obj)
+}
+
+func (f *Framework) UpdateStatus(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+
+	return remoteClient.Status().Update(ctx, obj)
+}
+
 func (f *Framework) Patch(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.PatchOption) error {
 	if len(key.K8sContext) == 0 {
 		return fmt.Errorf("the K8sContext must be specified for key %s", key)
@@ -180,13 +206,19 @@ func (f *Framework) k8sContextNotFound(k8sContext string) error {
 }
 
 // SetDatacenterStatusReady fetches the CassandraDatacenter specified by key and persists
-// a status update to make the CassandraDatacenter ready.
+// a status update to make the CassandraDatacenter ready. It sets the DatacenterReady and
+// DatacenterInitialized conditions to true.
 func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey) error {
 	now := metav1.Now()
 	return f.PatchDatacenterStatus(ctx, key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+		dc.Status.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterInitialized,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})

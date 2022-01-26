@@ -2,11 +2,11 @@ package cassandra
 
 import (
 	"fmt"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +32,52 @@ var DefaultJmxInitImage = images.Image{
 type SystemReplication struct {
 	Datacenters       []string `json:"datacenters"`
 	ReplicationFactor int      `json:"replicationFactor"`
+}
+
+// Replication provides a mapping of DCs to a mapping of keyspaces and their
+// replica counts. NetworkTopologyStrategy is assumed for all keyspaces.
+type Replication struct {
+	datacenters map[string]keyspacesReplication
+}
+
+type keyspacesReplication map[string]int
+
+// EachDcContainsKeyspaces if every DC contains all the keyspaces.
+func (r *Replication) EachDcContainsKeyspaces(keyspaces ...string) bool {
+	for _, ksMap := range r.datacenters {
+		for _, ks := range keyspaces {
+			if _, found := ksMap[ks]; !found {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ForDcs returns a new Replication that contains only the specifics dcs.
+func (r *Replication) ForDcs(dcs ...string) *Replication {
+	replication := &Replication{datacenters: map[string]keyspacesReplication{}}
+
+	for dc, ksReplication := range r.datacenters {
+		if utils.SliceContains(dcs, dc) {
+			ksMap := map[string]int{}
+			for ks, val := range ksReplication {
+				ksMap[ks] = val
+			}
+			replication.datacenters[dc] = ksMap
+		}
+	}
+
+	return replication
+}
+
+func (r *Replication) ReplicationFactor(dc, ks string) int {
+	if ksMap, found := r.datacenters[dc]; found {
+		if rf, found := ksMap[ks]; found {
+			return rf
+		}
+	}
+	return 0
 }
 
 // DatacenterConfig provides the configuration to be applied to the CassandraDatacenter.
@@ -307,4 +353,24 @@ func FindAdditionalVolume(dcConfig *DatacenterConfig, volumeName string) (int, b
 	}
 
 	return -1, false
+}
+
+func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
+	desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+	actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+
+	actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+	desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+	if (foundActualYaml && foundDesiredYaml) && actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
+		return fmt.Errorf("tried to change num_tokens in an existing datacenter")
+	}
+
+	return nil
 }

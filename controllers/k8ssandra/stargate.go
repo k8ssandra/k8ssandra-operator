@@ -7,6 +7,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -157,30 +158,25 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	dcs []*cassdcapi.CassandraDatacenter,
-	logger logr.Logger,
-) result.ReconcileResult {
+	mgmtApi cassandra.ManagementApiFacade,
+	logger logr.Logger) result.ReconcileResult {
+
 	if !kc.HasStargates() {
 		return result.Continue()
 	}
 
-	dcTemplate := kc.Spec.Cassandra.Datacenters[0]
-
-	if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
-		logger.Error(err, "Failed to get remote client")
-		return result.Error(err)
-	} else {
-		dc := dcs[0]
-		managementApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create ManagementApiFacade")
-			return result.Error(err)
-		}
-		if err = stargate.ReconcileAuthKeyspace(dcs, managementApi, logger); err != nil {
-			return result.Error(err)
-		}
-		return result.Continue()
+	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
+		return recResult
 	}
+
+	datacenters := kc.GetReadyDatacenters()
+	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
+
+	if err := stargate.ReconcileAuthKeyspace(mgmtApi, replication, logger); err != nil {
+		return result.Error(err)
+	}
+
+	return result.Continue()
 }
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {

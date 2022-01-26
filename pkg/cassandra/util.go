@@ -1,6 +1,8 @@
 package cassandra
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -31,14 +33,38 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 	return dc.GetConditionStatus(cassdcapi.DatacenterStopped) == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressUpdating
 }
 
-func ComputeSystemReplication(kluster *api.K8ssandraCluster) SystemReplication {
+// GetDatacentersForSystemReplication determines the DCs that should be included for
+// replication. This function should only be used for system keyspaces. Replication for
+// system keyspaces is initially set through the management-api, not CQL. This allows us
+// to specify non-existent DCs for replication even though Cassandra 4 does not allow that.
+// That cannot be done when configuration replication through CQL which is why this func
+// should only be used for system keyspaces.
+func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
+	var datacenters []api.CassandraDatacenterTemplate
+	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
+		datacenters = make([]api.CassandraDatacenterTemplate, 0)
+		for _, dc := range kc.Spec.Cassandra.Datacenters {
+			if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
+				datacenters = append(datacenters, dc)
+			}
+		}
+	} else {
+		datacenters = kc.Spec.Cassandra.Datacenters
+	}
+	return datacenters
+}
+
+func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication {
 	rf := 3.0
-	for _, dc := range kluster.Spec.Cassandra.Datacenters {
+
+	datacenters := GetDatacentersForSystemReplication(kc)
+
+	for _, dc := range datacenters {
 		rf = math.Min(rf, float64(dc.Size))
 	}
 
-	dcNames := make([]string, 0, len(kluster.Spec.Cassandra.Datacenters))
-	for _, dc := range kluster.Spec.Cassandra.Datacenters {
+	dcNames := make([]string, 0, len(datacenters))
+	for _, dc := range datacenters {
 		dcNames = append(dcNames, dc.Meta.Name)
 	}
 
@@ -66,12 +92,12 @@ func ComputeReplicationFromDcTemplates(maxReplicationPerDc int, datacenters ...a
 	return desiredReplication
 }
 
-const networkTopology = "org.apache.cassandra.locator.NetworkTopologyStrategy"
+const NetworkTopology = "org.apache.cassandra.locator.NetworkTopologyStrategy"
 
 func CompareReplications(actualReplication map[string]string, desiredReplication map[string]int) bool {
 	if len(actualReplication) == 0 {
 		return false
-	} else if class := actualReplication["class"]; class != networkTopology {
+	} else if class := actualReplication["class"]; class != NetworkTopology {
 		return false
 	} else if len(actualReplication) != len(desiredReplication)+1 {
 		return false
@@ -86,4 +112,36 @@ func CompareReplications(actualReplication map[string]string, desiredReplication
 		}
 	}
 	return true
+}
+
+func ParseReplication(val []byte) (*Replication, error) {
+	var result map[string]interface{}
+
+	if err := json.Unmarshal(val, &result); err != nil {
+		return nil, err
+	}
+
+	dcsReplication := Replication{datacenters: map[string]keyspacesReplication{}}
+
+	for k, v := range result {
+		ksMap, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed to parse replication")
+		}
+		ksReplication := keyspacesReplication{}
+		for keyspace, replicasVal := range ksMap {
+			freplicas, ok := replicasVal.(float64)
+			if !ok {
+				return nil, fmt.Errorf("failed to parse replication")
+			}
+			replicas := int(freplicas)
+			if replicas < 0 {
+				return nil, fmt.Errorf("invalid replication")
+			}
+			ksReplication[keyspace] = replicas
+		}
+		dcsReplication.datacenters[k] = ksReplication
+	}
+
+	return &dcsReplication, nil
 }
