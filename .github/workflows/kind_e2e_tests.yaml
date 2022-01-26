@@ -80,69 +80,11 @@ jobs:
           - CreateReaperAndDatacenter
           - CreateSingleMedusa
           - ConfigControllerRestarts
+        makefile_setup_target: [e2e-setup-single]
       fail-fast: false
     name: ${{ matrix.e2e_test }}
-    env:
-      GOPATH: /home/runner/go
-      GOROOT: /usr/local/go1.16
-      CGO_ENABLED: 0
-    steps:
-      - name: Free diskspace by removing unused packages
-        run: |
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-      - uses: actions/checkout@v2
-        if: github.event_name == 'pull_request'
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
-        if: github.event_name != 'pull_request'
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.16
-      - uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Install kubectl
-        run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-      - name: Install kustomize
-        run: make kustomize
-      - name: Install Kind
-        run: go get sigs.k8s.io/kind
-      - name: Install yq
-        run: |
-          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv yq_linux_amd64.tar.gz /usr/bin
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v2
-        with:
-          name: k8ssandra-operator
-          path: /tmp
-      - name: Load images
-        run: |
-          docker load --input /tmp/k8ssandra-operator.tar
-      - name: Setup kind cluster
-        run: make IMG=${{ needs.build_image.outputs.image }} create-kind-cluster kind-load-image
-      - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
-      - name: Get artefact upload directory
-        if: ${{ failure() }}
-        run: |
-          uploaddir_name=$(echo ${{ matrix.e2e_test }}| sed 's/\//__/g')
-          echo 'setting uploaddir_name to' $uploaddir_name
-          echo "uploaddir_name=$uploaddir_name" >> $GITHUB_ENV
-      - name: Archive k8s logs
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: k8s-logs-${{ env.uploaddir_name }}
-          path: ./build/test
+    uses: .github/workflows/kind_e2e_test_execution.yaml
+    with:
+      test: ${{ matrix.e2e_test }}
+      makefile_setup_target: ${{ matrix.makefile_setup_target }}
+    
