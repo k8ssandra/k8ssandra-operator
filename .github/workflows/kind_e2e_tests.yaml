@@ -85,6 +85,6 @@ jobs:
     name: ${{ matrix.e2e_test }}
     uses: .github/workflows/kind_e2e_test_execution.yaml
     with:
-      test: ${{ matrix.e2e_test }}
+      e2e_test: ${{ matrix.e2e_test }}
       makefile_setup_target: ${{ matrix.makefile_setup_target }}
     
