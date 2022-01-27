@@ -12,6 +12,7 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/api/errors"	
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
@@ -26,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -432,7 +432,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
-			if !k8serrors.IsNotFound(err) {
+			if !errors.IsNotFound(err) {
 				// We won't log the error if its not found because that is expected and it helps cut
 				// down on the verbosity of the test output.
 				f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
@@ -542,6 +542,6 @@ func (f *Framework) ContainerHasEnvVar(container corev1.Container, envVarName, e
 func (f *Framework) AssertObjectDoesNotExist(ctx context.Context, t *testing.T, key ClusterKey, obj client.Object, timeout, interval time.Duration) {
 	assert.Eventually(t, func() bool {
 		err := f.Get(ctx, key, obj)
-		return err != nil && k8serrors.IsNotFound(err)
-	}, timeout, interval, "failed to verify object does not exist", key)
+		return err != nil && errors.IsNotFound(err)
+	}, timeout, interval, fmt.Sprintf("failed to verify object (%+v) does not exist", key))
 }

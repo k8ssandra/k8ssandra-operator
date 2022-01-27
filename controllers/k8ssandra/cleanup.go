@@ -131,7 +131,6 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 	}
 
 	status := kc.Status.Datacenters[dcName]
-	logger.Info("delete status", "Status", status)
 
 	switch kc.Status.Datacenters[dcName].DecommissionProgress {
 	case api.DecommNone:
@@ -160,6 +159,7 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
 			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", dcName, err))
 		}
+		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
 	}
 
 	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dcName, remoteClient)
@@ -171,6 +171,7 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
 			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dcName, err))
 		}
+		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
 	}
 
 	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
@@ -188,10 +189,11 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
 			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
 		}
+		logger.Info("Deleted CassandraDatacenter", utils.GetKey(dc))
 	}
 
 	delete(kc.Status.Datacenters, dcName)
-	logger.Info("DC deletion finished", "DC", dcName, "Status", kc.Status)
+	logger.Info("DC deletion finished", "DC", dcName)
 	return result.Continue()
 }
 

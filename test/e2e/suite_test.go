@@ -82,7 +82,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeDcFromCluster,
-		fixture: "remove-dc",
+		fixture:  "remove-dc",
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -947,10 +947,10 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: k8sCtx0,
+		K8sContext: k8sCtx1,
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      "test-dc1-reaper",
+			Name:      "test-dc2-reaper",
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)
@@ -971,9 +971,9 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	err = f.Client.Update(ctx, kc)
 	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
 
-	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4 * time.Minute, 5 * time.Second)
-	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1 * time.Minute, 3 * time.Second)
-	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, 1 * time.Minute, 3 * time.Second)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
+	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1*time.Minute, 3*time.Second)
+	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, 1*time.Minute, 3*time.Second)
 
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {

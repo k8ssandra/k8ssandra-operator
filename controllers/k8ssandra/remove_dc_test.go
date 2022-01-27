@@ -73,7 +73,7 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 		return !found
 	}, timeout, interval, "timed out waiting for dc2 to be removed from K8ssandraCluster status")
 
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 
 	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
 
@@ -207,9 +207,9 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 		return !found
 	}, timeout, interval, "timed out waiting for dc2 to be removed from K8ssandraCluster status")
 
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
-	verifyObjectDoesNotExist(ctx, t, f, reaper2Key, &reaperapi.Reaper{})
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, timeout, interval)
 
 	verifyReplicationOfInternalKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
 

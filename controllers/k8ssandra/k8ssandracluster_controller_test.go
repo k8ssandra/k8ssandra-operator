@@ -295,7 +295,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // applyClusterTemplateConfigs verifies that settings specified at the cluster-level, i.e.,
@@ -419,8 +419,8 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // applyDatacenterTemplateConfigs verifies that settings specified at the dc-level, i.e.,
@@ -573,8 +573,8 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // applyClusterTemplateAndDatacenterTemplateConfigs specifies settings in the cluster
@@ -724,8 +724,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, systemRF int, dcNames ...string) (*gabs.Container, error) {
@@ -911,8 +911,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 func createSuperuserSecret(ctx context.Context, t *testing.T, f *framework.Framework, kcKey client.ObjectKey, secretName string) {
@@ -1241,10 +1241,10 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
-	verifyObjectDoesNotExist(ctx, t, f, sg1Key, &stargateapi.Stargate{})
-	verifyObjectDoesNotExist(ctx, t, f, sg2Key, &stargateapi.Stargate{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, timeout, interval)
 }
 
 // changeNumTokensValue creates a Datacenter and then changes the numTokens value
@@ -1355,7 +1355,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dcKey, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // Create a cluster with encryption options and Stargate.
@@ -1797,13 +1797,6 @@ func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framew
 		}
 		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
 	}, timeout, interval, "failed to verify that finalizer was added")
-}
-
-func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Framework, key framework.ClusterKey, obj client.Object) {
-	assert.Eventually(t, func() bool {
-		err := f.Get(ctx, key, obj)
-		return err != nil && errors.IsNotFound(err)
-	}, timeout, interval, "failed to verify object does not exist", key)
 }
 
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
