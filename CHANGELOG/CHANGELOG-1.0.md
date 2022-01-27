@@ -13,12 +13,15 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## Unreleased
+
 * [FEATURE] [#21](https://github.com/k8ssandra/k8ssandra-operator/issues/21) Add datacenter to existing cluster
+* [ENHANCEMENT] [#308](https://github.com/k8ssandra/k8ssandra-operator/issues/308) Improve logic to compute Reaper
+  availability mode and remove Reaper DC template
 
 ## v1.0.0-alpha.3 2022-01-23
 
 * [CHANGE] [#232](https://github.com/k8ssandra/k8ssandra-operator/issues/232) Use ReconcileResult in K8ssandraClusterReconciler
-* [CHANGE] [#237](https://github.com/k8ssandra/k8ssandra-operator/issues/237) Add cass-operator dev kutomization
+* [CHANGE] [#237](https://github.com/k8ssandra/k8ssandra-operator/issues/237) Add cass-operator dev kustomization
 * [FEATURE] [#276](https://github.com/k8ssandra/k8ssandra-operator/issues/276) Enable Reaper UI authentication
 * [FEATURE] [#249](https://github.com/k8ssandra/k8ssandra-operator/issues/249) Expose all Cassandra yaml settings in a structured fashion in the k8c CRD
 * [FEATURE] [#45](https://github.com/k8ssandra/k8ssandra-operator/issues/45) Migrate the Medusa controllers to k8ssandra-operator

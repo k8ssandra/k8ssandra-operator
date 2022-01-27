@@ -24,11 +24,6 @@ spec:
             heapSize: 384Mi
         networking:
           hostNetwork: true
-        reaper:
-          autoScheduling:
-            enabled: true
-            repairType: ADAPTIVE
-            timeBeforeFirstSchedule: P1D
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
@@ -46,9 +41,6 @@ spec:
             heapSize: 384Mi
         networking:
           hostNetwork: true
-        reaper:
-          autoScheduling:
-            enabled: false
   stargate:
     size: 1
     heapSize: 384Mi
@@ -69,4 +61,5 @@ spec:
       failureThreshold: 20
       successThreshold: 1
       timeoutSeconds: 20
-  reaper: { }
+  reaper:
+    deploymentMode: PER_DC

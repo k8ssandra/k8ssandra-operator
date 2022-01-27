@@ -39,7 +39,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
 
-	if !kc.HasReapers() {
+	if kc.Spec.Reaper == nil {
 		return result.Continue()
 	}
 
@@ -69,12 +69,16 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	kc *api.K8ssandraCluster,
 	dcTemplate api.CassandraDatacenterTemplate,
 	actualDc *cassdcapi.CassandraDatacenter,
+	actualDcIndex int,
 	logger logr.Logger,
 	remoteClient client.Client,
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	reaperTemplate := reaper.Coalesce(kc.Spec.Reaper.DeepCopy(), dcTemplate.Reaper.DeepCopy())
+	reaperTemplate := kc.Spec.Reaper.DeepCopy()
+	if reaperTemplate != nil && reaperTemplate.DeploymentMode == reaper.DeploymentModeSingle && actualDcIndex > 0 {
+		reaperTemplate = nil
+	}
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
 		Name:      reaper.DefaultResourceName(actualDc),

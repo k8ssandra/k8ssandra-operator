@@ -470,13 +470,11 @@ func newReaper(namespace string) *reaperapi.Reaper {
 			Name:      reaperName,
 		},
 		Spec: reaperapi.ReaperSpec{
-			ReaperClusterTemplate: reaperapi.ReaperClusterTemplate{
-				ReaperDatacenterTemplate: reaperapi.ReaperDatacenterTemplate{
-					// custom image for the main container, but default image for the init container
-					ContainerImage: &images.Image{
-						Name:          "cassandra-reaper-custom",
-						PullSecretRef: &corev1.LocalObjectReference{Name: "main-secret"},
-					},
+			ReaperTemplate: reaperapi.ReaperTemplate{
+				// custom image for the main container, but default image for the init container
+				ContainerImage: &images.Image{
+					Name:          "cassandra-reaper-custom",
+					PullSecretRef: &corev1.LocalObjectReference{Name: "main-secret"},
 				},
 			},
 			DatacenterRef: reaperapi.CassandraDatacenterRef{

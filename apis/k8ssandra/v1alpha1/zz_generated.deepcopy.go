@@ -234,11 +234,6 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		*out = new(stargatev1alpha1.StargateDatacenterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Reaper != nil {
-		in, out := &in.Reaper, &out.Reaper
-		*out = new(reaperv1alpha1.ReaperDatacenterTemplate)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.MgmtAPIHeap != nil {
 		in, out := &in.MgmtAPIHeap, &out.MgmtAPIHeap
 		x := (*in).DeepCopy()
