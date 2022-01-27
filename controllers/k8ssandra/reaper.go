@@ -76,7 +76,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	reaperTemplate := kc.Spec.Reaper.DeepCopy()
-	if kc.Spec.Reaper.DeploymentMode == reaper.DeploymentModeSingle && actualDcIndex > 0 {
+	if reaperTemplate != nil && reaperTemplate.DeploymentMode == reaper.DeploymentModeSingle && actualDcIndex > 0 {
 		reaperTemplate = nil
 	}
 	reaperKey := types.NamespacedName{
