@@ -4,15 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"
@@ -135,6 +136,9 @@ func TestOperator(t *testing.T) {
 		testFunc:      multiDcAuthOnOff,
 		fixture:       "multi-dc-auth",
 		deployTraefik: true,
+	}))
+	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
+		testFunc: controllerRestart,
 	}))
 }
 
