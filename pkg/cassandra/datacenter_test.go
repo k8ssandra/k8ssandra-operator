@@ -309,6 +309,16 @@ func TestCoalesce(t *testing.T) {
 				JmxInitContainerImage: &images.Image{Name: "dc-image"},
 			},
 		},
+		{
+			name:            "Stopped flag",
+			clusterTemplate: &api.CassandraClusterTemplate{},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				Stopped: true,
+			},
+			want: &DatacenterConfig{
+				Stopped: true,
+			},
+		},
 	}
 
 	for _, tc := range tests {

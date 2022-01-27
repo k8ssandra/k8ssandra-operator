@@ -40,16 +40,20 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 // That cannot be done when configuration replication through CQL which is why this func
 // should only be used for system keyspaces.
 func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
-	var datacenters []api.CassandraDatacenterTemplate
-	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-		datacenters = make([]api.CassandraDatacenterTemplate, 0)
-		for _, dc := range kc.Spec.Cassandra.Datacenters {
-			if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
+	datacenters := make([]api.CassandraDatacenterTemplate, 0)
+	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if dc.Stopped {
+			continue
+		}
+		if initialized {
+			status, found := kc.Status.Datacenters[dc.Meta.Name]
+			if found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
 				datacenters = append(datacenters, dc)
 			}
+		} else {
+			datacenters = append(datacenters, dc)
 		}
-	} else {
-		datacenters = kc.Spec.Cassandra.Datacenters
 	}
 	return datacenters
 }

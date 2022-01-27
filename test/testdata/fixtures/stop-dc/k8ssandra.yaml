@@ -1,0 +1,69 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: cluster1
+spec:
+  cassandra:
+    serverVersion: "4.0.1"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+    config:
+      cassandraYaml:
+        auto_snapshot: false
+        memtable_flush_writers: 1
+        commitlog_segment_size_in_mb: 2
+        concurrent_compactors: 1
+        compaction_throughput_mb_per_sec: 0
+        sstable_preemptive_open_interval_in_mb: 0
+        key_cache_size_in_mb: 0
+        thrift_prepared_statements_cache_size_mb: 1
+        prepared_statements_cache_size_mb: 1
+        slow_query_log_timeout_in_ms: 0
+        counter_cache_size_in_mb: 0
+        concurrent_reads: 2
+        concurrent_writes: 2
+        concurrent_counter_writes: 2
+      jvmOptions:
+        heapSize: 384Mi
+    networking:
+      hostNetwork: true
+    resources:
+      limits:
+        memory: 512Mi
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+      - metadata:
+          name: dc2
+        k8sContext: kind-k8ssandra-1
+        size: 1
+  reaper:
+    deploymentMode: SINGLE
+  stargate:
+    size: 1
+    heapSize: 384Mi
+    cassandraConfigMapRef:
+      name: cassandra-config
+    resources:
+      limits:
+        memory: 512Mi
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20

@@ -68,6 +68,7 @@ jobs:
           - MultiDcAuthOnOff
           - MultiDcEncryptionWithStargate
           - MultiDcEncryptionWithReaper
+          - StopAndRestartDc
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
@@ -134,4 +135,3 @@ jobs:
         with:
           name: k8s-logs-${{ env.uploaddir_name }}
           path: ./build/test
-

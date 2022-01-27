@@ -5450,6 +5450,16 @@ spec:
                           required:
                           - size
                           type: object
+                        stopped:
+                          default: false
+                          description: Stopped means that the datacenter will be stopped.
+                            Use this for maintenance or for cost saving. A stopped
+                            CassandraDatacenter will have no running server pods,
+                            like using "stop" with  traditional System V init scripts.
+                            Other Kubernetes resources will be left intact, and volumes
+                            will re-attach when the CassandraDatacenter workload is
+                            resumed.
+                          type: boolean
                         storageConfig:
                           description: StorageConfig is the persistent storage requirements
                             for each Cassandra pod. This includes everything under

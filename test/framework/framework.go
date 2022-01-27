@@ -104,6 +104,15 @@ func (k ClusterKey) String() string {
 	return k.K8sContext + string(types.Separator) + k.Namespace + string(types.Separator) + k.Name
 }
 
+func NewClusterKey(context, namespace, name string) ClusterKey {
+	return ClusterKey{
+		K8sContext: context,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+}
 func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
@@ -247,6 +256,26 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+		dc.Status.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterInitialized,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+	})
+}
+
+// SetDatacenterStatusStopped fetches the CassandraDatacenter specified by key and persists
+// a status update to make the CassandraDatacenter stopped. It sets the DatacenterStopped and
+// DatacenterInitialized conditions to true.
+func (f *Framework) SetDatacenterStatusStopped(ctx context.Context, key ClusterKey) error {
+	now := metav1.Now()
+	return f.PatchDatacenterStatus(ctx, key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterStopped,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})

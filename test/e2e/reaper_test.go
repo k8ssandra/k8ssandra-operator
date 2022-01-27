@@ -124,10 +124,10 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, 0, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, "test-dc2-default-sts-0", 2, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, "test-dc2-default-sts-0", 2, 0, "-u", username, "-pw", password)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")

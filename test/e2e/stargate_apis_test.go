@@ -53,6 +53,15 @@ func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int,
 	checkRowCountNative(t, connection, 10, tableName, keyspaceName)
 }
 
+// This is a simplified test that is able to pass even when the cluster is operating in downgraded mode, e.g. when a DC
+// is down.
+func testStargateNativeApiSimple(t *testing.T, ctx context.Context, k8sContextIdx int, username string, password string) {
+	connection := openCqlClientConnection(t, ctx, k8sContextIdx, username, password)
+	defer connection.Close()
+	response := sendQuery(t, connection, "SELECT peer FROM system.peers")
+	assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult")
+}
+
 func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
 	tableName := fmt.Sprintf("table_%s", rand.String(6))
 	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
@@ -256,7 +265,7 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 	))
 	require.IsType(t, &message.SchemaChangeResult{}, response.Body.Message, "Expected CREATE TABLE response to be of type SchemaChangeResult")
 	response = sendQuery(t, connection, fmt.Sprintf("TRUNCATE %s.%s", keyspaceName, tableName))
-	assert.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected TRUNCATE response to be of type VoidResult")
+	require.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected TRUNCATE response to be of type VoidResult")
 }
 
 func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
@@ -273,9 +282,10 @@ func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRo
 
 func checkRowCountNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
 	response := sendQuery(t, connection, fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName))
-	assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult")
-	result := response.Body.Message.(*message.RowsResult)
-	assert.Len(t, result.Data, nbRows, "Expected SELECT query to return %d rows", nbRows)
+	if assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult") {
+		result := response.Body.Message.(*message.RowsResult)
+		assert.Len(t, result.Data, nbRows, "Expected SELECT query to return %d rows", nbRows)
+	}
 }
 
 func sendQuery(t *testing.T, connection *client.CqlClientConnection, query string) *frame.Frame {

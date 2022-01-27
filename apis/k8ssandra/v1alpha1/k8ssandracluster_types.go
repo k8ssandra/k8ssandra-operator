@@ -275,6 +275,14 @@ type CassandraDatacenterTemplate struct {
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
+	// Stopped means that the datacenter will be stopped. Use this for maintenance or for cost saving. A stopped
+	// CassandraDatacenter will have no running server pods, like using "stop" with  traditional System V init scripts.
+	// Other Kubernetes resources will be left intact, and volumes will re-attach when the CassandraDatacenter
+	// workload is resumed.
+	// +optional
+	// +kubebuilder:default=false
+	Stopped bool `json:"stopped,omitempty"`
+
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
 	// +optional
