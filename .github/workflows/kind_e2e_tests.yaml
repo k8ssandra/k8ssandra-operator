@@ -79,6 +79,7 @@ jobs:
           - CreateSingleReaper
           - CreateReaperAndDatacenter
           - CreateSingleMedusa
+          - ConfigControllerRestarts
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
