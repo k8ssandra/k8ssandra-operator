@@ -11,6 +11,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/bombsimon/logrusr"
 	"github.com/go-logr/logr"
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
@@ -536,4 +537,11 @@ func (f *Framework) ContainerHasEnvVar(container corev1.Container, envVarName, e
 		}
 	}
 	return false
+}
+
+func (f *Framework) AssertObjectDoesNotExist(ctx context.Context, t *testing.T, key ClusterKey, obj client.Object, timeout, interval time.Duration) {
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, key, obj)
+		return err != nil && k8serrors.IsNotFound(err)
+	}, timeout, interval, "failed to verify object does not exist", key)
 }
