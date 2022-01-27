@@ -71,7 +71,7 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// ClientConfig without proper annotations, must be a new item, shutdown to refresh correct list
 	if !metav1.HasAnnotation(clientConfig.ObjectMeta, ClientConfigHashAnnotation) ||
-		metav1.HasAnnotation(clientConfig.ObjectMeta, KubeSecretHashAnnotation) {
+		!metav1.HasAnnotation(clientConfig.ObjectMeta, KubeSecretHashAnnotation) {
 		logger.Info(fmt.Sprintf("ClientConfig %v is missing hash annotations, shutting down the operator", req))
 		r.shutdownFunc()
 		return ctrl.Result{}, nil
@@ -97,7 +97,9 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 // SetupWithManager will only set this controller to listen in control plane cluster
 func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc context.CancelFunc) error {
 	r.shutdownFunc = cancelFunc
-	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName)
+	if r.secretFilter == nil {
+		r.secretFilter = make(map[types.NamespacedName]types.NamespacedName)
+	}
 
 	// We should only reconcile objects that match the rules
 	toMatchingClientConfig := func(secret client.Object) []reconcile.Request {
@@ -119,6 +121,8 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 // InitClientConfigs will fetch clientConfigs from the current cluster (control plane cluster) and create all the required Cluster objects for
 // other controllers to use. Not called from SetupWithManager since other controllers need the []cluster.Cluster array
 func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl.Manager, watchNamespace string) ([]cluster.Cluster, error) {
+	logger := log.FromContext(ctx)
+
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 	clientConfigs := make([]configapi.ClientConfig, 0)
 	namespaces := strings.Split(watchNamespace, ",")
@@ -133,6 +137,9 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	}
 
 	additionalClusters := make([]cluster.Cluster, 0, len(clientConfigs))
+
+	// TODO Secret could point to multiple clientConfigs. Shouldn't matter in our current use-case
+	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
 		// Calculate hashes
@@ -188,6 +195,8 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 		additionalClusters = append(additionalClusters, c)
 	}
 
+	logger.V(1).Info(fmt.Sprintf("Finished initializing %d client configs", len(clientConfigs)))
+
 	return additionalClusters, nil
 }
 
@@ -199,8 +208,8 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 		return "", "", err
 	}
 
-	cfgHash := utils.DeepHashString(clientCfg)
-	secretHash := utils.DeepHashString(secret)
+	cfgHash := utils.DeepHashString(clientCfg.Spec)
+	secretHash := utils.DeepHashString(secret.Data)
 
 	return cfgHash, secretHash, nil
 }

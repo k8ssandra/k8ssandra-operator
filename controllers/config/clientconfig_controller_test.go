@@ -81,7 +81,6 @@ func TestClientConfigReconciler(t *testing.T) {
 
 	// Secret controller tests
 	t.Run("InitClientConfigs", testEnv.ControllerTest(ctx, testInitClientConfigs))
-	t.Run("ClientConfigModification", testEnv.ControllerTest(ctx, testClientConfigModification))
 	t.Run("SecretModification", testEnv.ControllerTest(ctx, testSecretModification))
 }
 
