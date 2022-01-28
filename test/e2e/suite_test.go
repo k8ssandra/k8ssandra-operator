@@ -236,9 +236,12 @@ func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 
 		setTestNamespaceNames(opts)
 
-		fixtureDir, err := getTestFixtureDir(opts.fixture)
-		if err != nil {
-			t.Fatalf("failed to get fixture directory for %s: %v", opts.fixture, err)
+		fixtureDir := ""
+		if opts.fixture != "" {
+			fixtureDir, err = getTestFixtureDir(opts.fixture)
+			if err != nil {
+				t.Fatalf("failed to get fixture directory for %s: %v", opts.fixture, err)
+			}
 		}
 
 		err = beforeTest(t, f, fixtureDir, opts)
@@ -356,14 +359,16 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		}
 	}
 
-	fixtureDir, err := filepath.Abs(fixtureDir)
-	if err != nil {
-		return err
-	}
+	if fixtureDir != "" {
+		fixtureDir, err := filepath.Abs(fixtureDir)
+		if err != nil {
+			return err
+		}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
-		t.Log("kubectl apply failed")
-		return err
+		if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
+			t.Log("kubectl apply failed")
+			return err
+		}
 	}
 
 	return nil
