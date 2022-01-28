@@ -180,7 +180,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, single bool) func(*testing.T) {
 	return func(t *testing.T) {
-		namespace := rand.String(9)
+		namespace := framework.CleanupForKubernetes(rand.String(9))
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}

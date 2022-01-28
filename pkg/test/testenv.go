@@ -218,7 +218,8 @@ func (e *MultiClusterTestEnv) GetControlPlaneEnvTest() *envtest.Environment {
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
 func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
-	namespace := rand.String(9)
+	namespace := framework.CleanupForKubernetes(rand.String(9))
+
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
 		controlPlaneCluster := e.Clients[primaryCluster]
