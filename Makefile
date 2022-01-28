@@ -163,6 +163,10 @@ kind-e2e-test: multi-up e2e-test
 
 single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
+	make NUM_CLUSTERS=1 create-clientconfig
+	kubectl config use-context kind-k8ssandra-0
+	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
+	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 
 single-reload: build manifests kustomize docker-build kind-load-image cert-manager
 	kubectl config use-context kind-k8ssandra-0
