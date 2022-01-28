@@ -8,6 +8,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
@@ -181,15 +182,25 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 
 	if dc != nil {
 		if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
-			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", kcKey)
+			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
 			// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
 			return result.Done()
+		}
+
+		if !annotations.HasAnnotationWithValue(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true") {
+			patch := client.MergeFrom(dc.DeepCopy())
+			annotations.AddAnnotation(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true")
+			if err = remoteClient.Patch(ctx, dc, patch); err != nil {
+				return result.Error(fmt.Errorf("failed to add %s annotation to dc: %v", cassdcapi.DecommissionOnDeleteAnnotation, err))
+			}
 		}
 
 		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
 			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
 		}
 		logger.Info("Deleted CassandraDatacenter", utils.GetKey(dc))
+		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+		return result.Done()
 	}
 
 	delete(kc.Status.Datacenters, dcName)

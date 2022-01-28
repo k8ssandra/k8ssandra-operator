@@ -987,6 +987,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 			return strings.Contains(output, "'dc1': '1'") && !strings.Contains(output, "'dc2': '1'")
 		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
+
+	t.Log("check that nodes in dc1 do not see nodes in dc2 anymore")
+	pod = "test-dc1-default-sts-0"
+	count = 1
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
