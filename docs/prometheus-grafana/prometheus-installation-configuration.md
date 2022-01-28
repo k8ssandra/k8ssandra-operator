@@ -10,6 +10,25 @@ To use Prometheus for monitoring, you need to have the Prometheus operator insta
 
 The Prometheus operator installs the ServiceMonitor CRD, which is the integration point we use to tell Prometheus how to find the Stargate and Cassandra pods and what endpoints on those pods to scrape.
 
+### Permissions
+
+When Prometheus operator is installed via `kube-prometheus`, it does not provide itself with sufficient permissions to watch pods in other namespaces.
+
+To address this, you should add the following RBAC permissions to the `ClusterRole` `prometheus-k8s`.
+
+```
+  - verbs:
+    - get
+    - list
+    - watch
+    apiGroups:
+    - ''
+    resources:
+    - pods
+    - endpoints
+    - services
+```
+
 ### Enabling Prometheus for Cassandra Datacenters
 
 There are two ways to enable Prometheus monitoring for CassandraDatacenters. As with most Cassandra related configurations, it can be enabled cluster-wide as per the below:
