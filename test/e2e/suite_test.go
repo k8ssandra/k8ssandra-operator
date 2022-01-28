@@ -261,7 +261,11 @@ func setTestNamespaceNames(opts *e2eTestOpts) {
 	if opts.clusterScoped {
 		opts.operatorNamespace = "k8ssandra-operator"
 	} else {
-		opts.operatorNamespace = string(opts.fixture) + "-" + rand.String(6)
+		if opts.fixture != "" {
+			opts.operatorNamespace = string(opts.fixture) + "-" + rand.String(6)
+		} else {
+			opts.operatorNamespace = framework.CleanupForKubernetes(rand.String(9))
+		}
 		opts.sutNamespace = opts.operatorNamespace
 	}
 }
