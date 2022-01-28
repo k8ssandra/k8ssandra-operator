@@ -73,14 +73,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return result.Error(err), actualDcs
 		}
+		if idx > 0 {
+			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
+		}
+
+		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
 
 		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
 		logger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
-
-		if idx > 0 {
-			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
-		}
 
 		if recResult := r.checkRebuildAnnotation(ctx, kc, dcKey.Name); recResult.Completed() {
 			return recResult, actualDcs
