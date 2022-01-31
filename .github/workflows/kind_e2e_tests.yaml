@@ -133,9 +133,15 @@ jobs:
         run: make IMG=${{ needs.build_image.outputs.image }} create-kind-cluster kind-load-image
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
+      - name: Get artefact upload directory
+        if: ${{ failure() }}
+        run: |
+          uploaddir_name=$(echo ${{ matrix.e2e_test }}| sed 's/\//__/g')
+          echo 'setting uploaddir_name to' $uploaddir_name
+          echo "::set-env name=uploaddir_name::$uploaddir_name"
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
         with:
-          name: k8s-logs-${{ matrix.e2e_test }}
+          name: k8s-logs-${{ env.uploaddir_name }}
           path: ./build/test
