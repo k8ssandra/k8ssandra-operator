@@ -2,15 +2,18 @@ package e2e
 
 import (
 	"context"
+	"testing"
+
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 )
 
 func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace string, f *framework.E2eFramework) {
 	require := require.New(t)
+	assert.FailNow(t, "Deliberate failure.")
 
 	dc1Namespace := "test-1"
 	dc2Namespace := "test-2"
