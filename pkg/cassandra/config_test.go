@@ -158,7 +158,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
-                "num_tokens": 256
+                "num_tokens": 256,
+				"start_rpc": false
               },
               "jvm-options": {
                 "initial_heap_size": 1073741824,
@@ -300,7 +301,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			want: `{
               "cassandra-yaml": {
 				"num_tokens": 256,
-                "thrift_prepared_statements_cache_size_mb": 1
+                "thrift_prepared_statements_cache_size_mb": 1,
+				"start_rpc": false
               }
             }`,
 		},
@@ -328,7 +330,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
               "cassandra-yaml": {
-                "num_tokens": 32
+                "num_tokens": 32,
+				"start_rpc": false
               }
             }`,
 		},
@@ -388,7 +391,8 @@ func TestCreateJsonConfig(t *testing.T) {
 					"permissions_update_interval_in_ms": 456,
 					"credentials_validity_in_ms": 789,
 					"credentials_update_interval_in_ms": 789,
-					"num_tokens": 256
+					"num_tokens": 256,
+					"start_rpc":false
 				}
 		   }`,
 		},
@@ -803,6 +807,7 @@ func TestCreateJsonConfig(t *testing.T) {
 					"snapshot_before_compaction": true,
 					"snapshot_on_duplicate_row_detection": true,
 					"sstable_preemptive_open_interval_in_mb": 241,
+					"start_rpc":false, 
 					"stream_throughput_outbound_megabits_per_sec": 246,
 					"streaming_keep_alive_period_in_secs": 248,
 					"streaming_socket_timeout_in_ms": 249,
