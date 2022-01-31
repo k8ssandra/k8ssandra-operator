@@ -138,7 +138,7 @@ jobs:
         run: |
           uploaddir_name=$(echo ${{ matrix.e2e_test }}| sed 's/\//__/g')
           echo 'setting uploaddir_name to' $uploaddir_name
-          echo "::set-env name=uploaddir_name::$uploaddir_name"
+          echo "uploaddir_name=$uploaddir_name" >> $GITHUB_ENV
       - name: Archive k8s logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
