@@ -131,10 +131,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	volumes := []corev1.Volume{}
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
 	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
-		clientEncryptionVolumes := cassandra.EncryptionVolumes("client", *reaper.Spec.ClientEncryptionStores)
-		for _, volume := range clientEncryptionVolumes {
-			volumes = append(volumes, volume)
-		}
+		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("client", *reaper.Spec.ClientEncryptionStores)
+		volumes = append(volumes, *keystoreVolume)
+		volumes = append(volumes, *truststoreVolume)
 
 		for _, volume := range volumes {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{

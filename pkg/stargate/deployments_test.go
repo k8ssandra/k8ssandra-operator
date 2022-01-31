@@ -42,32 +42,22 @@ var (
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
 				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
 			},
-			ServerEncryptionStores: &encryption.Stores{
-				KeystoreSecretRef: corev1.LocalObjectReference{
-					Name: "server-keystore-secret",
+			CassandraEncryption: &api.CassandraEncryption{
+				ServerEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: corev1.LocalObjectReference{
+						Name: "server-keystore-secret",
+					},
+					TruststoreSecretRef: &corev1.LocalObjectReference{
+						Name: "server-truststore-secret",
+					},
 				},
-				KeystorePasswordSecretRef: corev1.LocalObjectReference{
-					Name: "server-keystore-password-secret",
-				},
-				TruststoreSecretRef: corev1.LocalObjectReference{
-					Name: "server-truststore-secret",
-				},
-				TruststorePasswordSecretRef: corev1.LocalObjectReference{
-					Name: "server-truststore-password-secret",
-				},
-			},
-			ClientEncryptionStores: &encryption.Stores{
-				KeystoreSecretRef: corev1.LocalObjectReference{
-					Name: "client-keystore-secret",
-				},
-				KeystorePasswordSecretRef: corev1.LocalObjectReference{
-					Name: "client-keystore-password-secret",
-				},
-				TruststoreSecretRef: corev1.LocalObjectReference{
-					Name: "client-truststore-secret",
-				},
-				TruststorePasswordSecretRef: corev1.LocalObjectReference{
-					Name: "client-truststore-password-secret",
+				ClientEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: corev1.LocalObjectReference{
+						Name: "client-keystore-secret",
+					},
+					TruststoreSecretRef: &corev1.LocalObjectReference{
+						Name: "client-truststore-secret",
+					},
 				},
 			},
 		},

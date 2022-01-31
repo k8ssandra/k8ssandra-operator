@@ -9,9 +9,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -82,20 +80,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 				key := client.ObjectKey{Namespace: namespace, Name: sg.Name}
 				if !errors.IsNotFound(err) {
 					logger.Error(err, "Failed to delete Stargate", "Stargate", key,
-						"Context", dcTemplate.K8sContext)
-					hasErrors = true
-				}
-			}
-		}
-
-		// Delete the Stargate generated config map
-		sgConfigMap := corev1.ConfigMap{}
-		sgConfigMapKey := client.ObjectKey{Namespace: namespace, Name: stargate.CassandraConfigMap}
-		if err = remoteClient.Get(ctx, sgConfigMapKey, &sgConfigMap); err == nil {
-			if err = remoteClient.Delete(ctx, &sgConfigMap); err != nil {
-				key := client.ObjectKey{Namespace: namespace, Name: stargate.CassandraConfigMap}
-				if !errors.IsNotFound(err) {
-					logger.Error(err, "Failed to delete Cassandra ConfigMap", "Stargate", key,
 						"Context", dcTemplate.K8sContext)
 					hasErrors = true
 				}

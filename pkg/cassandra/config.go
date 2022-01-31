@@ -9,6 +9,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 )
 
 const (
@@ -24,13 +25,26 @@ type config struct {
 	cassandraVersion     string
 	jvmOptions           jvmOptions
 	additionalJvmOptions []string
+	encryptionStores     map[string]encryption.EncryptionStoresYaml
+}
+
+type ServerEncryptionOptionsYaml struct {
+	encryption.ServerEncryptionOptions `json:",inline"`
+	encryption.EncryptionStoresYaml    `json:",inline"`
+}
+
+type ClientEncryptionOptionsYaml struct {
+	encryption.ClientEncryptionOptions `json:",inline"`
+	encryption.EncryptionStoresYaml    `json:",inline"`
 }
 
 // CassYamlIR is an internal representation of the cassandra.yaml. It is required because we want to make some options (esp. start_rpc) invisible to the user,
 // but some of those options still need to be rendered out into the final cassandra.yaml.
 type CassYamlIR struct {
-	api.CassandraYaml `json:",inline,omitempty"`
-	StartRpc          *bool `json:"start_rpc,omitempty"`
+	api.CassandraYaml           `json:",inline,omitempty"`
+	StartRpc                    *bool                        `json:"start_rpc,omitempty"`
+	serverEncryptionOptionsYaml *ServerEncryptionOptionsYaml `json:"server_encryption_options,omitempty"`
+	clientEncryptionOptionsYaml *ClientEncryptionOptionsYaml `json:"client_encryption_options,omitempty"`
 }
 
 // jvmOptions is an internal type that is intended to be marshaled into JSON that is valid
@@ -50,7 +64,7 @@ func isCassandra4(version string) bool {
 }
 
 func (c config) MarshalJSON() ([]byte, error) {
-	config := make(map[string]interface{})
+	cassConfig := make(map[string]interface{})
 
 	// Even though we default to Cassandra's stock defaults for num_tokens, we need to
 	// explicitly set it because the config builder defaults to num_tokens: 1
@@ -62,13 +76,13 @@ func (c config) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	config["cassandra-yaml"] = c.CassYamlIR
+	cassConfig["cassandra-yaml"] = c.CassYamlIR
 
 	if c.jvmOptions.InitialHeapSize != nil || c.jvmOptions.MaxHeapSize != nil || c.jvmOptions.HeapNewGenSize != nil {
 		if isCassandra4(c.cassandraVersion) {
-			config["jvm-server-options"] = c.jvmOptions
+			cassConfig["jvm-server-options"] = c.jvmOptions
 		} else {
-			config["jvm-options"] = c.jvmOptions
+			cassConfig["jvm-options"] = c.jvmOptions
 		}
 	}
 
@@ -76,32 +90,51 @@ func (c config) MarshalJSON() ([]byte, error) {
 	// cassandra-env-sh templates; it is safer to include this parameter in cassandra-env-sh, so that we can guarantee
 	// that our options will be applied last and will override whatever options were specified by default.
 	if c.additionalJvmOptions != nil {
-		config["cassandra-env-sh"] = map[string]interface{}{
+		cassConfig["cassandra-env-sh"] = map[string]interface{}{
 			"additional-jvm-opts": c.additionalJvmOptions,
 		}
 	}
 
-	return json.Marshal(&config)
+	return json.Marshal(&cassConfig)
 }
 
 // NewIRYaml returns a new Cassandra Yaml with all internal fields set to their mandatory values. For example, StartRpc must always be set false,
 // NewIRYaml ensures this happens.
 func NewIRYaml(cassAPIYaml api.CassandraYaml) CassYamlIR {
-	return CassYamlIR{
+	newIrYaml := CassYamlIR{
 		CassandraYaml: cassAPIYaml,
 		StartRpc:      pointer.Bool(false),
 	}
+
+	// Set the values that will be sent to cass-operator for server encryption options
+	if cassAPIYaml.ServerEncryptionOptions != nil {
+		newIrYaml.serverEncryptionOptionsYaml = &ServerEncryptionOptionsYaml{
+			ServerEncryptionOptions: *cassAPIYaml.ServerEncryptionOptions,
+		}
+		newIrYaml.CassandraYaml.ServerEncryptionOptions = nil
+	}
+
+	if cassAPIYaml.ClientEncryptionOptions != nil {
+		newIrYaml.clientEncryptionOptionsYaml = &ClientEncryptionOptionsYaml{
+			ClientEncryptionOptions: *cassAPIYaml.ClientEncryptionOptions,
+		}
+		newIrYaml.CassandraYaml.ClientEncryptionOptions = nil
+	}
+
+	return newIrYaml
 }
 
-func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptionStoresSecrets EncryptionStoresPasswords) (config, error) {
+func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptionStoresSecrets encryption.EncryptionStoresPasswords) (config, error) {
 	// Filters out config element which do not exist in the Cassandra version in use
-	apiConfig = addEncryptionOptions(&apiConfig, encryptionStoresSecrets, cassandraVersion)
 	apiConfig = *apiConfig.DeepCopy()
 	irCfgYaml := NewIRYaml(apiConfig.CassandraYaml)
 	filterConfigForVersion(cassandraVersion, &irCfgYaml)
-	cfg := config{CassYamlIR: irCfgYaml, cassandraVersion: cassandraVersion}
-	err := validateConfig(&irCfgYaml)
 
+	// Filters out config element which do not exist in the Cassandra version in use
+	encryptionStoresYaml := addEncryptionOptions(&irCfgYaml, encryptionStoresSecrets, cassandraVersion)
+	filterConfigForVersion(cassandraVersion, &irCfgYaml)
+	cfg := config{CassYamlIR: irCfgYaml, cassandraVersion: cassandraVersion, encryptionStores: encryptionStoresYaml}
+	err := validateConfig(&irCfgYaml)
 	if err != nil {
 		return cfg, err
 	}
@@ -122,38 +155,43 @@ func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptio
 	return cfg, nil
 }
 
-func addEncryptionOptions(apiConfig *api.CassandraConfig, encryptionStoresSecrets EncryptionStoresPasswords, cassandraVersion string) api.CassandraConfig {
-	updatedConfig := apiConfig.DeepCopy()
-	if updatedConfig.CassandraYaml.ClientEncryptionOptions == nil && updatedConfig.CassandraYaml.ServerEncryptionOptions == nil {
-		return *updatedConfig
+func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encryption.EncryptionStoresPasswords, cassandraVersion string) map[string]encryption.EncryptionStoresYaml {
+	encryptionStoresYaml := make(map[string]encryption.EncryptionStoresYaml)
+	if irCfgYaml.clientEncryptionOptionsYaml == nil && irCfgYaml.serverEncryptionOptionsYaml == nil {
+		return encryptionStoresYaml
 	}
 
-	if updatedConfig.CassandraYaml.ClientEncryptionOptions != nil {
-		if updatedConfig.CassandraYaml.ClientEncryptionOptions.Enabled {
+	if irCfgYaml.clientEncryptionOptionsYaml != nil {
+		if irCfgYaml.clientEncryptionOptionsYaml.Enabled {
 			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "keystore"), "keystore")
 			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "truststore"), "truststore")
-			updatedConfig.CassandraYaml.ClientEncryptionOptions.Keystore = pointer.String(keystorePath)
-			updatedConfig.CassandraYaml.ClientEncryptionOptions.Truststore = pointer.String(truststorePath)
-			updatedConfig.CassandraYaml.ClientEncryptionOptions.KeystorePassword = &encryptionStoresSecrets.ClientKeystorePassword
-			updatedConfig.CassandraYaml.ClientEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ClientTruststorePassword
+			encryptionStoresYaml["client"] = encryption.EncryptionStoresYaml{
+				Keystore:           keystorePath,
+				Truststore:         truststorePath,
+				KeystorePassword:   encryptionStoresSecrets.ClientKeystorePassword,
+				TruststorePassword: encryptionStoresSecrets.ClientTruststorePassword,
+			}
 		}
 	}
-	if updatedConfig.CassandraYaml.ServerEncryptionOptions != nil {
-		if *updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled {
+
+	if irCfgYaml.serverEncryptionOptionsYaml != nil {
+		if irCfgYaml.serverEncryptionOptionsYaml.InternodeEncryption != "none" {
 			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "keystore"), "keystore")
 			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "truststore"), "truststore")
-			updatedConfig.CassandraYaml.ServerEncryptionOptions.Keystore = pointer.String(keystorePath)
-			updatedConfig.CassandraYaml.ServerEncryptionOptions.Truststore = pointer.String(truststorePath)
-			updatedConfig.CassandraYaml.ServerEncryptionOptions.KeystorePassword = &encryptionStoresSecrets.ServerKeystorePassword
-			updatedConfig.CassandraYaml.ServerEncryptionOptions.TruststorePassword = &encryptionStoresSecrets.ServerTruststorePassword
+			encryptionStoresYaml["server"] = encryption.EncryptionStoresYaml{
+				Keystore:           keystorePath,
+				Truststore:         truststorePath,
+				KeystorePassword:   encryptionStoresSecrets.ServerKeystorePassword,
+				TruststorePassword: encryptionStoresSecrets.ServerTruststorePassword,
+			}
 		}
 		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
 		if IsCassandra3(cassandraVersion) {
 			// Remove properties that don't exist in Cassandra 3.x
-			updatedConfig.CassandraYaml.ServerEncryptionOptions.Enabled = nil
+			irCfgYaml.ServerEncryptionOptions.Optional = nil
 		}
 	}
-	return *updatedConfig
+	return encryptionStoresYaml
 }
 
 // Some settings in Cassandra are using a float type, which isn't supported for CRDs.
@@ -353,7 +391,7 @@ func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 
 // CreateJsonConfig parses dcConfig into a raw JSON base64-encoded string. If config is nil
 // then nil, nil is returned
-func CreateJsonConfig(config api.CassandraConfig, cassandraVersion string, encryptionStoresSecrets EncryptionStoresPasswords) ([]byte, error) {
+func CreateJsonConfig(config api.CassandraConfig, cassandraVersion string, encryptionStoresSecrets encryption.EncryptionStoresPasswords) ([]byte, error) {
 	cfg, err := newConfig(config, cassandraVersion, encryptionStoresSecrets)
 	if err != nil {
 		return nil, err

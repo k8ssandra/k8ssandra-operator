@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -158,7 +159,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ClientEncryptionOptions *ClientEncryptionOptions `json:"client_encryption_options,omitempty"`
+	ClientEncryptionOptions *encryption.ClientEncryptionOptions `json:"client_encryption_options,omitempty"`
 
 	// Exists in trunk
 	// +optional
@@ -845,7 +846,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ServerEncryptionOptions *ServerEncryptionOptions `json:"server_encryption_options,omitempty"`
+	ServerEncryptionOptions *encryption.ServerEncryptionOptions `json:"server_encryption_options,omitempty"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -1048,107 +1049,4 @@ type TrackWarnings struct {
 	CoordinatorReadSize *int `json:"coordinator_read_size,omitempty"`
 	LocalReadSize       *int `json:"local_read_size,omitempty"`
 	RowIndexSize        *int `json:"row_index_size,omitempty"`
-}
-
-type ClientEncryptionOptions struct {
-	Enabled bool `json:"enabled"`
-
-	// +optional
-	Optional *bool `json:"optional,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	Keystore *string `json:"keystore,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	KeystorePassword *string `json:"keystore_password,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	Truststore *string `json:"truststore,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	TruststorePassword *string `json:"truststore_password,omitempty"`
-
-	// +optional
-	Protocol *string `json:"protocol,omitempty"`
-
-	// +optional
-	AcceptedProtocols *[]string `json:"accepted_protocols,omitempty"`
-
-	// +optional
-	Algorithm *string `json:"algorithm,omitempty"`
-
-	// +optional
-	StoreType *string `json:"store_type,omitempty"`
-
-	// +optional
-	CipherSuites *[]string `json:"cipher_suites,omitempty"`
-
-	// default: false
-	// +optional
-	RequireClientAuth *bool `json:"require_client_auth,omitempty"`
-}
-
-type ServerEncryptionOptions struct {
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// +optional
-	Optional *bool `json:"optional,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	Keystore *string `json:"keystore,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	KeystorePassword *string `json:"keystore_password,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	Truststore *string `json:"truststore,omitempty"`
-
-	// Should not be set explicitly in the custom resource.
-	// The operator will generate the right value based on the EncryptionStores field.
-	// +optional
-	TruststorePassword *string `json:"truststore_password,omitempty"`
-
-	// +optional
-	Protocol *string `json:"protocol,omitempty"`
-
-	// +optional
-	AcceptedProtocols *[]string `json:"accepted_protocols,omitempty"`
-
-	// +optional
-	Algorithm *string `json:"algorithm,omitempty"`
-
-	// +optional
-	StoreType *string `json:"store_type,omitempty"`
-
-	// +optional
-	CipherSuites *[]string `json:"cipher_suites,omitempty"`
-
-	// default: false
-	// +optional
-	RequireClientAuth *bool `json:"require_client_auth,omitempty"`
-
-	// default: none
-	// +optional
-	InternodeEncryption *string `json:"internode_encryption,omitempty"`
-
-	// default: false
-	// +optional
-	RequireEndpointVerification *bool `json:"require_endpoint_verification,omitempty"`
-
-	// +optional
-	EnableLegacySslStoragePort *bool `json:"enable_legacy_ssl_storage_port,omitempty"`
 }

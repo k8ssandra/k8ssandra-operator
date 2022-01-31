@@ -190,15 +190,20 @@ type StargateSpec struct {
 	// +kubebuilder:default=true
 	Auth *bool `json:"auth,omitempty"`
 
-	// Internode encryption stores which are used by Cassandra and Stargate.
-	// These should not be set explicitly by the user, they will be copied from the K8ssandraCluster object.
-	// +optional
-	ServerEncryptionStores *encryption.Stores `json:"server_encryption_stores,omitempty"`
+	CassandraEncryption *CassandraEncryption `json:"cassandraEncryption,omitempty"`
+}
 
+// Encryption settings are inherited from the CassandraDatacenter resource where Stargate is being deployed and do not need to be defined in the spec.
+// Still it is required to pass the encryption stores secrets to the Stargate pods, so that they can be mounted as volumes.
+type CassandraEncryption struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// These should not be set explicitly by the user, they will be copied from the K8ssandraCluster object.
 	// +optional
-	ClientEncryptionStores *encryption.Stores `json:"client_encryption_stores,omitempty"`
+	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
+
+	// Internode encryption stores which are used by Cassandra and Stargate.
+	// +optional
+	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 }
 
 func (in StargateSpec) IsAuthEnabled() bool {

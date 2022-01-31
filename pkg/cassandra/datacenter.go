@@ -115,7 +115,7 @@ const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, encryptionStoresSecrets EncryptionStoresPasswords) (*cassdcapi.CassandraDatacenter, error) {
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, encryptionStoresSecrets encryption.EncryptionStoresPasswords) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace

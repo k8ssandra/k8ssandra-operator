@@ -7,6 +7,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1287,12 +1288,45 @@ func TestCreateJsonConfig(t *testing.T) {
 				}
 		   }`,
 		},
+		{
+			name:             "[4.0.0] encryption",
+			cassandraVersion: "4.0.0",
+			config: api.CassandraConfig{
+				CassandraYaml: api.CassandraYaml{
+					ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
+						Enabled: true,
+					},
+					ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
+						InternodeEncryption: "all",
+					},
+				},
+			},
+			want: `{
+              "cassandra-yaml": {
+                "num_tokens": 16,
+                "client_encryption_options": {
+					"enabled": true,
+					"keystore": "/mnt/client-keystore/keystore",
+					"keystore_password": "",
+					"truststore": "/mnt/client-truststore/truststore",
+					"truststore_password": ""
+				},
+				"server_encryption_options": {
+					"internode_encryption": "all",
+					"keystore": "/mnt/server-keystore/keystore",
+					"keystore_password": "",
+					"truststore": "/mnt/server-truststore/truststore",
+					"truststore_password": ""
+				}
+              }
+            }`,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var err error
-			tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion, EncryptionStoresPasswords{})
+			tc.got, err = CreateJsonConfig(tc.config, tc.cassandraVersion, encryption.EncryptionStoresPasswords{})
 			require.NoError(t, err, "failed to create json dcConfig")
 			expected, err := gabs.ParseJSON([]byte(tc.want))
 			require.NoError(t, err, "failed to parse expected value")

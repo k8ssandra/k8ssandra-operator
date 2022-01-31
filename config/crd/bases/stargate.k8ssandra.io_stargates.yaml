@@ -915,52 +915,68 @@ spec:
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
-              client_encryption_stores:
-                description: Client encryption stores which are used by Cassandra
-                  and Reaper. These should not be set explicitly by the user, they
-                  will be copied from the K8ssandraCluster object.
+              cassandraEncryption:
+                description: Encryption settings are inherited from the CassandraDatacenter
+                  resource where Stargate is being deployed and do not need to be
+                  defined in the spec. Still it is required to pass the encryption
+                  stores secrets to the Stargate pods, so that they can be mounted
+                  as volumes.
                 properties:
-                  keystore_password_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
+                  clientEncryptionStores:
+                    description: Client encryption stores which are used by Cassandra
+                      and Reaper. These should not be set explicitly by the user,
+                      they will be copied from the K8ssandraCluster object.
                     properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                    required:
+                    - keystoreSecretRef
                     type: object
-                  keystore_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
+                  serverEncryptionStores:
+                    description: Internode encryption stores which are used by Cassandra
+                      and Stargate.
                     properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                    required:
+                    - keystoreSecretRef
                     type: object
-                  truststore_password_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                  truststore_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                required:
-                - keystore_password_secret_ref
-                - keystore_secret_ref
-                - truststore_password_secret_ref
-                - truststore_secret_ref
                 type: object
               containerImage:
                 default:
@@ -2659,53 +2675,6 @@ spec:
                       it defaults to Limits if that is explicitly specified, otherwise
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
-                type: object
-              server_encryption_stores:
-                description: Internode encryption stores which are used by Cassandra
-                  and Stargate. These should not be set explicitly by the user, they
-                  will be copied from the K8ssandraCluster object.
-                properties:
-                  keystore_password_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                  keystore_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                  truststore_password_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                  truststore_secret_ref:
-                    description: LocalObjectReference contains enough information
-                      to let you locate the referenced object inside the same namespace.
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                required:
-                - keystore_password_secret_ref
-                - keystore_secret_ref
-                - truststore_password_secret_ref
-                - truststore_secret_ref
                 type: object
               serviceAccount:
                 default: default

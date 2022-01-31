@@ -28,14 +28,8 @@ func TestNewDeployment(t *testing.T) {
 		KeystoreSecretRef: corev1.LocalObjectReference{
 			Name: "keystore-secret",
 		},
-		KeystorePasswordSecretRef: corev1.LocalObjectReference{
-			Name: "keystore-password-secret",
-		},
-		TruststoreSecretRef: corev1.LocalObjectReference{
+		TruststoreSecretRef: &corev1.LocalObjectReference{
 			Name: "truststore-secret",
-		},
-		TruststorePasswordSecretRef: corev1.LocalObjectReference{
-			Name: "truststore-password-secret",
 		},
 	}
 

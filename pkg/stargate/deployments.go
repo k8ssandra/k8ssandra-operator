@@ -21,7 +21,7 @@ import (
 const (
 	cassandraConfigDir  = "/config"
 	cassandraConfigPath = "/config/cassandra.yaml"
-	CassandraConfigMap  = "generated-cassandra-config"
+	cassandraConfigMap  = "cassandra-config"
 
 	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
 	// "{{ .Values.clusterDomain | default \"cluster.local\" }}
@@ -86,7 +86,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
 		jvmOptions := computeJvmOptions(template)
-		volumes := computeVolumes(template)
+		volumes := computeVolumes(template, dc)
 		encryptionVolumes := computeEncryptionVolumes(template, stargate.Spec)
 		volumes = append(volumes, encryptionVolumes...)
 		volumeMounts := computeVolumeMounts(template, encryptionVolumes)
@@ -339,14 +339,14 @@ func computeHeapSize(template *api.StargateTemplate) resource.Quantity {
 
 // This config map will always be created by the k8ssandra controller.
 // It will augment the user provided config map with encryption settings if enabled.
-func computeVolumes(template *api.StargateTemplate) []corev1.Volume {
+func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatacenter) []corev1.Volume {
 	var volumes []corev1.Volume
 	volumes = append(volumes, corev1.Volume{
 		Name: "cassandra-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: CassandraConfigMap,
+					Name: GeneratedConfigMapName(dc.ClusterName, dc.Name),
 				},
 			},
 		},
@@ -358,16 +358,16 @@ func computeVolumes(template *api.StargateTemplate) []corev1.Volume {
 func computeEncryptionVolumes(template *api.StargateTemplate, spec api.StargateSpec) []corev1.Volume {
 	volumes := []corev1.Volume{}
 
-	if spec.ServerEncryptionStores != nil {
-		serverEncryptionVolumes := cassandra.EncryptionVolumes("server", *spec.ServerEncryptionStores)
-		for _, volume := range serverEncryptionVolumes {
-			volumes = append(volumes, volume)
+	if spec.CassandraEncryption != nil {
+		if spec.CassandraEncryption.ServerEncryptionStores != nil {
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("server", *spec.CassandraEncryption.ServerEncryptionStores)
+			volumes = append(volumes, *keystoreVolume)
+			volumes = append(volumes, *truststoreVolume)
 		}
-	}
-	if spec.ClientEncryptionStores != nil {
-		clientEncryptionVolumes := cassandra.EncryptionVolumes("client", *spec.ClientEncryptionStores)
-		for _, volume := range clientEncryptionVolumes {
-			volumes = append(volumes, volume)
+		if spec.CassandraEncryption.ClientEncryptionStores != nil {
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("client", *spec.CassandraEncryption.ClientEncryptionStores)
+			volumes = append(volumes, *keystoreVolume)
+			volumes = append(volumes, *truststoreVolume)
 		}
 	}
 
@@ -432,4 +432,8 @@ func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraData
 		NodeAffinity:    computeNodeAffinity(dc, rack.Name),
 		PodAntiAffinity: computePodAntiAffinity(allowStargateOnDataNodes, dc, rack.Name),
 	}
+}
+
+func GeneratedConfigMapName(clusterName, dcName string) string {
+	return fmt.Sprintf("%s-%s", dcName, cassandraConfigMap)
 }

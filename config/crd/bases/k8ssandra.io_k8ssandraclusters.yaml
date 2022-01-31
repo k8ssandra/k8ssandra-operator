@@ -76,44 +76,24 @@ spec:
                             type: boolean
                         type: object
                     type: object
-                  client_encryption_stores:
+                  clientEncryptionStores:
                     description: Client encryption stores which are used by Cassandra
                       and Reaper.
                     properties:
-                      keystore_password_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                         type: object
-                      keystore_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                      truststore_password_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                      truststore_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -121,10 +101,7 @@ spec:
                             type: string
                         type: object
                     required:
-                    - keystore_password_secret_ref
-                    - keystore_secret_ref
-                    - truststore_password_secret_ref
-                    - truststore_secret_ref
+                    - keystoreSecretRef
                     type: object
                   config:
                     description: CassandraConfig is configuration settings that are
@@ -315,34 +292,14 @@ spec:
                                 type: array
                               enabled:
                                 type: boolean
-                              keystore:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
-                                type: string
-                              keystore_password:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
-                                type: string
                               optional:
                                 type: boolean
                               protocol:
                                 type: string
                               require_client_auth:
-                                description: 'default: false'
+                                default: false
                                 type: boolean
                               store_type:
-                                type: string
-                              truststore:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
-                                type: string
-                              truststore_password:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
                                 type: string
                             required:
                             - enabled
@@ -999,43 +956,28 @@ spec:
                                   type: string
                                 type: array
                               enable_legacy_ssl_storage_port:
-                                type: boolean
-                              enabled:
+                                default: false
                                 type: boolean
                               internode_encryption:
-                                description: 'default: none'
-                                type: string
-                              keystore:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
-                                type: string
-                              keystore_password:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
+                                default: none
+                                enum:
+                                - none
+                                - dc
+                                - rack
+                                - all
                                 type: string
                               optional:
+                                default: false
                                 type: boolean
                               protocol:
                                 type: string
                               require_client_auth:
-                                description: 'default: false'
+                                default: false
                                 type: boolean
                               require_endpoint_verification:
-                                description: 'default: false'
+                                default: false
                                 type: boolean
                               store_type:
-                                type: string
-                              truststore:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
-                                type: string
-                              truststore_password:
-                                description: Should not be set explicitly in the custom
-                                  resource. The operator will generate the right value
-                                  based on the EncryptionStores field.
                                 type: string
                             type: object
                           slow_query_log_timeout_in_ms:
@@ -1387,38 +1329,14 @@ spec:
                                       type: array
                                     enabled:
                                       type: boolean
-                                    keystore:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
-                                      type: string
-                                    keystore_password:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
-                                      type: string
                                     optional:
                                       type: boolean
                                     protocol:
                                       type: string
                                     require_client_auth:
-                                      description: 'default: false'
+                                      default: false
                                       type: boolean
                                     store_type:
-                                      type: string
-                                    truststore:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
-                                      type: string
-                                    truststore_password:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
                                       type: string
                                   required:
                                   - enabled
@@ -2075,47 +1993,28 @@ spec:
                                         type: string
                                       type: array
                                     enable_legacy_ssl_storage_port:
-                                      type: boolean
-                                    enabled:
+                                      default: false
                                       type: boolean
                                     internode_encryption:
-                                      description: 'default: none'
-                                      type: string
-                                    keystore:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
-                                      type: string
-                                    keystore_password:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
+                                      default: none
+                                      enum:
+                                      - none
+                                      - dc
+                                      - rack
+                                      - all
                                       type: string
                                     optional:
+                                      default: false
                                       type: boolean
                                     protocol:
                                       type: string
                                     require_client_auth:
-                                      description: 'default: false'
+                                      default: false
                                       type: boolean
                                     require_endpoint_verification:
-                                      description: 'default: false'
+                                      default: false
                                       type: boolean
                                     store_type:
-                                      type: string
-                                    truststore:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
-                                      type: string
-                                    truststore_password:
-                                      description: Should not be set explicitly in
-                                        the custom resource. The operator will generate
-                                        the right value based on the EncryptionStores
-                                        field.
                                       type: string
                                   type: object
                                 slow_query_log_timeout_in_ms:
@@ -6091,44 +5990,24 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
-                  server_encryption_stores:
+                  serverEncryptionStores:
                     description: Internode encryption stores which are used by Cassandra
                       and Stargate.
                     properties:
-                      keystore_password_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
                             type: string
                         type: object
-                      keystore_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                      truststore_password_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                      truststore_secret_ref:
-                        description: LocalObjectReference contains enough information
-                          to let you locate the referenced object inside the same
-                          namespace.
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
                         properties:
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -6136,10 +6015,7 @@ spec:
                             type: string
                         type: object
                     required:
-                    - keystore_password_secret_ref
-                    - keystore_secret_ref
-                    - truststore_password_secret_ref
-                    - truststore_secret_ref
+                    - keystoreSecretRef
                     type: object
                   serverImage:
                     description: ServerImage is the image for the cassandra container.

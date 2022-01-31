@@ -18,21 +18,28 @@ package stargate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+
+	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -66,7 +73,6 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Info("Stargate resource not found", "Stargate", req.NamespacedName)
 			return ctrl.Result{}, nil
 		} else {
-			logger.Error(err, "Failed to fetch Stargate", "Stargate", req.NamespacedName)
 			return ctrl.Result{}, err
 		}
 	}
@@ -105,7 +111,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{}, err
 				}
 			}
-			return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		} else {
 			logger.Error(err, "Failed to fetch CassandraDatacenter", "CassandraDatacenter", dcKey)
 			return ctrl.Result{}, err
@@ -123,7 +129,37 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 		}
 		logger.Info("Waiting for datacenter to become ready", "CassandraDatacenter", dcKey)
-		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+	}
+
+	// if a configmap is specified, we need to read its content to merge it with the generated one
+	userConfigMapContent := ""
+	if stargate.Spec.CassandraConfigMapRef != nil {
+		userConfigMap := &corev1.ConfigMap{}
+		configMapKey := types.NamespacedName{Namespace: req.Namespace, Name: stargate.Spec.CassandraConfigMapRef.Name}
+		err := r.Get(ctx, configMapKey, userConfigMap)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		userConfigMapContent = userConfigMap.Data["cassandra.yaml"]
+	}
+
+	logger.Info("Reconciling Stargate configmap")
+	// Reconcile the Stargate cassandra-config configmap using the desiredConfig content marshalled to yaml
+	var dcConfig map[string]interface{}
+	if actualDc.Spec.Config != nil {
+		err := json.Unmarshal(actualDc.Spec.Config, &dcConfig)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userConfigMapContent, req.Namespace, actualDc.ClusterName, actualDc.Name, logger); err != nil {
+		return ctrl.Result{}, err
+	} else {
+		if stargateConfigResult.Requeue {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		}
 	}
 
 	racks := len(actualDc.GetRacks())
@@ -356,6 +392,76 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	logger.Info("Stargate successfully reconciled", "Stargate", req.NamespacedName)
+	return ctrl.Result{}, nil
+}
+
+func (r *StargateReconciler) reconcileStargateConfigMap(
+	ctx context.Context,
+	stargateObject *api.Stargate,
+	desiredConfig map[string]interface{},
+	userConfigMapContent,
+	namespace,
+	clusterName,
+	dcName string,
+	logger logr.Logger,
+) (ctrl.Result, error) {
+	logger.Info(fmt.Sprintf("Reconciling Stargate Cassandra yaml configMap on namespace %s for cluster %s and dc %s", namespace, clusterName, dcName))
+	var filteredCassandraConfig map[string]interface{}
+	desiredCassandraYaml, exists := desiredConfig["cassandra-yaml"]
+	if exists {
+		filteredCassandraConfig = stargate.FilterYamlConfig(desiredCassandraYaml.(map[string]interface{}))
+	}
+
+	configYamlString := ""
+	if len(filteredCassandraConfig) > 0 {
+		if configYaml, err := yaml.Marshal(filteredCassandraConfig); err != nil {
+			return ctrl.Result{}, err
+		} else {
+			configYamlString = string(configYaml)
+		}
+	}
+
+	mergedConfigMap := stargate.MergeConfigMaps(userConfigMapContent, configYamlString)
+
+	configMapKey := client.ObjectKey{
+		Namespace: namespace,
+		Name:      stargate.GeneratedConfigMapName(clusterName, dcName),
+	}
+
+	logger = logger.WithValues("StargateConfigMap", configMapKey)
+	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, mergedConfigMap, clusterName, dcName)
+	// Compute a hash which will allow to compare desired and actual configMaps
+	annotations.AddHashAnnotation(desiredConfigMap)
+	actualConfigMap := &corev1.ConfigMap{}
+
+	if err := r.Get(ctx, configMapKey, actualConfigMap); err != nil {
+		if errors.IsNotFound(err) {
+			if err = controllerutil.SetControllerReference(stargateObject, desiredConfigMap, r.Scheme); err != nil {
+				return ctrl.Result{}, err
+			}
+			logger.Info("Stargate configMap doesn't exist, creating it")
+			if err := r.Create(ctx, desiredConfigMap); err != nil {
+				logger.Error(err, "Failed to create Stargate ConfigMap")
+				return ctrl.Result{}, err
+			} else {
+				actualConfigMap = desiredConfigMap
+			}
+		}
+	}
+
+	actualConfigMap = actualConfigMap.DeepCopy()
+
+	if !annotations.CompareHashAnnotations(actualConfigMap, desiredConfigMap) {
+		resourceVersion := actualConfigMap.GetResourceVersion()
+		desiredConfigMap.DeepCopyInto(actualConfigMap)
+		actualConfigMap.SetResourceVersion(resourceVersion)
+		if err := r.Update(ctx, actualConfigMap); err != nil {
+			logger.Error(err, "Failed to update Stargate ConfigMap resource")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+	}
+	logger.Info("Stargate ConfigMap successfully reconciled")
 	return ctrl.Result{}, nil
 }
 

@@ -146,7 +146,7 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleReaper,
+		testFunc:      createSingleReaperWithEncryption,
 		fixture:       "single-dc-reaper-encryption",
 		deployTraefik: true,
 	}))
@@ -156,7 +156,7 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createMultiReaper,
+		testFunc:      createMultiReaperWithEncryption,
 		fixture:       "multi-dc-reaper-encryption",
 		deployTraefik: true,
 	}))
@@ -1010,9 +1010,6 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 }
 
 func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
-
 	checkStargateApisWithMultiDcCluster(t, ctx, namespace, f)
 }
 
