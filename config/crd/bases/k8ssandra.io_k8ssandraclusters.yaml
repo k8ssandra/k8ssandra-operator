@@ -906,9 +906,6 @@ spec:
                           sstable_preemptive_open_interval_in_mb:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
-                          start_rpc:
-                            description: Exists in 3.11
-                            type: boolean
                           stream_entire_sstables:
                             description: 'Exists in: 4.0, trunk'
                             type: boolean
@@ -1881,9 +1878,6 @@ spec:
                                 sstable_preemptive_open_interval_in_mb:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
-                                start_rpc:
-                                  description: Exists in 3.11
-                                  type: boolean
                                 stream_entire_sstables:
                                   description: 'Exists in: 4.0, trunk'
                                   type: boolean

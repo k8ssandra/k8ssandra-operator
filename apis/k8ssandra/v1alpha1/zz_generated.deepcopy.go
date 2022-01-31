@@ -1288,11 +1288,6 @@ func (in *CassandraYaml) DeepCopyInto(out *CassandraYaml) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.StartRpc != nil {
-		in, out := &in.StartRpc, &out.StartRpc
-		*out = new(bool)
-		**out = **in
-	}
 	if in.StreamEntireSstables != nil {
 		in, out := &in.StreamEntireSstables, &out.StreamEntireSstables
 		*out = new(bool)
