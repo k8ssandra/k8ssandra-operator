@@ -26,6 +26,8 @@ type config struct {
 	additionalJvmOptions []string
 }
 
+// CassYamlIR is an internal representation of the cassandra.yaml. It is required because we want to make some options (esp. start_rpc) invisible to the user,
+// but some of those options still need to be rendered out into the final cassandra.yaml.
 type CassYamlIR struct {
 	api.CassandraYaml `json:",inline,omitempty"`
 	StartRpc          *bool `json:"start_rpc,omitempty"`
