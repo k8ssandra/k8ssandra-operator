@@ -3,6 +3,9 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -11,6 +14,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -22,8 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
-	"time"
 )
 
 // addDc tests scenarios that involve adding a new CassandraDatacenter to an existing
@@ -678,7 +680,7 @@ func verifyRebuildTaskNotCreated(ctx context.Context, t *testing.T, f *framework
 func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcIdx int) {
 	dcTemplate := kc.Spec.Cassandra.Datacenters[dcIdx]
 	dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)
-	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig)
+	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig, encryption.EncryptionStoresPasswords{})
 
 	require.NoError(t, err, "failed to create CassandraDatacenter")
 

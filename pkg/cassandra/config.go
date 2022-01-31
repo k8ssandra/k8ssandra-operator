@@ -25,7 +25,6 @@ type config struct {
 	cassandraVersion     string
 	jvmOptions           jvmOptions
 	additionalJvmOptions []string
-	encryptionStores     map[string]encryption.EncryptionStoresYaml
 }
 
 type ServerEncryptionOptionsYaml struct {
@@ -43,8 +42,8 @@ type ClientEncryptionOptionsYaml struct {
 type CassYamlIR struct {
 	api.CassandraYaml           `json:",inline,omitempty"`
 	StartRpc                    *bool                        `json:"start_rpc,omitempty"`
-	serverEncryptionOptionsYaml *ServerEncryptionOptionsYaml `json:"server_encryption_options,omitempty"`
-	clientEncryptionOptionsYaml *ClientEncryptionOptionsYaml `json:"client_encryption_options,omitempty"`
+	ServerEncryptionOptionsYaml *ServerEncryptionOptionsYaml `json:"server_encryption_options,omitempty"`
+	ClientEncryptionOptionsYaml *ClientEncryptionOptionsYaml `json:"client_encryption_options,omitempty"`
 }
 
 // jvmOptions is an internal type that is intended to be marshaled into JSON that is valid
@@ -108,14 +107,14 @@ func NewIRYaml(cassAPIYaml api.CassandraYaml) CassYamlIR {
 
 	// Set the values that will be sent to cass-operator for server encryption options
 	if cassAPIYaml.ServerEncryptionOptions != nil {
-		newIrYaml.serverEncryptionOptionsYaml = &ServerEncryptionOptionsYaml{
+		newIrYaml.ServerEncryptionOptionsYaml = &ServerEncryptionOptionsYaml{
 			ServerEncryptionOptions: *cassAPIYaml.ServerEncryptionOptions,
 		}
 		newIrYaml.CassandraYaml.ServerEncryptionOptions = nil
 	}
 
 	if cassAPIYaml.ClientEncryptionOptions != nil {
-		newIrYaml.clientEncryptionOptionsYaml = &ClientEncryptionOptionsYaml{
+		newIrYaml.ClientEncryptionOptionsYaml = &ClientEncryptionOptionsYaml{
 			ClientEncryptionOptions: *cassAPIYaml.ClientEncryptionOptions,
 		}
 		newIrYaml.CassandraYaml.ClientEncryptionOptions = nil
@@ -131,9 +130,9 @@ func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptio
 	filterConfigForVersion(cassandraVersion, &irCfgYaml)
 
 	// Filters out config element which do not exist in the Cassandra version in use
-	encryptionStoresYaml := addEncryptionOptions(&irCfgYaml, encryptionStoresSecrets, cassandraVersion)
+	addEncryptionOptions(&irCfgYaml, encryptionStoresSecrets, cassandraVersion)
 	filterConfigForVersion(cassandraVersion, &irCfgYaml)
-	cfg := config{CassYamlIR: irCfgYaml, cassandraVersion: cassandraVersion, encryptionStores: encryptionStoresYaml}
+	cfg := config{CassYamlIR: irCfgYaml, cassandraVersion: cassandraVersion}
 	err := validateConfig(&irCfgYaml)
 	if err != nil {
 		return cfg, err
@@ -155,35 +154,26 @@ func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptio
 	return cfg, nil
 }
 
-func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encryption.EncryptionStoresPasswords, cassandraVersion string) map[string]encryption.EncryptionStoresYaml {
-	encryptionStoresYaml := make(map[string]encryption.EncryptionStoresYaml)
-	if irCfgYaml.clientEncryptionOptionsYaml == nil && irCfgYaml.serverEncryptionOptionsYaml == nil {
-		return encryptionStoresYaml
-	}
-
-	if irCfgYaml.clientEncryptionOptionsYaml != nil {
-		if irCfgYaml.clientEncryptionOptionsYaml.Enabled {
+func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encryption.EncryptionStoresPasswords, cassandraVersion string) {
+	if irCfgYaml.ClientEncryptionOptionsYaml != nil {
+		if irCfgYaml.ClientEncryptionOptionsYaml.Enabled {
 			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "keystore"), "keystore")
 			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "truststore"), "truststore")
-			encryptionStoresYaml["client"] = encryption.EncryptionStoresYaml{
-				Keystore:           keystorePath,
-				Truststore:         truststorePath,
-				KeystorePassword:   encryptionStoresSecrets.ClientKeystorePassword,
-				TruststorePassword: encryptionStoresSecrets.ClientTruststorePassword,
-			}
+			irCfgYaml.ClientEncryptionOptionsYaml.Keystore = keystorePath
+			irCfgYaml.ClientEncryptionOptionsYaml.Truststore = truststorePath
+			irCfgYaml.ClientEncryptionOptionsYaml.KeystorePassword = encryptionStoresSecrets.ClientKeystorePassword
+			irCfgYaml.ClientEncryptionOptionsYaml.TruststorePassword = encryptionStoresSecrets.ClientTruststorePassword
 		}
 	}
 
-	if irCfgYaml.serverEncryptionOptionsYaml != nil {
-		if irCfgYaml.serverEncryptionOptionsYaml.InternodeEncryption != "none" {
+	if irCfgYaml.ServerEncryptionOptionsYaml != nil {
+		if irCfgYaml.ServerEncryptionOptionsYaml.InternodeEncryption != "none" {
 			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "keystore"), "keystore")
 			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "truststore"), "truststore")
-			encryptionStoresYaml["server"] = encryption.EncryptionStoresYaml{
-				Keystore:           keystorePath,
-				Truststore:         truststorePath,
-				KeystorePassword:   encryptionStoresSecrets.ServerKeystorePassword,
-				TruststorePassword: encryptionStoresSecrets.ServerTruststorePassword,
-			}
+			irCfgYaml.ServerEncryptionOptionsYaml.Keystore = keystorePath
+			irCfgYaml.ServerEncryptionOptionsYaml.Truststore = truststorePath
+			irCfgYaml.ServerEncryptionOptionsYaml.KeystorePassword = encryptionStoresSecrets.ClientKeystorePassword
+			irCfgYaml.ServerEncryptionOptionsYaml.TruststorePassword = encryptionStoresSecrets.ClientTruststorePassword
 		}
 		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
 		if IsCassandra3(cassandraVersion) {
@@ -191,7 +181,6 @@ func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encrypt
 			irCfgYaml.ServerEncryptionOptions.Optional = nil
 		}
 	}
-	return encryptionStoresYaml
 }
 
 // Some settings in Cassandra are using a float type, which isn't supported for CRDs.

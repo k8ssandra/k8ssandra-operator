@@ -106,11 +106,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return recResult, actualDcs
 		}
 
-		desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
-		if err != nil {
-			return result.Error(err), actualDcs
-		}
-
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
 			r.setStatusForDatacenter(kc, actualDc)
 
