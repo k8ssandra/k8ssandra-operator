@@ -24,7 +24,7 @@ func HandleEncryptionOptions(template *DatacenterConfig, encryptionStoresSecrets
 			return err
 		} else {
 			// Create the volume and mount for the keystore
-			addVolumesForEncryption(template, "client", *template.ClientEncryptionStores)
+			addVolumesForEncryption(template, encryption.StoreTypeClient, *template.ClientEncryptionStores)
 			// Add JMX encryption jvm options
 			addJmxEncryptionOptions(template, *template.ClientEncryptionStores, encryptionStoresSecrets)
 		}
@@ -35,13 +35,13 @@ func HandleEncryptionOptions(template *DatacenterConfig, encryptionStoresSecrets
 			return err
 		} else {
 			// Create the volume and mount for the keystore
-			addVolumesForEncryption(template, "server", *template.ServerEncryptionStores)
+			addVolumesForEncryption(template, encryption.StoreTypeServer, *template.ServerEncryptionStores)
 		}
 	}
 	return nil
 }
 
-func addVolumesForEncryption(template *DatacenterConfig, storeType string, encryptionStores encryption.Stores) {
+func addVolumesForEncryption(template *DatacenterConfig, storeType encryption.StoreType, encryptionStores encryption.Stores) {
 	// Initialize the volume array if it doesn't exist yet
 	if template.PodTemplateSpec.Spec.Volumes == nil {
 		template.PodTemplateSpec.Spec.Volumes = make([]corev1.Volume, 0)
@@ -60,7 +60,7 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType string, encry
 	addEncryptionMountToCassandra(template, keystoreVolume, truststoreVolume, storeType)
 }
 
-func EncryptionVolumes(storeType string, encryptionStores encryption.Stores) (*corev1.Volume, *corev1.Volume) {
+func EncryptionVolumes(storeType encryption.StoreType, encryptionStores encryption.Stores) (*corev1.Volume, *corev1.Volume) {
 	// Create the volume for the keystore
 	keystoreVolume := corev1.Volume{
 		Name: fmt.Sprintf("%s-keystore", storeType),
@@ -69,8 +69,8 @@ func EncryptionVolumes(storeType string, encryptionStores encryption.Stores) (*c
 				SecretName: encryptionStores.KeystoreSecretRef.Name,
 				Items: []corev1.KeyToPath{
 					{
-						Key:  "keystore",
-						Path: "keystore",
+						Key:  string(encryption.StoreNameKeystore),
+						Path: string(encryption.StoreNameKeystore),
 					},
 				},
 			},
@@ -88,8 +88,8 @@ func EncryptionVolumes(storeType string, encryptionStores encryption.Stores) (*c
 					SecretName: encryptionStores.TruststoreSecretRef.Name,
 					Items: []corev1.KeyToPath{
 						{
-							Key:  "truststore",
-							Path: "truststore",
+							Key:  string(encryption.StoreNameTruststore),
+							Path: string(encryption.StoreNameTruststore),
 						},
 					},
 				},
@@ -100,7 +100,7 @@ func EncryptionVolumes(storeType string, encryptionStores encryption.Stores) (*c
 }
 
 // Adds keystore and truststore volume mounts to the cassandra container.
-func addEncryptionMountToCassandra(template *DatacenterConfig, keystoreVolume, truststoreVolume *corev1.Volume, storeType string) {
+func addEncryptionMountToCassandra(template *DatacenterConfig, keystoreVolume, truststoreVolume *corev1.Volume, storeType encryption.StoreType) {
 	// Initialize the container array if it doesn't exist yet
 	if template.PodTemplateSpec.Spec.Containers == nil {
 		template.PodTemplateSpec.Spec.Containers = make([]corev1.Container, 0)
@@ -115,9 +115,9 @@ func addEncryptionMountToCassandra(template *DatacenterConfig, keystoreVolume, t
 		cassandraContainer = template.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].DeepCopy()
 	}
 
-	AddOrUpdateVolumeMount(cassandraContainer, keystoreVolume, StoreMountFullPath(storeType, "keystore"))
+	AddOrUpdateVolumeMount(cassandraContainer, keystoreVolume, StoreMountFullPath(storeType, encryption.StoreNameKeystore))
 	if truststoreVolume != nil {
-		AddOrUpdateVolumeMount(cassandraContainer, truststoreVolume, StoreMountFullPath(storeType, "truststore"))
+		AddOrUpdateVolumeMount(cassandraContainer, truststoreVolume, StoreMountFullPath(storeType, encryption.StoreNameTruststore))
 	}
 
 	// If the container is not found, add it to the pod spec
@@ -139,7 +139,7 @@ func checkMandatoryEncryptionFields(encryptionStores *encryption.Stores) error {
 	return nil
 }
 
-func StoreMountFullPath(storeType string, storeName string) string {
+func StoreMountFullPath(storeType encryption.StoreType, storeName encryption.StoreName) string {
 	return fmt.Sprintf("%s/%s-%s", StoresMountPath, storeType, storeName)
 }
 
@@ -159,7 +159,7 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 		}
 		logger.Info("Client to node encryption is enabled, reading client encryption stores secrets")
 		// Read client keystore password
-		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.KeystoreSecretRef.Name, "keystore"); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.KeystoreSecretRef.Name, encryption.StoreNameKeystore); err != nil {
 			return encryptionStoresPasswords, err
 		} else {
 			encryptionStoresPasswords.ClientKeystorePassword = password
@@ -167,7 +167,7 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 
 		encryptionStoresPasswords.ClientTruststorePassword = ""
 		if template.ClientEncryptionStores.TruststoreSecretRef != nil {
-			if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.TruststoreSecretRef.Name, "truststore"); err != nil {
+			if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ClientEncryptionStores.TruststoreSecretRef.Name, encryption.StoreNameTruststore); err != nil {
 				return encryptionStoresPasswords, err
 			} else {
 				encryptionStoresPasswords.ClientTruststorePassword = password
@@ -182,7 +182,7 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 			return encryptionStoresPasswords, err
 		}
 
-		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.KeystoreSecretRef.Name, "keystore"); err != nil {
+		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.KeystoreSecretRef.Name, encryption.StoreNameKeystore); err != nil {
 			return encryptionStoresPasswords, err
 		} else {
 			logger.Info(fmt.Sprintf("Read keystore password %s", password))
@@ -192,7 +192,7 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 		// Read server truststore password
 		encryptionStoresPasswords.ServerTruststorePassword = ""
 		if template.ClientEncryptionStores.TruststoreSecretRef != nil {
-			if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.TruststoreSecretRef.Name, "truststore"); err != nil {
+			if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.TruststoreSecretRef.Name, encryption.StoreNameTruststore); err != nil {
 				return encryptionStoresPasswords, err
 			} else {
 				logger.Info(fmt.Sprintf("Read truststore password %s", password))
@@ -204,13 +204,13 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 	return encryptionStoresPasswords, nil
 }
 
-func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteClient client.Client, secretName, storeType string) (string, error) {
+func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteClient client.Client, secretName string, storeName encryption.StoreName) (string, error) {
 	clientKeystoreSecret := &corev1.Secret{}
 	secretKey := types.NamespacedName{Namespace: namespace, Name: secretName}
 	if err := remoteClient.Get(ctx, secretKey, clientKeystoreSecret); err != nil {
 		return "", err
 	}
-	password := string(clientKeystoreSecret.Data[fmt.Sprintf("%s-password", storeType)])
+	password := string(clientKeystoreSecret.Data[fmt.Sprintf("%s-password", storeName)])
 	return password, nil
 }
 
@@ -218,8 +218,8 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 func addJmxEncryptionOptions(template *DatacenterConfig, encryptionStores encryption.Stores, encryptionStoresSecrets encryption.EncryptionStoresPasswords) {
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
-	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath("client", "keystore"), "keystore"))
-	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/%s", StoreMountFullPath("client", "truststore"), "truststore"))
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore))
+	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword))
 }

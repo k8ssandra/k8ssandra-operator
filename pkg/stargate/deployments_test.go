@@ -574,8 +574,8 @@ func testNewDeploymentsEncryption(t *testing.T) {
 				SecretName: "client-keystore-secret",
 				Items: []corev1.KeyToPath{
 					{
-						Key:  "keystore",
-						Path: "keystore",
+						Key:  string(encryption.StoreNameKeystore),
+						Path: string(encryption.StoreNameKeystore),
 					},
 				},
 			},
@@ -592,8 +592,8 @@ func testNewDeploymentsEncryption(t *testing.T) {
 				SecretName: "client-truststore-secret",
 				Items: []corev1.KeyToPath{
 					{
-						Key:  "truststore",
-						Path: "truststore",
+						Key:  string(encryption.StoreNameTruststore),
+						Path: string(encryption.StoreNameTruststore),
 					},
 				},
 			},
@@ -610,8 +610,8 @@ func testNewDeploymentsEncryption(t *testing.T) {
 				SecretName: "server-keystore-secret",
 				Items: []corev1.KeyToPath{
 					{
-						Key:  "keystore",
-						Path: "keystore",
+						Key:  string(encryption.StoreNameKeystore),
+						Path: string(encryption.StoreNameKeystore),
 					},
 				},
 			},
@@ -628,8 +628,8 @@ func testNewDeploymentsEncryption(t *testing.T) {
 				SecretName: "server-truststore-secret",
 				Items: []corev1.KeyToPath{
 					{
-						Key:  "truststore",
-						Path: "truststore",
+						Key:  string(encryption.StoreNameTruststore),
+						Path: string(encryption.StoreNameTruststore),
 					},
 				},
 			},

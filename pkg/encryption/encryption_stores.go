@@ -17,10 +17,10 @@ type Stores struct {
 }
 
 type EncryptionStoresYaml struct {
-	Keystore           string `json:"keystore"`
-	KeystorePassword   string `json:"keystore_password"`
-	Truststore         string `json:"truststore"`
-	TruststorePassword string `json:"truststore_password"`
+	Keystore           string `json:"keystore,omitempty"`
+	KeystorePassword   string `json:"keystore_password,omitempty"`
+	Truststore         string `json:"truststore,omitempty"`
+	TruststorePassword string `json:"truststore_password,omitempty"`
 }
 
 type EncryptionStoresPasswords struct {
@@ -86,3 +86,17 @@ type EncryptionSettings struct {
 	// +optional
 	RequireClientAuth bool `json:"require_client_auth,omitempty"`
 }
+
+type StoreType string
+
+const (
+	StoreTypeClient = StoreType("client")
+	StoreTypeServer = StoreType("server")
+)
+
+type StoreName string
+
+const (
+	StoreNameKeystore   = StoreName("keystore")
+	StoreNameTruststore = StoreName("truststore")
+)

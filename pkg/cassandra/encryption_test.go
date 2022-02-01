@@ -100,7 +100,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		},
 	}
 
-	addEncryptionMountToCassandra(dcConfig, &clientKeystoreVolume, &clientTruststoreVolume, "client")
+	addEncryptionMountToCassandra(dcConfig, &clientKeystoreVolume, &clientTruststoreVolume, encryption.StoreTypeClient)
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, "cassandra", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
@@ -129,7 +129,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 		},
 	}
 
-	addEncryptionMountToCassandra(dcConfig, &serverKeystoreVolume, &serverTruststoreVolume, "server")
+	addEncryptionMountToCassandra(dcConfig, &serverKeystoreVolume, &serverTruststoreVolume, encryption.StoreTypeServer)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts))
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
@@ -168,14 +168,14 @@ func TestAddVolumesForEncryption(t *testing.T) {
 		},
 	}
 
-	addVolumesForEncryption(dcConfig, "client", *dcConfig.ClientEncryptionStores)
+	addVolumesForEncryption(dcConfig, encryption.StoreTypeClient, *dcConfig.ClientEncryptionStores)
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore", "client-truststore-secret"))
 
-	addVolumesForEncryption(dcConfig, "server", *dcConfig.ServerEncryptionStores)
+	addVolumesForEncryption(dcConfig, encryption.StoreTypeServer, *dcConfig.ServerEncryptionStores)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore", "server-truststore-secret"))
@@ -236,7 +236,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
-	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath("client", "keystore")), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath("client", "truststore")), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword)} {
+	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword)} {
 		assert.True(t, utils.SliceContains(dcConfig.CassandraConfig.JvmOptions.AdditionalOptions, jvmOption), fmt.Sprintf("JVM option %s not found", jvmOption))
 	}
 }

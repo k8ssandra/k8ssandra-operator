@@ -1307,16 +1307,12 @@ func TestCreateJsonConfig(t *testing.T) {
                 "client_encryption_options": {
 					"enabled": true,
 					"keystore": "/mnt/client-keystore/keystore",
-					"keystore_password": "",
-					"truststore": "/mnt/client-truststore/truststore",
-					"truststore_password": ""
+					"truststore": "/mnt/client-truststore/truststore"
 				},
 				"server_encryption_options": {
 					"internode_encryption": "all",
 					"keystore": "/mnt/server-keystore/keystore",
-					"keystore_password": "",
-					"truststore": "/mnt/server-truststore/truststore",
-					"truststore_password": ""
+					"truststore": "/mnt/server-truststore/truststore"
 				}
               }
             }`,

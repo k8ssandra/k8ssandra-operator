@@ -25,6 +25,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -169,13 +170,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 	var truststorePassword *string
 
 	if actualReaper.Spec.ClientEncryptionStores != nil {
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.KeystoreSecretRef.Name, "keystore"); err != nil {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.KeystoreSecretRef.Name, encryption.StoreNameKeystore); err != nil {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		} else {
 			keystorePassword = pointer.String(password)
 		}
 
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.TruststoreSecretRef.Name, "truststore"); err != nil {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.TruststoreSecretRef.Name, encryption.StoreNameTruststore); err != nil {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		} else {
 			truststorePassword = pointer.String(password)

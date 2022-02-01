@@ -9,6 +9,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -131,16 +132,17 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	volumes := []corev1.Volume{}
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
 	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
-		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("client", *reaper.Spec.ClientEncryptionStores)
+		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
 		volumes = append(volumes, *keystoreVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      keystoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore),
+		})
 		volumes = append(volumes, *truststoreVolume)
-
-		for _, volume := range volumes {
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      volume.Name,
-				MountPath: cassandra.StoreMountFullPath(strings.Split(volume.Name, "-")[0], strings.Split(volume.Name, "-")[1]),
-			})
-		}
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      keystoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
+		})
 
 		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
 		envVars = append(envVars, corev1.EnvVar{

@@ -51,6 +51,8 @@ spec:
         concurrent_counter_writes: 2
         server_encryption_options:
             internode_encryption: all
+        client_encryption_options:
+              enabled: true
       jvmOptions:
         heapSize: 384Mi
     resources:

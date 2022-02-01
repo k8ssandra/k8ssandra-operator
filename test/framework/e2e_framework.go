@@ -15,6 +15,7 @@ import (
 	"time"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -374,7 +375,7 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 }
 
 func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) error {
-	for _, storeType := range []string{"server", "client"} {
+	for _, storeType := range []encryption.StoreType{encryption.StoreTypeServer, encryption.StoreTypeClient} {
 		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))
 
 		for _, k8sContext := range f.getClusterContexts() {

@@ -157,8 +157,8 @@ func newConfig(apiConfig api.CassandraConfig, cassandraVersion string, encryptio
 func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encryption.EncryptionStoresPasswords, cassandraVersion string) {
 	if irCfgYaml.ClientEncryptionOptionsYaml != nil {
 		if irCfgYaml.ClientEncryptionOptionsYaml.Enabled {
-			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "keystore"), "keystore")
-			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("client", "truststore"), "truststore")
+			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
 			irCfgYaml.ClientEncryptionOptionsYaml.Keystore = keystorePath
 			irCfgYaml.ClientEncryptionOptionsYaml.Truststore = truststorePath
 			irCfgYaml.ClientEncryptionOptionsYaml.KeystorePassword = encryptionStoresSecrets.ClientKeystorePassword
@@ -168,8 +168,8 @@ func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encrypt
 
 	if irCfgYaml.ServerEncryptionOptionsYaml != nil {
 		if irCfgYaml.ServerEncryptionOptionsYaml.InternodeEncryption != "none" {
-			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "keystore"), "keystore")
-			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath("server", "truststore"), "truststore")
+			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
 			irCfgYaml.ServerEncryptionOptionsYaml.Keystore = keystorePath
 			irCfgYaml.ServerEncryptionOptionsYaml.Truststore = truststorePath
 			irCfgYaml.ServerEncryptionOptionsYaml.KeystorePassword = encryptionStoresSecrets.ClientKeystorePassword

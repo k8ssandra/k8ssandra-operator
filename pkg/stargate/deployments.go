@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -87,9 +88,9 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		readinessProbe := computeReadinessProbe(template)
 		jvmOptions := computeJvmOptions(template)
 		volumes := computeVolumes(template, dc)
-		encryptionVolumes := computeEncryptionVolumes(template, stargate.Spec)
+		encryptionVolumes, encryptionVolumesMounts := computeEncryptionVolumes(stargate.Spec)
 		volumes = append(volumes, encryptionVolumes...)
-		volumeMounts := computeVolumeMounts(template, encryptionVolumes)
+		volumeMounts := computeVolumeMounts(template, encryptionVolumesMounts)
 		serviceAccountName := computeServiceAccount(template)
 		nodeSelector := computeNodeSelector(template, dc)
 		tolerations := computeTolerations(template, dc)
@@ -355,44 +356,45 @@ func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatac
 	return volumes
 }
 
-func computeEncryptionVolumes(template *api.StargateTemplate, spec api.StargateSpec) []corev1.Volume {
+func computeEncryptionVolumes(spec api.StargateSpec) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{}
+	mounts := []corev1.VolumeMount{}
 
 	if spec.CassandraEncryption != nil {
 		if spec.CassandraEncryption.ServerEncryptionStores != nil {
-			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("server", *spec.CassandraEncryption.ServerEncryptionStores)
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeServer, *spec.CassandraEncryption.ServerEncryptionStores)
 			volumes = append(volumes, *keystoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*keystoreVolume, encryption.StoreTypeServer, encryption.StoreNameKeystore))
 			volumes = append(volumes, *truststoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*truststoreVolume, encryption.StoreTypeServer, encryption.StoreNameTruststore))
 		}
 		if spec.CassandraEncryption.ClientEncryptionStores != nil {
-			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes("client", *spec.CassandraEncryption.ClientEncryptionStores)
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *spec.CassandraEncryption.ClientEncryptionStores)
 			volumes = append(volumes, *keystoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*keystoreVolume, encryption.StoreTypeClient, encryption.StoreNameKeystore))
 			volumes = append(volumes, *truststoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*truststoreVolume, encryption.StoreTypeClient, encryption.StoreNameTruststore))
 		}
 	}
 
-	return volumes
+	return volumes, mounts
 }
 
-func computeVolumeMounts(template *api.StargateTemplate, encryptionVolumes []corev1.Volume) []corev1.VolumeMount {
+func computeVolumeMounts(template *api.StargateTemplate, encryptionVolumesMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	mounts := []corev1.VolumeMount{}
 	mounts = append(mounts, corev1.VolumeMount{
 		Name:      "cassandra-config",
 		MountPath: cassandraConfigDir,
 	})
-	mounts = append(mounts, encryptionStoreMounts(encryptionVolumes)...)
+	mounts = append(mounts, encryptionVolumesMounts...)
 	return mounts
 }
 
-func encryptionStoreMounts(encryptionVolumes []corev1.Volume) []corev1.VolumeMount {
-	mounts := []corev1.VolumeMount{}
-	for _, volume := range encryptionVolumes {
-		mounts = append(mounts, corev1.VolumeMount{
-			Name:      volume.Name,
-			MountPath: cassandra.StoreMountFullPath(strings.Split(volume.Name, "-")[0], strings.Split(volume.Name, "-")[1]),
-		})
+func encryptionStoreMount(encryptionVolume corev1.Volume, storeType encryption.StoreType, storeName encryption.StoreName) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      encryptionVolume.Name,
+		MountPath: cassandra.StoreMountFullPath(storeType, storeName),
 	}
-	return mounts
 }
 
 func computeServiceAccount(template *api.StargateTemplate) string {
