@@ -51,6 +51,7 @@ spec:
         concurrent_counter_writes: 2
         server_encryption_options:
             internode_encryption: all
+            require_client_auth: true
         client_encryption_options:
               enabled: true
       jvmOptions:
@@ -63,7 +64,7 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        #k8sContext: kind-k8ssandra-0
+        k8sContext: kind-k8ssandra-0
         size: 2
       - metadata:
           name: dc2

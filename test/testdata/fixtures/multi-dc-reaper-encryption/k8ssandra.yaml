@@ -52,7 +52,7 @@ spec:
         server_encryption_options:
             internode_encryption: all
         client_encryption_options:
-              enabled: true
+            enabled: true
       jvmOptions:
         heapSize: 384Mi
     resources:
