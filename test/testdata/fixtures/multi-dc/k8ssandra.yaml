@@ -43,6 +43,7 @@ spec:
         heapSize: 384Mi
     networking:
       hostNetwork: true
+    mgmtAPIHeap: 64Mi
     resources:
       limits:
         memory: 1024Mi

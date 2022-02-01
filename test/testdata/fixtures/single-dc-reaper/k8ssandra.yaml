@@ -27,3 +27,4 @@ spec:
         config:
           jvmOptions:
             heapSize: 384Mi
+    mgmtAPIHeap: 64Mi

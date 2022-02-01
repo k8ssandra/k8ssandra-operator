@@ -27,6 +27,7 @@ spec:
           name: dc2
         size: 2
         k8sContext: kind-k8ssandra-1
+    mgmtAPIHeap: 64Mi
   medusa:
     storageProperties:
       storageProvider: local

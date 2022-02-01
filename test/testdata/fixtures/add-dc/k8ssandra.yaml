@@ -41,6 +41,7 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 1
+    mgmtAPIHeap: 64Mi
   reaper: {}
   stargate:
     size: 1
