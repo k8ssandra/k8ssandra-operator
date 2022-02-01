@@ -225,3 +225,4 @@ spec:
             timeoutSeconds: 20
           cassandraConfigMapRef:
             name: cassandra-config
+    mgmtAPIHeap: 64Mi
