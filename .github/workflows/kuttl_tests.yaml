@@ -67,6 +67,16 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha }}
     - uses: actions/checkout@v2
       if: github.event_name != 'pull_request'
+    - name: Set up Go 1.16
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.16
+    - uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
     - name: Cache Docker layers
       uses: actions/cache@v2
       with:
