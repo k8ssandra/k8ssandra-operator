@@ -178,7 +178,7 @@ func addEncryptionOptions(irCfgYaml *CassYamlIR, encryptionStoresSecrets encrypt
 		// The encryption stores shouldn't end up in the cassandra yaml, they are specific to k8ssandra
 		if IsCassandra3(cassandraVersion) {
 			// Remove properties that don't exist in Cassandra 3.x
-			irCfgYaml.ServerEncryptionOptions.Optional = nil
+			irCfgYaml.ServerEncryptionOptionsYaml.Optional = nil
 		}
 	}
 }
