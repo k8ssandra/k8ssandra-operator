@@ -30,7 +30,8 @@ func controllerRestart(t *testing.T, ctx context.Context, namespace string, f *f
 
 	clientConfig := &configapi.ClientConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "configlist-to-crash-them-all",
+			Name:      "configlist-to-crash-them-all",
+			Namespace: namespace,
 		},
 		Spec: configapi.ClientConfigSpec{
 			ContextName: "so-fatally-wrong",
