@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: k8ssandra-operator
+  name: k8ssandra-operator
+  namespace: k8ssandra-operator
+status:
+  availableReplicas: 1
+  conditions:
+  - reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  readyReplicas: 1

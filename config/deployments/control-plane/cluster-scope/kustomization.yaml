@@ -3,8 +3,6 @@ kind: Kustomization
 
 resources:
   - ../../default
-  - ../../../cass-operator-cluster-scope
-
+  - ../../../cass-operator/cluster-scoped
 components:
   - ../../../components/cluster-scope
-  - ../../../components/namespace

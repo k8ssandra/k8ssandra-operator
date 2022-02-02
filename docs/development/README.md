@@ -196,7 +196,7 @@ images:
 
 In this example the `resources` entry happens to specify a commit hash. Note that the full hash must be specified. The images transform specifies the corresponding image tag.
 
-Similar changes need to be made in `config/cass-operator-cluster-scope/kustomization.yaml`.
+Similar changes need to be made in `config/cass-operator/{cluster-scoped,ns-scoped}/kustomization.yaml` and `test/framework/e2e_framework.go` (on line 140).
 
 ### Helm
 If you want to apply the upgrade via Helm, then the cass-operator [chart](https://github.com/k8ssandra/k8ssandra/blob/main/charts/cass-operator) will need to be updated. The k8ssandra-operator [chart](https://github.com/k8ssandra/k8ssandra/tree/main/charts/k8ssandra-operator) will then need to have its chart dependency updated. 

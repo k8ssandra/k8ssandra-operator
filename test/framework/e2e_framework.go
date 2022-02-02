@@ -134,8 +134,10 @@ func generateCassOperatorKustomization(namespace string) error {
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/default?ref=v1.9.0
-namespace: {{ .Namespace }}
+- github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
+images:
+  - name: k8ssandra/cass-operator
+    newTag: 9d1c58a5
 `
 	k := Kustomization{Namespace: namespace}
 
@@ -211,26 +213,80 @@ components:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: {{ .Namespace }}
-
 resources:
 - ../../../../config/deployments/control-plane
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
+
+patches:
+- target:
+    kind: Namespace
+    labelSelector: "control-plane=k8ssandra-operator"
+  options:
+    allowNameChange: true
+  patch: |
+    - op: replace
+      path: /metadata/name
+      value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+    - subjects.0.namespace
 `
 
 		dataPlaneTmpl = `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: {{ .Namespace }}
-
 resources:
 - ../../../../config/deployments/data-plane
 
 components:
 - ../../../../config/components/mgmt-api-heap-size
+
+patches:
+- target:
+    kind: Namespace
+    labelSelector: "control-plane=k8ssandra-operator"
+  options:
+    allowNameChange: true
+  patch: |
+    - op: replace
+      path: /metadata/name
+      value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+    - subjects.0.namespace
 `
 	}
 
@@ -274,11 +330,6 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 		return err
 	}
 
-	if err := kustomize.SetNamespace(kdir, namespace); err != nil {
-		f.logger.Error(err, "failed to set namespace for kustomization directory", "dir", kdir)
-		return err
-	}
-
 	if len(contexts) == 0 {
 		buf, err := kustomize.BuildDir(kdir)
 		if err != nil {
@@ -286,7 +337,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: defaultControlPlaneContext, ServerSide: true}
+		options := kubectl.Options{Context: defaultControlPlaneContext, ServerSide: true}
 		return kubectl.Apply(options, buf)
 	}
 
@@ -299,7 +350,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Namespace: namespace, Context: ctx, ServerSide: true}
+		options := kubectl.Options{Context: ctx, ServerSide: true}
 		if err := kubectl.Apply(options, buf); err != nil {
 			return err
 		}

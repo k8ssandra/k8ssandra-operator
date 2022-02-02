@@ -278,7 +278,12 @@ controller-gen: ## Download controller-gen locally if necessary.
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.0.5)
+	mkdir -p $$(pwd)/bin
+	cd $$(pwd)/bin && \
+	curl -LO https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.4.1/kustomize_v4.4.1_$$(uname)_amd64.tar.gz && \
+	tar -zxvf kustomize_v4.4.1_$$(uname)_amd64.tar.gz && \
+	rm kustomize_v4.4.1_$$(uname)_amd64.tar.gz
+
 
 ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
@@ -358,6 +363,7 @@ catalog-push: ## Push a catalog image.
 kuttl-test: install-kuttl docker-build
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-servicemonitors
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-config-control-plane
+	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-user-defined-ns
 
  # Install kuttl for e2e tests.
 install-kuttl: 
