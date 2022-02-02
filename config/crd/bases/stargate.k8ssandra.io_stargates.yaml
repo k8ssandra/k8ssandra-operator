@@ -916,16 +916,12 @@ spec:
                     type: string
                 type: object
               cassandraEncryption:
-                description: Encryption settings are inherited from the CassandraDatacenter
-                  resource where Stargate is being deployed and do not need to be
-                  defined in the spec. Still it is required to pass the encryption
-                  stores secrets to the Stargate pods, so that they can be mounted
-                  as volumes.
+                description: Still it is required to pass the encryption stores secrets
+                  to the Stargate pods, so that they can be mounted as volumes.
                 properties:
                   clientEncryptionStores:
                     description: Client encryption stores which are used by Cassandra
-                      and Reaper. These should not be set explicitly by the user,
-                      they will be copied from the K8ssandraCluster object.
+                      and Reaper.
                     properties:
                       keystoreSecretRef:
                         description: ref to the secret that contains the keystore
@@ -949,6 +945,7 @@ spec:
                         type: object
                     required:
                     - keystoreSecretRef
+                    - truststoreSecretRef
                     type: object
                   serverEncryptionStores:
                     description: Internode encryption stores which are used by Cassandra
@@ -976,6 +973,7 @@ spec:
                         type: object
                     required:
                     - keystoreSecretRef
+                    - truststoreSecretRef
                     type: object
                 type: object
               containerImage:

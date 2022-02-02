@@ -737,7 +737,11 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 		[]string{dcNamesOpt, rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},
 		config.JvmOptions.AdditionalOptions...,
 	)
-	json, err := cassandra.CreateJsonConfig(*config, serverVersion, encryption.EncryptionStoresPasswords{})
+	template := cassandra.DatacenterConfig{
+		ServerVersion:   serverVersion,
+		CassandraConfig: *config,
+	}
+	json, err := cassandra.CreateJsonConfig(&template)
 	if err != nil {
 		return nil, err
 	}
@@ -1461,7 +1465,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
 					},
 				},
@@ -1469,7 +1473,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
 					},
 				},
@@ -1690,7 +1694,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
 					},
 				},

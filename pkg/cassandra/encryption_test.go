@@ -8,6 +8,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -27,12 +28,12 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
 			},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
 			},
 		},
@@ -64,7 +65,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
 			},
 		},
@@ -72,7 +73,7 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
 			},
 		},
@@ -154,7 +155,7 @@ func TestAddVolumesForEncryption(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
 			},
 		},
@@ -162,7 +163,7 @@ func TestAddVolumesForEncryption(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
 			},
 		},
@@ -203,7 +204,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
 			},
 		},
@@ -211,17 +212,16 @@ func TestHandleEncryptionOptions(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
 			},
 		},
-	}
-
-	encryptionStoresSecrets := encryption.EncryptionStoresPasswords{
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
 	}
-	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
+
+	err := handleEncryptionOptions(dcConfig)
+	require.NoError(t, err)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
@@ -236,7 +236,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
-	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", encryptionStoresSecrets.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", encryptionStoresSecrets.ClientTruststorePassword)} {
+	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", dcConfig.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", dcConfig.ClientTruststorePassword)} {
 		assert.True(t, utils.SliceContains(dcConfig.CassandraConfig.JvmOptions.AdditionalOptions, jvmOption), fmt.Sprintf("JVM option %s not found", jvmOption))
 	}
 }
@@ -270,7 +270,7 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
 			},
 		},
@@ -278,16 +278,16 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			KeystoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
 			},
-			TruststoreSecretRef: &corev1.LocalObjectReference{
+			TruststoreSecretRef: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
 			},
 		},
-	}
-	encryptionStoresSecrets := encryption.EncryptionStoresPasswords{
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
 	}
-	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
+
+	err := handleEncryptionOptions(dcConfig)
+	require.NoError(t, err)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
@@ -323,14 +323,12 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 				},
 			},
 		},
-	}
-	encryptionStoresSecrets := encryption.EncryptionStoresPasswords{
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
 	}
 
-	err := HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
-	assert.NoError(t, err)
+	err := handleEncryptionOptions(dcConfig)
+	require.NoError(t, err)
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Containers))
 }
@@ -351,13 +349,11 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 				},
 			},
 		},
-	}
-	encryptionStoresSecrets := encryption.EncryptionStoresPasswords{
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
 	}
-	HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
-	err := HandleEncryptionOptions(dcConfig, encryptionStoresSecrets)
+
+	err := handleEncryptionOptions(dcConfig)
 	assert.Error(t, err)
 }
 

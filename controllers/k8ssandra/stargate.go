@@ -108,11 +108,11 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter, dcTemplate api.CassandraDatacenterTemplate) *stargateapi.Stargate {
 	cassandraEncryption := stargateapi.CassandraEncryption{}
 	if dcTemplate.CassandraConfig != nil {
-		if dcTemplate.CassandraConfig.CassandraYaml.ClientEncryptionOptions != nil && kc.Spec.Cassandra.ClientEncryptionStores != nil {
+		if cassandra.ClientEncryptionEnabled(cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)) {
 			cassandraEncryption.ClientEncryptionStores = kc.Spec.Cassandra.ClientEncryptionStores
 		}
 
-		if dcTemplate.CassandraConfig.CassandraYaml.ServerEncryptionOptions != nil && kc.Spec.Cassandra.ServerEncryptionStores != nil {
+		if cassandra.ServerEncryptionEnabled(cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)) {
 			cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
 		}
 	}

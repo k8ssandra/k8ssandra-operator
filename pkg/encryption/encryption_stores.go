@@ -8,57 +8,41 @@ import (
 type Stores struct {
 	// ref to the secret that contains the keystore and its password
 	// the expected format of the secret is a "keystore" entry and a "keystore-password" entry
+	// +kubebuilder:validation:Required
 	KeystoreSecretRef corev1.LocalObjectReference `json:"keystoreSecretRef"`
 
 	// ref to the secret that contains the truststore and its password
 	// the expected format of the secret is a "truststore" entry and a "truststore-password" entry
-	// +optional
-	TruststoreSecretRef *corev1.LocalObjectReference `json:"truststoreSecretRef"`
-}
-
-type EncryptionStoresYaml struct {
-	Keystore           string `json:"keystore,omitempty"`
-	KeystorePassword   string `json:"keystore_password,omitempty"`
-	Truststore         string `json:"truststore,omitempty"`
-	TruststorePassword string `json:"truststore_password,omitempty"`
-}
-
-type EncryptionStoresPasswords struct {
-	ClientKeystorePassword   string
-	ClientTruststorePassword string
-	ServerKeystorePassword   string
-	ServerTruststorePassword string
+	// +kubebuilder:validation:Required
+	TruststoreSecretRef corev1.LocalObjectReference `json:"truststoreSecretRef"`
 }
 
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
 // +kubebuilder:object:generate=true
 type ClientEncryptionOptions struct {
-	Enabled bool `json:"enabled"`
-
-	// +optional
-	Optional bool `json:"optional,omitempty"`
-
 	EncryptionSettings `json:",inline"`
+	Enabled            bool `json:"enabled"`
+	Optional           bool `json:"optional,omitempty"`
 }
 
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
 // +kubebuilder:object:generate=true
 type ServerEncryptionOptions struct {
 	// +kubebuilder:default=false
-	// +optional
+	// +kubebuilder:validation:optional
 	Optional *bool `json:"optional,omitempty"`
 
 	// +kubebuilder:validation:Enum=none;dc;rack;all
 	// +kubebuilder:default=none
-	// +optional
+	// +kubebuilder:validation:optional
 	InternodeEncryption string `json:"internode_encryption,omitempty"`
 
 	// +kubebuilder:default=false
-	// +optional
+	// +kubebuilder:validation:optional
 	RequireEndpointVerification bool `json:"require_endpoint_verification,omitempty"`
 
 	// +kubebuilder:default=false
-	// +optional
+	// +kubebuilder:validation:optional
 	EnableLegacySslStoragePort bool `json:"enable_legacy_ssl_storage_port,omitempty"`
 
 	EncryptionSettings `json:",inline"`
@@ -67,23 +51,23 @@ type ServerEncryptionOptions struct {
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
 // +kubebuilder:object:generate=true
 type EncryptionSettings struct {
-	// +optional
+	// +kubebuilder:validation:optional
 	Protocol string `json:"protocol,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:optional
 	AcceptedProtocols []string `json:"accepted_protocols,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:optional
 	Algorithm string `json:"algorithm,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:optional
 	StoreType string `json:"store_type,omitempty"`
 
-	// +optional
+	// +kubebuilder:validation:optional
 	CipherSuites []string `json:"cipher_suites,omitempty"`
 
 	// +kubebuilder:default=false
-	// +optional
+	// +kubebuilder:validation:optional
 	RequireClientAuth bool `json:"require_client_auth,omitempty"`
 }
 

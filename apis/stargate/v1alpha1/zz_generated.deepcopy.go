@@ -35,12 +35,12 @@ func (in *CassandraEncryption) DeepCopyInto(out *CassandraEncryption) {
 	if in.ClientEncryptionStores != nil {
 		in, out := &in.ClientEncryptionStores, &out.ClientEncryptionStores
 		*out = new(encryption.Stores)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	if in.ServerEncryptionStores != nil {
 		in, out := &in.ServerEncryptionStores, &out.ServerEncryptionStores
 		*out = new(encryption.Stores)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 }
 

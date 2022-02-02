@@ -993,6 +993,7 @@ spec:
                     type: object
                 required:
                 - keystoreSecretRef
+                - truststoreSecretRef
                 type: object
               containerImage:
                 default:

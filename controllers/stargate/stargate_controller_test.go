@@ -588,7 +588,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
 					},
 				},
@@ -596,7 +596,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
 					},
 				},

@@ -47,7 +47,7 @@ var (
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
 					},
 				},
@@ -55,7 +55,7 @@ var (
 					KeystoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
 					},
-					TruststoreSecretRef: &corev1.LocalObjectReference{
+					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
 					},
 				},

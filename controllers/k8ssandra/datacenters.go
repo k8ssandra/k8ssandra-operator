@@ -75,13 +75,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
-		encryptionPasswords, err := cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, logger)
+		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, logger)
 		if err != nil {
 			logger.Error(err, "Failed to read encryption secrets")
 			return result.Error(err), actualDcs
 		}
-		logger.Info("Read encryption secrets", "passwords", encryptionPasswords)
-		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig, encryptionPasswords)
+		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
 			return result.Error(err), actualDcs

@@ -102,6 +102,7 @@ spec:
                         type: object
                     required:
                     - keystoreSecretRef
+                    - truststoreSecretRef
                     type: object
                   config:
                     description: CassandraConfig is configuration settings that are
@@ -6016,6 +6017,7 @@ spec:
                         type: object
                     required:
                     - keystoreSecretRef
+                    - truststoreSecretRef
                     type: object
                   serverImage:
                     description: ServerImage is the image for the cassandra container.

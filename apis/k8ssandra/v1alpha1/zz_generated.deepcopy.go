@@ -164,12 +164,12 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 	if in.ServerEncryptionStores != nil {
 		in, out := &in.ServerEncryptionStores, &out.ServerEncryptionStores
 		*out = new(encryption.Stores)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	if in.ClientEncryptionStores != nil {
 		in, out := &in.ClientEncryptionStores, &out.ClientEncryptionStores
 		*out = new(encryption.Stores)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 }
 

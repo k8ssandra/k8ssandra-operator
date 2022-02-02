@@ -28,7 +28,7 @@ func TestNewDeployment(t *testing.T) {
 		KeystoreSecretRef: corev1.LocalObjectReference{
 			Name: "keystore-secret",
 		},
-		TruststoreSecretRef: &corev1.LocalObjectReference{
+		TruststoreSecretRef: corev1.LocalObjectReference{
 			Name: "truststore-secret",
 		},
 	}

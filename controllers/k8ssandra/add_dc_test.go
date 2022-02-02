@@ -14,7 +14,6 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -680,7 +679,7 @@ func verifyRebuildTaskNotCreated(ctx context.Context, t *testing.T, f *framework
 func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcIdx int) {
 	dcTemplate := kc.Spec.Cassandra.Datacenters[dcIdx]
 	dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)
-	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig, encryption.EncryptionStoresPasswords{})
+	dc, err := cassandra.NewDatacenter(utils.GetKey(kc), dcConfig)
 
 	require.NoError(t, err, "failed to create CassandraDatacenter")
 

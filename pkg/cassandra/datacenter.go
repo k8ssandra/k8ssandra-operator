@@ -89,44 +89,48 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta                   api.EmbeddedObjectMeta
-	Cluster                string
-	SuperuserSecretRef     corev1.LocalObjectReference
-	ServerImage            string
-	ServerVersion          string
-	JmxInitContainerImage  *images.Image
-	Size                   int32
-	Resources              *corev1.ResourceRequirements
-	SystemReplication      SystemReplication
-	StorageConfig          *cassdcapi.StorageConfig
-	Racks                  []cassdcapi.Rack
-	CassandraConfig        api.CassandraConfig
-	AdditionalSeeds        []string
-	Networking             *cassdcapi.NetworkingConfig
-	Users                  []cassdcapi.CassandraUser
-	PodTemplateSpec        *corev1.PodTemplateSpec
-	MgmtAPIHeap            *resource.Quantity
-	SoftPodAntiAffinity    *bool
-	ServerEncryptionStores *encryption.Stores
-	ClientEncryptionStores *encryption.Stores
+	Meta                     api.EmbeddedObjectMeta
+	Cluster                  string
+	SuperuserSecretRef       corev1.LocalObjectReference
+	ServerImage              string
+	ServerVersion            string
+	JmxInitContainerImage    *images.Image
+	Size                     int32
+	Resources                *corev1.ResourceRequirements
+	SystemReplication        SystemReplication
+	StorageConfig            *cassdcapi.StorageConfig
+	Racks                    []cassdcapi.Rack
+	CassandraConfig          api.CassandraConfig
+	AdditionalSeeds          []string
+	Networking               *cassdcapi.NetworkingConfig
+	Users                    []cassdcapi.CassandraUser
+	PodTemplateSpec          *corev1.PodTemplateSpec
+	MgmtAPIHeap              *resource.Quantity
+	SoftPodAntiAffinity      *bool
+	ServerEncryptionStores   *encryption.Stores
+	ClientEncryptionStores   *encryption.Stores
+	ClientKeystorePassword   string
+	ClientTruststorePassword string
+	ServerKeystorePassword   string
+	ServerTruststorePassword string
 }
 
 const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig, encryptionStoresSecrets encryption.EncryptionStoresPasswords) (*cassdcapi.CassandraDatacenter, error) {
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace
 	}
 
 	// If client or server encryption is enabled, create the required volumes and mounts
-	if err := HandleEncryptionOptions(template, encryptionStoresSecrets); err != nil {
+	if err := handleEncryptionOptions(template); err != nil {
 		return nil, err
 	}
 
-	rawConfig, err := CreateJsonConfig(template.CassandraConfig, template.ServerVersion, encryptionStoresSecrets)
+	rawConfig, err := CreateJsonConfig(template)
 	if err != nil {
 		return nil, err
 	}
