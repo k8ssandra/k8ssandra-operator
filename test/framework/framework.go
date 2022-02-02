@@ -3,6 +3,8 @@ package framework
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -199,6 +202,22 @@ func (f *Framework) CreateNamespace(name string) error {
 	}
 
 	return nil
+}
+
+const dns1035LabelFmt string = "[a-z]([-a-z0-9]*[a-z0-9])?"
+
+func CleanupForKubernetes(input string) string {
+	if len(validation.IsDNS1035Label(input)) > 0 {
+		r := regexp.MustCompile(dns1035LabelFmt)
+
+		// Invalid domain name, Kubernetes will reject this. Try to modify it to a suitable string
+		input = strings.ToLower(input)
+		input = strings.ReplaceAll(input, "_", "-")
+		validParts := r.FindAllString(input, -1)
+		return strings.Join(validParts, "")
+	}
+
+	return input
 }
 
 func (f *Framework) k8sContextNotFound(k8sContext string) error {

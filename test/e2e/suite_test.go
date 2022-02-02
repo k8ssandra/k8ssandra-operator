@@ -137,6 +137,9 @@ func TestOperator(t *testing.T) {
 		fixture:       "multi-dc-auth",
 		deployTraefik: true,
 	}))
+	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
+		testFunc: controllerRestart,
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -233,9 +236,12 @@ func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 
 		setTestNamespaceNames(opts)
 
-		fixtureDir, err := getTestFixtureDir(opts.fixture)
-		if err != nil {
-			t.Fatalf("failed to get fixture directory for %s: %v", opts.fixture, err)
+		fixtureDir := ""
+		if opts.fixture != "" {
+			fixtureDir, err = getTestFixtureDir(opts.fixture)
+			if err != nil {
+				t.Fatalf("failed to get fixture directory for %s: %v", opts.fixture, err)
+			}
 		}
 
 		err = beforeTest(t, f, fixtureDir, opts)
@@ -258,7 +264,11 @@ func setTestNamespaceNames(opts *e2eTestOpts) {
 	if opts.clusterScoped {
 		opts.operatorNamespace = "k8ssandra-operator"
 	} else {
-		opts.operatorNamespace = string(opts.fixture) + "-" + rand.String(6)
+		if opts.fixture != "" {
+			opts.operatorNamespace = string(opts.fixture) + "-" + rand.String(6)
+		} else {
+			opts.operatorNamespace = framework.CleanupForKubernetes(rand.String(9))
+		}
 		opts.sutNamespace = opts.operatorNamespace
 	}
 }
@@ -351,14 +361,16 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		}
 	}
 
-	fixtureDir, err := filepath.Abs(fixtureDir)
-	if err != nil {
-		return err
-	}
+	if fixtureDir != "" {
+		fixtureDir, err := filepath.Abs(fixtureDir)
+		if err != nil {
+			return err
+		}
 
-	if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
-		t.Log("kubectl apply failed")
-		return err
+		if err := kubectl.Apply(kubectl.Options{Namespace: opts.sutNamespace, Context: f.ControlPlaneContext}, fixtureDir); err != nil {
+			t.Log("kubectl apply failed")
+			return err
+		}
 	}
 
 	return nil
