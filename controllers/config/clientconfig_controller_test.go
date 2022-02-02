@@ -82,6 +82,8 @@ func TestClientConfigReconciler(t *testing.T) {
 	// Secret controller tests
 	t.Run("InitClientConfigs", testEnv.ControllerTest(ctx, testInitClientConfigs))
 	t.Run("SecretModification", testEnv.ControllerTest(ctx, testSecretModification))
+	t.Run("ClientConfigDeletion", testEnv.ControllerTest(ctx, testConfigDeletion))
+	t.Run("SecretDeletion", testEnv.ControllerTest(ctx, testSecretDeletion))
 }
 
 func insertKubeConfigSecret(ctx context.Context, localClient client.Client, namespace string) (*corev1.Secret, error) {
@@ -192,6 +194,56 @@ func testSecretModification(t *testing.T, ctx context.Context, f *framework.Fram
 
 	secretCurrent.Data["new-key"] = []byte("excellent")
 	err = f.Client.Update(ctx, secretCurrent)
+	assert.NoError(err)
+
+	assert.Eventually(func() bool {
+		return cancelCalls > currentCount
+	}, timeout, interval)
+}
+
+func testConfigDeletion(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	assert := assert.New(t)
+
+	t.Log("Insert clientConfig and secrets, load them to reconciler")
+	secret, err := insertKubeConfigSecret(ctx, f.Client, namespace)
+	assert.NoError(err)
+
+	clientConfig, err := insertClientConfig(ctx, f.Client, namespace, "envtest", secret.Name)
+	assert.NoError(err)
+
+	_, err = reconciler.InitClientConfigs(ctx, usedMgr, namespace)
+	assert.NoError(err)
+
+	// Store currentCount of cancelFunc
+	currentCount := cancelCalls
+
+	t.Log("Delete ClientConfig and wait for shutdown call")
+	err = f.Client.Delete(ctx, clientConfig)
+	assert.NoError(err)
+
+	assert.Eventually(func() bool {
+		return cancelCalls > currentCount
+	}, timeout, interval)
+}
+
+func testSecretDeletion(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	assert := assert.New(t)
+
+	t.Log("Insert clientConfig and secrets, load them to reconciler")
+	secret, err := insertKubeConfigSecret(ctx, f.Client, namespace)
+	assert.NoError(err)
+
+	_, err = insertClientConfig(ctx, f.Client, namespace, "envtest", secret.Name)
+	assert.NoError(err)
+
+	_, err = reconciler.InitClientConfigs(ctx, usedMgr, namespace)
+	assert.NoError(err)
+
+	// Store currentCount of cancelFunc
+	currentCount := cancelCalls
+
+	t.Log("Delete Secret and wait for shutdown call")
+	err = f.Client.Delete(ctx, secret)
 	assert.NoError(err)
 
 	assert.Eventually(func() bool {
