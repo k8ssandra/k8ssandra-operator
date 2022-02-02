@@ -142,22 +142,22 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterClusterWithEncryption,
-		fixture:       "single-dc-encryption",
+		fixture:       "single-dc-encryption-stargate",
 		deployTraefik: true,
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleReaperWithEncryption,
-		fixture:       "single-dc-reaper-encryption",
+		fixture:       "single-dc-encryption-reaper",
 		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      checkStargateApisWithMultiDcEncryptedCluster,
-		fixture:       "multi-dc-encryption",
+		fixture:       "multi-dc-encryption-stargate",
 		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createMultiReaperWithEncryption,
-		fixture:       "multi-dc-reaper-encryption",
+		fixture:       "multi-dc-encryption-reaper",
 		deployTraefik: true,
 	}))
 }

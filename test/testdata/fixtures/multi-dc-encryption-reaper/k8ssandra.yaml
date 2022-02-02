@@ -63,7 +63,7 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        #k8sContext: kind-k8ssandra-0
+        k8sContext: kind-k8ssandra-0
         size: 2
       - metadata:
           name: dc2

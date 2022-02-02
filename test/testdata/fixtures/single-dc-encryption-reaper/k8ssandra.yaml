@@ -34,7 +34,6 @@ spec:
         config:
           cassandraYaml:
             server_encryption_options:
-              enabled: true
               internode_encryption: all
             client_encryption_options:
               enabled: true

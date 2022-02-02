@@ -140,7 +140,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 		volumes = append(volumes, *truststoreVolume)
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      keystoreVolume.Name,
+			Name:      truststoreVolume.Name,
 			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
 		})
 
