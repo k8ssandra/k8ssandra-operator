@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -103,6 +104,7 @@ type DatacenterConfig struct {
 	Users                 []cassdcapi.CassandraUser
 	PodTemplateSpec       *corev1.PodTemplateSpec
 	MgmtAPIHeap           *resource.Quantity
+	SoftPodAntiAffinity   *bool
 }
 
 const (
@@ -161,6 +163,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.MgmtAPIHeap != nil {
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
+	}
+
+	if template.SoftPodAntiAffinity != nil {
+		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
 
 	return dc, nil
@@ -302,6 +308,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
 	} else {
 		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
+	}
+
+	if dcTemplate.SoftPodAntiAffinity == nil {
+		dcConfig.SoftPodAntiAffinity = clusterTemplate.SoftPodAntiAffinity
+	} else {
+		dcConfig.SoftPodAntiAffinity = dcTemplate.SoftPodAntiAffinity
 	}
 
 	return dcConfig
