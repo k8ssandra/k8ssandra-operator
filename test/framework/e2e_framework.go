@@ -128,21 +128,8 @@ func (f *E2eFramework) getDataPlaneContexts() []string {
 
 type Kustomization struct {
 	Namespace string
-}
 
-func generateCassOperatorKustomization(namespace string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
-images:
-  - name: k8ssandra/cass-operator
-    newTag: 9d1c58a5
-`
-	k := Kustomization{Namespace: namespace}
-
-	return generateKustomizationFile("cass-operator", k, tmpl)
+	ImageTag string
 }
 
 func generateContextsKustomization(namespace string) error {
@@ -175,50 +162,20 @@ namespace: {{ .Namespace }}
 	return ioutil.WriteFile(dest, buf, 0644)
 }
 
-func generateK8ssandraOperatorKustomization(namespace string, clusterScoped bool) error {
-	controlPlaneDir := ""
-	dataPlaneDir := ""
-	controlPlaneTmpl := ""
-	dataPlaneTmpl := ""
+func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
+	controlPlaneDir := "control-plane"
+	dataPlaneDir := "data-plane"
 
-	if clusterScoped {
-		controlPlaneDir = "control-plane-cluster-scope"
-		dataPlaneDir = "data-plane-cluster-scope"
-
-		controlPlaneTmpl = `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- ../../../../config/deployments/control-plane/cluster-scope
-
-components:
-- ../../../../config/components/mgmt-api-heap-size
-`
-
-		dataPlaneTmpl = `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- ../../../../config/deployments/data-plane/cluster-scope
-
-components:
-- ../../../../config/components/mgmt-api-heap-size
-`
-	} else {
-		controlPlaneDir = "control-plane"
-		dataPlaneDir = "data-plane"
-
-		controlPlaneTmpl = `
+	controlPlaneTmpl := `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
 - ../../../../config/deployments/control-plane
 
-components:
-- ../../../../config/components/mgmt-api-heap-size
+images:
+  - name: k8ssandra/k8ssandra-operator
+    newTag: {{ .ImageTag }}
 
 patches:
 - target:
@@ -250,15 +207,16 @@ replacements:
     - subjects.0.namespace
 `
 
-		dataPlaneTmpl = `
+	dataPlaneTmpl := `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
 - ../../../../config/deployments/data-plane
 
-components:
-- ../../../../config/components/mgmt-api-heap-size
+images:
+  - name: k8ssandra/k8ssandra-operator
+    newTag: {{ .ImageTag }}
 
 patches:
 - target:
@@ -289,9 +247,8 @@ replacements:
     fieldPaths:
     - subjects.0.namespace
 `
-	}
 
-	k := Kustomization{Namespace: namespace}
+	k := Kustomization{Namespace: config.Namespace, ImageTag: config.ImageTag}
 
 	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), k, controlPlaneTmpl)
 	if err != nil {
@@ -390,36 +347,46 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
+type OperatorDeploymentConfig struct {
+	Namespace string
+	ClusterScoped bool
+	ImageTag string
+}
+
 // DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
 // in the data plane cluster(s). Note that the control plane cluster can also be one of the
 // data plane clusters. It then deploys the operator in the data plane clusters with the
 // K8ssandraCluster controller disabled. When clusterScoped is true the operator is
 // configured to watch all namespaces and is deployed in the k8ssandra-operator namespace.
-func (f *E2eFramework) DeployK8ssandraOperator(namespace string, clusterScoped bool) error {
-	if err := generateK8ssandraOperatorKustomization(namespace, clusterScoped); err != nil {
-		return err
-	}
+func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) error {
+	var (
+		baseDir string
+		controlPlane string
+		dataPlane string
+	)
 
-	baseDir := filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
-	controlPlane := ""
-	dataPlane := ""
-
-	if clusterScoped {
-		controlPlane = filepath.Join(baseDir, "control-plane-cluster-scope")
-		dataPlane = filepath.Join(baseDir, "data-plane-cluster-scope")
+	if config.ClusterScoped {
+		baseDir = filepath.Join("..", "..", "config", "deployments")
+		controlPlane = filepath.Join(baseDir, "control-plane", "cluster-scope")
+		dataPlane = filepath.Join(baseDir, "data-plane", "cluster-scope")
 	} else {
+		baseDir = filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
 		controlPlane = filepath.Join(baseDir, "control-plane")
 		dataPlane = filepath.Join(baseDir, "data-plane")
+
+		if err := generateK8ssandraOperatorKustomization(config); err != nil {
+			return err
+		}
 	}
 
-	err := f.kustomizeAndApply(controlPlane, namespace, f.ControlPlaneContext)
+	err := f.kustomizeAndApply(controlPlane, config.Namespace, f.ControlPlaneContext)
 	if err != nil {
 		return err
 	}
 
 	dataPlaneContexts := f.getDataPlaneContexts()
 	if len(dataPlaneContexts) > 0 {
-		return f.kustomizeAndApply(dataPlane, namespace, dataPlaneContexts...)
+		return f.kustomizeAndApply(dataPlane, config.Namespace, dataPlaneContexts...)
 	}
 
 	return nil
@@ -437,17 +404,6 @@ func (f *E2eFramework) DeployCertManager() error {
 	}
 
 	return nil
-}
-
-// DeployCassOperator deploys cass-operator in all remote clusters.
-func (f *E2eFramework) DeployCassOperator(namespace string) error {
-	if err := generateCassOperatorKustomization(namespace); err != nil {
-		return err
-	}
-
-	dir := filepath.Join("..", "..", "build", "test-config", "cass-operator")
-
-	return f.kustomizeAndApply(dir, namespace, f.getClusterContexts()...)
 }
 
 // DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.

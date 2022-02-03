@@ -53,6 +53,7 @@ var (
 
 	logKustomizeOutput = flag.Bool("logKustomizeOutput", false, "")
 	logKubectlOutput   = flag.Bool("logKubectlOutput", false, "")
+	imageTag           = flag.String("imageTag", "latest", "")
 )
 
 func TestOperator(t *testing.T) {
@@ -343,7 +344,12 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		return err
 	}
 
-	if err := f.DeployK8ssandraOperator(opts.operatorNamespace, opts.clusterScoped); err != nil {
+	deploymentConfig := framework.OperatorDeploymentConfig{
+		Namespace: opts.operatorNamespace,
+		ClusterScoped: opts.clusterScoped,
+		ImageTag: *imageTag,
+	}
+	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
 		return err
 	}
