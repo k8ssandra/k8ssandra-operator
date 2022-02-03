@@ -344,6 +344,17 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
 }
 
+func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.AllowMultipleCassPerNode = pointer.Bool(true)
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, true, dc.Spec.AllowMultipleNodesPerWorker)
+}
+
 // TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
 func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 	template := GetDatacenterConfig()

@@ -238,6 +238,11 @@ type CassandraClusterTemplate struct {
 	// api heap.
 	// +optional
 	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
+
+	// AllowMultipleCassPerNode sets whether multiple Cassandra instances can be scheduled on the same node.
+	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
+	// the number of nodes required.
+	AllowMultipleCassPerNode *bool `json:"allowMultipleCassPerNode,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
@@ -307,6 +312,11 @@ type CassandraDatacenterTemplate struct {
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
 	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
+
+	// AllowMultipleCassPerNode sets whether multiple Cassandra instances can be scheduled on the same node.
+	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
+	// the number of nodes required.
+	AllowMultipleCassPerNode *bool `json:"allowMultipleCassPerNode,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

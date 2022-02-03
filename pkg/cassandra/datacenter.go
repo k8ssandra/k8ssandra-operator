@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -86,23 +87,24 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta                  api.EmbeddedObjectMeta
-	Cluster               string
-	SuperuserSecretRef    corev1.LocalObjectReference
-	ServerImage           string
-	ServerVersion         string
-	JmxInitContainerImage *images.Image
-	Size                  int32
-	Resources             *corev1.ResourceRequirements
-	SystemReplication     SystemReplication
-	StorageConfig         *cassdcapi.StorageConfig
-	Racks                 []cassdcapi.Rack
-	CassandraConfig       api.CassandraConfig
-	AdditionalSeeds       []string
-	Networking            *cassdcapi.NetworkingConfig
-	Users                 []cassdcapi.CassandraUser
-	PodTemplateSpec       *corev1.PodTemplateSpec
-	MgmtAPIHeap           *resource.Quantity
+	Meta                     api.EmbeddedObjectMeta
+	Cluster                  string
+	SuperuserSecretRef       corev1.LocalObjectReference
+	ServerImage              string
+	ServerVersion            string
+	JmxInitContainerImage    *images.Image
+	Size                     int32
+	Resources                *corev1.ResourceRequirements
+	SystemReplication        SystemReplication
+	StorageConfig            *cassdcapi.StorageConfig
+	Racks                    []cassdcapi.Rack
+	CassandraConfig          api.CassandraConfig
+	AdditionalSeeds          []string
+	Networking               *cassdcapi.NetworkingConfig
+	Users                    []cassdcapi.CassandraUser
+	PodTemplateSpec          *corev1.PodTemplateSpec
+	MgmtAPIHeap              *resource.Quantity
+	AllowMultipleCassPerNode *bool
 }
 
 const (
@@ -161,6 +163,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.MgmtAPIHeap != nil {
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
+	}
+
+	if template.AllowMultipleCassPerNode != nil {
+		dc.Spec.AllowMultipleNodesPerWorker = *template.AllowMultipleCassPerNode
 	}
 
 	return dc, nil
@@ -302,6 +308,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
 	} else {
 		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
+	}
+
+	if dcTemplate.AllowMultipleCassPerNode == nil {
+		dcConfig.AllowMultipleCassPerNode = clusterTemplate.AllowMultipleCassPerNode
+	} else {
+		dcConfig.AllowMultipleCassPerNode = dcTemplate.AllowMultipleCassPerNode
 	}
 
 	return dcConfig
