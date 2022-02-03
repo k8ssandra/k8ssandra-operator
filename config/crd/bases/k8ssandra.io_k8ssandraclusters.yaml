@@ -2309,6 +2309,13 @@ spec:
                           format: int32
                           minimum: 1
                           type: integer
+                        softPodAntiAffinity:
+                          description: SoftPodAntiAffinity sets whether multiple Cassandra
+                            instances can be scheduled on the same node. This should
+                            normally be false to ensure cluster resilience but may
+                            be set true for test/dev scenarios to minimise the number
+                            of nodes required.
+                          type: boolean
                         stargate:
                           description: Stargate defines the desired deployment characteristics
                             for Stargate in this datacenter. Leave nil to skip deploying
@@ -6028,6 +6035,12 @@ spec:
                     description: ServerVersion is the Cassandra version.
                     pattern: (3\.11\.\d+)|(4\.0\.\d+)
                     type: string
+                  softPodAntiAffinity:
+                    description: SoftPodAntiAffinity sets whether multiple Cassandra
+                      instances can be scheduled on the same node. This should normally
+                      be false to ensure cluster resilience but may be set true for
+                      test/dev scenarios to minimise the number of nodes required.
+                    type: boolean
                   storageConfig:
                     description: StorageConfig is the persistent storage requirements
                       for each Cassandra pod. This includes everything under /var/lib/cassandra,
