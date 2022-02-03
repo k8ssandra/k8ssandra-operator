@@ -346,7 +346,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 
 func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {
 	template := GetDatacenterConfig()
-	template.AllowMultipleCassPerNode = pointer.Bool(true)
+	template.SoftPodAntiAffinity = pointer.Bool(true)
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,

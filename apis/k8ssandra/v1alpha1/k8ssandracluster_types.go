@@ -239,10 +239,10 @@ type CassandraClusterTemplate struct {
 	// +optional
 	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
 
-	// AllowMultipleCassPerNode sets whether multiple Cassandra instances can be scheduled on the same node.
+	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
 	// the number of nodes required.
-	AllowMultipleCassPerNode *bool `json:"allowMultipleCassPerNode,omitempty"`
+	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
@@ -313,10 +313,10 @@ type CassandraDatacenterTemplate struct {
 	// +optional
 	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
 
-	// AllowMultipleCassPerNode sets whether multiple Cassandra instances can be scheduled on the same node.
+	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
 	// the number of nodes required.
-	AllowMultipleCassPerNode *bool `json:"allowMultipleCassPerNode,omitempty"`
+	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
