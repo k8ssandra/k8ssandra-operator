@@ -33,27 +33,31 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 	return dc.GetConditionStatus(cassdcapi.DatacenterStopped) == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressUpdating
 }
 
-// GetDatacentersForSystemReplication determines the DCs that should be included for
-// replication. This function should only be used for system keyspaces. Replication for
-// system keyspaces is initially set through the management-api, not CQL. This allows us
-// to specify non-existent DCs for replication even though Cassandra 4 does not allow that.
-// That cannot be done when configuration replication through CQL which is why this func
-// should only be used for system keyspaces.
-func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
-	datacenters := make([]api.CassandraDatacenterTemplate, 0)
-	initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue
-	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		if dc.Stopped {
-			continue
-		}
-		if initialized {
-			status, found := kc.Status.Datacenters[dc.Meta.Name]
-			if found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
-				datacenters = append(datacenters, dc)
+// GetDatacentersForReplication determines the DCs that should be included for replication. This function works for both
+// system and non-system keyspaces. Replication for system keyspaces is initially done before the cluster has been
+// initialized, and is set through the management-api, not CQL. This allows us to specify non-existent DCs for
+// replication even though Cassandra 4 does not allow that. Once the cluster is initialized however, replication is done
+// through CQL, and we cannot include non-existing DCs anymore; this is going to be the case: 1) when updating system
+// keyspaces; 2) when configuring keyspaces for Stargate and Reaper; and 3) when updating user keyspaces during a DC
+// rebuild.
+func GetDatacentersForReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
+	var datacenters []api.CassandraDatacenterTemplate
+	if initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue; initialized {
+		// The cluster is already initialized: we can't bypass CQL anymore, so we must include only dcs that really
+		// exist, otherwise Cassandra 4 is going to reject the replication. DCs can be in ready or stopped state.
+		for _, dc := range kc.Spec.Cassandra.Datacenters {
+			if status, found := kc.Status.Datacenters[dc.Meta.Name]; found {
+				ready := status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue
+				stopped := status.Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped) == corev1.ConditionTrue
+				if ready || stopped {
+					datacenters = append(datacenters, dc)
+				}
 			}
-		} else {
-			datacenters = append(datacenters, dc)
 		}
+	} else {
+		// The cluster hasn't been initialized yet: include all dcs, even those that don't exist yet.
+		// The replication is going to be set bypassing CQL, which is feasible even for Cassandra 4.
+		datacenters = kc.Spec.Cassandra.Datacenters
 	}
 	return datacenters
 }
@@ -61,7 +65,7 @@ func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.Cassandr
 func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication {
 	rf := 3.0
 
-	datacenters := GetDatacentersForSystemReplication(kc)
+	datacenters := GetDatacentersForReplication(kc)
 
 	for _, dc := range datacenters {
 		rf = math.Min(rf, float64(dc.Size))

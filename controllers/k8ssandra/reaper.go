@@ -51,7 +51,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 
 	keyspace := getReaperKeyspace(kc)
 
-	datacenters := kc.GetReadyDatacenters()
+	datacenters := cassandra.GetDatacentersForReplication(kc)
 	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
 		cassandra.ComputeReplicationFromDcTemplates(3, datacenters...),
