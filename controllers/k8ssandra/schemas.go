@@ -71,17 +71,32 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 }
 
 func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.ManagementApiFacade, logger logr.Logger) result.ReconcileResult {
-
 	versions, err := mgmtApi.GetSchemaVersions()
 	if err != nil {
 		return result.Error(err)
 	}
 
-	if len(versions) == 1 {
-		return result.Continue()
+	for uid := range versions {
+		// a key named UNREACHABLE may appear in the results when nodes are unreachable. The results
+		// from management-api will look like this:
+		//
+		//    {
+		//        "UNREACHABLE": [
+		//            "172.18.0.2"
+		//        ],
+		//        "aa573028-7c70-3b8f-a247-13bbca2011d2": [
+		//            "172.18.0.9",
+		//            "172.18.0.6"
+		//        ]
+		//    }
+		//
+		// We exclude these keys from the check.
+		if uid == "UNREACHABLE" {
+			delete(versions, uid)
+		}
 	}
 
-	if _, found := versions["UNREACHABLE"]; len(versions) == 2 && found {
+	if len(versions) == 1 {
 		return result.Continue()
 	}
 
