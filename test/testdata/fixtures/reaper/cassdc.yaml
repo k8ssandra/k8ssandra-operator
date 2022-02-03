@@ -28,7 +28,7 @@ spec:
       max_heap_size: 512m
   resources:
     limits:
-      memory: 800Mi
+      memory: 1024Mi
   serverType: cassandra
   serverVersion: 3.11.11
   networking:

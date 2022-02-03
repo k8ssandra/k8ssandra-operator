@@ -40,7 +40,7 @@ spec:
         heapSize: 384Mi
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     networking:
       hostNetwork: true
     datacenters:

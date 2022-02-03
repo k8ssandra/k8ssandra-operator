@@ -176,7 +176,6 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.KeystoreSecretRef.Name, encryption.StoreNameKeystore); err != nil {
 			return err
 		} else {
-			logger.Info(fmt.Sprintf("Read keystore password %s", password))
 			template.ServerKeystorePassword = password
 		}
 
@@ -184,7 +183,6 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 		if password, err := ReadEncryptionStorePassword(ctx, klusterKey.Namespace, remoteClient, template.ServerEncryptionStores.TruststoreSecretRef.Name, encryption.StoreNameTruststore); err != nil {
 			return err
 		} else {
-			logger.Info(fmt.Sprintf("Read truststore password %s", password))
 			template.ServerTruststorePassword = password
 		}
 	}

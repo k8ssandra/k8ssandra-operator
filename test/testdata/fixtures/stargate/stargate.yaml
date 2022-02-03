@@ -10,7 +10,7 @@ spec:
   heapSize: 512Mi
   resources:
     limits:
-      memory: "800Mi"
+      memory: "1024Mi"
   livenessProbe:
     initialDelaySeconds: 100
     periodSeconds: 10

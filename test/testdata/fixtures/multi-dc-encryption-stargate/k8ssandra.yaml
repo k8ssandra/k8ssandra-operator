@@ -13,9 +13,6 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
-  reaper:
-    autoScheduling:
-      enabled: false
   cassandra:
     serverVersion: "3.11.11"
     storageConfig:
@@ -58,7 +55,7 @@ spec:
         heapSize: 384Mi
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     networking:
       hostNetwork: true
     datacenters:
@@ -96,7 +93,7 @@ spec:
       name: cassandra-config
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     livenessProbe:
       initialDelaySeconds: 100
       periodSeconds: 10

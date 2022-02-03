@@ -1,4 +1,24 @@
 apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-cql-secret
+data:
+  # username: reaper-cql
+  username: cmVhcGVyLWNxbA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-ui-secret
+data:
+  # username: reaper-ui
+  username: cmVhcGVyLWpteA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cassandra-config
@@ -14,6 +34,13 @@ metadata:
   name: test
 spec:
   reaper:
+    keyspace: reaper_ks
+    cassandraUserSecretRef:
+      name: reaper-cql-secret # pre-existing secret with non-default name
+    jmxUserSecretRef:
+      name: reaper-jmx-secret # will be created with non-default name
+    uiUserSecretRef:
+      name: reaper-ui-secret # pre-existing secret with non-default name
     autoScheduling:
       enabled: false
   cassandra:
@@ -57,7 +84,7 @@ spec:
         heapSize: 384Mi
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     networking:
       hostNetwork: true
     datacenters:
