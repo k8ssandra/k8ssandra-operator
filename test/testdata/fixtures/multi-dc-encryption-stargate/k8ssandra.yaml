@@ -1,3 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-config
+data:
+  cassandra.yaml: |
+    concurrent_reads: 32
+    concurrent_writes: 32
+    concurrent_counter_writes: 32
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
@@ -36,6 +46,11 @@ spec:
         concurrent_reads: 2
         concurrent_writes: 2
         concurrent_counter_writes: 2
+        server_encryption_options:
+            internode_encryption: all
+            require_client_auth: true
+        client_encryption_options:
+              enabled: true
       jvmOptions:
         heapSize: 384Mi
     resources:
@@ -52,6 +67,16 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 2
+    serverEncryptionStores:
+      keystoreSecretRef:
+        name: server-encryption-stores
+      truststoreSecretRef:
+        name: server-encryption-stores
+    clientEncryptionStores:
+      keystoreSecretRef:
+        name: client-encryption-stores
+      truststoreSecretRef:
+        name: client-encryption-stores
   stargate:
     size: 1
     affinity:
@@ -68,7 +93,7 @@ spec:
       name: cassandra-config
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     livenessProbe:
       initialDelaySeconds: 100
       periodSeconds: 10

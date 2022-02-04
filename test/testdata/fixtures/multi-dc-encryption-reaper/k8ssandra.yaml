@@ -1,8 +1,48 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-cql-secret
+data:
+  # username: reaper-cql
+  username: cmVhcGVyLWNxbA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-ui-secret
+data:
+  # username: reaper-ui
+  username: cmVhcGVyLWpteA==
+  # password: R3ap3r
+  password: UjNhcDNy
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-config
+data:
+  cassandra.yaml: |
+    concurrent_reads: 32
+    concurrent_writes: 32
+    concurrent_counter_writes: 32
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  reaper:
+    keyspace: reaper_ks
+    cassandraUserSecretRef:
+      name: reaper-cql-secret # pre-existing secret with non-default name
+    jmxUserSecretRef:
+      name: reaper-jmx-secret # will be created with non-default name
+    uiUserSecretRef:
+      name: reaper-ui-secret # pre-existing secret with non-default name
+    autoScheduling:
+      enabled: false
   cassandra:
     serverVersion: "3.11.11"
     storageConfig:
@@ -36,6 +76,10 @@ spec:
         concurrent_reads: 2
         concurrent_writes: 2
         concurrent_counter_writes: 2
+        server_encryption_options:
+            internode_encryption: all
+        client_encryption_options:
+            enabled: true
       jvmOptions:
         heapSize: 384Mi
     resources:
@@ -52,32 +96,13 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 2
-  stargate:
-    size: 1
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: topology.kubernetes.io/zone
-                  operator: In
-                  values:
-                    - rack3
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    resources:
-      limits:
-        memory: 512Mi
-    livenessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
+    serverEncryptionStores:
+      keystoreSecretRef:
+        name: server-encryption-stores
+      truststoreSecretRef:
+        name: server-encryption-stores
+    clientEncryptionStores:
+      keystoreSecretRef:
+        name: client-encryption-stores
+      truststoreSecretRef:
+        name: client-encryption-stores

@@ -14,6 +14,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+* [FEATURE] [#293](https://github.com/k8ssandra/k8ssandra-operator/issues/293) Add support for encryption
 * [FEATURE] [#21](https://github.com/k8ssandra/k8ssandra-operator/issues/21) Add datacenter to existing cluster
 * [ENHANCEMENT] [#308](https://github.com/k8ssandra/k8ssandra-operator/issues/308) Improve logic to compute Reaper
   availability mode and remove Reaper DC template

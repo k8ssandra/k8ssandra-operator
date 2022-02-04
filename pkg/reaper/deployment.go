@@ -9,6 +9,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ var defaultImage = images.Image{
 	Tag:        DefaultVersion,
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	labels := createServiceAndDeploymentLabels(reaper)
 
 	selector := metav1.LabelSelector{
@@ -127,6 +128,33 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 		}
 	}
 
+	volumeMounts := []corev1.VolumeMount{}
+	volumes := []corev1.Volume{}
+	// if client encryption is turned on, we need to mount the keystore and truststore volumes
+	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
+		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
+		volumes = append(volumes, *keystoreVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      keystoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore),
+		})
+		volumes = append(volumes, *truststoreVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      truststoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
+		})
+
+		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "JAVA_OPTS",
+			Value: javaOpts,
+		})
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		})
+	}
+
 	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
 	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
 
@@ -152,6 +180,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 							SecurityContext: reaper.Spec.InitContainerSecurityContext,
 							Env:             envVars,
 							Args:            []string{"schema-migration"},
+							VolumeMounts:    volumeMounts,
 						},
 					},
 					Containers: []corev1.Container{
@@ -175,12 +204,14 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, authVa
 							ReadinessProbe: readinessProbe,
 							LivenessProbe:  livenessProbe,
 							Env:            envVars,
+							VolumeMounts:   volumeMounts,
 						},
 					},
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
 					ImagePullSecrets:   images.CollectPullSecrets(mainImage, initImage),
+					Volumes:            volumes,
 				},
 			},
 		},

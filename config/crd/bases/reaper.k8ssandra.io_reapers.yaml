@@ -967,6 +967,34 @@ spec:
                       TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                 type: object
+              clientEncryptionStores:
+                description: Client encryption stores which are used by Cassandra
+                  and Reaper.
+                properties:
+                  keystoreSecretRef:
+                    description: ref to the secret that contains the keystore and
+                      its password the expected format of the secret is a "keystore"
+                      entry and a "keystore-password" entry
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  truststoreSecretRef:
+                    description: ref to the secret that contains the truststore and
+                      its password the expected format of the secret is a "truststore"
+                      entry and a "truststore-password" entry
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                required:
+                - keystoreSecretRef
+                - truststoreSecretRef
+                type: object
               containerImage:
                 default:
                   name: cassandra-reaper

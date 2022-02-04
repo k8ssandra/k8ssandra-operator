@@ -76,6 +76,34 @@ spec:
                             type: boolean
                         type: object
                     type: object
+                  clientEncryptionStores:
+                    description: Client encryption stores which are used by Cassandra
+                      and Reaper.
+                    properties:
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                    required:
+                    - keystoreSecretRef
+                    - truststoreSecretRef
+                    type: object
                   config:
                     description: CassandraConfig is configuration settings that are
                       applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
@@ -250,6 +278,33 @@ spec:
                           check_for_duplicate_rows_during_reads:
                             description: Exists in 3.11, 4.0, trunk
                             type: boolean
+                          client_encryption_options:
+                            description: Exists in 3.11, 4.0, trunk
+                            properties:
+                              accepted_protocols:
+                                items:
+                                  type: string
+                                type: array
+                              algorithm:
+                                type: string
+                              cipher_suites:
+                                items:
+                                  type: string
+                                type: array
+                              enabled:
+                                type: boolean
+                              optional:
+                                type: boolean
+                              protocol:
+                                type: string
+                              require_client_auth:
+                                default: false
+                                type: boolean
+                              store_type:
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           client_error_reporting_exclusions:
                             description: Exists in trunk
                             properties:
@@ -888,6 +943,44 @@ spec:
                           row_cache_size_in_mb:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
+                          server_encryption_options:
+                            description: Exists in 3.11, 4.0, trunk
+                            properties:
+                              accepted_protocols:
+                                items:
+                                  type: string
+                                type: array
+                              algorithm:
+                                type: string
+                              cipher_suites:
+                                items:
+                                  type: string
+                                type: array
+                              enable_legacy_ssl_storage_port:
+                                default: false
+                                type: boolean
+                              internode_encryption:
+                                default: none
+                                enum:
+                                - none
+                                - dc
+                                - rack
+                                - all
+                                type: string
+                              optional:
+                                default: false
+                                type: boolean
+                              protocol:
+                                type: string
+                              require_client_auth:
+                                default: false
+                                type: boolean
+                              require_endpoint_verification:
+                                default: false
+                                type: boolean
+                              store_type:
+                                type: string
+                            type: object
                           slow_query_log_timeout_in_ms:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
@@ -1222,6 +1315,33 @@ spec:
                                 check_for_duplicate_rows_during_reads:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: boolean
+                                client_encryption_options:
+                                  description: Exists in 3.11, 4.0, trunk
+                                  properties:
+                                    accepted_protocols:
+                                      items:
+                                        type: string
+                                      type: array
+                                    algorithm:
+                                      type: string
+                                    cipher_suites:
+                                      items:
+                                        type: string
+                                      type: array
+                                    enabled:
+                                      type: boolean
+                                    optional:
+                                      type: boolean
+                                    protocol:
+                                      type: string
+                                    require_client_auth:
+                                      default: false
+                                      type: boolean
+                                    store_type:
+                                      type: string
+                                  required:
+                                  - enabled
+                                  type: object
                                 client_error_reporting_exclusions:
                                   description: Exists in trunk
                                   properties:
@@ -1860,6 +1980,44 @@ spec:
                                 row_cache_size_in_mb:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
+                                server_encryption_options:
+                                  description: Exists in 3.11, 4.0, trunk
+                                  properties:
+                                    accepted_protocols:
+                                      items:
+                                        type: string
+                                      type: array
+                                    algorithm:
+                                      type: string
+                                    cipher_suites:
+                                      items:
+                                        type: string
+                                      type: array
+                                    enable_legacy_ssl_storage_port:
+                                      default: false
+                                      type: boolean
+                                    internode_encryption:
+                                      default: none
+                                      enum:
+                                      - none
+                                      - dc
+                                      - rack
+                                      - all
+                                      type: string
+                                    optional:
+                                      default: false
+                                      type: boolean
+                                    protocol:
+                                      type: string
+                                    require_client_auth:
+                                      default: false
+                                      type: boolean
+                                    require_endpoint_verification:
+                                      default: false
+                                      type: boolean
+                                    store_type:
+                                      type: string
+                                  type: object
                                 slow_query_log_timeout_in_ms:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
@@ -2151,6 +2309,13 @@ spec:
                           format: int32
                           minimum: 1
                           type: integer
+                        softPodAntiAffinity:
+                          description: SoftPodAntiAffinity sets whether multiple Cassandra
+                            instances can be scheduled on the same node. This should
+                            normally be false to ensure cluster resilience but may
+                            be set true for test/dev scenarios to minimise the number
+                            of nodes required.
+                          type: boolean
                         stargate:
                           description: Stargate defines the desired deployment characteristics
                             for Stargate in this datacenter. Leave nil to skip deploying
@@ -5833,6 +5998,34 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  serverEncryptionStores:
+                    description: Internode encryption stores which are used by Cassandra
+                      and Stargate.
+                    properties:
+                      keystoreSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password the expected format of the secret is a
+                          "keystore" entry and a "keystore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      truststoreSecretRef:
+                        description: ref to the secret that contains the truststore
+                          and its password the expected format of the secret is a
+                          "truststore" entry and a "truststore-password" entry
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                    required:
+                    - keystoreSecretRef
+                    - truststoreSecretRef
+                    type: object
                   serverImage:
                     description: ServerImage is the image for the cassandra container.
                       Note that this should be a management-api image. If left empty
@@ -5842,6 +6035,12 @@ spec:
                     description: ServerVersion is the Cassandra version.
                     pattern: (3\.11\.\d+)|(4\.0\.\d+)
                     type: string
+                  softPodAntiAffinity:
+                    description: SoftPodAntiAffinity sets whether multiple Cassandra
+                      instances can be scheduled on the same node. This should normally
+                      be false to ensure cluster resilience but may be set true for
+                      test/dev scenarios to minimise the number of nodes required.
+                    type: boolean
                   storageConfig:
                     description: StorageConfig is the persistent storage requirements
                       for each Cassandra pod. This includes everything under /var/lib/cassandra,

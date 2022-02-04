@@ -3,6 +3,9 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"testing"
+
 	"github.com/google/uuid"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -13,12 +16,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"net/url"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
@@ -46,7 +49,33 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	})
 }
 
+func createSingleReaperWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	reaperKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
+
+	checkDatacenterReady(t, ctx, dcKey, f)
+	checkReaperReady(t, f, ctx, reaperKey)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	t.Log("deploying Reaper ingress routes in kind-k8ssandra-0")
+	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context kind-k8ssandra-0")
+		reaperUiSecretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-reaper-ui"}}
+		username, password := retrieveCredentials(t, f, ctx, reaperUiSecretKey)
+		testReaperApi(t, ctx, 0, "test", "reaper_db", username, password)
+	})
+}
+
 func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
 	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
@@ -92,7 +121,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, "test")
-	require.NoError(t, err, "failed to retrieve database credentials")
+	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, "-u", username, "-pw", password)
@@ -127,6 +156,55 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	})
 	t.Run("TestStargateApi[1]", func(t *testing.T) {
 		testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
+	})
+}
+
+func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
+	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
+	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: cqlSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: cqlSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: jmxSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: jmxSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: uiSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: uiSecretKey})
+
+	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	reaper1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
+	reaper2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-reaper"}}
+
+	checkDatacenterReady(t, ctx, dc1Key, f)
+	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	checkReaperReady(t, f, ctx, reaper1Key)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
+
+	checkReaperReady(t, f, ctx, reaper2Key)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
+
+	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
+	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
+	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-1", 1, namespace, "test-dc2-reaper-service")
+
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
+	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
+
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		secretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: uiSecretKey}
+		username, password := retrieveCredentials(t, f, ctx, secretKey)
+		testReaperApi(t, ctx, 0, "test", "reaper_ks", username, password)
+	})
+	t.Run("TestReaperApi[1]", func(t *testing.T) {
+		secretKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: uiSecretKey}
+		username, password := retrieveCredentials(t, f, ctx, secretKey)
+		testReaperApi(t, ctx, 1, "test", "reaper_ks", username, password)
 	})
 }
 

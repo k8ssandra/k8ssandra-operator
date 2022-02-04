@@ -1,12 +1,14 @@
 package stargate
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
 	"testing"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,6 +42,24 @@ var (
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
 				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
 			},
+			CassandraEncryption: &api.CassandraEncryption{
+				ServerEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: corev1.LocalObjectReference{
+						Name: "server-keystore-secret",
+					},
+					TruststoreSecretRef: corev1.LocalObjectReference{
+						Name: "server-truststore-secret",
+					},
+				},
+				ClientEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: corev1.LocalObjectReference{
+						Name: "client-keystore-secret",
+					},
+					TruststoreSecretRef: corev1.LocalObjectReference{
+						Name: "client-truststore-secret",
+					},
+				},
+			},
 		},
 	}
 )
@@ -53,6 +73,7 @@ func TestNewDeployments(t *testing.T) {
 	t.Run("Many racks few replicas", testNewDeploymentsManyRacksFewReplicas)
 	t.Run("CassandraConfigMap", testNewDeploymentsCassandraConfigMap)
 	t.Run("Custom images", testImages)
+	t.Run("Encryption", testNewDeploymentsEncryption)
 }
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
@@ -132,10 +153,10 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Contains(t, javaOpts.Value, "-Xmx268435456")
 
 	volumeMount := findVolumeMount(container, "cassandra-config")
-	require.Nil(t, volumeMount)
+	require.NotNil(t, volumeMount)
 
 	volume := findVolume(&deployment, "cassandra-config")
-	require.Nil(t, volume)
+	require.NotNil(t, volume)
 }
 
 func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
@@ -480,6 +501,7 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 
 func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	configMapName := "cassandra-config"
+	generatedConfigMapName := "dc1-cassandra-config"
 
 	stargate := stargate.DeepCopy()
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}
@@ -505,11 +527,115 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 		Name: "cassandra-config",
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+				LocalObjectReference: corev1.LocalObjectReference{Name: generatedConfigMapName},
 			},
 		},
 	}
 	assert.Equal(t, expected, *volume, "cassandra-config volume does not match expected value")
+}
+
+func testNewDeploymentsEncryption(t *testing.T) {
+
+	stargate := stargate.DeepCopy()
+
+	deployments := NewDeployments(stargate, dc)
+	require.Len(t, deployments, 1)
+	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+
+	container := findContainer(&deployment, deployment.Name)
+	require.NotNil(t, container, "failed to find stargate container")
+
+	/* envVar := findEnvVar(container, "JAVA_OPTS")
+	require.NotNil(t, envVar, "failed to find JAVA_OPTS env var")
+	assert.True(t, strings.Contains(envVar.Value, "-Dstargate.unsafe.cassandra_config_path="+cassandraConfigPath)) */
+
+	volumeMount := findVolumeMount(container, "server-keystore")
+	require.NotNil(t, volumeMount, "failed to find server keystore volume mount")
+	assert.Equal(t, "/mnt/server-keystore", volumeMount.MountPath)
+
+	volumeMount = findVolumeMount(container, "server-truststore")
+	require.NotNil(t, volumeMount, "failed to find server truststore volume mount")
+	assert.Equal(t, "/mnt/server-truststore", volumeMount.MountPath)
+
+	volumeMount = findVolumeMount(container, "client-keystore")
+	require.NotNil(t, volumeMount, "failed to find client keystore volume mount")
+	assert.Equal(t, "/mnt/client-keystore", volumeMount.MountPath)
+
+	volumeMount = findVolumeMount(container, "client-truststore")
+	require.NotNil(t, volumeMount, "failed to find client truststore volume mount")
+	assert.Equal(t, "/mnt/client-truststore", volumeMount.MountPath)
+
+	volume := findVolume(&deployment, "client-keystore")
+	require.NotNil(t, volume, "failed to find client-keystore volume")
+	expectedKeystoreVolume := corev1.Volume{
+		Name: "client-keystore",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "client-keystore-secret",
+				Items: []corev1.KeyToPath{
+					{
+						Key:  string(encryption.StoreNameKeystore),
+						Path: string(encryption.StoreNameKeystore),
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, expectedKeystoreVolume, *volume, "client keystore volume does not match expected value")
+
+	volume = findVolume(&deployment, "client-truststore")
+	require.NotNil(t, volume, "failed to find client-truststore volume")
+	expectedTruststoreVolume := corev1.Volume{
+		Name: "client-truststore",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "client-truststore-secret",
+				Items: []corev1.KeyToPath{
+					{
+						Key:  string(encryption.StoreNameTruststore),
+						Path: string(encryption.StoreNameTruststore),
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, expectedTruststoreVolume, *volume, "client truststore volume does not match expected value")
+
+	volume = findVolume(&deployment, "server-keystore")
+	require.NotNil(t, volume, "failed to find server-keystore volume")
+	expectedKeystoreVolume = corev1.Volume{
+		Name: "server-keystore",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "server-keystore-secret",
+				Items: []corev1.KeyToPath{
+					{
+						Key:  string(encryption.StoreNameKeystore),
+						Path: string(encryption.StoreNameKeystore),
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, expectedKeystoreVolume, *volume, "server keystore volume does not match expected value")
+
+	volume = findVolume(&deployment, "server-truststore")
+	require.NotNil(t, volume, "failed to find server-truststore volume")
+	expectedTruststoreVolume = corev1.Volume{
+		Name: "server-truststore",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "server-truststore-secret",
+				Items: []corev1.KeyToPath{
+					{
+						Key:  string(encryption.StoreNameTruststore),
+						Path: string(encryption.StoreNameTruststore),
+					},
+				},
+			},
+		},
+	}
+	assert.Equal(t, expectedTruststoreVolume, *volume, "server truststore volume does not match expected value")
 }
 
 func testImages(t *testing.T) {

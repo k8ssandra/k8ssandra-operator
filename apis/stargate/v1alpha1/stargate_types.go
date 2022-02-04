@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -188,6 +189,19 @@ type StargateSpec struct {
 	// +optional
 	// +kubebuilder:default=true
 	Auth *bool `json:"auth,omitempty"`
+
+	CassandraEncryption *CassandraEncryption `json:"cassandraEncryption,omitempty"`
+}
+
+// Still it is required to pass the encryption stores secrets to the Stargate pods, so that they can be mounted as volumes.
+type CassandraEncryption struct {
+	// Client encryption stores which are used by Cassandra and Reaper.
+	// +optional
+	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
+
+	// Internode encryption stores which are used by Cassandra and Stargate.
+	// +optional
+	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 }
 
 func (in StargateSpec) IsAuthEnabled() bool {

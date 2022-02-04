@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -216,6 +217,10 @@ type ReaperSpec struct {
 	// +kubebuilder:default="ALL"
 	// +kubebuilder:validation:Enum:=LOCAL;ALL;EACH
 	DatacenterAvailability string `json:"datacenterAvailability,omitempty"`
+
+	// Client encryption stores which are used by Cassandra and Reaper.
+	// +optional
+	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

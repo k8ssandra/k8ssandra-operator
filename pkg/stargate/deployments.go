@@ -2,13 +2,16 @@ package stargate
 
 import (
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"strings"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -19,6 +22,7 @@ import (
 const (
 	cassandraConfigDir  = "/config"
 	cassandraConfigPath = "/config/cassandra.yaml"
+	cassandraConfigMap  = "cassandra-config"
 
 	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
 	// "{{ .Values.clusterDomain | default \"cluster.local\" }}
@@ -83,8 +87,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
 		jvmOptions := computeJvmOptions(template)
-		volumes := computeVolumes(template)
-		volumeMounts := computeVolumeMounts(template)
+		volumes := computeVolumes(template, dc)
+		encryptionVolumes, encryptionVolumesMounts := computeEncryptionVolumes(stargate.Spec)
+		volumes = append(volumes, encryptionVolumes...)
+		volumeMounts := computeVolumeMounts(template, encryptionVolumesMounts)
 		serviceAccountName := computeServiceAccount(template)
 		nodeSelector := computeNodeSelector(template, dc)
 		tolerations := computeTolerations(template, dc)
@@ -332,28 +338,63 @@ func computeHeapSize(template *api.StargateTemplate) resource.Quantity {
 	return resource.MustParse("256Mi")
 }
 
-func computeVolumes(template *api.StargateTemplate) []corev1.Volume {
-	if template.CassandraConfigMapRef != nil {
-		return []corev1.Volume{{
-			Name: "cassandra-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: *template.CassandraConfigMapRef,
+// This config map will always be created by the k8ssandra controller.
+// It will augment the user provided config map with encryption settings if enabled.
+func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatacenter) []corev1.Volume {
+	var volumes []corev1.Volume
+	volumes = append(volumes, corev1.Volume{
+		Name: "cassandra-config",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: GeneratedConfigMapName(dc.ClusterName, dc.Name),
 				},
 			},
-		}}
-	}
-	return nil
+		},
+	})
+
+	return volumes
 }
 
-func computeVolumeMounts(template *api.StargateTemplate) []corev1.VolumeMount {
-	if template.CassandraConfigMapRef != nil {
-		return []corev1.VolumeMount{{
-			Name:      "cassandra-config",
-			MountPath: cassandraConfigDir,
-		}}
+func computeEncryptionVolumes(spec api.StargateSpec) ([]corev1.Volume, []corev1.VolumeMount) {
+	volumes := []corev1.Volume{}
+	mounts := []corev1.VolumeMount{}
+
+	if spec.CassandraEncryption != nil {
+		if spec.CassandraEncryption.ServerEncryptionStores != nil {
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeServer, *spec.CassandraEncryption.ServerEncryptionStores)
+			volumes = append(volumes, *keystoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*keystoreVolume, encryption.StoreTypeServer, encryption.StoreNameKeystore))
+			volumes = append(volumes, *truststoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*truststoreVolume, encryption.StoreTypeServer, encryption.StoreNameTruststore))
+		}
+		if spec.CassandraEncryption.ClientEncryptionStores != nil {
+			keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *spec.CassandraEncryption.ClientEncryptionStores)
+			volumes = append(volumes, *keystoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*keystoreVolume, encryption.StoreTypeClient, encryption.StoreNameKeystore))
+			volumes = append(volumes, *truststoreVolume)
+			mounts = append(mounts, encryptionStoreMount(*truststoreVolume, encryption.StoreTypeClient, encryption.StoreNameTruststore))
+		}
 	}
-	return nil
+
+	return volumes, mounts
+}
+
+func computeVolumeMounts(template *api.StargateTemplate, encryptionVolumesMounts []corev1.VolumeMount) []corev1.VolumeMount {
+	mounts := []corev1.VolumeMount{}
+	mounts = append(mounts, corev1.VolumeMount{
+		Name:      "cassandra-config",
+		MountPath: cassandraConfigDir,
+	})
+	mounts = append(mounts, encryptionVolumesMounts...)
+	return mounts
+}
+
+func encryptionStoreMount(encryptionVolume corev1.Volume, storeType encryption.StoreType, storeName encryption.StoreName) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      encryptionVolume.Name,
+		MountPath: cassandra.StoreMountFullPath(storeType, storeName),
+	}
 }
 
 func computeServiceAccount(template *api.StargateTemplate) string {
@@ -393,4 +434,8 @@ func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraData
 		NodeAffinity:    computeNodeAffinity(dc, rack.Name),
 		PodAntiAffinity: computePodAntiAffinity(allowStargateOnDataNodes, dc, rack.Name),
 	}
+}
+
+func GeneratedConfigMapName(clusterName, dcName string) string {
+	return fmt.Sprintf("%s-%s", dcName, cassandraConfigMap)
 }

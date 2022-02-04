@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -45,7 +45,7 @@ spec:
       hostNetwork: true
     resources:
       limits:
-        memory: 512Mi
+        memory: 1024Mi
     datacenters:
       - metadata:
           name: dc1

@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -38,8 +39,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 
 	if stargateTemplate != nil {
 		logger.Info("Reconcile Stargate")
-
-		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc)
+		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc, dcTemplate, logger)
 		annotations.AddHashAnnotation(desiredStargate)
 
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
@@ -105,7 +105,19 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 }
 
 // TODO move to stargate package
-func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter) *stargateapi.Stargate {
+func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedName, kc *api.K8ssandraCluster, stargateTemplate *stargateapi.StargateDatacenterTemplate, actualDc *cassdcapi.CassandraDatacenter, dcTemplate api.CassandraDatacenterTemplate, logger logr.Logger) *stargateapi.Stargate {
+	cassandraEncryption := stargateapi.CassandraEncryption{}
+	dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)
+	if cassandra.ClientEncryptionEnabled(dcConfig) {
+		logger.Info("Client encryption enabled, setting it up in Stargate")
+		cassandraEncryption.ClientEncryptionStores = kc.Spec.Cassandra.ClientEncryptionStores
+	}
+
+	if cassandra.ServerEncryptionEnabled(dcConfig) {
+		logger.Info("Server encryption enabled, setting it up in Stargate")
+		cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
+	}
+
 	desiredStargate := &stargateapi.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   stargateKey.Namespace,
@@ -124,6 +136,7 @@ func (r *K8ssandraClusterReconciler) newStargate(stargateKey types.NamespacedNam
 			StargateDatacenterTemplate: *stargateTemplate,
 			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
 			Auth:                       kc.Spec.Auth,
+			CassandraEncryption:        &cassandraEncryption,
 		},
 	}
 	return desiredStargate

@@ -3,6 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -18,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
@@ -68,6 +69,17 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return medusaResult, actualDcs
 		}
 
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		if err != nil {
+			logger.Error(err, "Failed to get remote client")
+			return result.Error(err), actualDcs
+		}
+
+		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, logger)
+		if err != nil {
+			logger.Error(err, "Failed to read encryption secrets")
+			return result.Error(err), actualDcs
+		}
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		if err != nil {
 			logger.Error(err, "Failed to create new CassandraDatacenter")
@@ -88,12 +100,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
-
-		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-		if err != nil {
-			logger.Error(err, "Failed to get remote client")
-			return result.Error(err), actualDcs
-		}
 
 		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, remoteClient, logger); recResult.Completed() {
 			return recResult, actualDcs

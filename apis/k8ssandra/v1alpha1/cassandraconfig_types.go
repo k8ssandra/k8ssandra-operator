@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -155,6 +156,10 @@ type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +optional
 	CheckForDuplicateRowsDuringReads *bool `json:"check_for_duplicate_rows_during_reads,omitempty"`
+
+	// Exists in 3.11, 4.0, trunk
+	// +optional
+	ClientEncryptionOptions *encryption.ClientEncryptionOptions `json:"client_encryption_options,omitempty"`
 
 	// Exists in trunk
 	// +optional
@@ -838,6 +843,10 @@ type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +optional
 	RowCacheSizeInMb *int `json:"row_cache_size_in_mb,omitempty"`
+
+	// Exists in 3.11, 4.0, trunk
+	// +optional
+	ServerEncryptionOptions *encryption.ServerEncryptionOptions `json:"server_encryption_options,omitempty"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
