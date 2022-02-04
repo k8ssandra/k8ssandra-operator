@@ -4,9 +4,13 @@
 
 `k8ssandra-operator` has integrations with Prometheus which allow for the simple rollout of Prometheus ServiceMonitors for both Stargate and Cassandra Datacenters.
 
-### Requirements
+### Prerequisites
 
 To use Prometheus for monitoring, you need to have the Prometheus operator installed on your Kubernetes (k8s) cluster. A simple way to install Prometheus operator is via [kube-prometheus](https://github.com/prometheus-operator/kube-prometheus). 
+
+```
+kubectl -k https://github.com/prometheus-operator/kube-prometheus
+```
 
 The Prometheus operator installs the ServiceMonitor CRD, which is the integration point we use to tell Prometheus how to find the Stargate and Cassandra pods and what endpoints on those pods to scrape.
 
