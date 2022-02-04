@@ -84,4 +84,17 @@ jobs:
       run: |
         # We are running tests against k8s 1.20 - 1.22 currently. 
         # Additional versions must be added in kind config files under ./test/config/kind
-        make KUTTL_KIND_CFG="./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml" kuttl-test
+
+        # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
+        # release process. The following changes have been made to stay as close as possible
+        # to the existing behavior with kuttl tests while supporting the ability to use a release
+        # image tag of the operator.
+
+        make install-kuttl
+        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
+        ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-servicemonitors
+        kind delete cluster --name k8ssandra-0
+        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
+        ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-config-control-plane

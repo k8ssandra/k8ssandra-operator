@@ -116,7 +116,7 @@ jobs:
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind clusters
-        run: make IMG=${{ needs.build_image.outputs.image }} create-kind-multicluster kind-load-image-multi
+        run: make IMG="k8ssandra/k8ssandra-operator:latest" create-kind-multicluster kind-load-image-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} NODETOOL_STATUS_TIMEOUT=2m e2e-test
       - name: Get artefact upload directory
