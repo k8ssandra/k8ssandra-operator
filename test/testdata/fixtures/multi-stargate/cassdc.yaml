@@ -24,8 +24,8 @@ spec:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
-      initial_heap_size: 512m
-      max_heap_size: 512m
+      initial_heap_size: 384m
+      max_heap_size: 384m
   resources:
     limits:
       memory: 1024Mi
