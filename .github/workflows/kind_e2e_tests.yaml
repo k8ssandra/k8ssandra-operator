@@ -85,4 +85,5 @@ jobs:
     with:
       e2e_test: ${{ matrix.e2e_test }}
       makefile_setup_target: ${{ matrix.makefile_setup_target }}
+      image: ${{ needs.build_image.outputs.image }}
     
