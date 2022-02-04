@@ -7,6 +7,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [FEATURE]
 * [ENHANCEMENT]
 * [BUGFIX]
+* [DOCS]
 * [TESTING]
 ```
 
@@ -14,12 +15,23 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+## v0.4.0 2022-02-04
+
+* [CHANGE] [#315](https://github.com/k8ssandra/k8ssandra-operator/issues/315) Explicity set `start_rpc: false`
+* [CHANGE] [#308](https://github.com/k8ssandra/k8ssandra-operator/issues/308) Remove per-DC Reaper templates
 * [FEATURE] [#293](https://github.com/k8ssandra/k8ssandra-operator/issues/293) Add support for encryption
 * [FEATURE] [#21](https://github.com/k8ssandra/k8ssandra-operator/issues/21) Add datacenter to existing cluster
 * [FEATURE] [#284](https://github.com/k8ssandra/k8ssandra-operator/issues/284) Remove datacenter from existing cluster
+* [FEATURE] [#178](https://github.com/k8ssandra/k8ssandra-operator/issues/178) If ClientConfig is modified, automatically restart the k8ssandra-operator
 * [ENHANCEMENT] [#308](https://github.com/k8ssandra/k8ssandra-operator/issues/308) Improve logic to compute Reaper
-  availability mode and remove Reaper DC template
-* [BUGFIX] [#335](https://github.com/k8ssandra/k8ssandra-operator/issues/335) single-up Makefile target does not generate ClientConfig  
+* [ENHANCEMENT] [#342](https://github.com/k8ssandra/k8ssandra-operator/issues/342) Expose `allowMultipleNodesPerWorker` property
+ availability mode and remove Reaper DC template
+* [BUGFIX] [#335](https://github.com/k8ssandra/k8ssandra-operator/issues/335) single-up Makefile target does not generate ClientConfig 
+* [BUGFIX] [#285](https://github.com/k8ssandra/k8ssandra-operator/issues/285) Fix cluster-scoped kustomizations 
+* [BUGFIX] [#329](https://github.com/k8ssandra/k8ssandra-operator/issues/329) Fix cass-operator version
+* [DOCS] [#357](https://github.com/k8ssandra/k8ssandra-operator/issues/357) Set up encryption
+* [TESTING] [#290](https://github.com/k8ssandra/k8ssandra-operator/issues/290) Update `DumpClusterInfo` method to include more details
+* [TESTING] [#339](https://github.com/k8ssandra/k8ssandra-operator/issues/339) Fix artifact uploads
 
 ## v1.0.0-alpha.3 2022-01-23
 
@@ -38,7 +50,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#267](https://github.com/k8ssandra/k8ssandra-operator/issues/267) Use the K8ssandraCluster name as cluster name for CassandraDatacenter objects
 * [ENHANCEMENT] [#297](https://github.com/k8ssandra/k8ssandra-operator/issues/297) Reconcile standalone Stargate auth schema
 * [TESTING] [#299](https://github.com/k8ssandra/k8ssandra-operator/issues/299) Cluster-scoped e2e test failing
-* [FEATURE] [#178](https://github.com/k8ssandra/k8ssandra-operator/issues/178) If ClientConfig is modified, automatically restart the k8ssandra-operator
 
 ## v1.0.0-alpha.2 - 2021-12-03
 
