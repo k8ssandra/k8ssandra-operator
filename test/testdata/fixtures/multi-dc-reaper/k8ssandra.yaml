@@ -68,4 +68,23 @@ spec:
             heapSize: 384Mi
         networking:
           hostNetwork: true
-
+  stargate:
+    size: 1
+    heapSize: 384Mi
+    cassandraConfigMapRef:
+      name: cassandra-config
+    resources:
+      limits:
+        memory: 512Mi
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
