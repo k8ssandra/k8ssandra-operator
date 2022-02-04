@@ -249,7 +249,7 @@ func Get(opts Options, args ...string) (string, error) {
 	}
 
 	if err != nil {
-		return stderr.String(), err
+		return stdout.String() + stderr.String(), err
 	}
 	return stdout.String(), nil
 }
