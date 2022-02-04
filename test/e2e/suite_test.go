@@ -1421,6 +1421,30 @@ func checkKeyspaceExists(
 	}, 1*time.Minute, 3*time.Second)
 }
 
+func checkKeyspaceReplication(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace string,
+	replication map[string]int,
+) {
+	assert.Eventually(t, func() bool {
+		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspace "+keyspace)
+		if err != nil {
+			t.Logf("failed to desctibe keyspace %s: %v", keyspace, err)
+			return false
+		}
+		for dc, rf := range replication {
+			rfStr := fmt.Sprintf("'%v': '%v'", dc, rf)
+			if !strings.Contains(desc, rfStr) {
+				t.Logf("Keyspace %s replication does not contain: %v", keyspace, rfStr)
+				return false
+			}
+		}
+		return true
+	}, 1*time.Minute, 3*time.Second)
+}
+
 func configureZeroLog() {
 	zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{
