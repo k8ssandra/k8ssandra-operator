@@ -68,6 +68,7 @@ spec:
             heapSize: 384Mi
         networking:
           hostNetwork: true
+    mgmtAPIHeap: 64Mi
   stargate:
     size: 1
     heapSize: 384Mi

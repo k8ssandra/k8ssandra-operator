@@ -58,3 +58,4 @@ spec:
           namespace: test-2
         k8sContext: kind-k8ssandra-1
         size: 3
+    mgmtAPIHeap: 64Mi

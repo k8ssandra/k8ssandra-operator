@@ -41,6 +41,7 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 1
+    mgmtAPIHeap: 64Mi
   reaper: {}
   stargate:
     size: 1
@@ -49,7 +50,7 @@ spec:
       name: cassandra-config
     resources:
       limits:
-        memory: 512Mi
+        memory: 800Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10
