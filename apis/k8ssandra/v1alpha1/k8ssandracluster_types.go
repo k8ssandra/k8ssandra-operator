@@ -83,12 +83,18 @@ type K8ssandraClusterStatus struct {
 
 type K8ssandraClusterConditionType string
 
+type DecommissionProgress string
+
 const (
 	// CassandraInitialized is set to true when the Cassandra cluster becomes ready for
 	// the first time. During the life time of the C* cluster CassandraDatacenters may have
 	// their readiness condition change back and forth. Once set, this condition however
 	// does not change.
 	CassandraInitialized = "CassandraInitialized"
+
+	DecommNone                DecommissionProgress = ""
+	DecommUpdatingReplication DecommissionProgress = "UpdatingReplication"
+	DecommDeleting            DecommissionProgress = "Decommissioning"
 )
 
 type K8ssandraClusterCondition struct {
@@ -102,9 +108,10 @@ type K8ssandraClusterCondition struct {
 
 // K8ssandraStatus defines the observed of a k8ssandra instance
 type K8ssandraStatus struct {
-	Cassandra *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	Stargate  *stargateapi.StargateStatus          `json:"stargate,omitempty"`
-	Reaper    *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
+	DecommissionProgress DecommissionProgress                 `json:"decommissionProgress,omitempty"`
+	Cassandra            *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
+	Stargate             *stargateapi.StargateStatus          `json:"stargate,omitempty"`
+	Reaper               *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
 
 // +kubebuilder:object:root=true

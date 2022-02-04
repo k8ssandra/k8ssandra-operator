@@ -22,10 +22,11 @@ import (
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -149,6 +150,19 @@ func (f *Framework) Update(ctx context.Context, key ClusterKey, obj client.Objec
 	}
 
 	return remoteClient.Update(ctx, obj)
+}
+
+func (f *Framework) Delete(ctx context.Context, key ClusterKey, obj client.Object) error {
+	if len(key.K8sContext) == 0 {
+		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	}
+
+	remoteClient, found := f.remoteClients[key.K8sContext]
+	if !found {
+		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	}
+
+	return remoteClient.Delete(ctx, obj)
 }
 
 func (f *Framework) UpdateStatus(ctx context.Context, key ClusterKey, obj client.Object) error {
@@ -418,7 +432,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
-			if !k8serrors.IsNotFound(err) {
+			if !errors.IsNotFound(err) {
 				// We won't log the error if its not found because that is expected and it helps cut
 				// down on the verbosity of the test output.
 				f.logger.Error(err, "failed to get CassandraDatacenter", "key", key)
@@ -523,4 +537,11 @@ func (f *Framework) ContainerHasEnvVar(container corev1.Container, envVarName, e
 		}
 	}
 	return false
+}
+
+func (f *Framework) AssertObjectDoesNotExist(ctx context.Context, t *testing.T, key ClusterKey, obj client.Object, timeout, interval time.Duration) {
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, key, obj)
+		return err != nil && errors.IsNotFound(err)
+	}, timeout, interval, fmt.Sprintf("failed to verify object (%+v) does not exist", key))
 }

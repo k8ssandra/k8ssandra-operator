@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [FEATURE] [#293](https://github.com/k8ssandra/k8ssandra-operator/issues/293) Add support for encryption
 * [FEATURE] [#21](https://github.com/k8ssandra/k8ssandra-operator/issues/21) Add datacenter to existing cluster
+* [FEATURE] [#284](https://github.com/k8ssandra/k8ssandra-operator/issues/284) Remove datacenter from existing cluster
 * [ENHANCEMENT] [#308](https://github.com/k8ssandra/k8ssandra-operator/issues/308) Improve logic to compute Reaper
   availability mode and remove Reaper DC template
 * [BUGFIX] [#335](https://github.com/k8ssandra/k8ssandra-operator/issues/335) single-up Makefile target does not generate ClientConfig  

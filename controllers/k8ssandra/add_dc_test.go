@@ -35,6 +35,8 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate, true))
 	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
+	t.Run("DeleteDcWithUserKeyspaces", addDcTest(ctx, f, deleteDcWithUserKeyspaces, false))
+	t.Run("DeleteDcWithStargateAndReaper", addDcTest(ctx, f, deleteDcWithStargateAndReaper, false))
 }
 
 type addDcTestFunc func(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster)
@@ -619,6 +621,12 @@ func verifyReplicationOfInternalKeyspacesUpdated(t *testing.T, mockMgmtApi *test
 func verifyReplicationOfKeyspaceUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, keyspace string, replication map[string]int) {
 	require.Eventually(t, func() bool {
 		return mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, keyspace, replication) > -1
+	}, timeout, interval, fmt.Sprintf("failed to verify replication for keyspace %s updated", keyspace))
+}
+
+func verifyKeyspaceReplicationAltered(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, keyspace string, replication map[string]int) {
+	require.Eventually(t, func() bool {
+		return mockMgmtApi.GetFirstCall(testutils.AlterKeyspace, keyspace, replication) > -1
 	}, timeout, interval, fmt.Sprintf("failed to verify replication for keyspace %s updated", keyspace))
 }
 

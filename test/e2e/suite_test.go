@@ -80,6 +80,10 @@ func TestOperator(t *testing.T) {
 		testFunc: addDcToCluster,
 		fixture:  "add-dc",
 	}))
+	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: removeDcFromCluster,
+		fixture:  "remove-dc",
+	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
 		fixture:                      "multi-stargate",
@@ -865,6 +869,129 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)
+}
+
+func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	k8sCtx0 := "kind-k8ssandra-0"
+	k8sCtx1 := "kind-k8ssandra-1"
+
+	dc1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc1",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+
+	dc2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc2",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Name)
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	pod := "test-dc1-default-sts-0"
+	count := 2
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+
+	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+
+	t.Log("check nodes in dc2 see nodes in dc1")
+	pod = "test-dc2-default-sts-0"
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+
+	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+
+	sg1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-stargate",
+		},
+	}
+	checkStargateReady(t, f, ctx, sg1Key)
+
+	reaper1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper1Key)
+
+	sg2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc2-stargate",
+		},
+	}
+	checkStargateReady(t, f, ctx, sg2Key)
+
+	reaper2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc2-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper2Key)
+
+	t.Log("create keyspaces")
+	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
+		"CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
+	require.NoError(err, "failed to create keyspace")
+
+	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
+		"CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
+	require.NoError(err, "failed to create keyspace")
+
+	t.Log("remove dc2 from cluster")
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
+	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+	err = f.Client.Update(ctx, kc)
+	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
+	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1*time.Minute, 3*time.Second)
+	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, 1*time.Minute, 3*time.Second)
+
+	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
+	for _, ks := range keyspaces {
+		assert.Eventually(func() bool {
+			output, err := f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
+				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
+			if err != nil {
+				t.Logf("replication check for keyspace %s failed: %v", ks, err)
+				return false
+			}
+			return strings.Contains(output, "'dc1': '1'") && !strings.Contains(output, "'dc2': '1'")
+		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
+	}
+
+	t.Log("check that nodes in dc1 do not see nodes in dc2 anymore")
+	pod = "test-dc1-default-sts-0"
+	count = 1
+	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
