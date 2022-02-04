@@ -573,9 +573,9 @@ func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, i
 
 // DumpClusterInfo Executes `kubectl cluster-info dump -o yaml` on each cluster. The output
 // is stored under <project-root>/build/test.
-func (f *E2eFramework) DumpClusterInfo(test string, namespace ...string) error {
+func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error {
 	f.logger.Info("dumping cluster info")
-	f.logger.Info("Namespaces", "namespaces", namespace)
+	f.logger.Info("Namespaces", "namespaces", namespaces)
 
 	now := time.Now()
 	testDir := strings.ReplaceAll(test, "/", "_")
@@ -589,45 +589,47 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespace ...string) error {
 		}
 
 		opts := kubectl.ClusterInfoOptions{Options: kubectl.Options{Context: ctx}, OutputDirectory: outputDir}
-		if len(namespace) == 1 {
-			opts.Namespace = namespace[0]
+		if len(namespaces) == 1 {
+			opts.Namespace = namespaces[0]
 		} else {
-			opts.Namespaces = namespace
+			opts.Namespaces = namespaces
 		}
 
 		if err := kubectl.DumpClusterInfo(opts); err != nil {
 			errs = append(errs, fmt.Errorf("failed to dump cluster info for cluster %s: %w", ctx, err))
 		}
 
-		// Store the list of pods in an easy to read format.
-		output, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace[1]}, "pods", "-o", "wide")
-		if err != nil {
-			f.logger.Info("dump failed", "output", output, "error", err)
-			errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", "pods", ctx, err))
-		}
-		f.storeOutput(outputDir, namespace[1], "pods", "out", output)
-
-		// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
-		for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets", "ReplicatedSecret", "ClientConfig"} {
-			if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace[1], objectType), 0755); err != nil {
-				return err
-			}
-
-			// Get the list of objects
-			output, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace[1]}, objectType, "-o", "wide")
+		for _, namespace := range namespaces {
+			// Store the list of pods in an easy to read format.
+			output, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace}, "pods", "-o", "wide")
 			if err != nil {
 				f.logger.Info("dump failed", "output", output, "error", err)
-				errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
+				errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", "pods", ctx, err))
 			}
-			f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace[1], objectType), objectType, "out", output)
+			f.storeOutput(outputDir, namespace, "pods", "out", output)
 
-			// Get the yamls for each object
-			outputYaml, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace[1]}, objectType, "-o", "yaml")
-			if err != nil {
-				f.logger.Info("dump failed", "output", output, "error", err)
-				errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
+			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
+			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets", "ReplicatedSecret", "ClientConfig", "CassandraTask"} {
+				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
+					return err
+				}
+
+				// Get the list of objects
+				output, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace}, objectType, "-o", "wide")
+				if err != nil {
+					f.logger.Info("dump failed", "output", output, "error", err)
+					errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
+				}
+				f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "out", output)
+
+				// Get the yamls for each object
+				outputYaml, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace}, objectType, "-o", "yaml")
+				if err != nil {
+					f.logger.Info("dump failed", "output", output, "error", err)
+					errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
+				}
+				f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "yaml", outputYaml)
 			}
-			f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace[1], objectType), objectType, "yaml", outputYaml)
 		}
 	}
 
@@ -639,7 +641,6 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespace ...string) error {
 
 func (f *E2eFramework) storeOutput(outputDir, subdirectory, objectType, ext, output string) error {
 	filePath := fmt.Sprintf("%s/%s/%s.%s", outputDir, subdirectory, objectType, ext)
-	f.logger.Info("storing output", "filePath", filePath)
 	outputFile, err := os.Create(filePath)
 	if err != nil {
 		f.logger.Error(err, "failed to create output file")
