@@ -53,15 +53,6 @@ func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int,
 	checkRowCountNative(t, connection, 10, tableName, keyspaceName)
 }
 
-// This is a simplified test that is able to pass even when the cluster is operating in downgraded mode, e.g. when a DC
-// is down.
-func testStargateNativeApiSimple(t *testing.T, ctx context.Context, k8sContextIdx int, username string, password string) {
-	connection := openCqlClientConnection(t, ctx, k8sContextIdx, username, password)
-	defer connection.Close()
-	response := sendQuery(t, connection, "SELECT peer FROM system.peers")
-	assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult")
-}
-
 func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
 	tableName := fmt.Sprintf("table_%s", rand.String(6))
 	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
