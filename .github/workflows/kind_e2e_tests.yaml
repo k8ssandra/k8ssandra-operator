@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - 'releases/**'
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'
@@ -16,8 +17,6 @@ jobs:
   build_image:
     name: Build Image
     runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.set_image_var.outputs.image }}
     steps:
       - uses: actions/checkout@v2
         if: github.event_name == 'pull_request'
@@ -34,23 +33,6 @@ jobs:
           key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-integ-
-      - name: Set build tags
-        id: set_build_tags
-        run: |
-          image="k8ssandra/k8ssandra-operator:latest"
-          echo "build_tags=$image" >> $GITHUB_ENV
-          echo "image=$image" >> $GITHUB_ENV
-      - name: Update build tags
-        id: update_build_tags
-        if: startsWith(github.head_ref, 'prepare-release-')
-        run: |
-          branch_name=${{ github.head_ref }}
-          release_tag=k8ssandra/k8ssandra-operator:${branch_name:16}
-          echo "image=$release_tag" >> $GITHUB_ENV
-          echo "build_tags=k8ssandra/k8ssandra-operator:latest,$release_tag" >> $GITHUB_ENV
-      - name: Set immage output var
-        id: set_image_var
-        run: echo ::set-output name=image::${{ env.image }}
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
@@ -58,7 +40,7 @@ jobs:
           file: Dockerfile
           context: .
           push: false
-          tags: ${{ env.build_tags }}
+          tags: k8ssandra/k8ssandra-operator:latest
           platforms: linux/amd64
           outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
           cache-from: type=local,src=/tmp/.buildx-cache
