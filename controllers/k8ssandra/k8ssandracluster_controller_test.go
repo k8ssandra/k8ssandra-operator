@@ -1583,7 +1583,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // Create a cluster with server and client encryption but client encryption stores missing.
@@ -1720,7 +1720,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
