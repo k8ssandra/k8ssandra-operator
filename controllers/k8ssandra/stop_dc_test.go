@@ -199,10 +199,10 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	t.Log("check that stargate sg1 was deleted")
-	verifyObjectDoesNotExist(ctx, t, f, sg1Key, &stargateapi.Stargate{})
+	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
 
 	t.Log("check that reaper reaper1 was deleted")
-	verifyObjectDoesNotExist(ctx, t, f, reaper1Key, &reaperapi.Reaper{})
+	f.AssertObjectDoesNotExist(ctx, t, reaper1Key, &reaperapi.Reaper{}, timeout, interval)
 
 	t.Log("check that stargate sg2 is still present")
 	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
@@ -356,10 +356,10 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
 	t.Log("check that stargate sg3 was deleted")
-	verifyObjectDoesNotExist(ctx, t, f, sg3Key, &stargateapi.Stargate{})
+	f.AssertObjectDoesNotExist(ctx, t, sg3Key, &stargateapi.Stargate{}, timeout, interval)
 
 	t.Log("check that reaper reaper3 was deleted")
-	verifyObjectDoesNotExist(ctx, t, f, reaper3Key, &reaperapi.Reaper{})
+	f.AssertObjectDoesNotExist(ctx, t, reaper3Key, &reaperapi.Reaper{}, timeout, interval)
 
 	t.Log("start dc3")
 	err = f.Client.Get(ctx, kcKey, kc)

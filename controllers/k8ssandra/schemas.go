@@ -157,7 +157,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 		return recResult
 	}
 
-	datacenters := cassandra.GetDatacentersForReplication(kc)
+	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
 	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
@@ -313,7 +313,7 @@ func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 // been deployed. The replication argument may include DCs that have not yet been deployed.
 func getReplicationForDeployedDcs(kc *api.K8ssandraCluster, replication *cassandra.Replication) *cassandra.Replication {
 	dcNames := make([]string, 0)
-	for _, template := range cassandra.GetDatacentersForReplication(kc) {
+	for _, template := range kc.GetInitializedDatacenters() {
 		dcNames = append(dcNames, template.Meta.Name)
 	}
 

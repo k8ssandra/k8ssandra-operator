@@ -352,9 +352,9 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 	}
 
 	deploymentConfig := framework.OperatorDeploymentConfig{
-		Namespace: opts.operatorNamespace,
+		Namespace:     opts.operatorNamespace,
 		ClusterScoped: opts.clusterScoped,
-		ImageTag: *imageTag,
+		ImageTag:      *imageTag,
 	}
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
@@ -918,13 +918,13 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := 2
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
@@ -1000,7 +1000,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	t.Log("check that nodes in dc1 do not see nodes in dc2 anymore")
 	pod = "test-dc1-default-sts-0"
 	count = 1
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

@@ -187,7 +187,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 		return recResult
 	}
 
-	datacenters := cassandra.GetDatacentersForReplication(kc)
+	datacenters := kc.GetInitializedDatacenters()
 	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
 
 	if err := stargate.ReconcileAuthKeyspace(mgmtApi, replication, logger); err != nil {
