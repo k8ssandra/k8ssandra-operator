@@ -8,3 +8,4 @@ resources:
 components:
   - ../../../components/cluster-scope
   - ../../../components/data-plane
+  - ../../../components/single-namespace
