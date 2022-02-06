@@ -229,6 +229,24 @@ patches:
     - op: replace
       path: /metadata/name
       value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+      - subjects.0.namespace
 `
 
 		dataPlaneTmpl = `
@@ -251,6 +269,60 @@ patches:
     - op: replace
       path: /metadata/name
       value: {{ .Namespace }}
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+      - subjects.0.namespace
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+      - subjects.0.namespace
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+    - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+    - subjects.0.namespace
 `
 	}
 

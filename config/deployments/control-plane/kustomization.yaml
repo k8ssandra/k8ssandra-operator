@@ -5,4 +5,4 @@ resources:
   - ../default
   - ../../cass-operator/ns-scoped
 components:
-  - ../../../components/single-namespace
+  - ../../components/single-namespace
