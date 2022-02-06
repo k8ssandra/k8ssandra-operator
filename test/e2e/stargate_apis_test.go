@@ -70,25 +70,27 @@ func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, 
 }
 
 func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, tableName, keyspaceName string, replication map[string]int) {
-	keyspaceUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces", k8sContextIdx)
-	keyspaceJson := fmt.Sprintf(`{"name":"%v","datacenters":%v}`, keyspaceName, formatReplicationForRestApi(replication))
-	request := restClient.NewRequest().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("X-Cassandra-Token", token).
-		SetBody(keyspaceJson)
-	response, err := request.Post(keyspaceUrl)
-	require.NoError(t, err, "Create keyspace with Schema API failed")
-	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create keyspace request to return 201")
 	timeout := 2 * time.Minute
-	interval := 1 * time.Second
+	interval := 3 * time.Second
+
 	require.Eventually(t, func() bool {
-		keyspaceUrl = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v", k8sContextIdx, keyspaceName)
+		keyspaceUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces", k8sContextIdx)
+		keyspaceJson := fmt.Sprintf(`{"name":"%v","datacenters":%v}`, keyspaceName, formatReplicationForRestApi(replication))
+		request := restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token).
+			SetBody(keyspaceJson)
+		if _, err := request.Post(keyspaceUrl); err != nil {
+			return false
+		}
+
 		request = restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
-		response, err = request.Get(keyspaceUrl)
+		response, err := request.Get(keyspaceUrl)
 		return err == nil && response.StatusCode() == http.StatusOK
-	}, timeout, interval)
+	}, timeout, interval, "Create keyspace with Schema API failed")
+
 	tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
 	tableJson := fmt.Sprintf(`{ "name": "%v",
   "columnDefinitions": [
@@ -98,21 +100,29 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
   ],
   "primaryKey": { "partitionKey": [ "pk" ], "clusteringKey": [ "cc" ] }
 }`, tableName)
-	request = restClient.NewRequest().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("X-Cassandra-Token", token).
-		SetBody(tableJson)
-	response, err = request.Post(tableUrl)
-	require.NoError(t, err, "Create table with Schema API failed")
-	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create table request to return 201")
+
 	require.Eventually(t, func() bool {
+		// Stargate will return a 400 if we try to create the table and it already exists.
+		// We first check to see if it already exists to handle retries for scenarios like
+		// write timeouts.
 		tableUrl = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
-		request = restClient.NewRequest().
+		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
-		response, err = request.Get(tableUrl)
+		response, err := request.Get(tableUrl)
+
+		if err == nil && response.StatusCode() == http.StatusOK {
+			return true
+		}
+
+		request = restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token).
+			SetBody(tableJson)
+		response, err = request.Post(tableUrl)
+
 		return err == nil && response.StatusCode() == http.StatusOK
-	}, timeout, interval)
+	}, timeout, interval, "Create table with Schema API failed")
 }
 
 func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, nbRows int, tableName, keyspaceName string) {
@@ -150,18 +160,20 @@ func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContextIdx int
 }
 
 func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace string, replication map[string]int) string {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces", k8sContextIdx)
-	documentNamespaceJson := fmt.Sprintf(`{"name":"%s","datacenters":%v}`, documentNamespace, formatReplicationForRestApi(replication))
-	request := restClient.NewRequest().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("X-Cassandra-Token", token).
-		SetBody(documentNamespaceJson)
-	response, err := request.Post(url)
-	require.NoError(t, err, "Failed creating Stargate document namespace")
-	assert.Equal(t, http.StatusCreated, response.StatusCode(), "Expected create namespace request to return 201")
 	timeout := 2 * time.Minute
-	interval := 1 * time.Second
+	interval := 3 * time.Second
 	require.Eventually(t, func() bool {
+		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces", k8sContextIdx)
+		documentNamespaceJson := fmt.Sprintf(`{"name":"%s","datacenters":%v}`, documentNamespace, formatReplicationForRestApi(replication))
+		request := restClient.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetHeader("X-Cassandra-Token", token).
+			SetBody(documentNamespaceJson)
+		response, err := request.Post(url)
+		if err != nil {
+			return false
+		}
+
 		url = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces/%v", k8sContextIdx, documentNamespace)
 		request = restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
