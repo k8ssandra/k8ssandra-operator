@@ -121,7 +121,11 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 			SetBody(tableJson)
 		response, err = request.Post(tableUrl)
 
-		return err == nil && response.StatusCode() == http.StatusOK
+		if err != nil {
+			t.Logf("create table failed, status code (%d): %v", response.StatusCode(), err)
+		}
+
+		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Create table with Schema API failed")
 }
 
