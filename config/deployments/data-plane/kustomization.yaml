@@ -6,13 +6,4 @@ resources:
 
 components:
   - ../../components/data-plane
-replacements:
-  - source: 
-      kind: Namespace
-      name: k8ssandra-operator
-      fieldPath: metadata.name
-    targets:
-    - select:
-        namespace: cass-operator
-      fieldPaths:
-      - metadata.namespace
+  - ../../../components/single-namespace
