@@ -91,7 +91,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval, "Create keyspace with Schema API failed")
 
-	tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
+	createTableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
 	tableJson := fmt.Sprintf(`{ "name": "%v",
   "columnDefinitions": [
     { "name": "pk", "typeDefinition": "int", "static": false },
@@ -105,7 +105,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		// Stargate will return a 400 if we try to create the table and it already exists.
 		// We first check to see if it already exists to handle retries for scenarios like
 		// write timeouts.
-		tableUrl = fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
+		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
@@ -119,10 +119,14 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token).
 			SetBody(tableJson)
-		response, err = request.Post(tableUrl)
+		response, err = request.Post(createTableUrl)
 
 		if err != nil {
 			t.Logf("create table failed, status code (%d): %v", response.StatusCode(), err)
+		}
+
+		if response.StatusCode() != http.StatusCreated {
+			t.Logf("create table status code (%d), status (%s), response (%s)", response.StatusCode(), response.Status(), response.String())
 		}
 
 		return err == nil && response.StatusCode() == http.StatusCreated
