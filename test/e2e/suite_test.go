@@ -283,11 +283,9 @@ func getTestFixtureDir(fixture TestFixture) (string, error) {
 // required by both operators.
 func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts *e2eTestOpts) error {
 	namespaces := make([]string, 0)
-	cassOperatorNS := opts.sutNamespace
 
 	if opts.clusterScoped {
 		namespaces = append(namespaces, opts.sutNamespace)
-		cassOperatorNS = "cass-operator"
 	}
 
 	namespaces = append(namespaces, opts.operatorNamespace)
@@ -344,7 +342,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 		return err
 	}
 
-	if err := f.WaitForCassOperatorToBeReady(cassOperatorNS, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+	if err := f.WaitForCassOperatorToBeReady(opts.sutNamespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
 		t.Log("failed waiting for cass-operator to be ready")
 		return err
 	}
