@@ -66,7 +66,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkKeyspaceReplication(t, f, ctx, k8sCtx1, namespace, "cluster1", pod2Name, reaperapi.DefaultKeyspace, map[string]int{"dc2": 1})
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
-		testStargateApis(t, ctx, k8sCtx0, 0, username, password, map[string]int{"dc2": 1})
+		testStargateApis(t, ctx, k8sCtx1, 1, username, password, map[string]int{"dc2": 1})
 		uiKey := framework.NewClusterKey(k8sCtx1, namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
 		testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
