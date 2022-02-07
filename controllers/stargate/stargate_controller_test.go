@@ -27,6 +27,7 @@ import (
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+	testutils2 "github.com/k8ssandra/k8ssandra-operator/pkg/testutils"
 )
 
 const (
@@ -73,7 +74,7 @@ func TestStargate(t *testing.T) {
 	})
 }
 
-func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
+func testCreateStargateSingleRack(t *testing.T, testClient testutils2.TestK8sClient) {
 
 	namespace := "default"
 	ctx := context.Background()
@@ -103,7 +104,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc1"}
 
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err == nil
 	}, timeout, interval)
 
@@ -154,14 +155,14 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	t.Log("check that the Stargate resource was created")
 	stargateKey := types.NamespacedName{Namespace: namespace, Name: "dc1-stargate"}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err == nil && sg.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
 	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc1-default-stargate-deployment"}
 	deployment := &appsv1.Deployment{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, deploymentKey, deployment)
+		err := testClient.UnsafeGetSync(ctx, deploymentKey, deployment)
 		return err == nil
 	}, timeout, interval)
 
@@ -187,13 +188,13 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	serviceKey := types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate-service"}
 	service := &corev1.Service{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, serviceKey, service)
+		err := testClient.UnsafeGetSync(ctx, serviceKey, service)
 		return err == nil
 	}, timeout, interval)
 
 	t.Log("check that the Stargate resource is fully reconciled")
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err == nil && sg.Status.Progress == api.StargateProgressRunning
 	}, timeout, interval)
 
@@ -215,7 +216,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	//	Check for presence of expected ServiceMonitor
 	sm := &promapi.ServiceMonitor{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, smKey, sm)
+		err := testClient.UnsafeGetSync(ctx, smKey, sm)
 		return err == nil
 	}, timeout, interval)
 	assert.NotNil(t, sm.Spec.Endpoints)
@@ -227,7 +228,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
 	assert.Eventually(t, func() bool {
-		err := testClient.Get(ctx, smKey, sm)
+		err := testClient.UnsafeGetSync(ctx, smKey, sm)
 		if err != nil {
 			return k8serrors.IsNotFound(err)
 		}
@@ -240,7 +241,7 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "dc was never deleted")
 
@@ -250,12 +251,12 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		sg := &api.Stargate{}
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "stargate was never deleted")
 }
 
-func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
+func testCreateStargateMultiRack(t *testing.T, testClient testutils2.TestK8sClient) {
 
 	namespace := "default"
 	ctx := context.Background()
@@ -299,7 +300,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc2"}
 
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err == nil
 	}, timeout, interval)
 
@@ -353,7 +354,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	t.Log("check that the Stargate resource was created")
 	stargateKey := types.NamespacedName{Namespace: namespace, Name: "dc2-stargate"}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, stargate)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, stargate)
 		return err == nil && stargate.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
@@ -415,13 +416,13 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	serviceKey := types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate-service"}
 	service := &corev1.Service{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, serviceKey, service)
+		err := testClient.UnsafeGetSync(ctx, serviceKey, service)
 		return err == nil
 	}, timeout, interval)
 
 	t.Log("check that the Stargate resource is fully reconciled")
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, stargate)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, stargate)
 		return err == nil && stargate.Status.Progress == api.StargateProgressRunning
 	}, timeout, interval)
 
@@ -445,7 +446,7 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "dc was never deleted")
 
@@ -455,12 +456,12 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		sg := &api.Stargate{}
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "stargate was never deleted")
 }
 
-func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
+func testCreateStargateEncryption(t *testing.T, testClient testutils2.TestK8sClient) {
 
 	namespace := "default"
 	ctx := context.Background()
@@ -561,7 +562,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc3"}
 
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err == nil
 	}, timeout, interval)
 
@@ -630,14 +631,14 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 	t.Log("check that the Stargate resource was created")
 	stargateKey := types.NamespacedName{Namespace: namespace, Name: "dc3-stargate"}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err == nil && sg.Status.Progress == api.StargateProgressDeploying
 	}, timeout, interval)
 
 	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc3-default-stargate-deployment"}
 	deployment := &appsv1.Deployment{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, deploymentKey, deployment)
+		err := testClient.UnsafeGetSync(ctx, deploymentKey, deployment)
 		return err == nil
 	}, timeout, interval)
 
@@ -663,13 +664,13 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 	serviceKey := types.NamespacedName{Namespace: namespace, Name: "test-dc3-stargate-service"}
 	service := &corev1.Service{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, serviceKey, service)
+		err := testClient.UnsafeGetSync(ctx, serviceKey, service)
 		return err == nil
 	}, timeout, interval)
 
 	t.Log("check that the Stargate resource is fully reconciled")
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err == nil && sg.Status.Progress == api.StargateProgressRunning
 	}, timeout, interval)
 
@@ -684,7 +685,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 
 	sgConfigMap := corev1.ConfigMap{}
 	sgConfigMapKey := client.ObjectKey{Namespace: namespace, Name: stargate.GeneratedConfigMapName(dc.Spec.ClusterName, dc.ObjectMeta.Name)}
-	err = testClient.Get(ctx, sgConfigMapKey, &sgConfigMap)
+	err = testClient.UnsafeGetSync(ctx, sgConfigMapKey, &sgConfigMap)
 	assert.NoError(t, err, "failed to get stargate cassandra yaml config map")
 
 	t.Log("check Stargate condition")
@@ -696,7 +697,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 	//	Check for presence of expected ServiceMonitor
 	sm := &promapi.ServiceMonitor{}
 	require.Eventually(t, func() bool {
-		err := testClient.Get(ctx, smKey, sm)
+		err := testClient.UnsafeGetSync(ctx, smKey, sm)
 		return err == nil
 	}, timeout, interval)
 	assert.NotNil(t, sm.Spec.Endpoints)
@@ -708,7 +709,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
 	assert.Eventually(t, func() bool {
-		err := testClient.Get(ctx, smKey, sm)
+		err := testClient.UnsafeGetSync(ctx, smKey, sm)
 		if err != nil {
 			return k8serrors.IsNotFound(err)
 		}
@@ -721,7 +722,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
-		err := testClient.Get(ctx, dcKey, dc)
+		err := testClient.UnsafeGetSync(ctx, dcKey, dc)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "dc was never deleted")
 
@@ -731,7 +732,7 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 
 	assert.Eventually(t, func() bool {
 		sg := &api.Stargate{}
-		err := testClient.Get(ctx, stargateKey, sg)
+		err := testClient.UnsafeGetSync(ctx, stargateKey, sg)
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "stargate was never deleted")
 
