@@ -4,5 +4,5 @@ import "time"
 
 const (
 	DefaultTick    = time.Second
-	DefaultTimeout = time.Second*500
+	DefaultTimeout = time.Second * 500
 )

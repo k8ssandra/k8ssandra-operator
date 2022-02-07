@@ -20,7 +20,7 @@ type TestK8sClient struct {
 	TestState     *testing.T
 	UnsafeGetSync func(ctx context.Context, key client.ObjectKey, obj client.Object) error
 	timeout       time.Duration
-	tick         time.Duration
+	tick          time.Duration
 }
 
 func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {

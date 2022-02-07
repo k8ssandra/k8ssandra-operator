@@ -206,7 +206,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 			return err
 		}
 
-		e.Clients[clusterName] = testutils.NewTestk8sClient(t, configuredClient, DefaultTimeout, DefaultTick)
+		e.Clients[clusterName] = testutils.NewTestk8sClient(t, configuredClient, testutils.DefaultTimeout, testutils.DefaultTick)
 		cfgs[i] = cfg
 
 		c, err := cluster.New(cfg, func(o *cluster.Options) {
@@ -288,7 +288,7 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 		for k, v := range e.Clients {
 			remoteClients[k] = testutils.NewTestk8sClient(t, v, testutils.DefaultTimeout, testutils.DefaultTick)
 		}
-		f := framework.NewFramework(testutils.NewTestk8sClient(t, remoteClients[primaryCluster], timeout, tick), primaryCluster, remoteClients)
+		f := framework.NewFramework(testutils.NewTestk8sClient(t, remoteClients[primaryCluster], testutils.DefaultTimeout, testutils.DefaultTick), primaryCluster, remoteClients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
