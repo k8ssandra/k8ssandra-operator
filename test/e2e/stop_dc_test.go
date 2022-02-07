@@ -47,8 +47,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	t.Logf("Check stargate1 stopped and reaper moved to dc2")
 	checkStargateNotFound(t, f, ctx, sg1Key)
 	checkReaperNotFound(t, f, ctx, reaper1Key)
-	// FIXME Reaper crashes:  Not enough replicas available for query at consistency QUORUM
-	// checkReaperReady(t, f, ctx, reaper2Key)
+	checkReaperReady(t, f, ctx, reaper2Key)
 
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, kcKey.Namespace, "cluster1")
 
@@ -62,7 +61,9 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	pod1Name := "cluster1-dc1-default-sts-0"
 	pod2Name := "cluster1-dc2-default-sts-0"
 
-	checkKeyspaceReplications(t, f, ctx, k8sCtx1, namespace, pod2Name)
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, k8sCtx1, namespace, pod2Name)
+	// Reaper keyspace should have been altered
+	checkKeyspaceReplication(t, f, ctx, k8sCtx1, namespace, "cluster1", pod2Name, reaperapi.DefaultKeyspace, map[string]int{"dc2": 1})
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
 		testStargateApis(t, ctx, k8sCtx0, 0, username, password, map[string]int{"dc2": 1})
@@ -82,14 +83,15 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	t.Logf("Check stargate1 started and reaper moved to dc1")
 	checkStargateReady(t, f, ctx, sg1Key)
-	// FIXME Reaper crashes:  Not enough replicas available for query at consistency QUORUM
-	// checkReaperReady(t, f, ctx, reaper1Key)
+	checkReaperReady(t, f, ctx, reaper1Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in " + k8sCtx0)
 	f.DeployStargateIngresses(t, k8sCtx0, 0, namespace, "cluster1-dc1-stargate-service", username, password)
 	f.DeployReaperIngresses(t, ctx, k8sCtx0, 0, namespace, "cluster1-dc1-reaper-service")
 
-	checkKeyspaceReplications(t, f, ctx, k8sCtx0, namespace, pod1Name)
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, k8sCtx0, namespace, pod1Name)
+	// Reaper keyspace should have been altered
+	checkKeyspaceReplication(t, f, ctx, k8sCtx0, namespace, "cluster1", pod1Name, reaperapi.DefaultKeyspace, map[string]int{"dc1": 1})
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
 		testStargateApis(t, ctx, k8sCtx0, 0, username, password, map[string]int{"dc1": 1})
@@ -160,12 +162,11 @@ func toggleDcStopped(t *testing.T,
 	}
 }
 
-func checkKeyspaceReplications(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext string, namespace string, podName string) {
-	t.Log("checking that keyspace replications didn't change")
+func checkKeyspaceReplicationsUnaltered(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext string, namespace string, podName string) {
+	t.Log("checking that keyspace replications didn't change for system and Stargate auth keyspaces")
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_auth", replication)
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_traces", replication)
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_distributed", replication)
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, stargate.AuthKeyspace, replication)
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, reaperapi.DefaultKeyspace, replication)
 }
