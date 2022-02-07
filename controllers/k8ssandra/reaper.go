@@ -51,10 +51,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 
 	keyspace := getReaperKeyspace(kc)
 
-	// Reaper issues many hard-coded queries at QUORUM; having a DC down will make it unusable unless we change the
-	// replication of Reaper's keyspace to exclude any DCs that are stopped and only include those that are in Ready
-	// state.
-	datacenters := kc.GetReadyDatacenters()
+	datacenters := kc.GetInitializedDatacenters()
 	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
 		cassandra.ComputeReplicationFromDcTemplates(3, datacenters...),
