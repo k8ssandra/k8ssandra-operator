@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/testutils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -62,8 +63,8 @@ func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
 	}
 
 	controlPlaneContext := ""
-	var controlPlaneClient client.Client
-	remoteClients := make(map[string]client.Client, 0)
+	var controlPlaneClient testutils.TestK8sClient
+	remoteClients := make(map[string]testutils.TestK8sClient, 0)
 	t.Logf("Using config file: %s", configFile)
 
 	for name, _ := range config.Contexts {
@@ -76,7 +77,7 @@ func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
 
 		remoteClient, err := client.New(restCfg, client.Options{Scheme: scheme.Scheme})
 		if err == nil {
-			remoteClients[name] = remoteClient
+			remoteClients[name] = testutils.NewTestk8sClient(t, remoteClient, testutils.DefaultTimeout, testutils.DefaultTick)
 		}
 
 		// TODO Add a flag or option to allow the user to specify the control plane cluster
@@ -495,7 +496,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 	// Should this wait.Poll call be per cluster?
 	return wait.Poll(interval, timeout, func() (bool, error) {
 		for _, remoteClient := range f.remoteClients {
-			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
+			err := remoteClient.UnsafeGetSync(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
 
 			if err == nil || !apierrors.IsNotFound(err) {
 				f.logger.Info("waiting for namespace deletion", "error", err)

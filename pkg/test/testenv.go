@@ -11,14 +11,12 @@ import (
 	"time"
 
 	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
-
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/testutils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -36,6 +34,7 @@ import (
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
@@ -54,7 +53,7 @@ var (
 type TestEnv struct {
 	*envtest.Environment
 
-	TestClient client.Client
+	TestClient testutils.TestK8sClient
 }
 
 func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager) error) error {
@@ -100,7 +99,8 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		}
 	}
 
-	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	configuredClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	e.TestClient = testutils.NewTestk8sClient(t, configuredClient, DefaultTimeout, DefaultTick)
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
 	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
@@ -152,7 +152,7 @@ func (e *TestEnv) Stop(t *testing.T) {
 type MultiClusterTestEnv struct {
 	// Clients is a mapping of cluster (or k8s context) names to Client objects. Note that
 	// these are no-cache clients  as they are intended for use by the tests.
-	Clients map[string]client.Client
+	Clients map[string]testutils.TestK8sClient
 
 	// testEnvs is a list of the test environments that are created
 	testEnvs []*envtest.Environment
@@ -175,7 +175,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	}
 
 	e.clustersToCreate = clustersToCreate
-	e.Clients = make(map[string]client.Client)
+	e.Clients = make(map[string]testutils.TestK8sClient)
 	e.testEnvs = make([]*envtest.Environment, 0)
 	cfgs := make([]*rest.Config, e.clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
@@ -201,12 +201,12 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 			return err
 		}
 
-		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		configuredClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
 		if err != nil {
 			return err
 		}
 
-		e.Clients[clusterName] = testClient
+		e.Clients[clusterName] = testutils.NewTestk8sClient(t, configuredClient, DefaultTimeout, DefaultTick)
 		cfgs[i] = cfg
 
 		c, err := cluster.New(cfg, func(o *cluster.Options) {
@@ -282,11 +282,13 @@ type ControllerTest func(*testing.T, context.Context, *framework.Framework, stri
 
 func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
 	namespace := framework.CleanupForKubernetes(rand.String(9))
-
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		controlPlaneCluster := e.Clients[primaryCluster]
-		f := framework.NewFramework(controlPlaneCluster, primaryCluster, e.Clients)
+		var remoteClients map[string]testutils.TestK8sClient
+		for k, v := range e.Clients {
+			remoteClients[k] = testutils.NewTestk8sClient(t, v, testutils.DefaultTimeout, testutils.DefaultTick)
+		}
+		f := framework.NewFramework(testutils.NewTestk8sClient(t, remoteClients[primaryCluster], timeout, tick), primaryCluster, remoteClients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)

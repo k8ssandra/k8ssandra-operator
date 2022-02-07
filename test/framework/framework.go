@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/testutils"
+
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
@@ -36,7 +38,7 @@ import (
 )
 
 var (
-	Client client.Client
+	Client testutils.TestK8sClient
 )
 
 // TODO Add a Framework type and make functions method on that type
@@ -83,13 +85,13 @@ type Framework struct {
 	// Client is the client for the control plane cluster, i.e., the cluster in which the
 	// K8ssandraCluster controller is deployed. Note that this may also be one of the
 	// remote clusters.
-	Client client.Client
+	Client testutils.TestK8sClient
 
 	// The Kubernetes context in which the K8ssandraCluser controller is running.
 	ControlPlaneContext string
 
 	// RemoteClients is mapping of Kubernetes context names to clients.
-	remoteClients map[string]client.Client
+	remoteClients map[string]testutils.TestK8sClient
 
 	logger logr.Logger
 }
@@ -113,7 +115,8 @@ func NewClusterKey(context, namespace, name string) ClusterKey {
 		},
 	}
 }
-func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
+
+func NewFramework(client testutils.TestK8sClient, controlPlanContext string, remoteClients map[string]testutils.TestK8sClient) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
 	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
