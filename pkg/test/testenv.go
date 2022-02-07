@@ -284,7 +284,7 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 	namespace := framework.CleanupForKubernetes(rand.String(9))
 	return func(t *testing.T) {
 		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		var remoteClients map[string]testutils.TestK8sClient
+		remoteClients := make(map[string]testutils.TestK8sClient)
 		for k, v := range e.Clients {
 			remoteClients[k] = testutils.NewTestk8sClient(t, v, testutils.DefaultTimeout, testutils.DefaultTick)
 		}
