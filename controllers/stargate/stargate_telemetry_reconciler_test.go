@@ -5,20 +5,20 @@ package stargate
 import (
 	"context"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
-// new_DummyK8ssandraClusterReconciler gives us back a `K8ssandraClusterReconciler` with just the fields that we need to test `reconcileCassandraDCTelemetry()`.
+// new_DummyK8ssandraClusterReconciler gives us back a `K8ssandraClusterReconciler` with just the fields that we need to testutils `reconcileCassandraDCTelemetry()`.
 func newDummyK8ssandraClusterReconciler() StargateReconciler {
 	return StargateReconciler{ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: interval}}
 }

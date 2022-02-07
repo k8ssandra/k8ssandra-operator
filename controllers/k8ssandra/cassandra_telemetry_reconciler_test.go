@@ -4,7 +4,7 @@ package k8ssandra
 
 import (
 	"context"
-
+	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -12,7 +12,6 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/types"
 

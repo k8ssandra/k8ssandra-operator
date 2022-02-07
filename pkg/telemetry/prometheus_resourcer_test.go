@@ -5,10 +5,10 @@ package telemetry
 import (
 	"context"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 

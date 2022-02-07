@@ -543,12 +543,12 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("check Stargate deleted")
 	require.Eventually(func() bool {
 		stargate := &stargateapi.Stargate{}
-		err := f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
+		err := f.Client.UnsafeGetSync(ctx, stargateKey.NamespacedName, stargate)
 		if err == nil || !errors.IsNotFound(err) {
 			return false
 		}
 		k8ssandra := &api.K8ssandraCluster{}
-		if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+		if err := f.Client.UnsafeGetSync(ctx, kcKey, k8ssandra); err != nil {
 			return false
 		} else if kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]; !found {
 			return false
@@ -596,7 +596,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, kcKey, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -645,7 +645,7 @@ func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Con
 	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, kcKey, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -707,7 +707,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -725,7 +725,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1018,7 +1018,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1036,7 +1036,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1062,7 +1062,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc1-stargate")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1091,7 +1091,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1160,7 +1160,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1178,7 +1178,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1204,7 +1204,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc1-stargate")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1233,7 +1233,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
 	require.Eventually(func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+		err := f.Client.UnsafeGetSync(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
 		if err != nil {
 			return false
 		}
@@ -1332,7 +1332,7 @@ func checkStargateK8cStatusReady(
 	t.Log("check k8ssandra cluster status updated for Stargate")
 	assert.Eventually(t, func() bool {
 		k8ssandra := &api.K8ssandraCluster{}
-		if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+		if err := f.Client.UnsafeGetSync(ctx, kcKey, k8ssandra); err != nil {
 			return false
 		}
 		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
