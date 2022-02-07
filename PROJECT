@@ -12,10 +12,15 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  group: k8ssandra.io
+  domain: k8ssandra.io
+  group: k8ssandra
   kind: K8ssandraCluster
   path: github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1
   version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true

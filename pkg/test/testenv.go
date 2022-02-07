@@ -2,12 +2,16 @@ package test
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -15,6 +19,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
+	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -65,6 +70,9 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 			filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
 			filepath.Join("..", "..", "build", "crd", "kube-prometheus"),
 			filepath.Join("..", "..", "build", "crd", "cass-operator")},
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
+		},
 	}
 
 	cfg, err := e.Environment.Start()
@@ -72,14 +80,30 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		return err
 	}
 
+	webhookInstallOptions := &e.Environment.WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:             scheme.Scheme,
+		Host:               webhookInstallOptions.LocalServingHost,
+		Port:               webhookInstallOptions.LocalServingPort,
+		CertDir:            webhookInstallOptions.LocalServingCertDir,
+		LeaderElection:     false,
+		MetricsBindAddress: "0",
 	})
 	if err != nil {
 		return err
 	}
 
-	err = initReconcilers(k8sManager)
+	if initReconcilers != nil {
+		err = initReconcilers(k8sManager)
+		if err != nil {
+			return err
+		}
+	}
+
+	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+
+	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
+	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
 	if err != nil {
 		return err
 	}
@@ -91,7 +115,28 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		}
 	}()
 
-	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	err = waitForWebhookServer(webhookInstallOptions)
+
+	return err
+}
+
+func waitForWebhookServer(webhookInstallOptions *envtest.WebhookInstallOptions) error {
+	// wait for the webhook server to get ready
+	var err error
+	dialer := &net.Dialer{Timeout: time.Second}
+	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
+
+	for i := 0; i < 10; i++ {
+		// This is eventually - it can take a while for this to start
+		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
+		if err != nil {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		conn.Close()
+		return nil
+	}
+
 	return err
 }
 
@@ -144,6 +189,9 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 				filepath.Join("..", "..", "build", "crd", "cass-operator"),
 			},
 			ErrorIfCRDPathMissing: true,
+			WebhookInstallOptions: envtest.WebhookInstallOptions{
+				Paths: []string{filepath.Join("..", "..", "config", "webhook")},
+			},
 		}
 
 		e.testEnvs = append(e.testEnvs, testEnv)
@@ -170,8 +218,14 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		clusters = append(clusters, c)
 	}
 
+	webhookInstallOptions := &e.testEnvs[0].WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
-		Scheme: scheme.Scheme,
+		Scheme:             scheme.Scheme,
+		Host:               webhookInstallOptions.LocalServingHost,
+		Port:               webhookInstallOptions.LocalServingPort,
+		CertDir:            webhookInstallOptions.LocalServingCertDir,
+		LeaderElection:     false,
+		MetricsBindAddress: "0",
 	})
 
 	if err != nil {
@@ -189,7 +243,14 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		clientCache.AddClient(ctxName, cli)
 	}
 
-	if err = initReconcilers(k8sManager, clientCache, clusters); err != nil {
+	if initReconcilers != nil {
+		if err = initReconcilers(k8sManager, clientCache, clusters); err != nil {
+			return err
+		}
+	}
+
+	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
+	if err != nil {
 		return err
 	}
 
@@ -199,6 +260,8 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 			t.Errorf("failed to start manager: %s", err)
 		}
 	}()
+
+	err = waitForWebhookServer(webhookInstallOptions)
 
 	return nil
 }
@@ -338,6 +401,10 @@ func registerApis() error {
 	}
 
 	if err := medusaapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := admissionv1.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 
