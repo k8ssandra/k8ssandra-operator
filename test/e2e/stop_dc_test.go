@@ -62,8 +62,6 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	pod2Name := "cluster1-dc2-default-sts-0"
 
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, k8sCtx1, namespace, pod2Name)
-	// Reaper keyspace should have been altered
-	checkKeyspaceReplication(t, f, ctx, k8sCtx1, namespace, "cluster1", pod2Name, reaperapi.DefaultKeyspace, map[string]int{"dc2": 1})
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
 		testStargateApis(t, ctx, k8sCtx1, 1, username, password, map[string]int{"dc2": 1})
@@ -90,8 +88,6 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	f.DeployReaperIngresses(t, ctx, k8sCtx0, 0, namespace, "cluster1-dc1-reaper-service")
 
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, k8sCtx0, namespace, pod1Name)
-	// Reaper keyspace should have been altered
-	checkKeyspaceReplication(t, f, ctx, k8sCtx0, namespace, "cluster1", pod1Name, reaperapi.DefaultKeyspace, map[string]int{"dc1": 1})
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
 		testStargateApis(t, ctx, k8sCtx0, 0, username, password, map[string]int{"dc1": 1})
@@ -169,4 +165,5 @@ func checkKeyspaceReplicationsUnaltered(t *testing.T, f *framework.E2eFramework,
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_traces", replication)
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_distributed", replication)
 	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, stargate.AuthKeyspace, replication)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, reaperapi.DefaultKeyspace, replication)
 }
