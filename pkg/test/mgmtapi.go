@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
@@ -10,6 +11,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"testing"
 )
 
 type ManagementApiFactoryAdapter func(
@@ -36,11 +38,17 @@ var defaultAdapter ManagementApiFactoryAdapter = func(
 }
 
 type FakeManagementApiFactory struct {
+	t *testing.T
+
 	adapter ManagementApiFactoryAdapter
 }
 
-func (f *FakeManagementApiFactory) Reset() {
-	f.adapter = nil
+func (f *FakeManagementApiFactory) SetT(t *testing.T) {
+	f.t = t
+}
+
+func (f *FakeManagementApiFactory) UseDefaultAdapter() {
+	f.adapter = defaultAdapter
 }
 
 func (f *FakeManagementApiFactory) SetAdapter(a ManagementApiFactoryAdapter) {
@@ -53,10 +61,27 @@ func (f *FakeManagementApiFactory) NewManagementApiFacade(
 	client client.Client,
 	logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 
-	if f.adapter != nil {
-		return f.adapter(ctx, dc, client, logger)
+	if f.t == nil {
+		return nil, fmt.Errorf("testing.T instance not set")
 	}
-	return defaultAdapter(ctx, dc, client, logger)
+
+	if f.adapter == nil {
+		return nil, fmt.Errorf("adapter not set")
+	}
+
+	var mgmtApi cassandra.ManagementApiFacade
+	var err error
+
+	mgmtApi, err = f.adapter(ctx, dc, client, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	if testable, ok := mgmtApi.(Testable); ok {
+		testable.Test(f.t)
+	}
+
+	return mgmtApi, nil
 }
 
 type ManagementApiMethod string
@@ -76,8 +101,13 @@ type FakeManagementApiFacade struct {
 	*mocks.ManagementApiFacade
 }
 
+type Testable interface {
+	Test(t mock.TestingT)
+}
+
 func NewFakeManagementApiFacade() *FakeManagementApiFacade {
-	return &FakeManagementApiFacade{ManagementApiFacade: new(mocks.ManagementApiFacade)}
+	m := new(mocks.ManagementApiFacade)
+	return &FakeManagementApiFacade{ManagementApiFacade: m}
 }
 
 func (f *FakeManagementApiFacade) GetLastCall(method ManagementApiMethod, args ...interface{}) int {

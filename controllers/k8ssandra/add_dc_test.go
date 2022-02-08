@@ -183,6 +183,9 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, single bool) func(*testing.T) {
 	return func(t *testing.T) {
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
+
 		namespace := framework.CleanupForKubernetes(rand.String(9))
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
@@ -193,7 +196,7 @@ func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, 
 		} else {
 			kc = addDcSetupForMultiDc(ctx, t, f, namespace)
 		}
-		managementApiFactory.Reset()
+
 		test(ctx, t, f, kc)
 
 		if err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc)); err != nil {

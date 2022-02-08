@@ -34,6 +34,8 @@ const (
 	interval = time.Millisecond * 250
 )
 
+var currentTest *testing.T
+
 func TestReaper(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
@@ -65,6 +67,7 @@ func newMockManager() reaper.Manager {
 	m.On("Connect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	m.On("AddClusterToReaper", mock.Anything, mock.Anything).Return(nil)
 	m.On("VerifyClusterIsConfigured", mock.Anything, mock.Anything).Return(true, nil)
+	m.Test(currentTest)
 	return m
 }
 
@@ -77,7 +80,7 @@ func reaperControllerTest(ctx context.Context, env *testutils.TestEnv, test func
 }
 
 func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
-
+	currentTest = t
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}}
 	err := k8sClient.Create(ctx, ns)
 	require.NoError(t, err)

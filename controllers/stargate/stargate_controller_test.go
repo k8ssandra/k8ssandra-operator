@@ -6,15 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"github.com/stretchr/testify/mock"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -39,7 +34,7 @@ const (
 	interval = time.Millisecond * 500
 )
 
-var managementApi = &fakeManagementApiFactory{}
+var managementApiFactory = &testutils.FakeManagementApiFactory{}
 
 func TestStargate(t *testing.T) {
 	ctx := testutils.TestSetup(t)
@@ -50,7 +45,7 @@ func TestStargate(t *testing.T) {
 			ReconcilerConfig: config.InitConfig(),
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
-			ManagementApi:    managementApi,
+			ManagementApi:    managementApiFactory,
 		}).SetupWithManager(mgr)
 		return err
 	})
@@ -62,12 +57,18 @@ func TestStargate(t *testing.T) {
 	defer cancel()
 
 	t.Run("CreateStargateSingleRack", func(t *testing.T) {
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
 		testCreateStargateSingleRack(t, testEnv.TestClient)
 	})
 	t.Run("TestCreateStargateEncryption", func(t *testing.T) {
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
 		testCreateStargateEncryption(t, testEnv.TestClient)
 	})
 	t.Run("CreateStargateMultiRack", func(t *testing.T) {
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
 		testCreateStargateMultiRack(t, testEnv.TestClient)
 	})
 }
@@ -734,17 +735,4 @@ func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "stargate was never deleted")
 
-}
-
-type fakeManagementApiFactory struct {
-}
-
-func (f fakeManagementApiFactory) NewManagementApiFacade(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
-	m := new(mocks.ManagementApiFacade)
-	m.On("EnsureKeyspaceReplication", mock.Anything, mock.Anything).Return(nil)
-	m.On("ListTables", stargate.AuthKeyspace).Return([]string{"token"}, nil)
-	m.On("CreateTable", mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
-		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
-	})).Return(nil)
-	return m, nil
 }
