@@ -20,7 +20,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.1.0"
+	DefaultVersion         = "skip-migration"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 )
@@ -128,6 +128,13 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		}
 	}
 
+	if reaper.Spec.SkipSchemaMigration {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
+		})
+	}
+
 	volumeMounts := []corev1.VolumeMount{}
 	volumes := []corev1.Volume{}
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
@@ -171,18 +178,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Affinity: reaper.Spec.Affinity,
-					InitContainers: []corev1.Container{
-						{
-							Name:            "reaper-schema-init",
-							Image:           initImage.String(),
-							ImagePullPolicy: initImage.PullPolicy,
-							SecurityContext: reaper.Spec.InitContainerSecurityContext,
-							Env:             envVars,
-							Args:            []string{"schema-migration"},
-							VolumeMounts:    volumeMounts,
-						},
-					},
+					Affinity:       reaper.Spec.Affinity,
+					InitContainers: computeInitContainers(reaper, initImage, envVars, volumeMounts),
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
@@ -210,7 +207,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
-					ImagePullSecrets:   images.CollectPullSecrets(mainImage, initImage),
+					ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage, initImage),
 					Volumes:            volumes,
 				},
 			},
@@ -219,6 +216,31 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	addAuthEnvVars(deployment, authVars)
 	annotations.AddHashAnnotation(deployment)
 	return deployment
+}
+
+func computeInitContainers(reaper *api.Reaper, initImage *images.Image, envVars []corev1.EnvVar, volumeMounts []corev1.VolumeMount) []corev1.Container {
+	var initContainers []corev1.Container
+	if !reaper.Spec.SkipSchemaMigration {
+		initContainers = append(initContainers,
+			corev1.Container{
+				Name:            "reaper-schema-init",
+				Image:           initImage.String(),
+				ImagePullPolicy: initImage.PullPolicy,
+				SecurityContext: reaper.Spec.InitContainerSecurityContext,
+				Env:             envVars,
+				Args:            []string{"schema-migration"},
+				VolumeMounts:    volumeMounts,
+			})
+	}
+	return initContainers
+}
+
+func computeImagePullSecrets(reaper *api.Reaper, mainImage, initImage *images.Image) []corev1.LocalObjectReference {
+	if reaper.Spec.SkipSchemaMigration {
+		return images.CollectPullSecrets(mainImage)
+	} else {
+		return images.CollectPullSecrets(mainImage, initImage)
+	}
 }
 
 func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
@@ -242,14 +264,18 @@ func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
 }
 
 func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {
-	initEnvVars := deployment.Spec.Template.Spec.InitContainers[0].Env
 	envVars := deployment.Spec.Template.Spec.Containers[0].Env
 	for _, v := range vars {
-		initEnvVars = append(initEnvVars, *v)
 		envVars = append(envVars, *v)
 	}
-	deployment.Spec.Template.Spec.InitContainers[0].Env = initEnvVars
 	deployment.Spec.Template.Spec.Containers[0].Env = envVars
+	if len(deployment.Spec.Template.Spec.InitContainers) > 0 {
+		initEnvVars := deployment.Spec.Template.Spec.InitContainers[0].Env
+		for _, v := range vars {
+			initEnvVars = append(initEnvVars, *v)
+		}
+		deployment.Spec.Template.Spec.InitContainers[0].Env = initEnvVars
+	}
 }
 
 func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (adaptive bool, incremental bool) {

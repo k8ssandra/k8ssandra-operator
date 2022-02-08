@@ -255,8 +255,6 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 		tableName,
 	))
 	require.IsType(t, &message.SchemaChangeResult{}, response.Body.Message, "Expected CREATE TABLE response to be of type SchemaChangeResult")
-	response = sendQuery(t, connection, fmt.Sprintf("TRUNCATE %s.%s", keyspaceName, tableName))
-	require.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected TRUNCATE response to be of type VoidResult")
 }
 
 func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {

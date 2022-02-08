@@ -146,6 +146,21 @@ func (in *K8ssandraCluster) HasStargates() bool {
 	return false
 }
 
+// HasStoppedDatacenters returns true if at least one DC is flagged as stopped.
+func (in *K8ssandraCluster) HasStoppedDatacenters() bool {
+	if in == nil {
+		return false
+	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
+		return false
+	}
+	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
+		if dcTemplate.Stopped {
+			return true
+		}
+	}
+	return false
+}
+
 func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTemplate {
 	datacenters := make([]CassandraDatacenterTemplate, 0)
 	if in != nil && in.Spec.Cassandra != nil {

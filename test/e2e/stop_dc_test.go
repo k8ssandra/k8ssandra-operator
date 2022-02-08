@@ -67,7 +67,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 		testStargateApis(t, ctx, k8sCtx1, 1, username, password, map[string]int{"dc2": 1})
 		uiKey := framework.NewClusterKey(k8sCtx1, namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
+		connectReaperApi(t, ctx, 1, "cluster1", uiUsername, uiPassword)
 		checkNodeToolStatus(t, f, k8sCtx1, namespace, pod2Name, 1, 1, "-u", username, "-pw", password)
 	})
 
@@ -93,7 +93,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 		testStargateApis(t, ctx, k8sCtx0, 0, username, password, map[string]int{"dc1": 1})
 		uiKey := framework.NewClusterKey(k8sCtx0, namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
+		connectReaperApi(t, ctx, 0, "cluster1", uiUsername, uiPassword)
 		checkNodeToolStatus(t, f, k8sCtx0, namespace, pod1Name, 1, 1, "-u", username, "-pw", password)
 	})
 
