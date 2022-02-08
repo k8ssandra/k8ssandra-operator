@@ -196,15 +196,15 @@ replacements:
   - select:
       namespace: cass-operator
     fieldPaths:
-    - metadata.namespace
+      - metadata.namespace
   - select:
       namespace: k8ssandra-operator
     fieldPaths:
-    - metadata.namespace
+      - metadata.namespace
   - select:
       kind: ClusterRoleBinding
     fieldPaths:
-    - subjects.0.namespace
+      - subjects.0.namespace
 `
 
 	dataPlaneTmpl := `
@@ -237,7 +237,43 @@ replacements:
   - select:
       namespace: cass-operator
     fieldPaths:
-    - metadata.namespace
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+      - subjects.0.namespace
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      namespace: k8ssandra-operator
+    fieldPaths:
+      - metadata.namespace
+  - select:
+      kind: ClusterRoleBinding
+    fieldPaths:
+      - subjects.0.namespace
+replacements:
+- source: 
+    kind: Namespace
+    name: {{ .Namespace }}
+    fieldPath: metadata.name
+  targets:
+  - select:
+      namespace: cass-operator
+    fieldPaths:
+      - metadata.namespace
   - select:
       namespace: k8ssandra-operator
     fieldPaths:
