@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/bombsimon/logrusr"
+	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -130,11 +131,12 @@ func TestWebhook(t *testing.T) {
 		return true
 	}, 2*time.Second, 300*time.Millisecond)
 
-	t.Run("TestCreateValidations", testValidationCreate)
-	t.Run("TestUpdateValidations", testValidationUpdate)
+	t.Run("ContextValidation", testContextValidation)
+	t.Run("ReaperKeyspaceValidation", testReaperKeyspaceValidation)
+	t.Run("StorageConfigValidation", testStorageConfigValidation)
 }
 
-func testValidationCreate(t *testing.T) {
+func testContextValidation(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "create-namespace")
 	cluster := createMinimalClusterObj("create-test", "create-namespace")
@@ -142,12 +144,13 @@ func testValidationCreate(t *testing.T) {
 	err := k8sClient.Create(ctx, cluster)
 	require.NoError(err)
 
+	// Verify incorrect K8sContext is not allowed
 	cluster.Spec.Cassandra.Datacenters[0].K8sContext = "wrong"
-	err = k8sClient.Create(ctx, cluster)
+	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
 }
 
-func testValidationUpdate(t *testing.T) {
+func testReaperKeyspaceValidation(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "update-namespace")
 	cluster := createMinimalClusterObj("update-test", "update-namespace")
@@ -164,6 +167,37 @@ func testValidationUpdate(t *testing.T) {
 	cluster.Spec.Reaper.ReaperTemplate.Keyspace = "modified"
 	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
+}
+
+func testStorageConfigValidation(t *testing.T) {
+	require := require.New(t)
+	createNamespace(require, "storage-namespace")
+	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
+
+	cluster.Spec.Cassandra.StorageConfig = nil
+	err := k8sClient.Create(ctx, cluster)
+	require.Error(err)
+
+	cluster.Spec.Cassandra.StorageConfig = &v1beta1.StorageConfig{}
+	err = k8sClient.Create(ctx, cluster)
+	require.NoError(err)
+
+	cluster.Spec.Cassandra.StorageConfig = nil
+	cluster.Spec.Cassandra.Datacenters[0].StorageConfig = &v1beta1.StorageConfig{}
+	err = k8sClient.Update(ctx, cluster)
+	require.NoError(err)
+
+	cluster.Spec.Cassandra.Datacenters = append(cluster.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		K8sContext: "envtest",
+		Size:       1,
+	})
+
+	err = k8sClient.Update(ctx, cluster)
+	require.Error(err)
+
+	cluster.Spec.Cassandra.Datacenters[1].StorageConfig = &v1beta1.StorageConfig{}
+	err = k8sClient.Update(ctx, cluster)
+	require.NoError(err)
 }
 
 func createNamespace(require *require.Assertions, namespace string) {
@@ -184,6 +218,7 @@ func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
 		},
 		Spec: K8ssandraClusterSpec{
 			Cassandra: &CassandraClusterTemplate{
+				StorageConfig: &v1beta1.StorageConfig{},
 				Datacenters: []CassandraDatacenterTemplate{
 					{
 						K8sContext: "envtest",

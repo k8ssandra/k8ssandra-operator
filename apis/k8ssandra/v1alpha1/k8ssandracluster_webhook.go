@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -27,7 +28,11 @@ import (
 )
 
 var (
-	clientCache *clientcache.ClientCache
+	clientCache        *clientcache.ClientCache
+	ErrNumTokens       = fmt.Errorf("num_tokens value can't be changed")
+	ErrReaperKeyspace  = fmt.Errorf("reaper keyspace can not be changed")
+	ErrNoStorageConfig = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
+	ErrNoResourcesSet  = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
 )
 
 // log is for logging in this package.
@@ -40,48 +45,59 @@ func (r *K8ssandraCluster) SetupWebhookWithManager(mgr ctrl.Manager, cCache *cli
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=mk8ssandracluster.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &K8ssandraCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *K8ssandraCluster) Default() {
-	webhookLog.Info("default", "name", r.Name)
+	webhookLog.Info("K8ssandraCluster default values", "K8ssandraCluster", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=vk8ssandracluster.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &K8ssandraCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateCreate() error {
-	webhookLog.Info("validate create", "name", r.Name)
+	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
 
-	// Verify given k8s-context is correct
+	return r.validateK8ssandraCluster()
+}
+
+func (r *K8ssandraCluster) validateK8ssandraCluster() error {
+	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
+	// Verify given k8s-contexts are correct
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		_, err := clientCache.GetRemoteClient(dc.K8sContext)
 		if err != nil {
 			// No client found for this context name, reject
-			return err
+			return errors.Wrap(err, fmt.Sprintf("unable to find k8sContext %s from ClientConfigs", dc.K8sContext))
+		}
+
+		// StorageConfig must be set at DC or Cluster level
+		if dc.StorageConfig == nil && !hasClusterStorageConfig {
+			return ErrNoStorageConfig
+		}
+		// From cass-operator, if AllowMultipleWorkersPerNode is set, Resources must be defined or cass-operator will reject this Datacenter
+		if dc.SoftPodAntiAffinity != nil && *dc.SoftPodAntiAffinity {
+			if dc.Resources == nil {
+				return ErrNoResourcesSet
+			}
 		}
 	}
 
-	// Run cass-operator validations
-
-	// TODO Num tokens does not change (should this be added to cass-operator?)
-
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
-	webhookLog.Info("validate update", "name", r.Name)
+	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
+
+	if err := r.validateK8ssandraCluster(); err != nil {
+		return err
+	}
 
 	oldCluster, ok := old.(*K8ssandraCluster)
 	if !ok {
@@ -92,27 +108,46 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	oldReaperSpec := oldCluster.Spec.Reaper
 	reaperSpec := r.Spec.Reaper
 	if reaperSpec != nil && oldReaperSpec != nil {
-		fmt.Printf("Verifying keyspaces: %s vs %s", reaperSpec.Keyspace, oldReaperSpec.Keyspace)
 		if reaperSpec.Keyspace != oldReaperSpec.Keyspace {
-			return fmt.Errorf("reaper keyspace can not be changed, %s != %s", reaperSpec.Keyspace, oldReaperSpec.Keyspace)
+			return ErrReaperKeyspace
 		}
 	}
 
-	// Verify clusterName isn't changed
-	if oldCluster.ClusterName != r.ClusterName {
-		return fmt.Errorf("can't change clusterName")
+	oldCassConfig := oldCluster.Spec.Cassandra.CassandraConfig
+	newCassConfig := r.Spec.Cassandra.CassandraConfig
+	// If num_tokens was set previously, do not allow modifying the value or leaving it out
+	if oldCassConfig != nil {
+		if oldCassConfig.CassandraYaml.NumTokens != nil {
+			// Changing num_tokens is not allowed
+			if newCassConfig == nil {
+				return ErrNumTokens
+			} else if newCassConfig.CassandraYaml.NumTokens != oldCassConfig.CassandraYaml.NumTokens {
+				return ErrNumTokens
+			}
+		}
+	}
+	// If num_tokens was unset previously, do not allow setting it now
+	if newCassConfig != nil {
+		if newCassConfig.CassandraYaml.NumTokens != nil {
+			if oldCassConfig == nil {
+				return ErrNumTokens
+			}
+		}
 	}
 
-	// How many nil checks? And both new and old..
-	// if oldCluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
+	// Some of these could be extracted in the cass-operator to reusable methods, do not copy code here.
+	// Also, reusing methods from cass-operator allows to follow updates to features if they change in cass-operator,
+	// such as allowing rack modifications or expanding PVCs.
+
+	// TODO SoftPodAntiAffinity is not allowed to be modified
+	// TODO StorageConfig can not be modified (not Cluster or DC level) in existing datacenters
+	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateDelete() error {
-	webhookLog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	webhookLog.Info("validate K8ssandraCluster delete", "name", r.Name)
 	return nil
 }
