@@ -15,6 +15,9 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+* [FEATURE] [#296](https://github.com/k8ssandra/k8ssandra-operator/issues/296) Expose the stopped property from the
+  CassandraDatacenter spec
+
 ## v0.4.0 2022-02-04
 
 * [CHANGE] [#315](https://github.com/k8ssandra/k8ssandra-operator/issues/315) Explicity set `start_rpc: false`

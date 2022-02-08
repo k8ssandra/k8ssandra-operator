@@ -165,6 +165,11 @@ func TestOperator(t *testing.T) {
 		fixture:       "multi-dc-encryption-reaper",
 		deployTraefik: true,
 	}))
+	t.Run("StopAndRestartDc", e2eTest(ctx, &e2eTestOpts{
+		testFunc:      stopAndRestartDc,
+		fixture:       "stop-dc",
+		deployTraefik: true,
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -347,9 +352,9 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, fixtureDir string, opts
 	}
 
 	deploymentConfig := framework.OperatorDeploymentConfig{
-		Namespace: opts.operatorNamespace,
+		Namespace:     opts.operatorNamespace,
 		ClusterScoped: opts.clusterScoped,
-		ImageTag: *imageTag,
+		ImageTag:      *imageTag,
 	}
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
@@ -747,13 +752,13 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-rack1-sts-0"
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 }
@@ -833,13 +838,13 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := 2
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
@@ -913,13 +918,13 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := 2
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
@@ -995,7 +1000,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	t.Log("check that nodes in dc1 do not see nodes in dc2 anymore")
 	pod = "test-dc1-default-sts-0"
 	count = 1
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -1116,13 +1121,13 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
 	count := 4
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-rack1-sts-0"
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod, count, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
@@ -1287,6 +1292,15 @@ func checkDatacenterUpdating(t *testing.T, ctx context.Context, key framework.Cl
 	}), polling.datacenterUpdating.timeout, polling.datacenterUpdating.interval, fmt.Sprintf("timed out waiting for datacenter %s to become updating", key.Name))
 }
 
+func checkDatacenterStopped(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s is stopped", key.Name, key.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, key)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterStopped)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become stopped", key.Name))
+}
+
 func getCassandraDatacenterStatus(k8ssandra *api.K8ssandraCluster, dc string) *cassdcapi.CassandraDatacenterStatus {
 	kdcStatus, found := k8ssandra.Status.Datacenters[dc]
 	if !found {
@@ -1330,24 +1344,24 @@ func checkStargateK8cStatusReady(
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 }
 
-// checkNodeToolStatusUN polls until nodetool status reports UN for count nodes.
-func checkNodeToolStatusUN(
+// checkNodeToolStatus polls until nodetool status reports the expected number of Up/Normal and Down/Normal nodes.
+func checkNodeToolStatus(
 	t *testing.T,
 	f *framework.E2eFramework,
 	k8sContext, namespace, pod string,
-	count int,
+	countUN, countDN int,
 	additionalArgs ...string,
 ) {
 	require.Eventually(
 		t,
 		func() bool {
-			actual, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod, additionalArgs...)
-			return err == nil && actual == count
+			actualUN, actualDN, err := f.GetNodeToolStatus(k8sContext, namespace, pod, additionalArgs...)
+			return err == nil && actualUN == countUN && actualDN == countDN
 		},
 		polling.nodetoolStatus.timeout,
 		polling.nodetoolStatus.interval,
-		"timed out waiting for nodetool status to reach count %v",
-		count,
+		"timed out waiting for nodetool status to reach count UN %v and DN %v",
+		countUN, countDN,
 	)
 }
 
@@ -1404,6 +1418,30 @@ func checkKeyspaceExists(
 			return false
 		}
 		return strings.Contains(keyspaces, keyspace)
+	}, 1*time.Minute, 3*time.Second)
+}
+
+func checkKeyspaceReplication(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace string,
+	replication map[string]int,
+) {
+	assert.Eventually(t, func() bool {
+		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspace "+keyspace)
+		if err != nil {
+			t.Logf("failed to desctibe keyspace %s: %v", keyspace, err)
+			return false
+		}
+		for dc, rf := range replication {
+			rfStr := fmt.Sprintf("'%v': '%v'", dc, rf)
+			if !strings.Contains(desc, rfStr) {
+				t.Logf("Keyspace %s replication does not contain: %v", keyspace, rfStr)
+				return false
+			}
+		}
+		return true
 	}, 1*time.Minute, 3*time.Second)
 }
 

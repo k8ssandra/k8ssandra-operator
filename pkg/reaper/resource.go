@@ -5,6 +5,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -63,6 +64,12 @@ func NewReaper(
 		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
 			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.Name)
 		}
+	}
+	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the
+	// cluster for Reaper's keyspace. In this case we simply skip schema migration, otherwise Reaper wouldn't be able to
+	// start up.
+	if kc.Status.GetConditionStatus(k8ssandraapi.CassandraInitialized) == corev1.ConditionTrue && kc.HasStoppedDatacenters() {
+		desiredReaper.Spec.SkipSchemaMigration = true
 	}
 	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper

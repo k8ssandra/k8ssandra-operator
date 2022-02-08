@@ -60,15 +60,15 @@ type ReaperTemplate struct {
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:3.1.0".
+	// The default is "thelastpickle/cassandra-reaper:skip-migration".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"skip-migration"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
-	// The default is "thelastpickle/cassandra-reaper:3.1.0".
+	// The default is "thelastpickle/cassandra-reaper:skip-migration".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.0"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"skip-migration"}
 	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
@@ -221,6 +221,14 @@ type ReaperSpec struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// +optional
 	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
+
+	// Whether to skip schema migration. Schema migration is done in an init container on every Reaper deployment and
+	// can slow down Reaper's startup time. Besides, schema migration requires reading data at QUORUM. It can be skipped
+	// if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
+	// example, because a DC is down).
+	// +optional
+	// +kubebuilder:default=false
+	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

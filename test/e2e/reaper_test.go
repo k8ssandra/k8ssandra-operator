@@ -124,10 +124,10 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, "test-dc1-default-sts-0", 2, 0, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, "test-dc2-default-sts-0", 2, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, "test-dc2-default-sts-0", 2, 0, "-u", username, "-pw", password)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
 	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "test-dc1-reaper-service")
@@ -342,7 +342,7 @@ func testRemoveReaperFromK8ssandraCluster(
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 }
 
-func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName, keyspace, username, password string) {
+func connectReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName string, username string, password string) reaperclient.Client {
 	t.Logf("Testing Reaper API in context kind-k8ssandra-%v...", k8sContextIdx)
 	var reaperURL, _ = url.Parse(fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%d080", k8sContextIdx))
 	var reaperClient = reaperclient.NewClient(reaperURL)
@@ -352,6 +352,11 @@ func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, cluster
 		require.NoError(t, err, "failed to login into Reaper")
 	}
 	checkClusterIsRegisteredInReaper(t, ctx, clusterName, reaperClient)
+	return reaperClient
+}
+
+func testReaperApi(t *testing.T, ctx context.Context, k8sContextIdx int, clusterName, keyspace, username, password string) {
+	reaperClient := connectReaperApi(t, ctx, k8sContextIdx, clusterName, username, password)
 	repairId := triggerRepair(t, ctx, clusterName, keyspace, reaperClient)
 	t.Log("Waiting for one segment to be repaired and canceling run")
 	waitForOneSegmentToBeDone(t, ctx, repairId, reaperClient)

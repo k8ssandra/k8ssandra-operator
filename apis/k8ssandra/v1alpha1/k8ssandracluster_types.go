@@ -146,23 +146,26 @@ func (in *K8ssandraCluster) HasStargates() bool {
 	return false
 }
 
+// HasStoppedDatacenters returns true if at least one DC is flagged as stopped.
+func (in *K8ssandraCluster) HasStoppedDatacenters() bool {
+	if in == nil {
+		return false
+	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
+		return false
+	}
+	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
+		if dcTemplate.Stopped {
+			return true
+		}
+	}
+	return false
+}
+
 func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTemplate {
 	datacenters := make([]CassandraDatacenterTemplate, 0)
 	if in != nil && in.Spec.Cassandra != nil {
 		for _, dc := range in.Spec.Cassandra.Datacenters {
 			if status, found := in.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterInitialized) == corev1.ConditionTrue {
-				datacenters = append(datacenters, dc)
-			}
-		}
-	}
-	return datacenters
-}
-
-func (in *K8ssandraCluster) GetReadyDatacenters() []CassandraDatacenterTemplate {
-	datacenters := make([]CassandraDatacenterTemplate, 0)
-	if in != nil && in.Spec.Cassandra != nil {
-		for _, dc := range in.Spec.Cassandra.Datacenters {
-			if status, found := in.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
 				datacenters = append(datacenters, dc)
 			}
 		}
@@ -274,6 +277,14 @@ type CassandraDatacenterTemplate struct {
 	// This number does not include Stargate instances.
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
+
+	// Stopped means that the datacenter will be stopped. Use this for maintenance or for cost saving. A stopped
+	// CassandraDatacenter will have no running server pods, like using "stop" with  traditional System V init scripts.
+	// Other Kubernetes resources will be left intact, and volumes will re-attach when the CassandraDatacenter
+	// workload is resumed.
+	// +optional
+	// +kubebuilder:default=false
+	Stopped bool `json:"stopped,omitempty"`
 
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)

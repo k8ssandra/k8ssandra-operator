@@ -51,7 +51,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 
 	keyspace := getReaperKeyspace(kc)
 
-	datacenters := kc.GetReadyDatacenters()
+	datacenters := kc.GetInitializedDatacenters()
 	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
 		cassandra.ComputeReplicationFromDcTemplates(3, datacenters...),
@@ -69,21 +69,29 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	kc *api.K8ssandraCluster,
 	dcTemplate api.CassandraDatacenterTemplate,
 	actualDc *cassdcapi.CassandraDatacenter,
-	actualDcIndex int,
 	logger logr.Logger,
 	remoteClient client.Client,
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	reaperTemplate := kc.Spec.Reaper.DeepCopy()
-	if reaperTemplate != nil && reaperTemplate.DeploymentMode == reaper.DeploymentModeSingle && actualDcIndex > 0 {
-		reaperTemplate = nil
-	}
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
 		Name:      reaper.DefaultResourceName(actualDc),
 	}
 	logger = logger.WithValues("Reaper", reaperKey)
+
+	reaperTemplate := kc.Spec.Reaper.DeepCopy()
+	if reaperTemplate != nil {
+		if reaperTemplate.DeploymentMode == reaper.DeploymentModeSingle && getSingleReaperDcName(kc) != actualDc.Name {
+			logger.Info("DC is not Reaper DC: skipping Reaper deployment")
+			reaperTemplate = nil
+		}
+		if actualDc.Spec.Stopped {
+			logger.Info("DC is stopped: skipping Reaper deployment")
+			reaperTemplate = nil
+		}
+	}
+
 	actualReaper := &reaperapi.Reaper{}
 
 	if reaperTemplate != nil {
@@ -224,4 +232,13 @@ func getReaperKeyspace(kc *api.K8ssandraCluster) string {
 		keyspace = kc.Spec.Reaper.Keyspace
 	}
 	return keyspace
+}
+
+func getSingleReaperDcName(kc *api.K8ssandraCluster) string {
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if !dc.Stopped {
+			return dc.Meta.Name
+		}
+	}
+	return ""
 }

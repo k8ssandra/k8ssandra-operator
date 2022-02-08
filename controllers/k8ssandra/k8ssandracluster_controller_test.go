@@ -106,6 +106,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
+	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the

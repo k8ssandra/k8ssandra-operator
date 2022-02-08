@@ -255,8 +255,6 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 		tableName,
 	))
 	require.IsType(t, &message.SchemaChangeResult{}, response.Body.Message, "Expected CREATE TABLE response to be of type SchemaChangeResult")
-	response = sendQuery(t, connection, fmt.Sprintf("TRUNCATE %s.%s", keyspaceName, tableName))
-	assert.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected TRUNCATE response to be of type VoidResult")
 }
 
 func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
@@ -273,9 +271,10 @@ func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRo
 
 func checkRowCountNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
 	response := sendQuery(t, connection, fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName))
-	assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult")
-	result := response.Body.Message.(*message.RowsResult)
-	assert.Len(t, result.Data, nbRows, "Expected SELECT query to return %d rows", nbRows)
+	if assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult") {
+		result := response.Body.Message.(*message.RowsResult)
+		assert.Len(t, result.Data, nbRows, "Expected SELECT query to return %d rows", nbRows)
+	}
 }
 
 func sendQuery(t *testing.T, connection *client.CqlClientConnection, query string) *frame.Frame {

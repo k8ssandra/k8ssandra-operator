@@ -164,14 +164,14 @@ func testAuthenticationDisabled(
 	t.Run("TestJmxAccessAuthDisabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth disabled, local JMX)")
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0)
 		})
 		t.Run("Remote", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
 			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, "-h", pod2IP)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, "-h", pod1IP)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-h", pod2IP)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-h", pod1IP)
 		})
 	})
 	t.Run("TestApisAuthDisabled", func(t *testing.T) {
@@ -205,8 +205,8 @@ func testAuthenticationEnabled(
 	t.Run("TestJmxAccessAuthEnabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth enabled, local JMX)")
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, "-u", username, "-pw", password)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
 			checkLocalJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name)
 			checkLocalJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name)
 			checkLocalJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name)
@@ -215,8 +215,8 @@ func testAuthenticationEnabled(
 		t.Run("Remote", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
 			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, "-h", pod2IP, "-u", username, "-pw", password)
-			checkNodeToolStatusUN(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, "-h", pod1IP, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
 			checkRemoteJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name, pod2IP)
 			checkRemoteJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name, pod1IP)
 			checkRemoteJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name, pod2IP)
@@ -246,28 +246,28 @@ func testAuthenticationEnabled(
 }
 
 func checkLocalJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
-	_, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod)
+	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod)
 	if assert.Error(t, err, "expected unauthenticated local JMX connection on pod %v to fail", pod) {
 		assert.Contains(t, err.Error(), "Credentials required")
 	}
 }
 
 func checkLocalJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
-	_, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant")
+	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant")
 	if assert.Error(t, err, "expected local JMX connection with wrong credentials on pod %v to fail", pod) {
 		assert.Contains(t, err.Error(), "Invalid username or password")
 	}
 }
 
 func checkRemoteJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod, host string) {
-	_, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod, "-h", host)
+	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-h", host)
 	if assert.Error(t, err, "expected unauthenticated remote JMX connection from pod %v to host %v to fail", pod, host) {
 		assert.Contains(t, err.Error(), "Credentials required")
 	}
 }
 
 func checkRemoteJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod, host string) {
-	_, err := f.GetNodeToolStatusUN(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant", "-h", host)
+	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant", "-h", host)
 	if assert.Error(t, err, "expected remote JMX connection with wrong credentials from pod %v to host %v to fail", pod) {
 		assert.Contains(t, err.Error(), "Invalid username or password")
 	}

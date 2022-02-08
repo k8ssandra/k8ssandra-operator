@@ -37,21 +37,14 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 // replication. This function should only be used for system keyspaces. Replication for
 // system keyspaces is initially set through the management-api, not CQL. This allows us
 // to specify non-existent DCs for replication even though Cassandra 4 does not allow that.
-// That cannot be done when configuration replication through CQL which is why this func
+// That cannot be done when configuring replication through CQL which is why this func
 // should only be used for system keyspaces.
 func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
-	var datacenters []api.CassandraDatacenterTemplate
-	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-		datacenters = make([]api.CassandraDatacenterTemplate, 0)
-		for _, dc := range kc.Spec.Cassandra.Datacenters {
-			if status, found := kc.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
-				datacenters = append(datacenters, dc)
-			}
-		}
+	if initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue; initialized {
+		return kc.GetInitializedDatacenters()
 	} else {
-		datacenters = kc.Spec.Cassandra.Datacenters
+		return kc.Spec.Cassandra.Datacenters
 	}
-	return datacenters
 }
 
 func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication {

@@ -999,9 +999,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.0
+                  tag: skip-migration
                 description: The image to use for the Reaper pod main container. The
-                  default is "thelastpickle/cassandra-reaper:3.1.0".
+                  default is "thelastpickle/cassandra-reaper:skip-migration".
                 properties:
                   name:
                     description: The image name to use.
@@ -1075,9 +1075,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.0
+                  tag: skip-migration
                 description: The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.0".
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:skip-migration".
                 properties:
                   name:
                     description: The image name to use.
@@ -1843,6 +1843,15 @@ spec:
                         type: string
                     type: object
                 type: object
+              skipSchemaMigration:
+                default: false
+                description: Whether to skip schema migration. Schema migration is
+                  done in an init container on every Reaper deployment and can slow
+                  down Reaper's startup time. Besides, schema migration requires reading
+                  data at QUORUM. It can be skipped if you know that the schema is
+                  already up-to-date, or if you know upfront that QUORUM cannot be
+                  achieved (for example, because a DC is down).
+                type: boolean
               tolerations:
                 description: Tolerations applied to the Reaper pods.
                 items:

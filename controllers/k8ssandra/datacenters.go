@@ -122,6 +122,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
 				}
 
+				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
+					desiredDc.Spec.Stopped = false
+					err = fmt.Errorf("tried to stop a datacenter that is being rebuilt")
+					logger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
+				}
+
 				if err := cassandra.ValidateConfig(desiredDc, actualDc); err != nil {
 					return result.Error(fmt.Errorf("invalid Cassandra config: %v", err)), actualDcs
 				}
@@ -136,27 +142,42 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				}
 			}
 
-			if !cassandra.DatacenterReady(actualDc) {
-				logger.Info("Waiting for datacenter to become ready")
-				return result.RequeueSoon(r.DefaultDelay), actualDcs
+			if actualDc.Spec.Stopped {
+				if !cassandra.DatacenterStopped(actualDc) {
+					logger.Info("Waiting for datacenter to satisfy Stopped condition")
+					return result.Done(), actualDcs
+				}
+			} else {
+				if !cassandra.DatacenterReady(actualDc) {
+					logger.Info("Waiting for datacenter to satisfy Ready condition")
+					return result.Done(), actualDcs
+				}
 			}
 
-			logger.Info("The datacenter is ready")
+			logger.Info("The datacenter is reconciled")
 
 			actualDcs = append(actualDcs, actualDc)
 
-			if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
-				return recResult, actualDcs
-			}
+			if !actualDc.Spec.Stopped {
 
-			if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
-				if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
+				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
 					return recResult, actualDcs
 				}
+
+				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
+					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
+						return recResult, actualDcs
+					}
+				}
+
 			}
 
 		} else {
 			if errors.IsNotFound(err) {
+				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
+					err := fmt.Errorf("cannot add a datacenter in stopped state to an existing cluster")
+					return result.Error(err), actualDcs
+				}
 				// cassdc doesn't exist, we'll create it
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
 					logger.Error(err, "Failed to create datacenter")

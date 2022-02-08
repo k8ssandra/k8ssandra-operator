@@ -43,6 +43,7 @@ type E2eFramework struct {
 	*Framework
 
 	nodeToolStatusUN *regexp.Regexp
+	nodeToolStatusDN *regexp.Regexp
 }
 
 func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
@@ -102,9 +103,11 @@ func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
 
 	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
 
-	re := regexp.MustCompile("UN\\s\\s")
-
-	return &E2eFramework{Framework: f, nodeToolStatusUN: re}, nil
+	return &E2eFramework{
+		Framework:        f,
+		nodeToolStatusUN: regexp.MustCompile("UN\\s\\s"),
+		nodeToolStatusDN: regexp.MustCompile("DN\\s\\s"),
+	}, nil
 }
 
 // getClusterContexts returns all contexts, including both control plane and data plane.
@@ -762,9 +765,9 @@ func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
 	return kubectl.Delete(options, buf)
 }
 
-// GetNodeToolStatusUN Executes nodetool status against the Cassandra pod and returns a
-// count of the matching lines reporting a status of Up/Normal.
-func (f *E2eFramework) GetNodeToolStatusUN(k8sContext, namespace, pod string, additionalArgs ...string) (int, error) {
+// GetNodeToolStatus Executes nodetool status against the Cassandra pod and returns a
+// count of the matching lines reporting a status of Up/Normal and Down/Normal.
+func (f *E2eFramework) GetNodeToolStatus(k8sContext, namespace, pod string, additionalArgs ...string) (int, int, error) {
 	opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
 	args := []string{"nodetool"}
 	args = append(args, additionalArgs...)
@@ -778,10 +781,11 @@ func (f *E2eFramework) GetNodeToolStatusUN(k8sContext, namespace, pod string, ad
 		}
 		err = fmt.Errorf("%s (%w)", output, err)
 		f.logger.Error(err, fmt.Sprintf("failed to execute nodetool status on %s: %s", pod, err))
-		return -1, err
+		return -1, -1, err
 	}
-	matches := f.nodeToolStatusUN.FindAllString(output, -1)
-	return len(matches), nil
+	countUN := len(f.nodeToolStatusUN.FindAllString(output, -1))
+	countDN := len(f.nodeToolStatusDN.FindAllString(output, -1))
+	return countUN, countDN, nil
 }
 
 func (f *E2eFramework) GetPodIP(k8sContext, namespace, pod string) (string, error) {

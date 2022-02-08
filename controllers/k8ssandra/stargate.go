@@ -37,6 +37,11 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	actualStargate := &stargateapi.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)
 
+	if actualDc.Spec.Stopped && stargateTemplate != nil {
+		logger.Info("DC is stopped: skipping Stargate deployment")
+		stargateTemplate = nil
+	}
+
 	if stargateTemplate != nil {
 		logger.Info("Reconcile Stargate")
 		desiredStargate := r.newStargate(stargateKey, kc, stargateTemplate, actualDc, dcTemplate, logger)
@@ -182,7 +187,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 		return recResult
 	}
 
-	datacenters := kc.GetReadyDatacenters()
+	datacenters := kc.GetInitializedDatacenters()
 	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
 
 	if err := stargate.ReconcileAuthKeyspace(mgmtApi, replication, logger); err != nil {

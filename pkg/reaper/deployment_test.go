@@ -281,8 +281,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.InitContainerImage = nil
 		reaper.Spec.ContainerImage = nil
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:skip-migration", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:skip-migration", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -296,8 +296,8 @@ func TestImages(t *testing.T) {
 		}
 		reaper.Spec.ContainerImage = nil
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.0", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:skip-migration", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:skip-migration", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -419,6 +419,13 @@ func TestPodSecurityContext(t *testing.T) {
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.EqualValues(t, podSecurityContext, podSpec.SecurityContext, "podSecurityContext expected at pod level")
+}
+
+func TestSkipSchemaMigration(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.SkipSchemaMigration = true
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
 func newTestReaper() *reaperapi.Reaper {

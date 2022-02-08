@@ -96,6 +96,7 @@ type DatacenterConfig struct {
 	ServerVersion            string
 	JmxInitContainerImage    *images.Image
 	Size                     int32
+	Stopped                  bool
 	Resources                *corev1.ResourceRequirements
 	SystemReplication        SystemReplication
 	StorageConfig            *cassdcapi.StorageConfig
@@ -155,6 +156,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                template.Size,
+			Stopped:             template.Stopped,
 			ServerVersion:       template.ServerVersion,
 			ServerImage:         template.ServerImage,
 			ServerType:          "cassandra",
@@ -266,6 +268,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// DC-level settings
 	dcConfig.Meta = dcTemplate.Meta
 	dcConfig.Size = dcTemplate.Size
+	dcConfig.Stopped = dcTemplate.Stopped
 
 	if len(dcTemplate.ServerVersion) == 0 {
 		dcConfig.ServerVersion = clusterTemplate.ServerVersion
