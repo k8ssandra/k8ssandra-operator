@@ -254,7 +254,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl delete -f -
 
 cert-manager: ## Install cert-manager to the cluster
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml
 # Wait for cert-manager rollout to be fully done	
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
 
