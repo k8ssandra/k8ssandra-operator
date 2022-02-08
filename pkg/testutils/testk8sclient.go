@@ -19,6 +19,7 @@ type TestK8sClient struct {
 	client.Client
 	TestState     *testing.T
 	UnsafeGetSync func(ctx context.Context, key client.ObjectKey, obj client.Object) error
+	UnsafeListSync func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
 	timeout       time.Duration
 	tick          time.Duration
 }
@@ -27,6 +28,17 @@ func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 	var err error
 	assert.Eventually(my.TestState, func() bool {
 		if err := my.UnsafeGetSync(ctx, key, obj); err != nil {
+			return false
+		}
+		return true
+	}, my.timeout, my.tick)
+	return err
+}
+
+func (my TestK8sClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	var err error
+	assert.Eventually(my.TestState, func() bool {
+		if err := my.UnsafeListSync(ctx, list, opts...); err != nil {
 			return false
 		}
 		return true
@@ -46,6 +58,7 @@ func NewTestk8sClient(t *testing.T, configuredClient client.Client, timeout time
 		Client:        configuredClient,
 		TestState:     t,
 		UnsafeGetSync: configuredClient.Get,
+		UnsafeListSync: configuredClient.List,
 		timeout:       timeout,
 		tick:          tick,
 	}
