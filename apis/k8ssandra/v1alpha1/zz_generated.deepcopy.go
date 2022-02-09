@@ -116,11 +116,6 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.SystemLoggerResources != nil {
-		in, out := &in.SystemLoggerResources, &out.SystemLoggerResources
-		*out = new(v1.ResourceRequirements)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.CassandraConfig != nil {
 		in, out := &in.CassandraConfig, &out.CassandraConfig
 		*out = new(CassandraConfig)
@@ -220,11 +215,6 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
-		*out = new(v1.ResourceRequirements)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.SystemLoggerResources != nil {
-		in, out := &in.SystemLoggerResources, &out.SystemLoggerResources
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}

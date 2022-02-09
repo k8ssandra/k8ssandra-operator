@@ -387,9 +387,9 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 }
 
 type OperatorDeploymentConfig struct {
-	Namespace string
+	Namespace     string
 	ClusterScoped bool
-	ImageTag string
+	ImageTag      string
 }
 
 // DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
@@ -399,9 +399,9 @@ type OperatorDeploymentConfig struct {
 // configured to watch all namespaces and is deployed in the k8ssandra-operator namespace.
 func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) error {
 	var (
-		baseDir string
+		baseDir      string
 		controlPlane string
-		dataPlane string
+		dataPlane    string
 	)
 
 	if config.ClusterScoped {

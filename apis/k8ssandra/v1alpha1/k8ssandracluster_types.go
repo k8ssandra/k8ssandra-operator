@@ -211,11 +211,6 @@ type CassandraClusterTemplate struct {
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
-	// container.
-	// +optional
-	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
-
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
 	// jvm-options for 3.11.x or jvm-server-options for 4.x.
 	// +optional
@@ -305,11 +300,6 @@ type CassandraDatacenterTemplate struct {
 	// Resources is the cpu and memory resources for the cassandra container.
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// SystemLoggerResources is the cpu and memory resources for the server-system-logger
-	// container.
-	// +optional
-	SystemLoggerResources *corev1.ResourceRequirements `json:"systemLoggerResources,omitempty"`
 
 	// +optional
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
