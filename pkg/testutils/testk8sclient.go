@@ -24,6 +24,7 @@ type TestK8sClient struct {
 	tick          time.Duration
 }
 
+// Get IS AN ASYNC SAFE client.Get(), it is not the normal `Get)`! Use UnsafeListSync() if you want regular Get()'s behaviour.
 func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	var err error
 	assert.Eventually(my.TestState, func() bool {
@@ -35,6 +36,7 @@ func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 	return err
 }
 
+// List IS AN ASYNC SAFE client.List(), it is not the normal `List()`! Use UnsafeListSync() if you want regular List()'s behaviour.
 func (my TestK8sClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	var err error
 	assert.Eventually(my.TestState, func() bool {
