@@ -24,15 +24,42 @@ type TestK8sClient struct {
 	tick          time.Duration
 }
 
+// SleepWithContext thanks to [this](https://stackoverflow.com/a/69291047) SO answer.
+func SleepWithContext(ctx context.Context, d time.Duration) {
+	timer := time.NewTimer(d)
+	select {
+	case <-ctx.Done():
+		if !timer.Stop() {
+			<-timer.C
+		}
+	case <-timer.C:
+	}
+}
+
 // Get IS AN ASYNC SAFE client.Get(), it is not the normal `Get)`! Use UnsafeListSync() if you want regular Get()'s behaviour.
 func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	var err error
-	assert.Eventually(my.TestState, func() bool {
-		if err := my.UnsafeGetSync(ctx, key, obj); err != nil {
-			return false
+	ticker := time.NewTicker(my.tick)
+	sleepCtx, sleepCancel := context.WithCancel(context.Background())
+	done := make(chan bool)
+	defer sleepCancel()
+	go func(){
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				err = my.UnsafeGetSync(ctx, key, obj)
+				if err == nil {
+					sleepCancel()
+					return
+			}
 		}
-		return true
-	}, my.timeout, my.tick)
+		}
+	}()
+	SleepWithContext(sleepCtx, my.timeout)
+	ticker.Stop()
+	done <- true
 	return err
 }
 
