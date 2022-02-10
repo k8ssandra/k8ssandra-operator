@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -517,6 +519,22 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		}
 		return cassandraDatacenterReady(kdcStatus.Cassandra)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+
+	// Confirm default images are being applied as expected.
+	expectedSystemLoggerContainerImage := &images.Image{
+		Registry:   "docker.io",
+		Repository: "k8ssandra",
+		Name:       "system-logger",
+		Tag:        "latest",
+	}
+	expectedConfigBuilderContainerImage := &images.Image{
+		Registry:   "docker.io",
+		Repository: "datastax",
+		Name:       "cass-config-builder",
+		Tag:        "1.0.4-ubi7",
+	}
+	require.Equal(t, k8ssandra.Spec.Cassandra.SystemLoggerContainerImage, expectedSystemLoggerContainerImage)
+	require.Equal(t, k8ssandra.Spec.Cassandra.ConfigBuilderContainerImage, expectedConfigBuilderContainerImage)
 
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)

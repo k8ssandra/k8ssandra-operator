@@ -191,7 +191,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	if template.SystemLoggerContainerImage != nil {
-		dc.Spec.ConfigBuilderImage = template.SystemLoggerContainerImage.String()
+		dc.Spec.SystemLoggerImage = template.SystemLoggerContainerImage.String()
 	}
 
 	return dc, nil
@@ -304,7 +304,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.ConfigBuilderContainerImage = clusterTemplate.ConfigBuilderContainerImage
 	}
 
-	if dcTemplate.ConfigBuilderContainerImage != nil {
+	if dcTemplate.SystemLoggerContainerImage != nil {
 		dcConfig.SystemLoggerContainerImage = dcTemplate.SystemLoggerContainerImage
 	} else {
 		dcConfig.SystemLoggerContainerImage = clusterTemplate.SystemLoggerContainerImage
