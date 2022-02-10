@@ -203,13 +203,13 @@ type CassandraClusterTemplate struct {
 	// The image to use in each Cassandra pod for the container that runs the system logger.
 	// Defaults back to cass-operator's defaults if undefined.
 	// +optional
-	// +kubebuilder:default={repository:"k8ssandra",name:"system-logger",tag:"latest"}
+	// +kubebuilder:default={registry:"docker.io",repository:"k8ssandra",name:"system-logger",tag:"latest"}
 	SystemLoggerContainerImage *images.Image `json:"systemLoggerContainerImage,omitempty"`
 
 	// The image to use in each Cassandra pod for the init container that runs cass-config-builder.
 	// Defaults back to cass-operator's defaults if undefined.
 	// +optional
-	// +kubebuilder:default={repository:"datastax",name:"cass-config-builder",tag:"1.0.4-ubi7"}
+	// +kubebuilder:default={registry:"docker.io",repository:"datastax",name:"cass-config-builder",tag:"1.0.4-ubi7"}
 	ConfigBuilderContainerImage *images.Image `json:"configBuilderContainerImage,omitempty"`
 
 	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
@@ -301,13 +301,13 @@ type CassandraDatacenterTemplate struct {
 	// The image to use in each Cassandra pod for the container that runs the system logger.
 	// Defaults back to cass-operator's defaults if undefined.
 	// +optional
-	// +kubebuilder:default={repository:"k8ssandra",name:"system-logger",tag:"latest"}
+	// +kubebuilder:default={registry:"docker.io",repository:"k8ssandra",name:"system-logger",tag:"latest"}
 	SystemLoggerContainerImage *images.Image `json:"systemLoggerContainerImage,omitempty"`
 
 	// The image to use in each Cassandra pod for the init container that runs cass-config-builder.
 	// Defaults back to cass-operator's defaults if undefined.
 	// +optional
-	// +kubebuilder:default={repository:"datastax",name:"cass-config-builder",tag:"1.0.4-ubi7"}
+	// +kubebuilder:default={registry:"docker.io",repository:"datastax",name:"cass-config-builder",tag:"1.0.4-ubi7"}
 	ConfigBuilderContainerImage *images.Image `json:"configBuilderContainerImage,omitempty"`
 
 	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
