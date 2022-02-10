@@ -35,7 +35,8 @@ func stopDcTest(f *framework.Framework, ctx context.Context, test stopDcTestFunc
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
-		managementApiFactory.Reset()
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
 		kc := stopDcTestSetup(t, f, ctx, namespace)
 		test(t, f, ctx, kc)
 		err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc))
@@ -143,7 +144,6 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 // EnsureKeyspaceReplication that have the desired replication. Other calls with undesired replications would then
 // panic. This ensures that stopping a DC does not modify the desired replication of keyspaces in the cluster.
 func stopDcManagementApiReset(replication map[string]int) {
-	managementApiFactory.Reset()
 	mockMgmtApi := testutils.NewFakeManagementApiFacade()
 	// Only accept calls to EnsureKeyspaceReplication with the desired replication for system keyspaces:
 	for _, keyspace := range api.SystemKeyspaces {

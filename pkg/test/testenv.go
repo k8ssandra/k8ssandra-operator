@@ -114,7 +114,7 @@ type MultiClusterTestEnv struct {
 
 	clustersToCreate int
 
-	BeforeTest func()
+	BeforeTest func(t *testing.T)
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
@@ -230,7 +230,7 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 		}
 
 		if e.BeforeTest != nil {
-			e.BeforeTest()
+			e.BeforeTest(t)
 		}
 
 		test(t, ctx, f, namespace)

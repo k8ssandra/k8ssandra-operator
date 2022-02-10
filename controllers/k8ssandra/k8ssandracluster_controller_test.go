@@ -65,8 +65,9 @@ func TestK8ssandraCluster(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{
-		BeforeTest: func() {
-			managementApiFactory.Reset()
+		BeforeTest: func(t *testing.T) {
+			managementApiFactory.SetT(t)
+			managementApiFactory.UseDefaultAdapter()
 		},
 	}
 
