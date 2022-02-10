@@ -89,31 +89,33 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta                     api.EmbeddedObjectMeta
-	Cluster                  string
-	SuperuserSecretRef       corev1.LocalObjectReference
-	ServerImage              string
-	ServerVersion            string
-	JmxInitContainerImage    *images.Image
-	Size                     int32
-	Stopped                  bool
-	Resources                *corev1.ResourceRequirements
-	SystemReplication        SystemReplication
-	StorageConfig            *cassdcapi.StorageConfig
-	Racks                    []cassdcapi.Rack
-	CassandraConfig          api.CassandraConfig
-	AdditionalSeeds          []string
-	Networking               *cassdcapi.NetworkingConfig
-	Users                    []cassdcapi.CassandraUser
-	PodTemplateSpec          *corev1.PodTemplateSpec
-	MgmtAPIHeap              *resource.Quantity
-	SoftPodAntiAffinity      *bool
-	ServerEncryptionStores   *encryption.Stores
-	ClientEncryptionStores   *encryption.Stores
-	ClientKeystorePassword   string
-	ClientTruststorePassword string
-	ServerKeystorePassword   string
-	ServerTruststorePassword string
+	Meta                        api.EmbeddedObjectMeta
+	Cluster                     string
+	SuperuserSecretRef          corev1.LocalObjectReference
+	ServerImage                 string
+	ServerVersion               string
+	SystemLoggerContainerImage  *images.Image
+	ConfigBuilderContainerImage *images.Image
+	JmxInitContainerImage       *images.Image
+	Size                        int32
+	Stopped                     bool
+	Resources                   *corev1.ResourceRequirements
+	SystemReplication           SystemReplication
+	StorageConfig               *cassdcapi.StorageConfig
+	Racks                       []cassdcapi.Rack
+	CassandraConfig             api.CassandraConfig
+	AdditionalSeeds             []string
+	Networking                  *cassdcapi.NetworkingConfig
+	Users                       []cassdcapi.CassandraUser
+	PodTemplateSpec             *corev1.PodTemplateSpec
+	MgmtAPIHeap                 *resource.Quantity
+	SoftPodAntiAffinity         *bool
+	ServerEncryptionStores      *encryption.Stores
+	ClientEncryptionStores      *encryption.Stores
+	ClientKeystorePassword      string
+	ClientTruststorePassword    string
+	ServerKeystorePassword      string
+	ServerTruststorePassword    string
 }
 
 const (
@@ -182,6 +184,14 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.SoftPodAntiAffinity != nil {
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
+	}
+
+	if template.ConfigBuilderContainerImage != nil {
+		dc.Spec.ConfigBuilderImage = template.ConfigBuilderContainerImage.String()
+	}
+
+	if template.SystemLoggerContainerImage != nil {
+		dc.Spec.ConfigBuilderImage = template.SystemLoggerContainerImage.String()
 	}
 
 	return dc, nil
@@ -286,6 +296,18 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.JmxInitContainerImage = dcTemplate.JmxInitContainerImage
 	} else {
 		dcConfig.JmxInitContainerImage = clusterTemplate.JmxInitContainerImage
+	}
+
+	if dcTemplate.ConfigBuilderContainerImage != nil {
+		dcConfig.ConfigBuilderContainerImage = dcTemplate.ConfigBuilderContainerImage
+	} else {
+		dcConfig.ConfigBuilderContainerImage = clusterTemplate.ConfigBuilderContainerImage
+	}
+
+	if dcTemplate.ConfigBuilderContainerImage != nil {
+		dcConfig.SystemLoggerContainerImage = dcTemplate.SystemLoggerContainerImage
+	} else {
+		dcConfig.SystemLoggerContainerImage = clusterTemplate.SystemLoggerContainerImage
 	}
 
 	if len(dcTemplate.Racks) == 0 {
