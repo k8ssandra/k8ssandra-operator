@@ -1116,6 +1116,51 @@ spec:
                             x-kubernetes-int-or-string: true
                         type: object
                     type: object
+                  configBuilderContainerImage:
+                    default:
+                      name: cass-config-builder
+                      repository: datastax
+                      tag: 1.0.4-ubi7
+                    description: The image to use in each Cassandra pod for the init
+                      container that runs cass-config-builder. Defaults back to cass-operator's
+                      defaults if undefined.
+                    properties:
+                      name:
+                        description: The image name to use.
+                        type: string
+                      pullPolicy:
+                        description: The image pull policy to use. Defaults to "Always"
+                          if the tag is "latest", otherwise to "IfNotPresent".
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        - Never
+                        type: string
+                      pullSecretRef:
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      registry:
+                        default: docker.io
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
+                        type: string
+                      repository:
+                        description: The Docker repository to use.
+                        type: string
+                      tag:
+                        default: latest
+                        description: The image tag to use. Defaults to "latest".
+                        type: string
+                    type: object
                   datacenters:
                     description: Datacenters a list of the DCs in the cluster.
                     items:
@@ -2152,6 +2197,49 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                               type: object
+                          type: object
+                        configBuilderContainerImage:
+                          description: The image to use in each Cassandra pod for
+                            the init container that runs cass-config-builder. Defaults
+                            back to cass-operator's defaults if undefined.
+                          properties:
+                            name:
+                              description: The image name to use.
+                              type: string
+                            pullPolicy:
+                              description: The image pull policy to use. Defaults
+                                to "Always" if the tag is "latest", otherwise to "IfNotPresent".
+                              enum:
+                              - Always
+                              - IfNotPresent
+                              - Never
+                              type: string
+                            pullSecretRef:
+                              description: 'The secret to use when pulling the image
+                                from private repositories. If specified, this secret
+                                will be passed to individual puller implementations
+                                for them to use. For example, in the case of Docker,
+                                only DockerConfig type secrets are honored. More info:
+                                https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            registry:
+                              default: docker.io
+                              description: The Docker registry to use. Defaults to
+                                "docker.io", the official Docker Hub.
+                              type: string
+                            repository:
+                              description: The Docker repository to use.
+                              type: string
+                            tag:
+                              default: latest
+                              description: The image tag to use. Defaults to "latest".
+                              type: string
                           type: object
                         jmxInitContainerImage:
                           default:
@@ -5853,6 +5941,49 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        systemLoggerContainerImage:
+                          description: The image to use in each Cassandra pod for
+                            the container that runs the system logger. Defaults back
+                            to cass-operator's defaults if undefined.
+                          properties:
+                            name:
+                              description: The image name to use.
+                              type: string
+                            pullPolicy:
+                              description: The image pull policy to use. Defaults
+                                to "Always" if the tag is "latest", otherwise to "IfNotPresent".
+                              enum:
+                              - Always
+                              - IfNotPresent
+                              - Never
+                              type: string
+                            pullSecretRef:
+                              description: 'The secret to use when pulling the image
+                                from private repositories. If specified, this secret
+                                will be passed to individual puller implementations
+                                for them to use. For example, in the case of Docker,
+                                only DockerConfig type secrets are honored. More info:
+                                https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            registry:
+                              default: docker.io
+                              description: The Docker registry to use. Defaults to
+                                "docker.io", the official Docker Hub.
+                              type: string
+                            repository:
+                              description: The Docker repository to use.
+                              type: string
+                            tag:
+                              default: latest
+                              description: The image tag to use. Defaults to "latest".
+                              type: string
+                          type: object
                       required:
                       - size
                       type: object
@@ -6397,6 +6528,51 @@ spec:
                       name:
                         description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                           TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                  systemLoggerContainerImage:
+                    default:
+                      name: system-logger
+                      repository: k8ssandra
+                      tag: latest
+                    description: The image to use in each Cassandra pod for the container
+                      that runs the system logger. Defaults back to cass-operator's
+                      defaults if undefined.
+                    properties:
+                      name:
+                        description: The image name to use.
+                        type: string
+                      pullPolicy:
+                        description: The image pull policy to use. Defaults to "Always"
+                          if the tag is "latest", otherwise to "IfNotPresent".
+                        enum:
+                        - Always
+                        - IfNotPresent
+                        - Never
+                        type: string
+                      pullSecretRef:
+                        description: 'The secret to use when pulling the image from
+                          private repositories. If specified, this secret will be
+                          passed to individual puller implementations for them to
+                          use. For example, in the case of Docker, only DockerConfig
+                          type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                      registry:
+                        default: docker.io
+                        description: The Docker registry to use. Defaults to "docker.io",
+                          the official Docker Hub.
+                        type: string
+                      repository:
+                        description: The Docker repository to use.
+                        type: string
+                      tag:
+                        default: latest
+                        description: The image tag to use. Defaults to "latest".
                         type: string
                     type: object
                 type: object

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -518,6 +520,57 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		return cassandraDatacenterReady(kdcStatus.Cassandra)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
+	// Confirm default images are being applied as expected.
+	expectedSystemLoggerContainerImage := &images.Image{
+		Registry:   "docker.io",
+		Repository: "k8ssandra",
+		Name:       "system-logger",
+		Tag:        "latest",
+	}
+	expectedConfigBuilderContainerImage := &images.Image{
+		Registry:   "docker.io",
+		Repository: "datastax",
+		Name:       "cass-config-builder",
+		Tag:        "1.0.4-ubi7",
+	}
+	require.Equal(k8ssandra.Spec.Cassandra.SystemLoggerContainerImage, expectedSystemLoggerContainerImage)
+	require.Equal(k8ssandra.Spec.Cassandra.ConfigBuilderContainerImage, expectedConfigBuilderContainerImage)
+
+	// Confirm non-default images are being applied as expected and merged with defaults.
+	partialSystemLoggerContainerImage := &images.Image{
+		Tag: "d94231ba",
+	}
+	partialConfigBuilderContainerImage := &images.Image{
+		Tag: "1.0.4",
+	}
+
+	patch := client.MergeFrom(k8ssandra.DeepCopy())
+	k8ssandra.Spec.Cassandra.SystemLoggerContainerImage = partialSystemLoggerContainerImage
+	k8ssandra.Spec.Cassandra.ConfigBuilderContainerImage = partialConfigBuilderContainerImage
+	if err := f.Client.Patch(ctx, k8ssandra, patch); err != nil {
+		require.FailNow("could not patch K8ssandraCluster with new images", "error", err)
+	}
+	expectedSystemLoggerContainerImage.Tag = partialSystemLoggerContainerImage.Tag
+	expectedConfigBuilderContainerImage.Tag = partialConfigBuilderContainerImage.Tag
+	if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+		require.FailNow("could not Get K8ssandraCluster to check images", "error", err)
+	}
+	require.Equal(k8ssandra.Spec.Cassandra.SystemLoggerContainerImage, expectedSystemLoggerContainerImage)
+	require.Equal(k8ssandra.Spec.Cassandra.ConfigBuilderContainerImage, expectedConfigBuilderContainerImage)
+
+	// Patch back to defaults to proceed with tests
+	patch = client.MergeFrom(k8ssandra.DeepCopy())
+	k8ssandra.Spec.Cassandra.SystemLoggerContainerImage = nil
+	k8ssandra.Spec.Cassandra.ConfigBuilderContainerImage = nil
+
+	if err := f.Client.Patch(ctx, k8ssandra, patch); err != nil {
+		require.FailNow("could not patch K8ssandraCluster back to default images", "error", err)
+	}
+	if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+		require.FailNow("could not Get K8ssandraCluster to check images", "error", err)
+	}
+	// End image tests
+
 	stargateKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -534,7 +587,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("delete Stargate in k8ssandracluster CRD")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
 	err = f.Client.Patch(ctx, k8ssandra, patch)
