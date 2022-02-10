@@ -50,14 +50,20 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 	return pods, nil
 }
 
-func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(ctx context.Context, dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod, remoteClient client.Client, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
+	ctx context.Context,
+	dc *cassdcapi.CassandraDatacenter,
+	seeds []corev1.Pod,
+	additionalSeeds []string,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
 	logger.Info("Reconciling seeds")
 
 	// The following if block was basically taken straight out of cass-operator. See
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/210 for a detailed
 	// explanation of why this is being done.
 
-	desiredEndpoints := newEndpoints(dc, seeds)
+	desiredEndpoints := newEndpoints(dc, seeds, additionalSeeds)
 	actualEndpoints := &corev1.Endpoints{}
 	endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
 
@@ -110,7 +116,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(ctx context.Context
 
 // newEndpoints returns an Endpoints object who is named after the additional seeds service
 // of dc.
-func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1.Endpoints {
+func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod, additionalSeeds []string) *corev1.Endpoints {
 	ep := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   dc.Namespace,
@@ -125,6 +131,10 @@ func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod) *corev1
 		addresses = append(addresses, corev1.EndpointAddress{
 			IP: seed.Status.PodIP,
 		})
+	}
+
+	for _, seed := range additionalSeeds {
+		addresses = append(addresses, corev1.EndpointAddress{IP: seed})
 	}
 
 	ep.Subsets = []corev1.EndpointSubset{

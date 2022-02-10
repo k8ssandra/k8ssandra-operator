@@ -155,6 +155,11 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		x := (*in).DeepCopy()
 		*out = &x
 	}
+	if in.AdditionalSeeds != nil {
+		in, out := &in.AdditionalSeeds, &out.AdditionalSeeds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.SoftPodAntiAffinity != nil {
 		in, out := &in.SoftPodAntiAffinity, &out.SoftPodAntiAffinity
 		*out = new(bool)

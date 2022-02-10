@@ -105,7 +105,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
-		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, remoteClient, logger); recResult.Completed() {
+		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, dcConfig.AdditionalSeeds, remoteClient, logger); recResult.Completed() {
 			return recResult, actualDcs
 		}
 
