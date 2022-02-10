@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] [#120](https://github.com/k8ssandra/k8ssandra-operator/issues/120) Remove `systemLoggerResources` from K8ssandraCluster spec
 * [FEATURE] [#296](https://github.com/k8ssandra/k8ssandra-operator/issues/296) Expose the stopped property from the CassandraDatacenter spec
+* [FEATURE] [#378](https://github.com/k8ssandra/k8ssandra-operator/issues/378) Expose `ConfigBuilderContainerImage` and `SystemLoggerContainerImage` properties to allow control over which images will be used for those containers within the Cassandra pods.
 
 ## v0.4.0 2022-02-04
 
