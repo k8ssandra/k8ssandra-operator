@@ -13,7 +13,9 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## Unreleased
+## unreleased
+
+## v0.5.0 2022-02-10
 
 * [CHANGE] [#120](https://github.com/k8ssandra/k8ssandra-operator/issues/120) Remove `systemLoggerResources` from K8ssandraCluster spec
 * [FEATURE] [#296](https://github.com/k8ssandra/k8ssandra-operator/issues/296) Expose the stopped property from the CassandraDatacenter spec
