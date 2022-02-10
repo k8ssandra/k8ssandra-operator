@@ -106,6 +106,16 @@ func (in *AuditLogOptions) DeepCopy() *AuditLogOptions {
 func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) {
 	*out = *in
 	out.SuperuserSecretRef = in.SuperuserSecretRef
+	if in.SystemLoggerContainerImage != nil {
+		in, out := &in.SystemLoggerContainerImage, &out.SystemLoggerContainerImage
+		*out = new(images.Image)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ConfigBuilderContainerImage != nil {
+		in, out := &in.ConfigBuilderContainerImage, &out.ConfigBuilderContainerImage
+		*out = new(images.Image)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.JmxInitContainerImage != nil {
 		in, out := &in.JmxInitContainerImage, &out.JmxInitContainerImage
 		*out = new(images.Image)
@@ -203,6 +213,16 @@ func (in *CassandraConfig) DeepCopy() *CassandraConfig {
 func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemplate) {
 	*out = *in
 	in.Meta.DeepCopyInto(&out.Meta)
+	if in.SystemLoggerContainerImage != nil {
+		in, out := &in.SystemLoggerContainerImage, &out.SystemLoggerContainerImage
+		*out = new(images.Image)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.ConfigBuilderContainerImage != nil {
+		in, out := &in.ConfigBuilderContainerImage, &out.ConfigBuilderContainerImage
+		*out = new(images.Image)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.JmxInitContainerImage != nil {
 		in, out := &in.JmxInitContainerImage, &out.JmxInitContainerImage
 		*out = new(images.Image)
