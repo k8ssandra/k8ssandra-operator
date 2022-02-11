@@ -32,7 +32,7 @@ Create a PR for the k8ssandra repo that includes the following changes:
 
 * Generate CRD manifests by running `kustomize build config/crd > /tmp/k8ssandra-operator-crds.yaml` in k8ssandra-operator repo
     * Make sure to do this from the release tag
-* Copy CRDs over to `charts/k8ssandra-operator/crds` in k8ssandra repo
+* Empty the `charts/k8ssandra-operator/crds` directory in k8ssandra repo and move `/tmp/k8ssandra-operator-crds.yaml` in it.
 * Generate RBAC manifests by running `kustomize build config/rbac` in k8ssandra-operator repo
     * Make sure to do this from the release tag
 * Apply RBAC changes in `charts/k8ssandra-operator/templates` in k8ssandra repo
