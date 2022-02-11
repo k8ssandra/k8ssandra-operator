@@ -30,7 +30,7 @@ When we release a new version of the operator, we need to also update the Helm c
 
 Create a PR for the k8ssandra repo that includes the following changes:
 
-* Generate CRD manifests by running `kustomize build config/crd` in k8ssandra-operator repo
+* Generate CRD manifests by running `kustomize build config/crd > /tmp/k8ssandra-operator-crds.yaml` in k8ssandra-operator repo
     * Make sure to do this from the release tag
 * Copy CRDs over to `charts/k8ssandra-operator/crds` in k8ssandra repo
 * Generate RBAC manifests by running `kustomize build config/rbac` in k8ssandra-operator repo
