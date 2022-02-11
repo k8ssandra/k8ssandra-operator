@@ -184,6 +184,13 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		return requests
 	}
 
+	cb = cb.Watches(&source.Kind{Type: &cassdcapi.CassandraDatacenter{}},
+		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+	cb = cb.Watches(&source.Kind{Type: &stargateapi.Stargate{}},
+		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+	cb = cb.Watches(&source.Kind{Type: &reaperapi.Reaper{}},
+		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+
 	for _, c := range clusters {
 		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
