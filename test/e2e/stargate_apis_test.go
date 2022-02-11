@@ -104,11 +104,8 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token).
 			SetBody(tableJson)
-		_, err := request.Post(tableUrl)
-		// We don't test the status code as it could be 500 if the table already exists because it was created in a
-		// previous call, but somehow the HTTP request failed, and now we are attempting to create it again; we will
-		// validate below that the table exists.
-		return err == nil
+		response, err := request.Post(tableUrl)
+		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval, "Create table with Schema API failed")
 	require.Eventually(t, func() bool {
 		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
