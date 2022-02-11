@@ -22,6 +22,8 @@ The examples in this guide use [kind](https://kind.sigs.k8s.io/) clusters. Insta
 
 By default kind clusters run on the same Docker network which means we will have routable pod IPs across clusters.
 
+**Note:**  Issues creating multiple kind clusters have been observed on various versions of Docker Desktop for Mac.  These issues seem to be resolved with the 4.5.0 release of Docker Desktop.  Please be sure to upgrade Docker Desktop if you plan to deploy using kind.
+
 ### **kubectx**
 
 [kubectx](https://github.com/ahmetb/kubectx) is a really handy tool when you are dealing with multiple clusters. The examples will use it so go ahead and install it now.
@@ -63,6 +65,8 @@ At completion, the cluster is now ready to accept a `K8ssandraCluster` deploymen
 
 **Note:** if a k8ssandra-0 and/or k8ssandra-1 kind cluster already exists, running `make 
 single-up` or `make multi-up` will delete and recreate them.
+
+**Note:** These steps will attempt to start a local Docker registry instance to be used by the kind cluster(s), if you are already running one locally it will need to be stopped before following these procedures.
 
 ### Single Cluster
 
