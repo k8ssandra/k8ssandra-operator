@@ -8,7 +8,8 @@ on:
       - 'docs/**'
       - 'CHANGELOG/**'
   pull_request:
-    branches: [ main ]
+    # Temporarily disable while debugging test
+#    branches: [ main ]
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'

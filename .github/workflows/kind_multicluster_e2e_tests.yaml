@@ -58,17 +58,17 @@ jobs:
       matrix:
         e2e_test:
           - CreateMultiDatacenterCluster
-          - AddDcToCluster
-          - RemoveDcFromCluster
-          - CheckStargateApisWithMultiDcCluster
-          - CreateMultiStargateAndDatacenter
-          - CreateMultiReaper
-          - ClusterScoped/MultiDcMultiCluster
-          - CreateMultiMedusa
-          - MultiDcAuthOnOff
-          - MultiDcEncryptionWithStargate
-          - MultiDcEncryptionWithReaper
-          - StopAndRestartDc
+#          - AddDcToCluster
+#          - RemoveDcFromCluster
+#          - CheckStargateApisWithMultiDcCluster
+#          - CreateMultiStargateAndDatacenter
+#          - CreateMultiReaper
+#          - ClusterScoped/MultiDcMultiCluster
+#          - CreateMultiMedusa
+#          - MultiDcAuthOnOff
+#          - MultiDcEncryptionWithStargate
+#          - MultiDcEncryptionWithReaper
+#          - StopAndRestartDc
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
