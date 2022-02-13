@@ -107,7 +107,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     datacenters:
       - metadata:
