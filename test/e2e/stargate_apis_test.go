@@ -105,6 +105,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 			SetHeader("X-Cassandra-Token", token).
 			SetBody(tableJson)
 		response, err := request.Post(tableUrl)
+		t.Logf("err = %v code = %v", err, response.StatusCode())
 		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval, "Create table with Schema API failed")
 	require.Eventually(t, func() bool {
