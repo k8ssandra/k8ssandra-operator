@@ -45,8 +45,6 @@ func (r *K8ssandraCluster) SetupWebhookWithManager(mgr ctrl.Manager, cCache *cli
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=mk8ssandracluster.kb.io,admissionReviewVersions=v1
-
 var _ webhook.Defaulter = &K8ssandraCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type

@@ -4,7 +4,7 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: selfsigned-issuer
+  name: k8ssandra-operator-selfsigned-issuer
   namespace: system
 spec:
   selfSigned: {}
@@ -12,7 +12,7 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: serving-cert  # this name should match the one appeared in kustomizeconfig.yaml
+  name: k8ssandra-operator-serving-cert  # this name should match the one appeared in kustomizeconfig.yaml
   namespace: system
 spec:
   # $(SERVICE_NAME) and $(SERVICE_NAMESPACE) will be substituted by kustomize
@@ -21,5 +21,5 @@ spec:
   - $(SERVICE_NAME_K8S).$(SERVICE_NAMESPACE_K8S).svc.cluster.local
   issuerRef:
     kind: Issuer
-    name: selfsigned-issuer
-  secretName: webhook-server-cert # this secret will not be prefixed, since it's not managed by kustomize
+    name: k8ssandra-operator-selfsigned-issuer
+  secretName: k8ssandra-operator-webhook-server-cert # this secret will not be prefixed, since it's not managed by kustomize

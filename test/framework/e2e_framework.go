@@ -432,7 +432,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 }
 
 func (f *E2eFramework) DeployCertManager() error {
-	dir := filepath.Join("..", "..", "config", "cert-manager", "cert-manager-1.3.1.yaml")
+	dir := "https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml"
 
 	for _, ctx := range f.getClusterContexts() {
 		options := kubectl.Options{Context: ctx}

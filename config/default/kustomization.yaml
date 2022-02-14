@@ -56,7 +56,7 @@ vars:
     kind: Certificate
     group: cert-manager.io
     version: v1
-    name: serving-cert # this name should match the one in certificate.yaml
+    name: k8ssandra-operator-serving-cert # this name should match the one in certificate.yaml
   fieldref:
     fieldpath: metadata.namespace
 - name: CERTIFICATE_NAME_K8S
@@ -64,16 +64,16 @@ vars:
     kind: Certificate
     group: cert-manager.io
     version: v1
-    name: serving-cert # this name should match the one in certificate.yaml
+    name: k8ssandra-operator-serving-cert # this name should match the one in certificate.yaml
 - name: SERVICE_NAMESPACE_K8S # namespace of the service
   objref:
     kind: Service
     version: v1
-    name: webhook-service
+    name: k8ssandra-operator-webhook-service
   fieldref:
     fieldpath: metadata.namespace
 - name: SERVICE_NAME_K8S
   objref:
     kind: Service
     version: v1
-    name: webhook-service
+    name: k8ssandra-operator-webhook-service
