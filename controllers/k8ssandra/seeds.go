@@ -71,23 +71,34 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 		// If we already have an Endpoints object but no seeds then it probably means all
 		// Cassandra pods are down or not ready for some reason. In this case we will
 		// delete the Endpoints and let it get recreated once we have seed nodes.
-		if len(seeds) == 0 {
-			logger.Info("Deleting endpoints")
-			if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
-				logger.Error(err, "Failed to delete endpoints")
+		//if len(seeds) == 0 {
+		//	logger.Info("Deleting endpoints")
+		//	if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
+		//		logger.Error(err, "Failed to delete endpoints")
+		//		return result.Error(err)
+		//	}
+		//} else {
+		//	if !annotations.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
+		//		logger.Info("Updating endpoints", "Endpoints", endpointsKey)
+		//		actualEndpoints := actualEndpoints.DeepCopy()
+		//		resourceVersion := actualEndpoints.GetResourceVersion()
+		//		desiredEndpoints.DeepCopyInto(actualEndpoints)
+		//		actualEndpoints.SetResourceVersion(resourceVersion)
+		//		if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
+		//			logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
+		//			return result.Error(err)
+		//		}
+		//	}
+		//}
+		if !annotations.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
+			logger.Info("Updating endpoints", "Endpoints", endpointsKey)
+			actualEndpoints := actualEndpoints.DeepCopy()
+			resourceVersion := actualEndpoints.GetResourceVersion()
+			desiredEndpoints.DeepCopyInto(actualEndpoints)
+			actualEndpoints.SetResourceVersion(resourceVersion)
+			if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
+				logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
 				return result.Error(err)
-			}
-		} else {
-			if !annotations.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
-				logger.Info("Updating endpoints", "Endpoints", endpointsKey)
-				actualEndpoints := actualEndpoints.DeepCopy()
-				resourceVersion := actualEndpoints.GetResourceVersion()
-				desiredEndpoints.DeepCopyInto(actualEndpoints)
-				actualEndpoints.SetResourceVersion(resourceVersion)
-				if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
-					logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
-					return result.Error(err)
-				}
 			}
 		}
 	} else {
@@ -99,7 +110,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 			// first created and no pods have reached the ready state. Secondly, you
 			// cannot create an Endpoints object that has both empty Addresses and
 			// empty NotReadyAddresses.
-			if len(seeds) > 0 {
+			if len(seeds) > 0 || len(additionalSeeds) > 0 {
 				logger.Info("Creating endpoints", "Endpoints", endpointsKey)
 				if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
 					logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
