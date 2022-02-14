@@ -92,7 +92,10 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 	}, timeout, interval, "Retrieve keyspace with Schema API failed")
 	require.Eventually(t, func() bool {
 		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
-		tableJson := fmt.Sprintf(`{ "name": "%v",
+		tableJson := fmt.Sprintf(
+			`{ 
+          "name": "%v", 
+          "ifNotExists": true, 
 		  "columnDefinitions": [
 			{ "name": "pk", "typeDefinition": "int", "static": false },
 			{ "name": "cc", "typeDefinition": "int", "static": false },
@@ -105,8 +108,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 			SetHeader("X-Cassandra-Token", token).
 			SetBody(tableJson)
 		response, err := request.Post(tableUrl)
-		t.Logf("err = %v code = %v", err, response.StatusCode())
-		return err == nil && response.StatusCode() == http.StatusOK
+		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Create table with Schema API failed")
 	require.Eventually(t, func() bool {
 		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
