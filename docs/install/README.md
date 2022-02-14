@@ -3,8 +3,8 @@
 ## Overview 
 There are a few options for deploying the operator:
 
-* Helm
-* Kustomize
+* [Helm](#helm)
+* [Kustomize](#kustomize)
 * Build from source
 
 ## Prerequisites
@@ -72,23 +72,23 @@ single-up` or `make multi-up` will delete and recreate them.
 
 Deploy a single kind based Kubernetes cluster.
 
-```sh
+```console
 make single-up
 ```
 
 Once cluster should be available:
 
-```sh
+```console
 kubectx
 ```
 
-```sh
+```console
 kind-k8ssandra-0
 ```
 
 The cluster should consist of the following nodes:
 
-```sh
+```console
 NAME                        STATUS   ROLES                  AGE     VERSION
 k8ssandra-0-control-plane   Ready    control-plane,master   3m24s   v1.21.2
 k8ssandra-0-worker          Ready    <none>                 2m53s   v1.21.2
@@ -99,7 +99,7 @@ k8ssandra-0-worker4         Ready    <none>                 2m53s   v1.21.2
 
 Once the Kubernetes cluster is ready, deploy a `K8ssandraCluster` like:
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -256,7 +256,7 @@ Switched to context "kind-k8ssandra-0".
 
 Deploy the `K8ssandraCluster` resource:
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -311,7 +311,7 @@ demo   45s
 kubectl describe -n k8ssandra-operator K8ssandraCluster demo
 ```
 
-```sh
+```console
 Name:         demo
 Namespace:    k8ssandra-operator
 Labels:       <none>
@@ -417,8 +417,8 @@ any extra configuration.
 #### Create kind cluster
 Run `setup-kind-multicluster.sh` as follows:
 
-```sh
-./setup-kind-multicluster.sh --kind-worker-nodes 4
+```console
+./scripts/setup-kind-multicluster.sh --kind-worker-nodes 4
 ```
 
 #### Install K8ssandra Operator
@@ -471,7 +471,7 @@ k8ssandra-operator-k8ssandra-operator   1/1     1            1           85s
 #### Deploy a K8ssandraCluster
 Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster and a Stargate node.
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -583,8 +583,8 @@ will run on the same Docker network which means that they will have routable IPs
 #### Create kind clusters
 Run `setup-kind-multicluster.sh` as follows:
 
-```sh
-./setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+```console
+./scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
 ```
 
 When creating a cluster, kind generates a kubeconfig with the address of the API server 
@@ -726,8 +726,8 @@ Here is a summary of what the script does:
 Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account 
 token and CA cert from `kind-k8ssandra-1`:
 
-```sh
-./create-clientconfig.sh --namespace k8ssandra-operator --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
+```console
+./scripts/create-clientconfig.sh --namespace k8ssandra-operator --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 ```
 The script stores all the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
@@ -756,7 +756,7 @@ why it is necessary to restart the control plane operator.
 Now we will create a K8ssandraCluster that consists of a Cassandra cluster with 2 DCs and 3 
 nodes per DC, and a Stargate node per DC.
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -818,8 +818,8 @@ any extra configuration.
 #### Create kind cluster
 Run `setup-kind-multicluster.sh` as follows:
 
-```sh
-./setup-kind-multicluster.sh --kind-worker-nodes 4
+```console
+./scripts/setup-kind-multicluster.sh --kind-worker-nodes 4
 ```
 
 #### Install Cert Manager
@@ -827,6 +827,17 @@ We need to first install Cert Manager as it is a dependency of cass-operator:
 
 ```console
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
+```
+
+Ensure cert-manager has been successfully rolled out:
+
+```console
+kubectl rollout status deployment cert-manager-webhook -n cert-manager
+```
+
+```console
+Waiting for deployment "cert-manager-webhook" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-webhook" successfully rolled out
 ```
 
 #### Install K8ssandra Operator
@@ -839,7 +850,7 @@ on Docker Hub for a list of available images.
 Install with kubectl:
 
 ```console
-kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
+kubectl apply --server-side --force-conflicts -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -852,7 +863,7 @@ builds from the `main` branch and in this case we'll add namespace creation and 
 new namespace. Note the `namespace` property which we added. This property tells 
 Kustomize to apply a transformation on all resources that specify a namespace.
 
-```sh
+```console
 K8SSANDRA_OPERATOR_HOME=$(mktemp -d)
 cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 
@@ -918,7 +929,7 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operat
 Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster and a 
 Stargate node.
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -1032,8 +1043,8 @@ will run on the same Docker network which means that they will have routable IPs
 #### Create kind clusters
 Run `setup-kind-multicluster.sh` as follows:
 
-```sh
-./setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
+```console
+./scripts/setup-kind-multicluster.sh --clusters 2 --kind-worker-nodes 4
 ```
 
 When creating a cluster, kind generates a kubeconfig with the address of the API server 
@@ -1060,6 +1071,17 @@ Install Cert Manager:
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
+Ensure cert-manager has been successfully rolled out:
+
+```console
+kubectl rollout status deployment cert-manager-webhook -n cert-manager
+```
+
+```console
+Waiting for deployment "cert-manager-webhook" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-webhook" successfully rolled out
+```
+
 Set the active context to `kind-k8ssandra-1`:
 
 ```console
@@ -1072,6 +1094,17 @@ Install Cert Manager:
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
+Ensure cert-manager has been successfully rolled out:
+
+```console
+kubectl rollout status deployment cert-manager-webhook -n cert-manager
+```
+
+```console
+Waiting for deployment "cert-manager-webhook" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cert-manager-webhook" successfully rolled out
+```
+
 #### Install the control plane
 We will install the control plane in `kind-k8ssandra-0`. Make sure your active context is 
 configured correctly:
@@ -1082,7 +1115,7 @@ kubectx kind-k8ssandra-0
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/control-plane
+kubectl apply --server-side --force-conflicts -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -1105,13 +1138,14 @@ Verify that the following CRDs are installed:
 Check that there are two Deployments. The output should look similar to this:
 
 ```console
-kubectl get deployment
+kubectl -n k8ssandra-operator get deployment
 ```
 
 ```console
-NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-cass-operator        1/1     1            1           2m
-k8ssandra-operator   1/1     1            1           2m
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator-controller-manager   1/1     1            1           2m
+k8ssandra-operator                 1/1     1            1           2m
+
 ```
 
 The operator looks for an environment variable named `K8SSANDRA_CONTROL_PLANE`. When set 
@@ -1119,21 +1153,21 @@ to `true` the control plane is enabled. It is enabled by default.
 
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `true`:
 
-```sh
+```console
 kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Install the data plane
 Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
-```
+```console
 kubectx kind-k8ssandra-1
 ```
 
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/data-plane
+kubectl apply --server-side --force-conflicts -k github.com/k8ssandra/k8ssandra-operator/config/deployments/data-plane
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -1159,9 +1193,9 @@ Check that there are two Deployments. The output should look similar to this:
 kubectl -n k8ssandra-operator get deployment
 ```
 ```console
-NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
-cass-operator        1/1     1            1           2m
-k8ssandra-operator   1/1     1            1           2m
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
+cass-operator-controller-manager   1/1     1            1           2m
+k8ssandra-operator                 1/1     1            1           2m
 ```
 
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
@@ -1187,8 +1221,8 @@ Here is a summary of what the script does:
 Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account 
 token and CA cert from `kind-k8ssandra-1`:
 
-```sh
-./create-clientconfig.sh --namespace k8ssandra-operator --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
+```console
+./scripts/create-clientconfig.sh --namespace k8ssandra-operator --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
 ```
 The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
@@ -1215,7 +1249,7 @@ why it is necessary to restart the control plane operator.
 Now we will create a K8ssandraCluster that consists of a Cassandra cluster with 2 DCs and 3 
 nodes per DC, and a Stargate node per DC.
 
-```sh
+```console
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
