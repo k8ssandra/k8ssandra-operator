@@ -1,3 +1,4 @@
+# While all operators are in k8ssandra-operator ns, the K8ssandraCluster is in test-ns. This demonstrates that cluster scoping is successful.
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands: 
