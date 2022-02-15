@@ -165,6 +165,13 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		*out = new(bool)
 		**out = **in
 	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = make([]v1.Toleration, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.ServerEncryptionStores != nil {
 		in, out := &in.ServerEncryptionStores, &out.ServerEncryptionStores
 		*out = new(encryption.Stores)
@@ -259,6 +266,13 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		in, out := &in.SoftPodAntiAffinity, &out.SoftPodAntiAffinity
 		*out = new(bool)
 		**out = **in
+	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = make([]v1.Toleration, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 }
 
