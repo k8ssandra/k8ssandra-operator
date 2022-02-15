@@ -208,6 +208,16 @@ replacements:
       kind: ClusterRoleBinding
     fieldPaths:
       - subjects.0.namespace
+  - select:
+      name: cass-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
+  - select:
+      name: k8ssandra-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
 `
 
 	dataPlaneTmpl := `
@@ -249,42 +259,16 @@ replacements:
       kind: ClusterRoleBinding
     fieldPaths:
       - subjects.0.namespace
-replacements:
-- source: 
-    kind: Namespace
-    name: {{ .Namespace }}
-    fieldPath: metadata.name
-  targets:
   - select:
-      namespace: cass-operator
+      name: cass-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
     fieldPaths:
-      - metadata.namespace
+      - webhooks.0.clientConfig.service.namespace
   - select:
-      namespace: k8ssandra-operator
+      name: k8ssandra-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
     fieldPaths:
-      - metadata.namespace
-  - select:
-      kind: ClusterRoleBinding
-    fieldPaths:
-      - subjects.0.namespace
-replacements:
-- source: 
-    kind: Namespace
-    name: {{ .Namespace }}
-    fieldPath: metadata.name
-  targets:
-  - select:
-      namespace: cass-operator
-    fieldPaths:
-      - metadata.namespace
-  - select:
-      namespace: k8ssandra-operator
-    fieldPaths:
-    - metadata.namespace
-  - select:
-      kind: ClusterRoleBinding
-    fieldPaths:
-    - subjects.0.namespace
+      - webhooks.0.clientConfig.service.namespace
 `
 
 	k := Kustomization{Namespace: config.Namespace, ImageTag: config.ImageTag}
