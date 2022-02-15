@@ -198,7 +198,7 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
 			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
 		}
-		logger.Info("Deleted CassandraDatacenter", utils.GetKey(dc))
+		logger.Info("Deleted CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
 		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
 		return result.Done()
 	}
