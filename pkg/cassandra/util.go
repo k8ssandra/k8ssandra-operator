@@ -61,6 +61,10 @@ func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication
 		dcNames = append(dcNames, dc.Meta.Name)
 	}
 
+	for _, dcName := range kc.Spec.ExternalDatacenters {
+		dcNames = append(dcNames, dcName)
+	}
+
 	return SystemReplication{Datacenters: dcNames, ReplicationFactor: int(rf)}
 }
 
@@ -76,12 +80,16 @@ func ComputeReplication(maxReplicationPerDc int, datacenters ...*cassdcapi.Cassa
 }
 
 // ComputeReplicationFromDcTemplates is similar to ComputeReplication but takes dc templates as parameters.
-func ComputeReplicationFromDcTemplates(maxReplicationPerDc int, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
+func ComputeReplicationFromDcTemplates(maxReplicationPerDc int, externalDatacenters []string, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
 	desiredReplication := make(map[string]int, len(datacenters))
 	for _, dcTemplate := range datacenters {
 		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Size)))
 		desiredReplication[dcTemplate.Meta.Name] = replicationFactor
 	}
+	for _, dcName := range externalDatacenters {
+		desiredReplication[dcName] = maxReplicationPerDc
+	}
+
 	return desiredReplication
 }
 
