@@ -18,6 +18,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#296](https://github.com/k8ssandra/k8ssandra-operator/issues/296) Expose the stopped property from the
   CassandraDatacenter spec
 * [BUGFIX] [#389](https://github.com/k8ssandra/k8ssandra-operator/issues/389) Configure watches for control plane client
+* [BUGFIX] [#398](https://github.com/k8ssandra/k8ssandra-operator/issues/398) Removing a DC with size > 1 causes panic
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
 * [TESTING] [#361](https://github.com/k8ssandra/k8ssandra-operator/issues/361) Reduce flakiness in Stargate API tests
 

@@ -3,6 +3,8 @@ package test
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,11 +12,9 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
-	"github.com/bombsimon/logrusr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -240,7 +240,11 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 func TestSetup(t *testing.T) context.Context {
 	ctx := ctrl.SetupSignalHandler()
 
-	log := logrusr.NewLogger(logrus.New())
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Fatalf("failed to created logger: %v", err)
+	}
+	log := zapr.NewLogger(logger)
 	logf.SetLogger(log)
 
 	if err := prepareCRDs(); err != nil {
