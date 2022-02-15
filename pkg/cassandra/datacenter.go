@@ -108,6 +108,7 @@ type DatacenterConfig struct {
 	PodTemplateSpec          *corev1.PodTemplateSpec
 	MgmtAPIHeap              *resource.Quantity
 	SoftPodAntiAffinity      *bool
+	Tolerations              []corev1.Toleration
 	ServerEncryptionStores   *encryption.Stores
 	ClientEncryptionStores   *encryption.Stores
 	ClientKeystorePassword   string
@@ -182,6 +183,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	if template.SoftPodAntiAffinity != nil {
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
+
+	dc.Spec.Tolerations = template.Tolerations
 
 	return dc, nil
 }
@@ -330,6 +333,13 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	} else {
 		dcConfig.SoftPodAntiAffinity = dcTemplate.SoftPodAntiAffinity
 	}
+
+	if len(dcTemplate.Tolerations) == 0 {
+		dcConfig.Tolerations = clusterTemplate.Tolerations
+	} else {
+		dcConfig.Tolerations = dcTemplate.Tolerations
+	}
+
 	// Client/Server Encryption stores are only defined at the cluster level
 	dcConfig.ServerEncryptionStores = clusterTemplate.ServerEncryptionStores
 	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores

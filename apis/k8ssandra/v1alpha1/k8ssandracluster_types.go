@@ -259,6 +259,10 @@ type CassandraClusterTemplate struct {
 	// the number of nodes required.
 	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
 
+	// Tolerations applied to every Cassandra pod.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
 	// Internode encryption stores which are used by Cassandra and Stargate.
 	// +optional
 	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
@@ -343,6 +347,10 @@ type CassandraDatacenterTemplate struct {
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
 	// the number of nodes required.
 	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
+
+	// Tolerations applied to every Cassandra pod.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

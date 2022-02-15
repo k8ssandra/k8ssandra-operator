@@ -367,6 +367,22 @@ func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {
 	assert.Equal(t, true, dc.Spec.AllowMultipleNodesPerWorker)
 }
 
+func TestNewDatacenter_Tolerations(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.Tolerations = []corev1.Toleration{{
+		Key:      "key1",
+		Operator: corev1.TolerationOpEqual,
+		Value:    "value1",
+		Effect:   corev1.TaintEffectNoSchedule,
+	}}
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, template.Tolerations, dc.Spec.Tolerations)
+}
+
 // TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
 func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 	template := GetDatacenterConfig()
