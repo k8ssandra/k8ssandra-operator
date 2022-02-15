@@ -45,6 +45,10 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 				},
 			}
 		}
+
+		if medusaSpec.StorageProperties.StorageProvider != "local" && medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
+			return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
+		}
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
