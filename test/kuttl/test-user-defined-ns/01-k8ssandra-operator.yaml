@@ -1,3 +1,5 @@
+# We are deploying a cluster scoped version of cass-operator and k8ssandra-operator into the namespace k8ssandra-operator.
+# This sets us up to ensure the cluster-scope component is successful, and immediately demonstrates that the single-namespace component is sucessful.
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands: 
