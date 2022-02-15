@@ -15,7 +15,7 @@ patches:
             enabled: true
         allowStargateOnDataNodes: true
     - op: add
-      path: /spec/cassandra/cassandraTelemetry
+      path: /spec/cassandra/telemetry
       value:
         prometheus:
             enabled: true

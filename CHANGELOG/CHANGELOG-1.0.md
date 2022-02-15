@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] [#411](https://github.com/k8ssandra/k8ssandra-operator/issues/411) Rename `cassandraTelemetry` to just `telemetry`
 * [FEATURE] [#402](https://github.com/k8ssandra/k8ssandra-operator/issues/402) Expose CassandraDatacenter Tolerations property
 * [BUGFIX] [#381](https://github.com/k8ssandra/k8ssandra-operator/issues/381) Add additionalSeeds property to support migrations
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics

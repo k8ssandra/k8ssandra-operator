@@ -68,27 +68,6 @@ spec:
                     items:
                       type: string
                     type: array
-                  cassandraTelemetry:
-                    description: CassandraTelemetry defines the desired state for
-                      telemetry resources in this K8ssandraCluster. If telemetry configurations
-                      are defined, telemetry resources will be deployed to integrate
-                      with a user-provided monitoring solution (at present, only support
-                      for Prometheus is available).
-                    properties:
-                      prometheus:
-                        properties:
-                          commonLabels:
-                            additionalProperties:
-                              type: string
-                            description: CommonLabels are applied to all serviceMonitors
-                              created.
-                            type: object
-                          enabled:
-                            description: Enable the creation of Prometheus serviceMonitors
-                              for this resource (Cassandra or Stargate).
-                            type: boolean
-                        type: object
-                    type: object
                   clientEncryptionStores:
                     description: Client encryption stores which are used by Cassandra
                       and Reaper.
@@ -1133,27 +1112,6 @@ spec:
                     description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
-                        cassandraTelemetry:
-                          description: Telemetry defines the desired state for telemetry
-                            resources in this datacenter. If telemetry configurations
-                            are defined, telemetry resources will be deployed to integrate
-                            with a user-provided monitoring solution (at present,
-                            only support for Prometheus is available).
-                          properties:
-                            prometheus:
-                              properties:
-                                commonLabels:
-                                  additionalProperties:
-                                    type: string
-                                  description: CommonLabels are applied to all serviceMonitors
-                                    created.
-                                  type: object
-                                enabled:
-                                  description: Enable the creation of Prometheus serviceMonitors
-                                    for this resource (Cassandra or Stargate).
-                                  type: boolean
-                              type: object
-                          type: object
                         config:
                           description: CassandraConfig is configuration settings that
                             are applied to cassandra.yaml and jvm-options for 3.11.x
@@ -5866,6 +5824,27 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        telemetry:
+                          description: Telemetry defines the desired state for telemetry
+                            resources in this datacenter. If telemetry configurations
+                            are defined, telemetry resources will be deployed to integrate
+                            with a user-provided monitoring solution (at present,
+                            only support for Prometheus is available).
+                          properties:
+                            prometheus:
+                              properties:
+                                commonLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: CommonLabels are applied to all serviceMonitors
+                                    created.
+                                  type: object
+                                enabled:
+                                  description: Enable the creation of Prometheus serviceMonitors
+                                    for this resource (Cassandra or Stargate).
+                                  type: boolean
+                              type: object
+                          type: object
                         tolerations:
                           description: Tolerations applied to every Cassandra pod.
                           items:
@@ -6454,6 +6433,27 @@ spec:
                         description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                           TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
+                    type: object
+                  telemetry:
+                    description: Telemetry defines the desired state for telemetry
+                      resources in this K8ssandraCluster. If telemetry configurations
+                      are defined, telemetry resources will be deployed to integrate
+                      with a user-provided monitoring solution (at present, only support
+                      for Prometheus is available).
+                    properties:
+                      prometheus:
+                        properties:
+                          commonLabels:
+                            additionalProperties:
+                              type: string
+                            description: CommonLabels are applied to all serviceMonitors
+                              created.
+                            type: object
+                          enabled:
+                            description: Enable the creation of Prometheus serviceMonitors
+                              for this resource (Cassandra or Stargate).
+                            type: boolean
+                        type: object
                     type: object
                   tolerations:
                     description: Tolerations applied to every Cassandra pod.
