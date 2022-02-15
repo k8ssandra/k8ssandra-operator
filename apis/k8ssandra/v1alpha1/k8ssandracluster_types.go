@@ -245,6 +245,15 @@ type CassandraClusterTemplate struct {
 	// +optional
 	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
 
+	// AdditionalSeeds specifies Cassandra node IPs for an existing datacenter. This is
+	// primarily intended for migrations from an existing Cassandra cluster that is not
+	// managed by k8ssandra-operator. Note that this property should NOT be used to set
+	// seeds for a DC that is or will be managed by k8ssandra-operator. k8ssandra-operator
+	// already manages seeds for DCs that it manages. If you have DNS set up such that you
+	// can resolve hostnames for the remote Cassandra cluster, then you can specify hostnames
+	// here; otherwise, use IP addresses.
+	AdditionalSeeds []string `json:"additionalSeeds,omitempty"`
+
 	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
 	// the number of nodes required.

@@ -167,7 +167,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			SuperuserSecretName: template.SuperuserSecretRef.Name,
 			Users:               template.Users,
 			Networking:          template.Networking,
-			AdditionalSeeds:     template.AdditionalSeeds,
 			PodTemplateSpec:     template.PodTemplateSpec,
 		},
 	}
@@ -334,6 +333,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// Client/Server Encryption stores are only defined at the cluster level
 	dcConfig.ServerEncryptionStores = clusterTemplate.ServerEncryptionStores
 	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
+	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
 
 	return dcConfig
 }

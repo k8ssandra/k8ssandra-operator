@@ -37,6 +37,7 @@ func TestCoalesce(t *testing.T) {
 			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
+				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -59,6 +60,7 @@ func TestCoalesce(t *testing.T) {
 				},
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
+				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
 			},
 		},
 		{

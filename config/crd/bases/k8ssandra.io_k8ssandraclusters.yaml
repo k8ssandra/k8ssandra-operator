@@ -55,6 +55,19 @@ spec:
                   cluster where each DC should be deployed, node affinity (via racks),
                   individual C* node settings, JVM settings, and more.
                 properties:
+                  additionalSeeds:
+                    description: AdditionalSeeds specifies Cassandra node IPs for
+                      an existing datacenter. This is primarily intended for migrations
+                      from an existing Cassandra cluster that is not managed by k8ssandra-operator.
+                      Note that this property should NOT be used to set seeds for
+                      a DC that is or will be managed by k8ssandra-operator. k8ssandra-operator
+                      already manages seeds for DCs that it manages. If you have DNS
+                      set up such that you can resolve hostnames for the remote Cassandra
+                      cluster, then you can specify hostnames here; otherwise, use
+                      IP addresses.
+                    items:
+                      type: string
+                    type: array
                   cassandraTelemetry:
                     description: CassandraTelemetry defines the desired state for
                       telemetry resources in this K8ssandraCluster. If telemetry configurations
