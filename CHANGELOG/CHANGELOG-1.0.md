@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [BUGFIX] [#381](https://github.com/k8ssandra/k8ssandra-operator/issues/381) Add additionalSeeds property to support migrations
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
+* [TESTING] [#407](https://github.com/k8ssandra/k8ssandra-operator/issues/407) Fix `nil` condition checks in backup/restore integration tests
 
 ## v0.5.0 2022-02-10
 
