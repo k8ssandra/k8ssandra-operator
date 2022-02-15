@@ -54,7 +54,9 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: api.Storage{
-					StorageSecretRef: cassandraUserSecret,
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: cassandraUserSecret,
+					},
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,

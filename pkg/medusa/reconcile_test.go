@@ -39,8 +39,10 @@ func testMedusaIniFull(t *testing.T) {
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				StorageProperties: medusaapi.Storage{
-					StorageProvider:          "s3",
-					StorageSecretRef:         "secret",
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
 					BucketName:               "bucket",
 					Prefix:                   "prefix",
 					MaxBackupAge:             10,
@@ -101,8 +103,10 @@ func testMedusaIniNoPrefix(t *testing.T) {
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				StorageProperties: medusaapi.Storage{
-					StorageProvider:          "s3",
-					StorageSecretRef:         "secret",
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
 					BucketName:               "bucket",
 					MaxBackupAge:             10,
 					MaxBackupCount:           20,
@@ -161,8 +165,10 @@ func testMedusaIniSecured(t *testing.T) {
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				StorageProperties: medusaapi.Storage{
-					StorageProvider:          "s3",
-					StorageSecretRef:         "secret",
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
 					BucketName:               "bucket",
 					MaxBackupAge:             10,
 					MaxBackupCount:           20,
@@ -221,8 +227,10 @@ func testMedusaIniUnsecured(t *testing.T) {
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				StorageProperties: medusaapi.Storage{
-					StorageProvider:          "s3",
-					StorageSecretRef:         "secret",
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
 					BucketName:               "bucket",
 					MaxBackupAge:             10,
 					MaxBackupCount:           20,
@@ -281,9 +289,11 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				StorageProperties: medusaapi.Storage{
-					StorageProvider:  "s3",
-					StorageSecretRef: "secret",
-					BucketName:       "bucket",
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
+					BucketName: "bucket",
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: "test-superuser",

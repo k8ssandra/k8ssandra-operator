@@ -214,7 +214,7 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassand
 		// We're not using local storage for backups, which requires a secret with backend credentials
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			// Medusa storage secret volume
-			Name:      medusaSpec.StorageProperties.StorageSecretRef,
+			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
 		})
 	}
@@ -271,12 +271,12 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 	// Medusa credentials volume using the referenced secret
 	if medusaSpec.StorageProperties.StorageProvider != "local" {
 		// We're not using local storage for backups, which requires a secret with backend credentials
-		secretVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef)
+		secretVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
 		secretVolume := &corev1.Volume{
-			Name: medusaSpec.StorageProperties.StorageSecretRef,
+			Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: medusaSpec.StorageProperties.StorageSecretRef,
+					SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
 				},
 			},
 		}
