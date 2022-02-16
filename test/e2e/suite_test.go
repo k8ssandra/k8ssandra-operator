@@ -425,8 +425,8 @@ func applyPollingDefaults() {
 	polling.stargateReady.timeout = 5 * time.Minute
 	polling.stargateReady.interval = 5 * time.Second
 
-	polling.reaperReady.timeout = 5 * time.Minute
-	polling.reaperReady.interval = 5 * time.Second
+	polling.reaperReady.timeout = 10 * time.Minute
+	polling.reaperReady.interval = 15 * time.Second
 
 	polling.medusaBackupDone.timeout = 2 * time.Minute
 	polling.medusaBackupDone.interval = 5 * time.Second
