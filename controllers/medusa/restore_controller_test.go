@@ -107,7 +107,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 		}
 
 		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	dc1 := &cassdcapi.CassandraDatacenter{}
