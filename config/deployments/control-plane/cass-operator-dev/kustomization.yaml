@@ -3,5 +3,6 @@ kind: Kustomization
 
 resources:
   - ../../default
-  - ../../cass-operator/ns-scoped
+  - ../../../cass-operator/ns-scoped
+components:
   - ../../../components/single-namespace
