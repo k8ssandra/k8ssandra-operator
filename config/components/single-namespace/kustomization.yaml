@@ -22,11 +22,11 @@ replacements:
         kind: ValidatingWebhookConfiguration
       fieldPaths:
       - webhooks.0.clientConfig.service.namespace
-# patchesStrategicMerge:
-# - |-
-#   apiVersion: v1
-#   kind: Namespace
-#   metadata:
-#     name: cass-operator
-#   $patch: delete
+patchesStrategicMerge:
+- |-
+  apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: cass-operator
+  $patch: delete
     
