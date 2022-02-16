@@ -6,4 +6,3 @@ resources:
   - ../../../cass-operator/ns-scoped
 components:
   - ../../../components/data-plane
-  - ../../../components/single-namespace
