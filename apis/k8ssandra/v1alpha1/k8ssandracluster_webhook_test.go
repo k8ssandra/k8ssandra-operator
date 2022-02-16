@@ -134,6 +134,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("ContextValidation", testContextValidation)
 	t.Run("ReaperKeyspaceValidation", testReaperKeyspaceValidation)
 	t.Run("StorageConfigValidation", testStorageConfigValidation)
+	t.Run("NumTokensValidation", testNumTokens)
 }
 
 func testContextValidation(t *testing.T) {
@@ -198,6 +199,39 @@ func testStorageConfigValidation(t *testing.T) {
 	cluster.Spec.Cassandra.Datacenters[1].StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
 	require.NoError(err)
+}
+
+func testNumTokens(t *testing.T) {
+	require := require.New(t)
+	createNamespace(require, "numtokens-namespace")
+	cluster := createMinimalClusterObj("numtokens-test", "numtokens-namespace")
+
+	// Create without token definition
+	cluster.Spec.Cassandra.CassandraConfig = &CassandraConfig{}
+	err := k8sClient.Create(ctx, cluster)
+	require.NoError(err)
+
+	tokens := int(256)
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = &tokens
+	err = k8sClient.Update(ctx, cluster)
+	require.Error(err)
+
+	err = k8sClient.Delete(context.TODO(), cluster)
+	require.NoError(err)
+
+	// Recreate with tokens
+	cluster.ResourceVersion = ""
+	err = k8sClient.Create(ctx, cluster)
+	require.NoError(err)
+
+	newTokens := int(16)
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = &newTokens
+	err = k8sClient.Update(ctx, cluster)
+	require.Error(err)
+
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = nil
+	err = k8sClient.Update(ctx, cluster)
+	require.Error(err)
 }
 
 func createNamespace(require *require.Assertions, namespace string) {

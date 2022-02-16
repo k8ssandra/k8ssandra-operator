@@ -129,6 +129,8 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 		if newCassConfig.CassandraYaml.NumTokens != nil {
 			if oldCassConfig == nil {
 				return ErrNumTokens
+			} else if oldCassConfig.CassandraYaml.NumTokens == nil {
+				return ErrNumTokens
 			}
 		}
 	}
