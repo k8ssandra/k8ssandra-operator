@@ -7795,9 +7795,9 @@ spec:
                     default:
                       name: cassandra-reaper
                       repository: thelastpickle
-                      tag: skip-migration
+                      tag: 3.1.1
                     description: The image to use for the Reaper pod main container.
-                      The default is "thelastpickle/cassandra-reaper:skip-migration".
+                      The default is "thelastpickle/cassandra-reaper:3.1.1".
                     properties:
                       name:
                         description: The image name to use.
@@ -7845,9 +7845,9 @@ spec:
                     default:
                       name: cassandra-reaper
                       repository: thelastpickle
-                      tag: skip-migration
+                      tag: 3.1.1
                     description: The image to use for the Reaper pod init container
-                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:skip-migration".
+                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.1".
                     properties:
                       name:
                         description: The image name to use.
