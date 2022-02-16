@@ -6801,7 +6801,12 @@ spec:
                         description: Kubernetes Secret that stores the key file for
                           the storage provider's API. If using 'local' storage, this
                           value is ignored.
-                        type: string
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
                       transferMaxBandwidth:
                         default: 50MB/s
                         description: Max upload bandwidth in MB/s. Defaults to 50

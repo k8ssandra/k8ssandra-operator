@@ -34,7 +34,7 @@ type Storage struct {
 	// Kubernetes Secret that stores the key file for the storage provider's API.
 	// If using 'local' storage, this value is ignored.
 	// +optional
-	StorageSecretRef string `json:"storageSecretRef,omitempty"`
+	StorageSecretRef corev1.LocalObjectReference `json:"storageSecretRef,omitempty"`
 
 	// The name of the bucket to use for the backups.
 	// +kubebuilder:validation:Required

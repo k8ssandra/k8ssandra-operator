@@ -20,7 +20,8 @@ spec:
       # Can be either of local, google_storage, azure_blobs, s3, s3_compatible, s3_rgw or ibm_storage 
       storageProvider: s3_compatible
       # Name of the secret containing the credentials file to access the backup storage backend
-      storageSecretRef: medusa-bucket-key
+      storageSecretRef:
+        name: medusa-bucket-key
       # Name of the storage bucket
       bucketName: k8ssandra-medusa
       # Prefix for this cluster in the storage bucket directory structure, used for multitenancy

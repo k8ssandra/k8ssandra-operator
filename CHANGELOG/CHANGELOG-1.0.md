@@ -24,6 +24,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#120](https://github.com/k8ssandra/k8ssandra-operator/issues/120) Remove `systemLoggerResources` from K8ssandraCluster spec
 * [FEATURE] [#296](https://github.com/k8ssandra/k8ssandra-operator/issues/296) Expose the stopped property from the
   CassandraDatacenter spec
+* [BUGFIX] [#401](https://github.com/k8ssandra/k8ssandra-operator/issues/401) Use a LocalObjectReference for the bucket secret of Medusa 
 * [BUGFIX] [#389](https://github.com/k8ssandra/k8ssandra-operator/issues/389) Configure watches for control plane client
 * [BUGFIX] [#398](https://github.com/k8ssandra/k8ssandra-operator/issues/398) Removing a DC with size > 1 causes panic
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
