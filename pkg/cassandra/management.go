@@ -3,6 +3,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"strconv"
 
@@ -110,6 +111,12 @@ func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 	keyspaceName string,
 	replication map[string]int,
 ) error {
+	if agreement, err := r.HasSchemaAgreement(); err != nil {
+		return err
+	} else if !agreement {
+		return errors.NewSchemaDisagreementError(fmt.Sprintf("cannot create keyspace %s", keyspaceName))
+	}
+
 	if pods, err := r.fetchDatacenterPods(); err != nil {
 		r.logger.Error(err, "Failed to fetch datacenter pods")
 		return err
@@ -198,6 +205,12 @@ func (r *defaultManagementApiFacade) AlterKeyspace(
 	keyspaceName string,
 	replicationSettings map[string]int,
 ) error {
+	if agreement, err := r.HasSchemaAgreement(); err != nil {
+		return err
+	} else if !agreement {
+		return errors.NewSchemaDisagreementError(fmt.Sprintf("cannot alter keyspace %s", keyspaceName))
+	}
+
 	if pods, err := r.fetchDatacenterPods(); err != nil {
 		r.logger.Error(err, "Failed to fetch datacenter pods")
 		return err
@@ -249,6 +262,12 @@ func (r *defaultManagementApiFacade) ListTables(keyspaceName string) ([]string, 
 }
 
 func (r *defaultManagementApiFacade) CreateTable(table *httphelper.TableDefinition) error {
+	if agreement, err := r.HasSchemaAgreement(); err != nil {
+		return err
+	} else if !agreement {
+		return errors.NewSchemaDisagreementError(fmt.Sprintf("cannot create table %s.%s", table.KeyspaceName, table.KeyspaceName))
+	}
+
 	if pods, err := r.fetchDatacenterPods(); err != nil {
 		r.logger.Error(err, "Failed to fetch datacenter pods")
 		return err
@@ -311,4 +330,33 @@ func (r *defaultManagementApiFacade) GetSchemaVersions() (map[string][]string, e
 	}
 
 	return nil, fmt.Errorf("failed to get schema version on all pods in CassandraDatacenter %v", utils.GetKey(r.dc))
+}
+
+func (r *defaultManagementApiFacade) HasSchemaAgreement() (bool, error) {
+	versions, err := r.GetSchemaVersions()
+	if err != nil {
+		return false, err
+	}
+
+	for uid := range versions {
+		// a key named UNREACHABLE may appear in the results when nodes are unreachable. The results
+		// from management-api will look like this:
+		//
+		//    {
+		//        "UNREACHABLE": [
+		//            "172.18.0.2"
+		//        ],
+		//        "aa573028-7c70-3b8f-a247-13bbca2011d2": [
+		//            "172.18.0.9",
+		//            "172.18.0.6"
+		//        ]
+		//    }
+		//
+		// We exclude these keys from the check.
+		if uid == "UNREACHABLE" {
+			delete(versions, uid)
+		}
+	}
+
+	return len(versions) == 1, nil
 }

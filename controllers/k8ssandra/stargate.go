@@ -9,6 +9,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -191,6 +192,9 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, datacenters...)
 
 	if err := stargate.ReconcileAuthKeyspace(mgmtApi, replication, logger); err != nil {
+		if kerrors.IsSchemaDisagreement(err) {
+			return result.RequeueSoon(r.DefaultDelay)
+		}
 		return result.Error(err)
 	}
 

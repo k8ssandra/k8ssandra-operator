@@ -14,6 +14,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -34,6 +35,8 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("WithStargateAndReaper", addDcTest(ctx, f, withStargateAndReaper, true))
 	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate, true))
 	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
+	t.Run("SchemaDisagreementOnSystemKeyspaces", addDcTest(ctx, f, schemaDisagreementOnSystemKeyspaces, true))
+	t.Run("SchemaDisagreementOnStargate", addDcTest(ctx, f, schemaDisagreementOnStargate, true))
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
 	t.Run("DeleteDcWithUserKeyspaces", addDcTest(ctx, f, deleteDcWithUserKeyspaces, false))
 	t.Run("DeleteDcWithStargateAndReaper", addDcTest(ctx, f, deleteDcWithStargateAndReaper, false))
@@ -226,7 +229,6 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
-	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	for _, ks := range userKeyspaces {
 		mockMgmtApi.On(testutils.EnsureKeyspaceReplication, ks, updatedReplication).Return(nil)
@@ -262,6 +264,53 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
 }
 
+// schemaDisagreementOnSystemKeyspaces verifies that the rebuild task is not created when the
+// EnsureKeyspaceReplication call fails with the updated replication. The failure is intended to simulate a schema
+// disagreement.
+func schemaDisagreementOnSystemKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	replication := map[string]int{"dc1": 3}
+	updatedReplication := map[string]int{"dc1": 3, "dc2": 3}
+
+	schemaDisagreementErr := kerrors.NewSchemaDisagreementError("system keyspace check failed")
+
+	mockMgmtApi := testutils.NewFakeManagementApiFacade()
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", updatedReplication).Return(schemaDisagreementErr)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(schemaDisagreementErr)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(schemaDisagreementErr)
+
+	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+		return mockMgmtApi, nil
+	}
+	managementApiFactory.SetAdapter(adapter)
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("check that dc2 was created")
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
+
+	t.Log("update dc2 status to ready")
+	err := f.SetDatacenterStatusReady(ctx, dc2Key)
+	require.NoError(err, "failed to set dc2 status ready")
+
+	taskKey := framework.ClusterKey{
+		NamespacedName: types.NamespacedName{
+			Namespace: dc2Key.Namespace,
+			Name:      dc2Key.Name + "-rebuild",
+		},
+		K8sContext: dc2Key.K8sContext,
+	}
+	f.AssertObjectDoesNotExist(ctx, t, taskKey, &cassctlapi.CassandraTask{}, timeout, interval)
+}
+
 // configureSrcDcForRebuild tests adding a DC to a cluster and setting the
 // api.RebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
 // configured with the specified source dc.
@@ -278,7 +327,6 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
-	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
@@ -348,7 +396,6 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, reaperapi.DefaultKeyspace, updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListTables, stargate.AuthKeyspace).Return([]string{stargate.AuthTable}, nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
-	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 		return mockMgmtApi, nil
@@ -441,6 +488,107 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	require.Eventually(f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 }
 
+// schemaDisagreementOnStargate tests the scenario in which updating the replication of
+// the Stargate auth keyspace fails. It verifies that the none rebuild task, Stargate, nor
+// Reaper objects for DC2 are created.
+func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	replication := map[string]int{"dc1": 3}
+	updatedReplication := map[string]int{"dc1": 3, "dc2": 3}
+
+	schemaDisagreementErr := kerrors.NewSchemaDisagreementError("system keyspace check failed")
+
+	mockMgmtApi := testutils.NewFakeManagementApiFacade()
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, stargate.AuthKeyspace, replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, stargate.AuthKeyspace, updatedReplication).Return(schemaDisagreementErr)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, reaperapi.DefaultKeyspace, replication).Return(nil)
+	mockMgmtApi.On(testutils.ListTables, stargate.AuthKeyspace).Return([]string{stargate.AuthTable}, nil)
+	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
+
+	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+		return mockMgmtApi, nil
+	}
+	managementApiFactory.SetAdapter(adapter)
+
+	addStargateAndReaperToCluster(ctx, t, f, kc)
+
+	sg1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      kc.Name + "-dc1-stargate",
+		},
+	}
+
+	t.Log("check that stargate sg1 is created")
+	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
+
+	t.Logf("update stargate sg1 status to ready")
+	err := f.SetStargateStatusReady(ctx, sg1Key)
+	require.NoError(err, "failed to patch stargate status")
+
+	reaper1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      kc.Name + "-dc1-reaper",
+		},
+	}
+
+	t.Log("check that reaper reaper1 is created")
+	require.Eventually(f.ReaperExists(ctx, reaper1Key), timeout, interval)
+
+	t.Logf("update reaper reaper1 status to ready")
+	err = f.SetReaperStatusReady(ctx, reaper1Key)
+	require.NoError(err, "failed to patch reaper status")
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("check that dc2 was created")
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
+
+	t.Log("update dc2 status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dc2Key)
+	require.NoError(err, "failed to set dc2 status ready")
+
+	rebuildTaskKey := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      "dc2-rebuild",
+		},
+	}
+	f.AssertObjectDoesNotExist(ctx, t, rebuildTaskKey, &cassctlapi.CassandraTask{}, timeout, interval)
+
+	sg2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      kc.Name + "-dc2-stargate"},
+	}
+	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, timeout, interval)
+
+	reaper2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: kc.Namespace,
+			Name:      kc.Name + "-dc2-reaper",
+		},
+	}
+	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, timeout, interval)
+}
+
 // failSystemKeyspaceUpdate tests adding a DC to an existing cluster and verifying the
 // behavior when updating replication of system keyspaces fails.
 func failSystemKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
@@ -458,7 +606,6 @@ func failSystemKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fr
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(replicationCheckErr)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(replicationCheckErr)
-	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
 		return mockMgmtApi, nil
@@ -505,7 +652,6 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
 	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
 	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
-	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	for _, ks := range userKeyspaces {
 		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(updatedReplicationStr, nil)
