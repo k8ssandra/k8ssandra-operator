@@ -34,7 +34,7 @@ spec:
       # region: us-east-1
       
       # Whether or not to use SSL to connect to the storage backend
-      secure: false 
+      secure: false 
       
       # Maximum backup age that the purge process should observe.
       # 0 equals unlimited
