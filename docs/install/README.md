@@ -107,7 +107,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     datacenters:
       - metadata:
@@ -264,7 +263,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
@@ -479,7 +477,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     datacenters:
       - metadata:
@@ -764,7 +761,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "3.11.11"
     storageConfig:
       cassandraDataVolumeClaimSpec:
@@ -926,7 +922,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     datacenters:
       - metadata:
@@ -1223,7 +1218,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
