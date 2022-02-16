@@ -1,0 +1,19 @@
+resources:
+- manifests.yaml
+- service.yaml
+
+configurations:
+- kustomizeconfig.yaml
+
+namePrefix: k8ssandra-operator-
+
+patchesJson6902:
+- target:
+    group: admissionregistration.k8s.io
+    version: v1
+    name: k8ssandra-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |-
+    - op: replace
+      path: /webhooks/0/clientConfig/service/name
+      value: k8ssandra-operator-webhook-service

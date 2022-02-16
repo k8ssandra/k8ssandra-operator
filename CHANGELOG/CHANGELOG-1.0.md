@@ -32,6 +32,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
 * [TESTING] [#361](https://github.com/k8ssandra/k8ssandra-operator/issues/361) Reduce flakiness in Stargate API tests
 
+* [FEATURE] [#121](https://github.com/k8ssandra/k8ssandra-operator/issues/121) Add validating webhook for K8ssandraCluster
+
 ## v0.4.0 2022-02-04
 
 * [CHANGE] [#315](https://github.com/k8ssandra/k8ssandra-operator/issues/315) Explicity set `start_rpc: false`
