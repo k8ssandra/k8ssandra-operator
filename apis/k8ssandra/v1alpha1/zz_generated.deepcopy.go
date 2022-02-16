@@ -146,8 +146,8 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.CassandraTelemetry != nil {
-		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
 		*out = new(telemetryv1alpha1.TelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}
@@ -258,8 +258,8 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		x := (*in).DeepCopy()
 		*out = &x
 	}
-	if in.CassandraTelemetry != nil {
-		in, out := &in.CassandraTelemetry, &out.CassandraTelemetry
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
 		*out = new(telemetryv1alpha1.TelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}

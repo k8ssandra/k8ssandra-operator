@@ -240,11 +240,11 @@ type CassandraClusterTemplate struct {
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 
-	// CassandraTelemetry defines the desired state for telemetry resources in this K8ssandraCluster.
+	// Telemetry defines the desired state for telemetry resources in this K8ssandraCluster.
 	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
-	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
+	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
 	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
@@ -347,7 +347,7 @@ type CassandraDatacenterTemplate struct {
 	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
-	CassandraTelemetry *telemetryapi.TelemetrySpec `json:"cassandraTelemetry,omitempty"`
+	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
 	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise

@@ -248,7 +248,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].CassandraTelemetry = &telemetryapi.TelemetrySpec{
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 			Enabled: true,
 		},
@@ -283,7 +283,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	assert.NotNil(t, sm.Spec.Endpoints)
 	// Ensure that removing the telemetry spec does delete the ServiceMonitor
 	kcPatch = client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].CassandraTelemetry = nil
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = nil
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
