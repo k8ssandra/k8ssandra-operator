@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -68,6 +69,16 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
 
 	if err := remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
+		// We can't have an Endpoints object that has no addresses or notReadyAddresses for
+		// its EndpointSubset elements. This would be the case if both seeds and
+		// additionalSeeds are empty, so we delete the Endpoints.
+		if len(seeds) == 0 && len(additionalSeeds) == 0 {
+			if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
+				return result.Error(fmt.Errorf("failed to delete endpoints for dc (%s): %v", dc.Name, err))
+			}
+			return result.Continue()
+		}
+
 		if !annotations.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
 			logger.Info("Updating endpoints", "Endpoints", endpointsKey)
 			actualEndpoints := actualEndpoints.DeepCopy()
