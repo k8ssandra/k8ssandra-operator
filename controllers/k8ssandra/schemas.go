@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"time"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -15,8 +18,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strconv"
-	"time"
 )
 
 func (r *K8ssandraClusterReconciler) checkSchemas(
@@ -158,7 +159,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	}
 
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
-	replication := cassandra.ComputeReplicationFromDcTemplates(3, datacenters...)
+	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 

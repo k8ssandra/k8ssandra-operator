@@ -6497,6 +6497,16 @@ spec:
                       type: object
                     type: array
                 type: object
+              externalDatacenters:
+                description: During a migration the operator should alter keyspaces
+                  replication settings including the following external DCs. This
+                  avoids removing replicas from datacenters which are outside of the
+                  operator scope (not referenced in the CR). Replication settings
+                  changes will only apply to system_* keyspaces as well as reaper_db
+                  and data_endpoint_auth (Stargate).
+                items:
+                  type: string
+                type: array
               medusa:
                 description: Medusa defines the desired deployment characteristics
                   for Medusa in this K8ssandraCluster. If this is non-nil, Medusa

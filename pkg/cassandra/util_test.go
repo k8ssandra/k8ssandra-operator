@@ -1,10 +1,11 @@
 package cassandra
 
 import (
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -34,10 +35,11 @@ func TestComputeSystemReplication(t *testing.T) {
 							},
 						},
 					},
+					ExternalDatacenters: []string{"dc2"},
 				},
 			},
 			want: SystemReplication{
-				Datacenters:       []string{"dc1"},
+				Datacenters:       []string{"dc1", "dc2"},
 				ReplicationFactor: 3,
 			},
 		},
@@ -88,10 +90,11 @@ func TestComputeSystemReplication(t *testing.T) {
 							},
 						},
 					},
+					ExternalDatacenters: []string{"dc4"},
 				},
 			},
 			want: SystemReplication{
-				Datacenters:       []string{"dc1", "dc2", "dc3"},
+				Datacenters:       []string{"dc1", "dc2", "dc3", "dc4"},
 				ReplicationFactor: 1,
 			},
 		},
@@ -168,7 +171,7 @@ func TestComputeReplication(t *testing.T) {
 	}
 }
 
-func TestComputeReplicationFromDcTemplates(t *testing.T) {
+func TestComputeReplicationFromDatacenters(t *testing.T) {
 	tests := []struct {
 		name     string
 		dcs      []api.CassandraDatacenterTemplate
@@ -191,7 +194,36 @@ func TestComputeReplicationFromDcTemplates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ComputeReplicationFromDcTemplates(3, tt.dcs...)
+			actual := ComputeReplicationFromDatacenters(3, []string{}, tt.dcs...)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestComputeReplicationWithExternalDc(t *testing.T) {
+	tests := []struct {
+		name     string
+		dcs      []api.CassandraDatacenterTemplate
+		expected map[string]int
+	}{
+		{"one dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+		}, map[string]int{"dc1": 3, "dc4": 3, "dc5": 3}},
+		{"small dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 1},
+		}, map[string]int{"dc1": 1, "dc4": 3, "dc5": 3}},
+		{"large dc", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 10},
+		}, map[string]int{"dc1": 3, "dc4": 3, "dc5": 3}},
+		{"many dcs", []api.CassandraDatacenterTemplate{
+			{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, Size: 3},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, Size: 1},
+			{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, Size: 10},
+		}, map[string]int{"dc1": 3, "dc2": 1, "dc3": 3, "dc4": 3, "dc5": 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ComputeReplicationFromDatacenters(3, []string{"dc4", "dc5"}, tt.dcs...)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
