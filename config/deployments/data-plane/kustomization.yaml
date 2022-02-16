@@ -6,4 +6,3 @@ resources:
 
 components:
   - ../../components/data-plane
-  - ../../components/single-namespace
