@@ -176,7 +176,7 @@ The integration test framework installs CRDs. We have to specify the version to 
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d"
-	cassOperatorVersion       = "9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa"
+	cassOperatorVersion       = "682baeb8e643dba629c964f80516634f95556619"
 	prometheusOperatorVersion = "v0.9.0"
 )
 ```
@@ -187,7 +187,7 @@ There are a couple of places in the Kustomize manifests that need to be updated.
 ```yaml
 resources:
   - ../default
-  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
+  - github.com/k8ssandra/cass-operator/config/deployments/default?ref=682baeb8e643dba629c964f80516634f95556619
 
 images:
   - name: k8ssandra/cass-operator

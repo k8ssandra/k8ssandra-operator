@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/deployments/default?ref=9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa
+- github.com/k8ssandra/cass-operator/config/deployments/default?ref=682baeb8e643dba629c964f80516634f95556619
 
 images:
   - name: k8ssandra/cass-operator

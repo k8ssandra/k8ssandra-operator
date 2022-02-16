@@ -3,11 +3,12 @@ package test
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -38,7 +39,7 @@ import (
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d"
-	cassOperatorVersion       = "9d1c58a5dec6d113b22bb7cfdbfde5370df6ddfa"
+	cassOperatorVersion       = "682baeb8e643dba629c964f80516634f95556619"
 	prometheusOperatorVersion = "v0.9.0"
 )
 
