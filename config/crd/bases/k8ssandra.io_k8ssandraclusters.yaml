@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
   name: k8ssandraclusters.k8ssandra.io
 spec:
@@ -6498,12 +6498,12 @@ spec:
                     type: array
                 type: object
               externalDatacenters:
-                description: During a migration or in hybrid mode the operator should
-                  alter keyspaces replication settings including these external DCs.
-                  This avoids removing replicas from datacenters which are outside
-                  of the operator scope (not referenced in the CR). Those will only
-                  apply to system_* keyspaces as well as reaper_db and data_endpoint_auth
-                  (Stargate).
+                description: During a migration the operator should alter keyspaces
+                  replication settings including the following external DCs. This
+                  avoids removing replicas from datacenters which are outside of the
+                  operator scope (not referenced in the CR). Replication settings
+                  changes will only apply to system_* keyspaces as well as reaper_db
+                  and data_endpoint_auth (Stargate).
                 items:
                   type: string
                 type: array

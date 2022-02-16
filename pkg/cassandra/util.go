@@ -79,8 +79,8 @@ func ComputeReplication(maxReplicationPerDc int, datacenters ...*cassdcapi.Cassa
 	return desiredReplication
 }
 
-// ComputeReplicationFromDcTemplates is similar to ComputeReplication but takes dc templates as parameters.
-func ComputeReplicationFromDcTemplates(maxReplicationPerDc int, externalDatacenters []string, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
+// ComputeReplicationFromDatacenters is similar to ComputeReplication but takes dc templates as parameters along with potential external datacenters (unmanaged by the operator).
+func ComputeReplicationFromDatacenters(maxReplicationPerDc int, externalDatacenters []string, datacenters ...api.CassandraDatacenterTemplate) map[string]int {
 	desiredReplication := make(map[string]int, len(datacenters))
 	for _, dcTemplate := range datacenters {
 		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Size)))

@@ -62,9 +62,9 @@ type K8ssandraClusterSpec struct {
 	// +optional
 	Medusa *medusaapi.MedusaClusterTemplate `json:"medusa,omitempty"`
 
-	// During a migration or in hybrid mode the operator should alter keyspaces replication settings including these external DCs.
+	// During a migration the operator should alter keyspaces replication settings including the following external DCs.
 	// This avoids removing replicas from datacenters which are outside of the operator scope (not referenced in the CR).
-	// Those will only apply to system_* keyspaces as well as reaper_db and data_endpoint_auth (Stargate).
+	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db and data_endpoint_auth (Stargate).
 	// +optional
 	ExternalDatacenters []string `json:"externalDatacenters,omitempty"`
 }

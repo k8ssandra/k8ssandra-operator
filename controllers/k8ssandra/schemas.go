@@ -159,7 +159,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	}
 
 	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
-	replication := cassandra.ComputeReplicationFromDcTemplates(3, kc.Spec.ExternalDatacenters, datacenters...)
+	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, datacenters...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 

@@ -55,7 +55,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	datacenters := kc.GetInitializedDatacenters()
 	err := mgmtApi.EnsureKeyspaceReplication(
 		keyspace,
-		cassandra.ComputeReplicationFromDcTemplates(3, kc.Spec.ExternalDatacenters, datacenters...),
+		cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, datacenters...),
 	)
 	if err != nil {
 		logger.Error(err, "Failed to ensure keyspace replication")

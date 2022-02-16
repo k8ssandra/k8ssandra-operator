@@ -171,7 +171,7 @@ func TestComputeReplication(t *testing.T) {
 	}
 }
 
-func TestComputeReplicationFromDcTemplates(t *testing.T) {
+func TestComputeReplicationFromDatacenters(t *testing.T) {
 	tests := []struct {
 		name     string
 		dcs      []api.CassandraDatacenterTemplate
@@ -194,7 +194,7 @@ func TestComputeReplicationFromDcTemplates(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ComputeReplicationFromDcTemplates(3, []string{}, tt.dcs...)
+			actual := ComputeReplicationFromDatacenters(3, []string{}, tt.dcs...)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -223,7 +223,7 @@ func TestComputeReplicationWithExternalDc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := ComputeReplicationFromDcTemplates(3, []string{"dc4", "dc5"}, tt.dcs...)
+			actual := ComputeReplicationFromDatacenters(3, []string{"dc4", "dc5"}, tt.dcs...)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
