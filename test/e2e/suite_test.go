@@ -751,7 +751,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
-	count := 6
+	count := 4
 	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
