@@ -213,11 +213,6 @@ replacements:
       kind: ValidatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
-  - select:
-      name: k8ssandra-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
 `
 
 	dataPlaneTmpl := `
@@ -261,11 +256,6 @@ replacements:
       - subjects.0.namespace
   - select:
       name: cass-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
-  - select:
-      name: k8ssandra-operator-validating-webhook-configuration
       kind: ValidatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
