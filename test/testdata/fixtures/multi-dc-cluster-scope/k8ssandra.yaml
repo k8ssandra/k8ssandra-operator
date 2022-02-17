@@ -21,9 +21,6 @@ spec:
       - name: rack2
         nodeAffinityLabels:
           "topology.kubernetes.io/zone": rack2
-      - name: rack3
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack3
     config:
       cassandraYaml:
         auto_snapshot: false
@@ -52,10 +49,10 @@ spec:
           name: dc1
           namespace: test-1
         k8sContext: kind-k8ssandra-0
-        size: 3
+        size: 2
       - metadata:
           name: dc2
           namespace: test-2
         k8sContext: kind-k8ssandra-1
-        size: 3
+        size: 2
     mgmtAPIHeap: 64Mi
