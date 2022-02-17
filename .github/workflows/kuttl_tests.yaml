@@ -115,3 +115,4 @@ jobs:
         kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
         make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
         ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-config-control-plane
+        ./bin/kubectl-kuttl test --start-kind=false --test test-all-deployments
