@@ -13,15 +13,21 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.0.0  2022-02-17
 
 * [CHANGE] [#423](https://github.com/k8ssandra/k8ssandra-operator/pull/423) Update to cass-operator v1.10.0
 * [CHANGE] [#411](https://github.com/k8ssandra/k8ssandra-operator/issues/411) Rename `cassandraTelemetry` to just `telemetry`
+* [CHANGE] [#417](https://github.com/k8ssandra/k8ssandra-operator/issues/417) Upgrade to Reaper 3.1.1
+* [FEATURE] [#121](https://github.com/k8ssandra/k8ssandra-operator/issues/121) Add validating webhook for K8ssandraCluster
 * [FEATURE] [#402](https://github.com/k8ssandra/k8ssandra-operator/issues/402) Expose CassandraDatacenter Tolerations property
 * [BUGFIX] [#400](https://github.com/k8ssandra/k8ssandra-operator/issues/381) Keyspaces get altered incorrectly during DC migration
 * [BUGFIX] [#381](https://github.com/k8ssandra/k8ssandra-operator/issues/381) Add additionalSeeds property to support migrations
+* [BUGFIX] [#295](https://github.com/k8ssandra/k8ssandra-operator/issues/295) Check for schema agreement before applying schema changes
+* [BUGFIX] [#421](https://github.com/k8ssandra/k8ssandra-operator/pull/421) Fix data plane kustomizations
+* [DOCS] [#394](https://github.com/k8ssandra/k8ssandra-operator/issues/394) Fix examples in install guide
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
 * [TESTING] [#407](https://github.com/k8ssandra/k8ssandra-operator/issues/407) Fix `nil` condition checks in backup/restore integration tests
+* [TESTING] [#422](https://github.com/k8ssandra/k8ssandra-operator/pull/422) Fix single-dc Reaper e2e test
 
 ## v0.5.0 2022-02-10
 
@@ -33,8 +39,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#398](https://github.com/k8ssandra/k8ssandra-operator/issues/398) Removing a DC with size > 1 causes panic
 * [TESTING] [#332](https://github.com/k8ssandra/k8ssandra-operator/issues/332) Configure mocks to avoid panics
 * [TESTING] [#361](https://github.com/k8ssandra/k8ssandra-operator/issues/361) Reduce flakiness in Stargate API tests
-
-* [FEATURE] [#121](https://github.com/k8ssandra/k8ssandra-operator/issues/121) Add validating webhook for K8ssandraCluster
 
 ## v0.4.0 2022-02-04
 
