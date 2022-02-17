@@ -510,8 +510,14 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 	// TODO Add multi-cluster support.
 	// By default this should wait for all clusters including the control plane cluster.
-
-	return kubectl.WaitForCondition("established", "--timeout=60s", "--all", "crd")
+	for _, k8sContext := range f.getClusterContexts() {
+		opts := kubectl.Options{Context: k8sContext}
+		err := kubectl.WaitForCondition(opts,"established", "--timeout=60s", "--all", "crd")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // WaitForK8ssandraOperatorToBeReady blocks until the k8ssandra-operator deployment is
