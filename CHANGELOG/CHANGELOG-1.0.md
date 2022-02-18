@@ -13,6 +13,9 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+* [TESTING] [#420](https://github.com/k8ssandra/k8ssandra-operator/issues/420) Default to `build/kubeconfig` instead of `~/.kube/config` for `kubectl` commands in tests
+
 ## v1.0.0  2022-02-17
 
 * [CHANGE] [#423](https://github.com/k8ssandra/k8ssandra-operator/pull/423) Update to cass-operator v1.10.0
