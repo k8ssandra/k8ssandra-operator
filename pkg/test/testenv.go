@@ -100,7 +100,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 
 	configuredClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	e.TestClient = testutils.NewTestk8sClient(t, configuredClient, DefaultTimeout, DefaultTick)
+	e.TestClient = testutils.NewTestk8sClient(t, configuredClient, testutils.DefaultTimeout, testutils.DefaultTick)
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
 	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
