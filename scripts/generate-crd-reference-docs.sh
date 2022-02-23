@@ -15,6 +15,8 @@ execName=crd-to-markdown
 rm -rf $tempDir
 mkdir $tempDir
 cd $tempDir
+# create a docs directory within the temp directory where the generated files will go
+mkdir docs
 
 # Identify the OS that we're on
 unameOut="$(uname -s)"
@@ -54,7 +56,7 @@ do
     type=${BASH_REMATCH[1]}
     echo "Generating $type.md from $file"
     # Do a little manipulation here to cleanup the output -- removing the header we don't want
-    (./$execName -f $file | grep -v '### Sub Resources') > $type.md
+    (./$execName -f $file | grep -v '### Sub Resources') > docs/$type.md
   else
     echo "Error:  Unable to identify type for $file"
   fi
