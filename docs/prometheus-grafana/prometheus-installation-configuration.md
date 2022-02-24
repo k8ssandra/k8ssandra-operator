@@ -61,7 +61,7 @@ spec:
     datacenters:
     - metadata: 
         name: dc1
-      cassandraTelemetry: 
+      telemetry: 
         prometheus:
           enabled: true
 ```
