@@ -21,7 +21,7 @@ Recovery from this failure is impossible in certain scenarios, because (in the e
 
 It might appear acceptable to lose the control plane for a brief period (in the understanding that data plane activities will continue under the coordination of Cassandra itself without supervision for some time). However, in practice, major outages typically entail excess pressure on the control plane as operators and automation work to bring the system back to stability.
 
-The implication is that k8ssandra-operator's control plane instance is most likely to fail when it is needed most.
+The implication is that k8ssandra-operator's control plane instance is most likely to fail when it is needed most.[^1]
 
 ## Proposed solution
 
@@ -37,7 +37,7 @@ It also appears that Kubefed offers a [leader election module](https://github.co
 
 ### Distributed consensus
 
-At all times, it is important that there is only one leader across the entire k8ssandra cluster. In a single k8s cluster, leader election is accomplished via etcd, whose locking mechanisms are foundational in ensuring that consistency is maintained.
+At all times, it is important that there is only one leader across the entire k8ssandra cluster.[^2] In a single k8s cluster, leader election is accomplished via etcd, whose locking mechanisms are foundational in ensuring that consistency is maintained.
 
 But there is no k8s-native way to achieve transactional consistency across multiple k8s clusters which each have their own etcd instances.
 
