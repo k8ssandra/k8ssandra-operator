@@ -44,7 +44,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    cassandraTelemetry: 
+    telemetry: 
       prometheus:
         enabled: true
 ```
