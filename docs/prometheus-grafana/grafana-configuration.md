@@ -14,7 +14,7 @@ You can then log in using the highly secure `admin`/`admin` username and passwor
 
 ## Importing the Grafana dashboards
 
-If you hover on the `+` icon on the left hand of the Grafana dashboards an option will come up to import a dasboard. click it and copy in one of the dashboards defined in the [MCAC repo](https://github.com/datastax/metric-collector-for-apache-cassandra/blob/master/dashboards/grafana/generated-dashboards).
+If you hover on the `+` icon on the left hand of the Grafana dashboards an option will come up to import a dashboard. click it and copy in one of the dashboards defined in the [MCAC repo](https://github.com/datastax/metric-collector-for-apache-cassandra/blob/master/dashboards/grafana/generated-dashboards).
 
 Follow the prompts and you will be taken to the dashboard, which should be populated with data from Prometheus.
 
