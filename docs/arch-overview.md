@@ -19,6 +19,8 @@ Note the `name: dc1` declaration that is highlighted in green. This tells K8ssan
 
 Cass Operator manages the CassandraDatacenter. Note the arrow from the CassandraDatacenter to the StatefulSet `test-dc1-default-sts`. Cass Operator creates the StatefulSet. The StatefulSet controller, which is part of Kubernetes itself, creates the actual pods that run Cassandra.
 
+<!-- TODO: Add link to configuration doc when its available -->
+
 
 ## k8sContext
 K8ssandra Operator creates `dc1` in the `east` cluster. The `k8sContext` property determines in which Kubernetes cluster the operator creates the CassandraDatacenter. If not specified the operator creates the CassandraDatacenter in the control plane cluster.
@@ -30,7 +32,7 @@ A ClientConfig is another custom resource provided by K8ssandra Operator; howeve
 
 The operator identifies remote clusters using the `contextName` property. The property is optional. If not specified, the operator uses the ClientConfig name to identify the remote cluster.
 
-The arrow going from the `k8sContext` property to the ClientConfig object which has a `contextName` property represents an indirect relationship. Deleting a K8ssandraCluster will result in the deletion of the member CassandraDatacenters, but it won't result in deletion of any ClientConfigs.
+The arrow going from the `k8sContext` property to the ClientConfig object which has a `contextName` property represents an indirect relationship. While deleting a K8ssandraCluster will result in the deletion of the member CassandraDatacenters, it won't result in deletion of any ClientConfigs.
 
 **Note:** See [Remote Cluster Connection Management][remote-k8s-access/README.md] for more information about ClientConfigs. 
 
@@ -39,6 +41,8 @@ Next we look at the `cassandra.telemetry` property. When it is enabled, K8ssandr
 
 **Note:** The ServiceMonitor custom resource is provided by [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator).
 
+<!-- TODO: Add line to prometheus doc when https://github.com/k8ssandra/k8ssandra-operator/pull/333 is merged -->
+
 # Stargate
 K8ssandra Operator provides a Stargate custom resource. The `stargate` property configures Stargate for each CassandraDatacenter. The diagram illustrates the `test-dc1-stargate` Stargate object that the operator creates in the `east` cluster. More precisely the K8ssandraCluster controller creates the Stargate object.
 
@@ -46,12 +50,16 @@ K8ssandra Operator provides a Stargate custom resource. The `stargate` property 
 
 Note the arrow from `test-dc1-stargate` `test-dc1-default-stargate-deployment`. The Stargate controller creates this Deployment. The Deployment controller, which is part of Kubernetes itself, creates the actual pod that runs Stargate.
 
+<!-- TODO: Add link to configuration doc when its available -->
+
 # Reaper
 K8ssandra Operator provides a Reaper custom resource. The `reaper` property configures Reaper for each CassandraDatacenter. The diagram illustrates the `test-dc1-reaper` Reaper object that the operator creates in the `east` cluster. More precisely the K8ssandraCluster controller creates the Reaper object.
 
 **Note:** See [cassandra-reaper.io](http://cassandra-reaper.io/) to learn more about Reaper.
 
 Note the arrow from the `test-dc1-reaper` Reaper object to the `test-dc1-reaper` Deployment object. The Reaper controller creates this Deployment. The Deployment controller, which is part of Kubernetes itself, create the actual pod that runs Reaper.
+
+<!-- TODO: Add link to configuration doc when its available -->
 
 # Medusa
 The `medusa` property configures Medusa for performing backups and restores of Cassandra. K8ssandra Operator modifies the CassandraDatacenter to include additional containers in Cassandra pods for performing backup and restore operations.
