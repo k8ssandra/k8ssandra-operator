@@ -16,6 +16,12 @@ First up in `cassandra.datacenters`. A CassandraDatacenter is created for each e
     name: dc1
 ```
 
-points to the CassandraDatacenter object that K8ssandra Operator creates. The CassandraDatacenter is comprised of several objects, notably the StatefulSet `test-dc1-default-sts`. The StatefulSet is comprised of three pods which are not shown in the diagram.
+points to the CassandraDatacenter object that K8ssandra Operator creates. The CassandraDatacenter is comprised of several objects, notably the StatefulSet `test-dc1-default-sts`. The StatefulSet is comprised of three pods which are not shown in the diagram. It is good to be aware of the relationships between these objects. 
+
+* The K8ssandraCluster controller creates/updates the CassandraDatacenter object
+* Cass Operator creates/updates the StatefulSet object
+* The StatefulSet controller creates/updates the pods
+
+The sequence of events happens in that order.
 
 The `k8sContext` property determines in which Kubernetes cluster K8ssandra Operator will create the CassandraDatacenter. If not specified the CassandraDatacenter is created in the control plane cluster.
