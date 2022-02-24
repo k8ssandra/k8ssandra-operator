@@ -23,4 +23,4 @@ Follow the prompts and you will be taken to the dashboard, which should be popul
 
 While suitable for a quick start guide, the above procedure seems slightly clunky and requires manual intervention to import dashboards. Worst of all, if you delete the pod your dashboards will be lost.
 
-It is worth noting that [Grafana](https://github.com/grafana-operator/grafana-operator) operator allows for [dashboards](https://github.com/grafana-operator/grafana-operator/blob/master/documentation/dashboards.md) to be deployed as yaml manifests, and this is probably the approach you want to opt for in serious deployments.
+It is worth noting that [Grafana](https://github.com/grafana-operator/grafana-operator) operator allows for [dashboards](https://github.com/grafana-operator/grafana-operator/blob/master/documentation/dashboards.md) to be deployed as yaml manifests, and this is probably the approach you want to opt for in production deployments.
