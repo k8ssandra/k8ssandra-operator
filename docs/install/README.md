@@ -835,7 +835,7 @@ on Docker Hub for a list of available images.
 Install with kubectl:
 
 ```console
-kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
+kubectl apply --server-side -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane\?ref\=v1.0.0
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -855,21 +855,18 @@ cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 namespace: k8ssandra-operator
 
 resources:
-- github.com/k8ssandra/k8ssandra-operator/config/deployments/default?ref=main
-
-components:
-- github.com/k8ssandra/k8ssandra-operator/config/components/namespace
+- github.com/k8ssandra/k8ssandra-operator/config/deployments/default?ref=v1.0.0
 
 images:
 - name: k8ssandra/k8ssandra-operator
-  newTag: v1.0.0-alpha.1
+  newTag: v1.0.0
 EOF
 ```
 
 Now install the operator:
 
 ```console
-kubectl apply -k $K8SSANDRA_OPERATOR_HOME
+kubectl apply --server-side -k $K8SSANDRA_OPERATOR_HOME
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -907,7 +904,7 @@ k8ssandra-operator   1/1     1            1           2m
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
 ```console
-kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Deploy a K8ssandraCluster
@@ -1077,7 +1074,7 @@ kubectx kind-k8ssandra-0
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/control-plane
+kubectl apply -k github.com/k8ssandra/config/deployments/control-plane\?ref\=v1.0.0 --server-side
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -1128,7 +1125,7 @@ kubectx kind-k8ssandra-1
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/data-plane
+kubectl apply -k github.com/k8ssandra/config/deployments/data-plane\?ref\=v1.0.0 --server-side
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
