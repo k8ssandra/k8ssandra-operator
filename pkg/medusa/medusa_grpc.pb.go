@@ -19,9 +19,12 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MedusaClient interface {
 	Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error)
+	AsyncBackup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error)
 	BackupStatus(ctx context.Context, in *BackupStatusRequest, opts ...grpc.CallOption) (*BackupStatusResponse, error)
 	DeleteBackup(ctx context.Context, in *DeleteBackupRequest, opts ...grpc.CallOption) (*DeleteBackupResponse, error)
 	GetBackups(ctx context.Context, in *GetBackupsRequest, opts ...grpc.CallOption) (*GetBackupsResponse, error)
+	PurgeBackups(ctx context.Context, in *PurgeBackupsRequest, opts ...grpc.CallOption) (*PurgeBackupsResponse, error)
+	PrepareRestore(ctx context.Context, in *PrepareRestoreRequest, opts ...grpc.CallOption) (*PrepareRestoreResponse, error)
 }
 
 type medusaClient struct {
@@ -35,6 +38,15 @@ func NewMedusaClient(cc grpc.ClientConnInterface) MedusaClient {
 func (c *medusaClient) Backup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error) {
 	out := new(BackupResponse)
 	err := c.cc.Invoke(ctx, "/Medusa/Backup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *medusaClient) AsyncBackup(ctx context.Context, in *BackupRequest, opts ...grpc.CallOption) (*BackupResponse, error) {
+	out := new(BackupResponse)
+	err := c.cc.Invoke(ctx, "/Medusa/AsyncBackup", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,14 +80,35 @@ func (c *medusaClient) GetBackups(ctx context.Context, in *GetBackupsRequest, op
 	return out, nil
 }
 
+func (c *medusaClient) PurgeBackups(ctx context.Context, in *PurgeBackupsRequest, opts ...grpc.CallOption) (*PurgeBackupsResponse, error) {
+	out := new(PurgeBackupsResponse)
+	err := c.cc.Invoke(ctx, "/Medusa/PurgeBackups", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *medusaClient) PrepareRestore(ctx context.Context, in *PrepareRestoreRequest, opts ...grpc.CallOption) (*PrepareRestoreResponse, error) {
+	out := new(PrepareRestoreResponse)
+	err := c.cc.Invoke(ctx, "/Medusa/PrepareRestore", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MedusaServer is the server API for Medusa service.
 // All implementations must embed UnimplementedMedusaServer
 // for forward compatibility
 type MedusaServer interface {
 	Backup(context.Context, *BackupRequest) (*BackupResponse, error)
+	AsyncBackup(context.Context, *BackupRequest) (*BackupResponse, error)
 	BackupStatus(context.Context, *BackupStatusRequest) (*BackupStatusResponse, error)
 	DeleteBackup(context.Context, *DeleteBackupRequest) (*DeleteBackupResponse, error)
 	GetBackups(context.Context, *GetBackupsRequest) (*GetBackupsResponse, error)
+	PurgeBackups(context.Context, *PurgeBackupsRequest) (*PurgeBackupsResponse, error)
+	PrepareRestore(context.Context, *PrepareRestoreRequest) (*PrepareRestoreResponse, error)
 	mustEmbedUnimplementedMedusaServer()
 }
 
@@ -86,6 +119,9 @@ type UnimplementedMedusaServer struct {
 func (UnimplementedMedusaServer) Backup(context.Context, *BackupRequest) (*BackupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Backup not implemented")
 }
+func (UnimplementedMedusaServer) AsyncBackup(context.Context, *BackupRequest) (*BackupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AsyncBackup not implemented")
+}
 func (UnimplementedMedusaServer) BackupStatus(context.Context, *BackupStatusRequest) (*BackupStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BackupStatus not implemented")
 }
@@ -94,6 +130,12 @@ func (UnimplementedMedusaServer) DeleteBackup(context.Context, *DeleteBackupRequ
 }
 func (UnimplementedMedusaServer) GetBackups(context.Context, *GetBackupsRequest) (*GetBackupsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBackups not implemented")
+}
+func (UnimplementedMedusaServer) PurgeBackups(context.Context, *PurgeBackupsRequest) (*PurgeBackupsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PurgeBackups not implemented")
+}
+func (UnimplementedMedusaServer) PrepareRestore(context.Context, *PrepareRestoreRequest) (*PrepareRestoreResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareRestore not implemented")
 }
 func (UnimplementedMedusaServer) mustEmbedUnimplementedMedusaServer() {}
 
@@ -122,6 +164,24 @@ func _Medusa_Backup_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MedusaServer).Backup(ctx, req.(*BackupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Medusa_AsyncBackup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MedusaServer).AsyncBackup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Medusa/AsyncBackup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MedusaServer).AsyncBackup(ctx, req.(*BackupRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -180,6 +240,42 @@ func _Medusa_GetBackups_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Medusa_PurgeBackups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurgeBackupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MedusaServer).PurgeBackups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Medusa/PurgeBackups",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MedusaServer).PurgeBackups(ctx, req.(*PurgeBackupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Medusa_PrepareRestore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareRestoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MedusaServer).PrepareRestore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Medusa/PrepareRestore",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MedusaServer).PrepareRestore(ctx, req.(*PrepareRestoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Medusa_ServiceDesc is the grpc.ServiceDesc for Medusa service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +286,10 @@ var Medusa_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Backup",
 			Handler:    _Medusa_Backup_Handler,
+		},
+		{
+			MethodName: "AsyncBackup",
+			Handler:    _Medusa_AsyncBackup_Handler,
 		},
 		{
 			MethodName: "BackupStatus",
@@ -203,7 +303,15 @@ var Medusa_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetBackups",
 			Handler:    _Medusa_GetBackups_Handler,
 		},
+		{
+			MethodName: "PurgeBackups",
+			Handler:    _Medusa_PurgeBackups_Handler,
+		},
+		{
+			MethodName: "PrepareRestore",
+			Handler:    _Medusa_PrepareRestore_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/pb/medusa.proto",
+	Metadata: "pkg/medusa/medusa.proto",
 }

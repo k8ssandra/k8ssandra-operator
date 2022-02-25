@@ -1,0 +1,20 @@
+# permissions for end users to view medusabackupjobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: medusabackupjob-viewer-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusabackupjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusabackupjobs/status
+  verbs:
+  - get

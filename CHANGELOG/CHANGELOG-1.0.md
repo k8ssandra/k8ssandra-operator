@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] []() Update to cass-operator v1.11.0
 * [CHANGE] [#310](https://github.com/k8ssandra/k8ssandra-operator/issues/310) Update to Go 1.17 and Kubernetes dependencies (incl. controller-runtime)
+* [FEATURE] [#454](https://github.com/k8ssandra/k8ssandra-operator/pull/454) Remote restore support for Medusa
 * [ENHANCEMENT] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Refactor config-builder JSON marshaling
 * [ENHANCEMENT] [#507](https://github.com/k8ssandra/k8ssandra-operator/issues/507) Shared Cassandra cluster and datacenter fields are defined in a single struct
 * [BUGFIX] [#447](https://github.com/k8ssandra/k8ssandra-operator/issues/447) Reconciliation doesn't finish when adding DC with more than 1 node

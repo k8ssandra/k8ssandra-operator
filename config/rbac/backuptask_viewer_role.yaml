@@ -1,0 +1,20 @@
+# permissions for end users to view MedusaTasks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: MedusaTask-viewer-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - MedusaTasks
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - MedusaTasks/status
+  verbs:
+  - get

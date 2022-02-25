@@ -477,3 +477,8 @@ gke-e2e-test:
      -hostNetwork=false \
      -imageName=$(GKE_IMAGE_TAG_BASE) \
      -imageTag=latest"
+
+# The protobuf compiler is required to run this target: https://grpc.io/docs/protoc-installation/
+PHONY: protobuf-code-gen
+protobuf-code-gen:
+	@protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pkg/medusa/medusa.proto

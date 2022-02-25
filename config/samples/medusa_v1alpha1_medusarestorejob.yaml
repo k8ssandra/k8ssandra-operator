@@ -1,0 +1,7 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaRestoreJob
+metadata:
+  name: medusarestorejob-sample
+spec:
+  # Add fields here
+  foo: bar

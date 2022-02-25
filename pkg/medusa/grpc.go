@@ -35,6 +35,10 @@ type Client interface {
 	CreateBackup(ctx context.Context, name string, backupType string) error
 
 	GetBackups(ctx context.Context) ([]*BackupSummary, error)
+
+	PurgeBackups(ctx context.Context) (*PurgeBackupsResponse, error)
+
+	PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*PrepareRestoreResponse, error)
 }
 
 func (c *defaultClient) Close() error {
@@ -68,4 +72,22 @@ func (c *defaultClient) DeleteBackup(ctx context.Context, name string) error {
 	request := DeleteBackupRequest{Name: name}
 	_, err := c.grpcClient.DeleteBackup(context.Background(), &request)
 	return err
+}
+
+func (c *defaultClient) PurgeBackups(ctx context.Context) (*PurgeBackupsResponse, error) {
+	request := PurgeBackupsRequest{}
+	response, err := c.grpcClient.PurgeBackups(ctx, &request)
+
+	return response, err
+}
+
+func (c *defaultClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*PrepareRestoreResponse, error) {
+	request := PrepareRestoreRequest{
+		Datacenter: datacenter,
+		BackupName: backupName,
+		RestoreKey: restoreKey,
+	}
+	response, err := c.grpcClient.PrepareRestore(ctx, &request)
+
+	return response, err
 }

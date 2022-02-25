@@ -15,7 +15,11 @@ spec:
     singular: cassandrarestore
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    deprecationWarning: medusa.k8ssandra.com/v1alpha1 CassandraBackup/CassandraRestore
+      are deprecated, use medusa.k8ssandra.com/v1alpha1 MedusaBackupJob/MedusaRestoreJob
+      instead.
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: CassandraRestore is the Schema for the cassandrarestores API

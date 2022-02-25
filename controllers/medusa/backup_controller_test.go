@@ -3,7 +3,6 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -14,6 +13,7 @@ import (
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -138,9 +138,9 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("verify that medusa gRPC clients are invoked")
 	require.Equal(map[string][]string{
-		fmt.Sprintf("%s:%d", getPodIpAddress(0), backupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(1), backupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(2), backupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(0), shared.BackupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(1), shared.BackupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(2), shared.BackupSidecarPort): {defaultBackupName},
 	}, medusaClientFactory.GetRequestedBackups())
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -214,33 +214,6 @@ func createAndVerifyBackup(
 		return !updated.Status.StartTime.IsZero()
 	}, timeout, interval)
 
-	t.Log("verify that the CassandraDatacenter spec is added to the backup status")
-	require.Eventually(t, func() bool {
-		updated := &api.CassandraBackup{}
-		err := f.Get(ctx, backupKey, updated)
-		if err != nil {
-			return false
-		}
-
-		return updated.Status.CassdcTemplateSpec.Spec.ClusterName == dc.Spec.ClusterName &&
-			updated.Status.CassdcTemplateSpec.Spec.Size == dc.Spec.Size &&
-			updated.Status.CassdcTemplateSpec.Spec.ServerVersion == dc.Spec.ServerVersion &&
-			updated.Status.CassdcTemplateSpec.Spec.ServerImage == dc.Spec.ServerImage &&
-			updated.Status.CassdcTemplateSpec.Spec.ManagementApiAuth == dc.Spec.ManagementApiAuth &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.Resources, dc.Spec.Resources) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.SystemLoggerResources, dc.Spec.SystemLoggerResources) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.ConfigBuilderResources, dc.Spec.ConfigBuilderResources) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.Racks, dc.Spec.Racks) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.StorageConfig, dc.Spec.StorageConfig) &&
-			updated.Status.CassdcTemplateSpec.Spec.Stopped == dc.Spec.Stopped &&
-			updated.Status.CassdcTemplateSpec.Spec.ConfigBuilderImage == dc.Spec.ConfigBuilderImage &&
-			updated.Status.CassdcTemplateSpec.Spec.AllowMultipleNodesPerWorker == dc.Spec.AllowMultipleNodesPerWorker &&
-			updated.Status.CassdcTemplateSpec.Spec.ServiceAccount == dc.Spec.ServiceAccount &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.NodeSelector, dc.Spec.NodeSelector) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.Users, dc.Spec.Users) &&
-			reflect.DeepEqual(updated.Status.CassdcTemplateSpec.Spec.AdditionalSeeds, dc.Spec.AdditionalSeeds)
-	}, timeout, interval)
-
 	t.Log("verify the backup finished")
 	require.Eventually(t, func() bool {
 		updated := &api.CassandraBackup{}
@@ -299,14 +272,18 @@ func NewMedusaClientFactory() *fakeMedusaClientFactory {
 }
 
 func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, error) {
-	medusaClient := newFakeMedusaClient()
 	f.clientsMutex.Lock()
-	f.clients[address] = medusaClient
-	f.clientsMutex.Unlock()
-	return medusaClient, nil
+	defer f.clientsMutex.Unlock()
+	_, ok := f.clients[address]
+	if !ok {
+		f.clients[address] = newFakeMedusaClient()
+	}
+	return f.clients[address], nil
 }
 
 func (f *fakeMedusaClientFactory) GetRequestedBackups() map[string][]string {
+	f.clientsMutex.Lock()
+	defer f.clientsMutex.Unlock()
 	requestedBackups := make(map[string][]string)
 	for k, v := range f.clients {
 		requestedBackups[k] = v.RequestedBackups
@@ -332,10 +309,34 @@ func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backup
 }
 
 func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
-	return nil, nil
+	backups := make([]*medusa.BackupSummary, 0)
+	for _, name := range c.RequestedBackups {
+		backup := &medusa.BackupSummary{
+			BackupName: name,
+			StartTime:  0,
+			FinishTime: 10,
+			Status:     *medusa.StatusType_SUCCESS.Enum(),
+		}
+		backups = append(backups, backup)
+	}
+	return backups, nil
 }
 
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
+	return nil, nil
+}
+
+func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+	response := &medusa.PurgeBackupsResponse{
+		NbBackupsPurged:           2,
+		NbObjectsPurged:           10,
+		TotalObjectsWithinGcGrace: 0,
+		TotalPurgedSize:           1000,
+	}
+	return response, nil
+}
+
+func (c *fakeMedusaClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*medusa.PrepareRestoreResponse, error) {
 	return nil, nil
 }
 
@@ -373,8 +374,8 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 								Image: "cassandra",
 							},
 							{
-								Name:  backupSidecarName,
-								Image: backupSidecarName,
+								Name:  shared.BackupSidecarName,
+								Image: shared.BackupSidecarName,
 							},
 						},
 					},

@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -210,13 +211,29 @@ func TestOperator(t *testing.T) {
 			additionalNamespaces: []string{"test-1", "test-2"},
 		}))
 	})
-	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleMedusa,
-		fixture:  framework.NewTestFixture("single-dc-medusa", controlPlane),
+	t.Run("CreateSingleMedusaOld", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusa,
+		fixture:                      framework.NewTestFixture("single-dc-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
 	}))
-	t.Run("CreateMultiMedusa", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createMultiMedusa,
-		fixture:  framework.NewTestFixture("multi-dc-medusa", controlPlane),
+	t.Run("CreateMultiMedusaOld", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createMultiMedusa,
+		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
+	t.Run("CreateSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusaJob,
+		fixture:                      framework.NewTestFixture("single-dc-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+	}))
+	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createMultiMedusaJob,
+		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc: multiDcAuthOnOff,
