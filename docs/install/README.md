@@ -835,7 +835,7 @@ on Docker Hub for a list of available images.
 Install with kubectl:
 
 ```console
-kubectl apply --server-side -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane\?ref\=v1.0.0
+kustomize build github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane\?ref\=v1.0.0 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -866,7 +866,7 @@ EOF
 Now install the operator:
 
 ```console
-kubectl apply --server-side -k $K8SSANDRA_OPERATOR_HOME
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
