@@ -163,6 +163,22 @@ The operator requeues reconciliation requests until the rebuild is finished
 
 **Note:** Upon successful completion Cass Operator deletes the CassandraTask.
 
+## Choose Source Datacenter for Streaming
+Suppose our K8ssandraCluster already has `dc1` and `dc2`, and now we want to add `dc3`. By default K8ssandra Operator will choose the first DC as the source for streaming. Set the `k8ssandra.io/rebuild-src-dc` annotation to tell the operator from which DC to stream.
+
+If we want to stream from `dc2`, then we would have something like this:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+  namespace: k8ssandra-operator
+  annotations:
+    k8ssandra.io/dc-replication: '{"dc3": {"ks1": 2, "ks2": 2}}'
+    k8ssandra.io/rebuild-src-dc: dc2
+```
+
 # Deploy Stargate
 Next K8ssandra Operator creates a Stargate object, `test-dc2-stargate`, in the `k8ssandra-operator` namesapce in the `west` cluster.
 
