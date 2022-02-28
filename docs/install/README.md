@@ -1074,7 +1074,7 @@ kubectx kind-k8ssandra-0
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/control-plane\?ref\=v1.0.0 --server-side
+kustomize build github.com/k8ssandra/config/deployments/control-plane\?ref\=v1.0.0 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -1125,7 +1125,7 @@ kubectx kind-k8ssandra-1
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/data-plane\?ref\=v1.0.0 --server-side
+kustomize build github.com/k8ssandra/config/deployments/data-plane\?ref\=v1.0.0 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
