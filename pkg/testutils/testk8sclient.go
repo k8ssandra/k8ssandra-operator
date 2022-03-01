@@ -12,6 +12,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,17 +31,18 @@ func (my TestK8sClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 	var err error
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() error {
+	go func() {
 		defer wg.Done()
 		for {
 			select {
 			case <-time.After(my.tick): // Poll
 				err = my.UnsafeGetSync(ctx, key, obj)
 				if err == nil {
-					return nil
+					return
 				}
 			case <-time.After(my.timeout): // Timeout
-				return err
+				err = errors.NewTimeoutError("timed out trying to get resource", 0)
+				return
 			}
 		}
 	}()
