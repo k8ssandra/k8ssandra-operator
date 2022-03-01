@@ -2,5 +2,5 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands: 
 - script: |- 
-    sed "s/serverVersion: .*/serverVersion: ${SERVERVERSION:-4.0.1}/g" '../../testdata/samples/k8ssandra-single-kind.yaml' | kubectl apply -n $NAMESPACE --server-side -f - 
+    sed "s/serverVersion: .*/serverVersion: ${SERVERVERSION:-4.0.1}/g" '../config/fixtures/k8ssandra-base/k8ssandra-cluster.yaml' | kubectl apply -n $NAMESPACE --server-side -f - 
   ignoreFailure: false 

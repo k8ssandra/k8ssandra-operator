@@ -5,11 +5,14 @@ metadata:
   namespace: k8ssandra-operator
 status:
   conditions:
-  - type: Initialized
+  - status: "True"
+    type: Initialized
   - status: "True"
     type: Ready
-  - type: ContainersReady
-  - type: PodScheduled
+  - status: "True"
+    type: ContainersReady
+  - status: "True"
+    type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -18,11 +21,14 @@ metadata:
   namespace: k8ssandra-operator
 status:
   conditions:
-  - type: Initialized
+  - status: "True"
+    type: Initialized
   - status: "True"
     type: Ready
-  - type: ContainersReady
-  - type: PodScheduled
+  - status: "True"
+    type: ContainersReady
+  - status: "True"
+    type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -31,8 +37,11 @@ metadata:
   namespace: k8ssandra-operator
 status:
   conditions:
-  - type: Initialized
+  - status: "True"
+    type: Initialized
   - status: "True"
     type: Ready
-  - type: ContainersReady
-  - type: PodScheduled
+  - status: "True"
+    type: ContainersReady
+  - status: "True"
+    type: PodScheduled
