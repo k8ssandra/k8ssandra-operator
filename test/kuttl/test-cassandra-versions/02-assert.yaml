@@ -4,9 +4,12 @@ metadata:
   name: demo-dc1-default-sts-0
   namespace: k8ssandra-operator
 status:
-  containerStatuses:
-  - name: cassandra
-    ready: true
+  conditions:
+  - type: Initialized
+  - status: "True"
+    type: Ready
+  - type: ContainersReady
+  - type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -14,9 +17,12 @@ metadata:
   name: demo-dc1-default-sts-1
   namespace: k8ssandra-operator
 status:
-  containerStatuses:
-  - name: cassandra
-    ready: true
+  conditions:
+  - type: Initialized
+  - status: "True"
+    type: Ready
+  - type: ContainersReady
+  - type: PodScheduled
 ---
 apiVersion: v1
 kind: Pod
@@ -24,6 +30,9 @@ metadata:
   name: demo-dc1-default-sts-2
   namespace: k8ssandra-operator
 status:
-  containerStatuses:
-  - name: cassandra
-    ready: true
+  conditions:
+  - type: Initialized
+  - status: "True"
+    type: Ready
+  - type: ContainersReady
+  - type: PodScheduled
