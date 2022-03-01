@@ -117,7 +117,4 @@ jobs:
         # image tag of the operator.
         
         make install-kuttl
-        kind create cluster --name k8ssandra-0 
-        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
-        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
-        kind delete cluster --name k8ssandra-0
+        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --test ${{ matrix.kuttl-test }}
