@@ -227,7 +227,7 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	}, timeout, interval, "reaper status should have been updated")
 }
 
-// The purpose of this testutils is to cover code paths where an object, e.g., the
+// The purpose of this test is to cover code paths where an object, e.g., the
 // deployment already exists. This could happen after a failed reconciliation and
 // the request gets requeued.
 func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
