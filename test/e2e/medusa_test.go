@@ -21,11 +21,11 @@ const (
 )
 
 func createSingleMedusa(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.ClusterKey{K8sContext: *dataPlane1, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "Error getting the K8ssandraCluster")
-	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: *dataPlane1, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
@@ -37,13 +37,13 @@ func createSingleMedusa(t *testing.T, ctx context.Context, namespace string, f *
 }
 
 func createMultiMedusa(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.ClusterKey{K8sContext: *dataPlane1, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "Error getting the K8ssandraCluster")
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
-	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc1Key := framework.ClusterKey{K8sContext: *dataPlane1, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc2Key := framework.ClusterKey{K8sContext: *dataPlane2, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
 	// Check that both DCs are ready and have Medusa containers
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {

@@ -26,7 +26,7 @@ spec:
       - metadata:
           name: dc2
         size: 2
-        k8sContext: kind-k8ssandra-1
+        k8sContext: k8ssandra-1
     mgmtAPIHeap: 64Mi
   medusa:
     storageProperties:

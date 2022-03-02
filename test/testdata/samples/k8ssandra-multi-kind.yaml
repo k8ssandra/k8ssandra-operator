@@ -28,7 +28,7 @@ spec:
           heapSize: 256M
       - metadata:
           name: dc2
-        k8sContext: kind-k8ssandra-1
+        k8sContext: k8ssandra-1
         size: 3
         stargate:
           size: 1

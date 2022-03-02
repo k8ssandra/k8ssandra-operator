@@ -85,7 +85,7 @@ type Framework struct {
 	// remote clusters.
 	Client client.Client
 
-	// The Kubernetes context in which the K8ssandraCluser controller is running.
+	// The Kubernetes context in which the K8ssandraCluster controller is running.
 	ControlPlaneContext string
 
 	// RemoteClients is mapping of Kubernetes context names to clients.
