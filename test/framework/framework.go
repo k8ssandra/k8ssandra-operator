@@ -461,7 +461,7 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 		}
 
 		dc := &cassdcapi.CassandraDatacenter{}
-		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
+		if err := remoteClient.UnsafeGetSync(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
 			if !errors.IsNotFound(err) {
