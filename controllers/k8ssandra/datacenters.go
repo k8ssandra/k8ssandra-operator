@@ -308,7 +308,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	task := &cassctlapi.CassandraTask{}
 
 	if err := remoteClient.Get(ctx, taskKey, task); err == nil {
-		if taskFinished(task) {
+		if taskFinished(task, int(dc.Spec.Size)) {
 			// TODO what should we do if it failed?
 			logger.Info("Datacenter rebuild finished")
 			patch := client.MergeFromWithOptions(kc.DeepCopy())
@@ -336,8 +336,8 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	}
 }
 
-func taskFinished(task *cassctlapi.CassandraTask) bool {
-	return len(task.Spec.Jobs) == int(task.Status.Succeeded+task.Status.Failed)
+func taskFinished(task *cassctlapi.CassandraTask, numNodes int) bool {
+	return numNodes == task.Status.Succeeded+task.Status.Failed
 }
 
 func newRebuildTask(targetDc, namespace, srcDc string) *cassctlapi.CassandraTask {

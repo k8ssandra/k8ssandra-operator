@@ -369,7 +369,7 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 			Name:      "dc3-rebuild",
 		},
 	}
-	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey)
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 }
 
 // withStargateAndReaper tests adding a DC to a cluster that also has Stargate and Reaper
@@ -460,7 +460,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 			Name:      "dc2-rebuild",
 		},
 	}
-	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey)
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	sg2Key := framework.ClusterKey{
 		K8sContext: k8sCtx1,
@@ -808,15 +808,19 @@ func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Fr
 	require.Equal(expectedJobs, task.Spec.Jobs)
 }
 
-func setRebuildTaskFinished(ctx context.Context, t *testing.T, f *framework.Framework, key framework.ClusterKey) {
+func setRebuildTaskFinished(ctx context.Context, t *testing.T, f *framework.Framework, taskKey framework.ClusterKey, dcKey framework.ClusterKey) {
 	t.Log("set rebuild task to finished")
 
 	task := &cassctlapi.CassandraTask{}
-	err := f.Get(ctx, key, task)
+	err := f.Get(ctx, taskKey, task)
 	require.NoError(t, err, "failed to get rebuild task")
 
-	task.Status.Succeeded = 1
-	err = f.UpdateStatus(ctx, key, task)
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dcKey, dc)
+	require.NoError(t, err, "failed to get CassandraDatacenter for rebuild")
+
+	task.Status.Succeeded = int(dc.Spec.Size)
+	err = f.UpdateStatus(ctx, taskKey, task)
 	require.NoError(t, err, "failed to set rebuild task finished")
 }
 
