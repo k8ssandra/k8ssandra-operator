@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
 )
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
@@ -303,12 +308,16 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		return result.Error(err)
 	}
 
-	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc)
+	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size))
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
 
 	if err := remoteClient.Get(ctx, taskKey, task); err == nil {
-		if taskFinished(task, int(dc.Spec.Size)) {
+		finished, err := taskFinished(task)
+		if err != nil {
+			return result.Error(err)
+		}
+		if finished {
 			// TODO what should we do if it failed?
 			logger.Info("Datacenter rebuild finished")
 			patch := client.MergeFromWithOptions(kc.DeepCopy())
@@ -336,16 +345,28 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	}
 }
 
-func taskFinished(task *cassctlapi.CassandraTask, numNodes int) bool {
-	return numNodes == task.Status.Succeeded+task.Status.Failed
+func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {
+	label, found := task.Labels[rebuildNodesLabel]
+	if !found {
+		return false, fmt.Errorf("rebuild task %s is missing required label %s", utils.GetKey(task), rebuildNodesLabel)
+	}
+
+	numNodes, err := strconv.Atoi(label)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse label %s value for rebuild task %s", rebuildNodesLabel, utils.GetKey(task))
+	}
+	return numNodes == task.Status.Succeeded+task.Status.Failed, nil
 }
 
-func newRebuildTask(targetDc, namespace, srcDc string) *cassctlapi.CassandraTask {
+func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi.CassandraTask {
 	now := metav1.Now()
 	task := &cassctlapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      targetDc + "-rebuild",
+			Labels: map[string]string{
+				rebuildNodesLabel: strconv.Itoa(numNodes),
+			},
 		},
 		Spec: cassctlapi.CassandraTaskSpec{
 			ScheduledTime: &now,

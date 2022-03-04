@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -797,6 +798,16 @@ func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Fr
 	}, timeout, interval, "failed to get rebuild task")
 
 	require.Equal(corev1.ObjectReference{Namespace: targetDcKey.Namespace, Name: targetDcKey.Name}, task.Spec.Datacenter)
+
+	require.Contains(task.Labels, rebuildNodesLabel, "rebuild task missing %s label", rebuildNodesLabel)
+	nodeCount, err := strconv.Atoi(task.Labels[rebuildNodesLabel])
+	require.NoError(err, "invalid value for %s label", rebuildNodesLabel)
+
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, targetDcKey, dc)
+	require.NoError(err, "failed to get CassandraDatacenter for rebuild")
+
+	require.Equal(int(dc.Spec.Size), nodeCount, "%s labels has wrong value", rebuildNodesLabel)
 
 	expectedJobs := []cassctlapi.CassandraJob{
 		{
