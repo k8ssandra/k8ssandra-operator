@@ -42,7 +42,7 @@ spec:
         k8sContext: kind-k8ssandra-0
         size: 2
     mgmtAPIHeap: 64Mi
-  reaper: {}
+#  reaper: {}
   stargate:
     size: 1
     heapSize: 384Mi

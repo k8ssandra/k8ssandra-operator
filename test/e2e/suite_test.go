@@ -794,14 +794,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg1Key)
 
-	reaper1Key := framework.ClusterKey{
-		K8sContext: k8sCtx0,
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      "test-dc1-reaper",
-		},
-	}
-	checkReaperReady(t, f, ctx, reaper1Key)
+	//reaper1Key := framework.ClusterKey{
+	//	K8sContext: k8sCtx0,
+	//	NamespacedName: types.NamespacedName{
+	//		Namespace: namespace,
+	//		Name:      "test-dc1-reaper",
+	//	},
+	//}
+	//checkReaperReady(t, f, ctx, reaper1Key)
 
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
@@ -860,7 +860,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
-	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
+	keyspaces := []string{"system_auth", stargate.AuthKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
 			output, err := f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
@@ -882,14 +882,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
 
-	reaper2Key := framework.ClusterKey{
-		K8sContext: k8sCtx1,
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      "test-dc2-reaper",
-		},
-	}
-	checkReaperReady(t, f, ctx, reaper2Key)
+	//reaper2Key := framework.ClusterKey{
+	//	K8sContext: k8sCtx1,
+	//	NamespacedName: types.NamespacedName{
+	//		Namespace: namespace,
+	//		Name:      "test-dc2-reaper",
+	//	},
+	//}
+	//checkReaperReady(t, f, ctx, reaper2Key)
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
