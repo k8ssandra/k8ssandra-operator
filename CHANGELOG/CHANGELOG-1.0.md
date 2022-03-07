@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unrelease
+
+* [BUGFIX] [#447](https://github.com/k8ssandra/k8ssandra-operator/issues/447) Reconciliation doesn't finish when adding DC with more than 1 node
+
 ## v1.0.0  2022-02-17
 
 * [CHANGE] [#423](https://github.com/k8ssandra/k8ssandra-operator/pull/423) Update to cass-operator v1.10.0

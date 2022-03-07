@@ -282,7 +282,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	t.Log("check that dc3 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
 	rebuildTaskKey := framework.NewClusterKey(k8sCtx2, kc.Namespace, "dc3-rebuild")
-	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey)
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
 	t.Log("check that stargate sg3 was created")
 	require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)
