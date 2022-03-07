@@ -813,6 +813,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("add dc2 to cluster")
+	dcSize := 2
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
 		err = f.Client.Get(ctx, kcKey, kc)
@@ -826,9 +827,9 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				Name: "dc2",
 			},
 			K8sContext: k8sCtx1,
-			Size:       2,
+			Size:       int32(dcSize),
 		})
-		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, `{"dc2": {"ks1": 2, "ks2": 2}}`)
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -868,7 +869,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
-			return strings.Contains(output, "'dc1': '2'") && strings.Contains(output, "'dc2': '2'")
+			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
 		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 
