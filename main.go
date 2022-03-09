@@ -208,7 +208,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO Are these really behaving correctly? Or is backup per cluster manual job?
 	if err = (&medusactrl.CassandraBackupReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
@@ -251,6 +250,14 @@ func main() {
 		ClientFactory:    &medusa.DefaultFactory{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaRestoreJob")
+	}
+
+	if err = (&medusacontrollers.MedusaBackupScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Clock:  &medusacontrollers.RealClock{},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupSchedule")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

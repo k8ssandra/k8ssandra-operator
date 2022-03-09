@@ -1,0 +1,6 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaBackupSchedule
+metadata:
+  name: medusabackupschedule-sample
+spec:
+  # TODO(user): Add fields here

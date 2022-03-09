@@ -16,5 +16,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [FEATURE] [#496](https://github.com/k8ssandra/k8ssandra-operator/issues/496) Allow overriding Cassandra cluster names
+* [FEATURE] [#460](https://github.com/k8ssandra/k8ssandra-operator/pull/460) Add support for scheduling backups.
 * [ENHANCEMENT] [#354](https://github.com/k8ssandra/k8ssandra-operator/issues/354) Add encryption support to Medusa
 * [BUGFIX] [#549](https://github.com/k8ssandra/k8ssandra-operator/issues/549) Releases branches should run e2e tests against target release version
