@@ -37,13 +37,17 @@ jobs:
       - run:
           name: Install System Dependencies
           command: |
-              ./circleci/install-sys-deps.sh
+              /home/circleci/project/.circleci/install_sys_deps.sh
 
       - run:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
               make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+      
+      - store_artifacts:
+          path: build/test/
+
   e2e-multi-tests:
     machine:
       image: ubuntu-2004:202201-01
@@ -63,13 +67,16 @@ jobs:
       - run:
           name: Install System Dependencies
           command: |
-              ./circleci/install-sys-deps.sh
+              /home/circleci/project/.circleci/install_sys_deps.sh
 
       - run:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
               make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+
+      - store_artifacts:
+          path: build/test/
 
 workflows:
   version: 2.1
@@ -79,27 +86,27 @@ workflows:
           matrix:
             parameters:
               e2e-test: 
-                - CreateSingleDatacenterCluster
-                - CreateStargateAndDatacenter
-                - CreateSingleReaper
-                - CreateReaperAndDatacenter
-                - CreateSingleMedusa
-                - ConfigControllerRestarts
                 - SingleDcEncryptionWithStargate
-                - SingleDcEncryptionWithReaper
+                #- CreateSingleDatacenterCluster
+                #- CreateStargateAndDatacenter
+                #- CreateSingleReaper
+                #- CreateReaperAndDatacenter
+                #- CreateSingleMedusa
+                #- ConfigControllerRestarts
+                #- SingleDcEncryptionWithReaper
       - e2e-multi-tests:
           matrix:
             parameters:
               e2e-test: 
-                - CreateMultiDatacenterCluster
-                - AddDcToCluster
-                - RemoveDcFromCluster
-                - CheckStargateApisWithMultiDcCluster
-                - CreateMultiStargateAndDatacenter
                 - CreateMultiReaper
-                - ClusterScoped/MultiDcMultiCluster
-                - CreateMultiMedusa
-                - MultiDcAuthOnOff
-                - MultiDcEncryptionWithStargate
-                - MultiDcEncryptionWithReaper
-                - StopAndRestartDc
+                #- CreateMultiDatacenterCluster
+                #- AddDcToCluster
+                #- RemoveDcFromCluster
+                #- CheckStargateApisWithMultiDcCluster
+                #- CreateMultiStargateAndDatacenter
+                #- ClusterScoped/MultiDcMultiCluster
+                #- CreateMultiMedusa
+                #- MultiDcAuthOnOff
+                #- MultiDcEncryptionWithStargate
+                #- MultiDcEncryptionWithReaper
+                #- StopAndRestartDc
