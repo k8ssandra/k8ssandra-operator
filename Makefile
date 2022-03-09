@@ -164,7 +164,9 @@ docker-push: ## Push docker image with the manager.
 kind-load-image:
 	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
 
-kind-e2e-test: multi-up e2e-test
+kind-single-e2e-test: single-up e2e-test
+
+kind-multi-e2e-test: multi-up e2e-test
 
 single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -

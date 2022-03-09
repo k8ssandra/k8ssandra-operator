@@ -182,7 +182,8 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
-		testFunc: controllerRestart,
+		testFunc:                    controllerRestart,
+		skipK8ssandraClusterCleanup: true,
 	}))
 	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterClusterWithEncryption,

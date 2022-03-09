@@ -1,0 +1,105 @@
+# Copyright 2020 DataStax, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Java Maven CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-java/ for more details
+#
+version: 2.1
+jobs:
+  e2e-tests:
+    machine:
+      image: ubuntu-2004:202201-01
+    #docker:
+    #  - image: cimg/base:2021.04
+    resource_class: large
+    parameters:
+      e2e-test:
+        type: string
+    environment:
+      E2E_TEST: << parameters.e2e-test >>
+      GOPATH: /home/circleci/go
+      GOROOT: /usr/local/go
+      CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install System Dependencies
+          command: |
+              ./circleci/install-sys-deps.sh
+
+      - run:
+          name: Run integration tests
+          no_output_timeout: 45m
+          command: |
+              make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+  e2e-multi-tests:
+    machine:
+      image: ubuntu-2004:202201-01
+    #docker:
+    #  - image: cimg/base:2021.04
+    resource_class: large
+    parameters:
+      e2e-test:
+        type: string
+    environment:
+      E2E_TEST: << parameters.e2e-test >>
+      GOPATH: /home/circleci/go
+      GOROOT: /usr/local/go
+      CGO_ENABLED: 0
+    steps:
+      - checkout
+      - run:
+          name: Install System Dependencies
+          command: |
+              ./circleci/install-sys-deps.sh
+
+      - run:
+          name: Run integration tests
+          no_output_timeout: 45m
+          command: |
+              make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+
+workflows:
+  version: 2.1
+  k8ssandra_op_qa_push:
+    jobs:
+      - e2e-tests:
+          matrix:
+            parameters:
+              e2e-test: 
+                - CreateSingleDatacenterCluster
+                - CreateStargateAndDatacenter
+                - CreateSingleReaper
+                - CreateReaperAndDatacenter
+                - CreateSingleMedusa
+                - ConfigControllerRestarts
+                - SingleDcEncryptionWithStargate
+                - SingleDcEncryptionWithReaper
+      - e2e-multi-tests:
+          matrix:
+            parameters:
+              e2e-test: 
+                - CreateMultiDatacenterCluster
+                - AddDcToCluster
+                - RemoveDcFromCluster
+                - CheckStargateApisWithMultiDcCluster
+                - CreateMultiStargateAndDatacenter
+                - CreateMultiReaper
+                - ClusterScoped/MultiDcMultiCluster
+                - CreateMultiMedusa
+                - MultiDcAuthOnOff
+                - MultiDcEncryptionWithStargate
+                - MultiDcEncryptionWithReaper
+                - StopAndRestartDc
