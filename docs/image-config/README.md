@@ -1,19 +1,18 @@
 # Configuring the K8ssandra images
 
-Often users find it neccesary to configure various properties of the images they are using, this may be to:
+Often users find it necessary to configure various properties of the images they are using, this may be to:
 
 * Use an internal image registry to avoid dependancy on Docker Hub.
 * Use a custom image (for example to customise aspects of the classpath or run customised versions of Cassandra).
-
 ## cass-operator images
 
-The cassandra pods have containers for Cassandra (including the management API), Medusa, config-builder and system-server-logger. These pods are under the management of cass-operator.
+cass-operator manages the Cassandra pod's images. While the K8ssandraCluster field `serverImage` can be used to set the Cassandra image, other images (especially config-builder and system-server-logger can only be set via cass-operator.
 
 cass-operator allows the user to provide a [`ImageConfig`](https://github.com/k8ssandra/cass-operator/blob/master/config/manager/image_config.yaml) to the operator via a ConfigMap, which contains a yaml representation of an `ImageConfig` specifying image sources. 
 
 The location of the mounted ConfigMap is then referenced in the [`OperatorConfig`](https://github.com/k8ssandra/cass-operator/blob/master/config/manager/controller_manager_config.yaml#L1).
 
-It is important to note that all image configurations occur in the ConfigMap mounted into the cass-operator deployment, not via the K8ssandraCluster or CassandraDatacenter CRs. Even though the `ImageConfig` looks like a Kubernetes API extension (and even has a `Kind`, and `ApiVersion`), **it is not**.
+It is important to note that configurations for config-builder and system-server-logger occur in the ConfigMap mounted into the cass-operator deployment, not via the K8ssandraCluster or CassandraDatacenter CRs. Even though the `ImageConfig` looks like a Kubernetes API extension (and even has a `Kind`, and `ApiVersion`), **it is not**.
 
 To specify a custom image registry, we recommend you create a kustomization which may look something like the following:
 
@@ -38,7 +37,7 @@ patches:
 1. **The ImageConfig ConfigMap will be automatically updated in the pod filesystem  when it changes, but changes will not take effect until the Operator is restarted.**
 2. **If a CassandraDatacenter is already running, the new image configurations will not be automatically applied. The CassandraDatacenter needs to be deleted and re-created in order for the changes to take effect.**
 
-## Stargate and Reaper images
+## Cassandra, Stargate, Medusa and Reaper images
 
 The images for Reaper, Stargate, the short lived JMX container within the Cassandra pods, and the Cassandra/management-api containers can be also set via the K8ssandraCluster CR as follows:
 
@@ -87,7 +86,7 @@ spec:
       pullPolicy: <my-pullPolicy>
       pullSecretRef: <my-pullSecretRef>
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1
