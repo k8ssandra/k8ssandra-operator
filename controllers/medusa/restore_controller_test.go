@@ -24,7 +24,6 @@ const (
 func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	err := f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
-	k8sCtx0 := "cluster-0"
 
 	kc := &k8ss.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -38,7 +37,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 						Meta: k8ss.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx0,
+						K8sContext:    f.K8sContext(0),
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -71,7 +70,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -84,7 +83,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {

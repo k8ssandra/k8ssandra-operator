@@ -49,10 +49,6 @@ import (
 const (
 	timeout  = time.Second * 5
 	interval = time.Millisecond * 500
-
-	k8sCtx0 = "cluster-0"
-	k8sCtx1 = "cluster-1"
-	k8sCtx2 = "cluster-2"
 )
 
 var (
@@ -116,8 +112,6 @@ func TestK8ssandraCluster(t *testing.T) {
 func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	k8sCtx := "cluster-1"
-
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -130,7 +124,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx,
+						K8sContext:    f.K8sContext(1),
 						Size:          1,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -156,7 +150,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that the datacenter was created")
-	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(1)}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
 	lastTransitionTime := metav1.Now()
@@ -171,7 +165,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: "cluster-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
 		err = f.Get(ctx, kcKey, kc)
@@ -261,7 +255,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			Name:      "dc1",
 			Namespace: namespace,
 		},
-		K8sContext: "cluster-1",
+		K8sContext: f.K8sContext(1),
 	}); err != nil {
 		assert.Fail(t, "error setting status ready", err)
 	}
@@ -272,7 +266,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 			Name:      kc.Name + "-" + kc.Spec.Cassandra.Datacenters[0].Meta.Name + "-" + "cass-servicemonitor",
 			Namespace: namespace,
 		},
-		K8sContext: k8sCtx,
+		K8sContext: f.K8sContext(1),
 	}
 	assert.Eventually(t, func() bool {
 		if err := f.Get(ctx, smKey, sm); err != nil {
@@ -341,14 +335,14 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext: k8sCtx0,
+						K8sContext: f.K8sContext(0),
 						Size:       dc1Size,
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: k8sCtx1,
+						K8sContext: f.K8sContext(1),
 						Size:       dc2Size,
 					},
 				},
@@ -368,7 +362,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	klusterKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
@@ -398,7 +392,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to set dc1 status ready")
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	t.Log("verify configuration of dc2")
@@ -450,7 +444,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx0,
+						K8sContext:    f.K8sContext(0),
 						Size:          dc1Size,
 						ServerVersion: serverVersion,
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -482,7 +476,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: k8sCtx1,
+						K8sContext: f.K8sContext(1),
 						Size:       dc2Size,
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
@@ -526,7 +520,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("verify configuration of dc1")
@@ -552,7 +546,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	require.NoError(err, "failed to set dc1 status ready")
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	t.Log("verify configuration of dc2")
@@ -627,7 +621,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx0,
+						K8sContext:    f.K8sContext(0),
 						Size:          dc1Size,
 						ServerVersion: serverVersion,
 					},
@@ -635,7 +629,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: k8sCtx1,
+						K8sContext: f.K8sContext(1),
 						Size:       dc2Size,
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
@@ -677,7 +671,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("verify configuration of dc1")
@@ -703,7 +697,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	require.NoError(err, "failed to set dc1 status ready")
 
 	t.Log("check that dc2 was created")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	t.Log("verify configuration of dc2")
@@ -757,9 +751,6 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
-
 	clusterName := "cluster-multi"
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -773,7 +764,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx0,
+						K8sContext:    f.K8sContext(0),
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -786,7 +777,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    k8sCtx1,
+						K8sContext:    f.K8sContext(1),
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -812,7 +803,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -825,7 +816,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -856,7 +847,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("check that dc2 has not been created yet")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
 	dc2 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
@@ -991,9 +982,6 @@ func setReplicationStatusDone(ctx context.Context, t *testing.T, f *framework.Fr
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
-
 	clusterName := "cluster-multi-stargate"
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1007,7 +995,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx0,
+						K8sContext:    f.K8sContext(0),
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -1025,7 +1013,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    k8sCtx1,
+						K8sContext:    f.K8sContext(1),
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -1056,7 +1044,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -1069,7 +1057,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -1100,7 +1088,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: k8sCtx0,
+		K8sContext: f.K8sContext(0),
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
@@ -1112,7 +1100,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc1 is ready", sg1Key))
 
 	t.Log("check that dc2 has not been created yet")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: k8sCtx1}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
 	dc2 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
@@ -1125,7 +1113,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: k8sCtx1,
+		K8sContext: f.K8sContext(1),
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
@@ -1255,8 +1243,6 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	k8sCtx := "cluster-0"
-
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -1274,7 +1260,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    k8sCtx,
+						K8sContext:    f.K8sContext(0),
 						Size:          1,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -1301,7 +1287,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("check that the datacenter was created")
 
-	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx}
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
 	lastTransitionTime := metav1.Now()
@@ -1334,7 +1320,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 
 	// Update the datacenter with a different num_tokens value and check that it failed
 	initialNumTokens := *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
-	kcKey := framework.ClusterKey{NamespacedName: utils.GetKey(kc), K8sContext: k8sCtx}
+	kcKey := framework.ClusterKey{NamespacedName: utils.GetKey(kc), K8sContext: f.K8sContext(0)}
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = pointer.Int(256)
 	err = f.Patch(ctx, kc, kcPatch, kcKey)
@@ -1366,8 +1352,6 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	assert := assert.New(t)
-
-	k8sCtx0 := "cluster-0"
 
 	clusterName := "cluster-with-encryption"
 	serverVersion := "4.0.0"
@@ -1422,7 +1406,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	// Loop over the secrets and create them
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
 		secretKey := utils.GetKey(secret)
-		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: k8sCtx0}
+		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.K8sContext(0)}
 		f.Create(ctx, secretClusterKey0, secret)
 	}
 
@@ -1445,7 +1429,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext: k8sCtx0,
+						K8sContext: f.K8sContext(0),
 						Size:       dc1Size,
 						CassandraConfig: &api.CassandraConfig{
 							CassandraYaml: api.CassandraYaml{
@@ -1496,7 +1480,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("verify configuration of dc1")
@@ -1566,7 +1550,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status ready")
 
-	sg1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1-stargate", dc1.Spec.ClusterName)}, K8sContext: k8sCtx0}
+	sg1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1-stargate", dc1.Spec.ClusterName)}, K8sContext: f.K8sContext(0)}
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
 
@@ -1593,9 +1577,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 // Verify that dc1 never gets created.
 func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-
-	k8sCtx0 := "cluster-0"
-	k8sCtx1 := "cluster-1"
 
 	clusterName := "cluster-with-encryption"
 	serverVersion := "4.0.0"
@@ -1647,8 +1628,8 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	// Loop over the created configmaps and create them
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, clientKeystoreSecret, clientTruststoreSecret} {
 		secretKey := utils.GetKey(secret)
-		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: k8sCtx0}
-		secretClusterKey1 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: k8sCtx1}
+		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.K8sContext(0)}
+		secretClusterKey1 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.K8sContext(1)}
 		f.Create(ctx, secretClusterKey0, secret)
 		f.Create(ctx, secretClusterKey1, secret)
 	}
@@ -1682,14 +1663,14 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext: k8sCtx0,
+						K8sContext: f.K8sContext(0),
 						Size:       dc1Size,
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: k8sCtx1,
+						K8sContext: f.K8sContext(1),
 						Size:       dc2Size,
 					},
 				},
@@ -1717,7 +1698,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	t.Log("check that dc1 was never created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: k8sCtx0}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
 	require.Never(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")

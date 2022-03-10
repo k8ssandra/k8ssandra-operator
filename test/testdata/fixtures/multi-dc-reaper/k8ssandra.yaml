@@ -36,7 +36,7 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: k8ssandra-0
+        k8sContext: kind-k8ssandra-0
         size: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -53,7 +53,7 @@ spec:
           hostNetwork: true
       - metadata:
           name: dc2
-        k8sContext: k8ssandra-1
+        k8sContext: kind-k8ssandra-1
         size: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:

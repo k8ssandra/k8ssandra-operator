@@ -122,7 +122,7 @@ cluster_addr=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.clusters[?
 if [[ $cluster_addr == *"127.0.0.1"* ]]; then
   api_server_ip=$(kubectl $src_kubeconfig_opt $src_context_opt -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
   cluster_addr="https://$api_server_ip:6443"
-  echo "Source kubeconfig had localhost as the API server address; replacing with $cluster_addr"
+  echo "Source cluster had localhost as the API server address; replacing with $cluster_addr"
 fi
 
 output_kubeconfig="$output_dir/kubeconfig"

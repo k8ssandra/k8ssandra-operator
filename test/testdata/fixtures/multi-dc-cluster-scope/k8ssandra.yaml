@@ -51,11 +51,11 @@ spec:
       - metadata:
           name: dc1
           namespace: test-1
-        k8sContext: k8ssandra-0
+        k8sContext: kind-k8ssandra-0
         size: 3
       - metadata:
           name: dc2
           namespace: test-2
-        k8sContext: k8ssandra-1
+        k8sContext: kind-k8ssandra-1
         size: 3
     mgmtAPIHeap: 64Mi

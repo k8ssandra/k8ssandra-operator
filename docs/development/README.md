@@ -26,11 +26,11 @@ Run `make manifests` to update CRDs. This will generate new manifest files, but 
 If you are doing multi-cluster dev/testing, make sure you update the CRDs in each cluster, e.g.,
 
 ```
-$ kubectx k8ssandra-0
+$ kubectx kind-k8ssandra-0
 
 $ make install
 
-$ kubectx k8ssandra-1
+$ kubectx kind-k8ssandra-1
 
 $ make install
 ```
@@ -66,14 +66,14 @@ make KIND_CLUSTER=k8ssandra-1 kind-load-image
 Cass Operator has a dependency on Cert Manager. It needs to be installed first. Assuming you have two kind clusters, install with:
 
 ```
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 
 make cert-manager
 ```
 and
 
 ```
-kubectx k8ssandra-1
+kubectx kind-k8ssandra-1
 
 make cert-manager
 ```

@@ -36,12 +36,13 @@ By default kind clusters run on the same Docker network which means we will have
 
 [setup-kind-multicluster.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/setup-kind-multicluster.sh) lives in the k8ssandra-operator repo. It is used extensively during development and testing. Not only does it configure and create kind clusters, it also generates kubeconfig files for each cluster.
 
-**Note:** kind generates a kubeconfig with the IP address of the API server set to 
-localhost since the cluster is intended for local development. We need a kubeconfig with the IP address set to the internal address of the api server. `setup-kind-mulitcluster.sh` takes care of this for us.
-
 ### **`create-clientconfig.sh`**
 
 [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) lives in the k8ssandra-operator repo. It is used to configure access to remote clusters. 
+
+**Note:** kind generates a kubeconfig with the IP address of the API server set to localhost since the cluster is
+intended for local development. When creating a ClientConfig using `create-clientconfig.sh`, the script will
+automatically replace the API server address with the appropriate in-cluster IP.
 
 ## Quick Start
 
@@ -83,7 +84,7 @@ kubectx
 ```
 
 ```sh
-k8ssandra-0
+kind-k8ssandra-0
 ```
 
 The cluster should consist of the following nodes:
@@ -213,13 +214,13 @@ kubectx
 ```
 
 ```console
-k8ssandra-0
-k8ssandra-1
+kind-k8ssandra-0
+kind-k8ssandra-1
 ```
 
 Each cluster should consist of the following nodes:
 
-k8ssandra-0:
+kind-k8ssandra-0:
 
 ```console
 NAME                        STATUS   ROLES                  AGE     VERSION
@@ -230,7 +231,7 @@ k8ssandra-0-worker3         Ready    <none>                 8m48s   v1.21.2
 k8ssandra-0-worker4         Ready    <none>                 8m49s   v1.21.2
 ```
 
-k8ssandra-1;
+kind-k8ssandra-1
 
 ```console
 NAME                        STATUS   ROLES                  AGE     VERSION
@@ -243,14 +244,14 @@ k8ssandra-1-worker4         Ready    <none>                 9m20s   v1.21.2
 
 You're now ready to deploy a `K8ssandraCluster`.
 
-Set your context to the control-plane cluster (`k8ssandra-0`):
+Set your context to the control-plane cluster (`kind-k8ssandra-0`):
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 
 ```console
-Switched to context "k8ssandra-0".
+Switched to context "kind-k8ssandra-0".
 ```
 
 Deploy the `K8ssandraCluster` resource:
@@ -286,7 +287,7 @@ spec:
           heapSize: 256M
       - metadata:
           name: dc2
-        k8sContext: k8ssandra-1
+        k8sContext: kind-k8ssandra-1
         size: 3
         stargate:
           size: 1
@@ -592,15 +593,15 @@ files are written into a `build` directory.
 Run `kubectx` without any arguments and verify that you see the following contexts 
 listed in the output:
 
-* k8ssandra-0
-* k8ssandra-1
+* kind-k8ssandra-0
+* kind-k8ssandra-1
 
 #### Install the control plane
-We will install the control plane in `k8ssandra-0`. Make sure your active context 
+We will install the control plane in `kind-k8ssandra-0`. Make sure your active context 
 is configured correctly:
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 
 Install the operator:
@@ -659,10 +660,10 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operat
 ```
 
 #### Install the data plane
-Now we will install the data plane in `k8ssandra-1`. Switch the active context:
+Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
 ```console
-kubectx k8ssandra-1
+kubectx kind-k8ssandra-1
 ```
 
 Install the operator:
@@ -708,7 +709,7 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operat
 ```
 
 #### Create a ClientConfig
-Now we need to create a `ClientConfig` for the `k8ssandra-1` cluster. We will use 
+Now we need to create a `ClientConfig` for the `kind-k8ssandra-1` cluster. We will use 
 the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 Here is a summary of what the script does:
@@ -720,23 +721,29 @@ Here is a summary of what the script does:
 * Create a secret for the kubeconfig in the control plane cluster
 * Create a ClientConfig in the control plane cluster that references the secret
 
-Create a `ClientConfig` in the `k8ssandra-0` cluster using the service account 
-token and CA cert from `k8ssandra-1`:
+Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account 
+token and CA cert from `kind-k8ssandra-1`:
 
 ```sh
 ./create-clientconfig.sh \
     --namespace             k8ssandra-operator \
-    --src-kubeconfig        build/kubeconfigs/k8ssandra-1.yaml \ 
-    --dest-kubeconfig       build/kubeconfigs/k8ssandra-0.yaml
+    --src-kubeconfig        ./build/kind-kubeconfig \ 
+    --dest-kubeconfig       ./build/kind-kubeconfig \
+    --src-context           kind-k8ssandra-1 \ 
+    --dest-context          kind-k8ssandra-0
 ```
+
+Here `./build/kind-kubeconfig` refers to the kubeconfig file generated by `setup-kind-multicluster.sh`. It should contain
+configurations to access both contexts `kind-k8ssandra-0` and `kind-k8ssandra-1`.
+
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
 
 #### Restart the control plane
 
-Make the active context `k8ssandra-0`:
+Make the active context `kind-k8ssandra-0`:
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 
 Restart the operator:
@@ -783,7 +790,7 @@ spec:
           heapSize: 256M
       - metadata:
           name: dc2
-        k8sContext: k8ssandra-1
+        k8sContext: kind-k8ssandra-1
         size: 3
         stargate:
           size: 1
@@ -1038,14 +1045,14 @@ files are written into a `build` directory.
 Run `kubectx` without any arguments and verify that you see the following contexts 
 listed in the output:
 
-* k8ssandra-0
-* k8ssandra-1
+* kind-k8ssandra-0
+* kind-k8ssandra-1
 
 #### Install Cert Manager
-Set the active context to `k8ssandra-0`:
+Set the active context to `kind-k8ssandra-0`:
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 
 Install Cert Manager:
@@ -1054,10 +1061,10 @@ Install Cert Manager:
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
 ```
 
-Set the active context to `k8ssandra-1`:
+Set the active context to `kind-k8ssandra-1`:
 
 ```console
-kubectx k8ssandra-1
+kubectx kind-k8ssandra-1
 ```
 
 Install Cert Manager:
@@ -1067,11 +1074,11 @@ kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.5
 ```
 
 #### Install the control plane
-We will install the control plane in `k8ssandra-0`. Make sure your active context is 
+We will install the control plane in `kind-k8ssandra-0`. Make sure your active context is 
 configured correctly:
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 Now install the operator:
 
@@ -1118,10 +1125,10 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.s
 ```
 
 #### Install the data plane
-Now we will install the data plane in `k8ssandra-1`. Switch the active context:
+Now we will install the data plane in `kind-k8ssandra-1`. Switch the active context:
 
 ```
-kubectx k8ssandra-1
+kubectx kind-k8ssandra-1
 ```
 
 Now install the operator:
@@ -1178,22 +1185,27 @@ Here is a summary of what the script does:
 * Create a secret for the kubeconfig in the control plane cluster
 * Create a ClientConfig in the control plane cluster that references the secret
 
-Create a `ClientConfig` in the `k8ssandra-0` cluster using the service account 
-token and CA cert from `k8ssandra-1`:
+Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account 
+token and CA cert from `kind-k8ssandra-1`:
 
 ```sh
 ./create-clientconfig.sh \
-    --namespace       k8ssandra-operator \
-    --src-kubeconfig  build/kubeconfigs/k8ssandra-1.yaml \
-    --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml
+    --namespace             k8ssandra-operator \
+    --src-kubeconfig        ./build/kind-kubeconfig \ 
+    --dest-kubeconfig       ./build/kind-kubeconfig \
+    --src-context           kind-k8ssandra-1 \ 
+    --dest-context          kind-k8ssandra-0
 ```
+
+Here `./build/kind-kubeconfig` refers to the kubeconfig file generated by `setup-kind-multicluster.sh`. It should contain
+configurations to access both contexts `kind-k8ssandra-0` and `kind-k8ssandra-1`.
 
 #### Restart the control plane
 
-Make the active context `k8ssandra-0`:
+Make the active context `kind-k8ssandra-0`:
 
 ```console
-kubectx k8ssandra-0
+kubectx kind-k8ssandra-0
 ```
 
 Restart the operator:
@@ -1240,7 +1252,7 @@ spec:
           heapSize: 256M
       - metadata:
           name: dc2
-        k8sContext: k8ssandra-1
+        k8sContext: kind-k8ssandra-1
         size: 3
         stargate:
           size: 1

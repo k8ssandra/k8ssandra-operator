@@ -33,7 +33,7 @@ Options:
   --kind-worker-nodes <nodes>    The number of worker nodes to deploy.
                                  Defaults to 3.
   --output-file <path>           The location of the file where the generated kubeconfig will be written to.
-                                 Defaults to "./build/kubeconfig". Existing content will be overwritten.
+                                 Defaults to "./build/kind-kubeconfig". Existing content will be overwritten.
   -o|--overwrite                 Whether to delete existing clusters before re-creating them.
                                  Defaults to false.
   --help                         Displays this help message.
@@ -47,7 +47,7 @@ cluster_prefix="k8ssandra-"
 kind_node_version="$default_kind_node_version"
 kind_worker_nodes=3
 overwrite_clusters="no"
-output_file="./build/kubeconfig"
+output_file="./build/kind-kubeconfig"
 
 while true; do
   case "$1" in
@@ -109,10 +109,6 @@ done)
 EOF
 
   docker network connect "kind" "$registry_name" || true
-
-  # Enforce same context name as cluster name. Note: when deleting the cluster with kind delete,
-  # The context won't be automatically deleted and will be orphaned.
-  kubectl config rename-context kind-$cluster_name $cluster_name
 }
 
 function delete_clusters() {
@@ -122,8 +118,6 @@ function delete_clusters() {
   do
     echo "Deleting cluster $((i+1)) out of $num_clusters"
     kind delete cluster --name "$cluster_prefix$i" || echo "Cluster $cluster_prefix$i doesn't exist yet"
-    # Since we renamed the generated context, delete it now manually
-    kubectl config delete-context "$cluster_prefix$i" || echo "Context $cluster_prefix$i doesn't exist yet"
   done
   echo
 }
@@ -140,7 +134,7 @@ function create_clusters() {
 }
 
 # Creates a kubeconfig file that has entries for each of the clusters created.
-# The file created is <project-root>/build/kubeconfig and is intended for use
+# The file created is <project-root>/build/kind-kubeconfig and is intended for use
 # primarily by tests running out of cluster.
 function create_kubeconfig() {
   echo "Generating $output_file"
@@ -150,13 +144,13 @@ function create_kubeconfig() {
   do
     kubeconfig_base="$temp_dir/$cluster_prefix$i.yaml"
     kind get kubeconfig --name "$cluster_prefix$i" > "$kubeconfig_base"
-    yq eval ".contexts[0].name |= \"$cluster_prefix$i\"" "$kubeconfig_base" -i
-    yq eval ".current-context |= \"$cluster_prefix$i\"" "$kubeconfig_base" -i
   done
 
   basedir=$(dirname "$output_file")
   mkdir -p "$basedir"
   yq ea '. as $item ireduce({}; . *+ $item)' "$temp_dir"/*.yaml > "$output_file"
+  # remove current-context for security
+  yq e 'del(.current-context)' "$output_file" -i
 }
 
 create_registry
@@ -170,4 +164,4 @@ create_clusters
 create_kubeconfig
 
 # Set current context to the first cluster
-kubectl config use "${cluster_prefix}0"
+kubectl config use "kind-${cluster_prefix}0"

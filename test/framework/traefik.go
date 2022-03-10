@@ -8,15 +8,14 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -54,19 +53,15 @@ func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
 	return nil
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, k8sContextIdx int, namespace, stargateServiceName, username, password string) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContextIdx int, namespace, stargateServiceName, username, password string) {
+	k8sContext := f.K8sContext(k8sContextIdx)
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
-	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
-	dest := filepath.Join(dir, "stargate-ingress.yaml")
-	err := os.MkdirAll(dir, 0755)
-	require.NoError(t, err)
-	buf, err := ioutil.ReadFile(src)
-	require.NoError(t, err)
-	err = ioutil.WriteFile(dest, buf, 0644)
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
+	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
 	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName)
 	require.NoError(t, err)
-	err = f.kustomizeAndApply(dir, namespace, k8sContext)
+	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
@@ -96,19 +91,15 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext string, 
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 
-func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext string, k8sContextIdx int, namespace, reaperServiceName string) {
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContextIdx int, namespace, reaperServiceName string) {
+	k8sContext := f.K8sContext(k8sContextIdx)
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
-	dir := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
-	dest := filepath.Join(dir, "reaper-ingress.yaml")
-	err := os.MkdirAll(dir, 0755)
-	require.NoError(t, err)
-	buf, err := ioutil.ReadFile(src)
-	require.NoError(t, err)
-	err = ioutil.WriteFile(dest, buf, 0644)
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
+	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
 	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName)
 	require.NoError(t, err)
-	err = f.kustomizeAndApply(dir, namespace, k8sContext)
+	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
@@ -121,12 +112,17 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, 
 	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
 }
 
-func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {
-	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
+func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContextIdx int, namespace string) {
+	options := kubectl.Options{Context: f.K8sContext(k8sContextIdx), Namespace: namespace}
 	err := kubectl.DeleteAllOf(options, "IngressRoute")
 	assert.NoError(t, err)
 	err = kubectl.DeleteAllOf(options, "IngressRouteTCP")
 	assert.NoError(t, err)
+}
+
+type ingressKustomization struct {
+	Namespace   string
+	ServiceName string
 }
 
 func generateStargateIngressKustomization(k8sContext, namespace, serviceName string) error {
@@ -144,7 +140,7 @@ patches:
   patch: |-
     - op: replace
       path: /metadata/name
-      value: "` + serviceName + `-http-ingress"
+      value: "{{ .ServiceName }}-http-ingress"
 - target:
     group: traefik.containo.us
     version: v1alpha1
@@ -153,7 +149,7 @@ patches:
   patch: |-
     - op: replace
       path: /metadata/name
-      value: "` + serviceName + `-native-ingress"
+      value: "{{ .ServiceName }}-native-ingress"
 patchesJson6902:
   - target:
       group: traefik.containo.us
@@ -163,13 +159,13 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/routes/0/services/0/name
-        value: "` + serviceName + `"
+        value: "{{ .ServiceName }}"
       - op: replace
         path: /spec/routes/1/services/0/name
-        value: "` + serviceName + `"
+        value: "{{ .ServiceName }}"
       - op: replace
         path: /spec/routes/2/services/0/name
-        value: "` + serviceName + `"
+        value: "{{ .ServiceName }}"
   - target:
       group: traefik.containo.us
       version: v1alpha1
@@ -178,9 +174,9 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/routes/0/services/0/name
-        value: "` + serviceName + `"
+        value: "{{ .ServiceName }}"
 `
-	k := Kustomization{Namespace: namespace}
+	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName}
 	return generateKustomizationFile("ingress/"+k8sContext, k, tmpl)
 }
 
@@ -199,7 +195,7 @@ patches:
   patch: |-
     - op: replace
       path: /metadata/name
-      value: "` + serviceName + `-http-ingress"
+      value: "{{ .ServiceName }}-http-ingress"
 patchesJson6902:
   - target:
       group: traefik.containo.us
@@ -209,8 +205,8 @@ patchesJson6902:
     patch: |-
       - op: replace
         path: /spec/routes/0/services/0/name
-        value: "` + serviceName + `"
+        value: "{{ .ServiceName }}"
 `
-	k := Kustomization{Namespace: namespace}
+	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName}
 	return generateKustomizationFile("ingress/"+k8sContext, k, tmpl)
 }

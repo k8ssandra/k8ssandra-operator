@@ -75,10 +75,9 @@ jobs:
       GOPATH: /home/runner/go
       GOROOT: /usr/local/go1.16
       CGO_ENABLED: 0
-      KUBECONFIG_PATH: "./build/kubeconfig"
-      CONTROL_PLANE: k8ssandra-0
-      DATA_PLANE1: k8ssandra-0
-      DATA_PLANE2: k8ssandra-1
+      KUBECONFIG_PATH: "./build/kind-kubeconfig"
+      CONTROL_PLANE: kind-k8ssandra-0
+      DATA_PLANES: kind-k8ssandra-1
     steps:
       - name: Free diskspace by removing unused packages
         run: |
@@ -128,10 +127,9 @@ jobs:
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
           e2e_test="TestOperator/${{ matrix.e2e_test }}"
-          args="-configFile ${{ env.KUBECONFIG_PATH }}"
-          args="$args -controlPlane ${{ env.CONTROL_PLANE }}"
-          args="$args -dataPlane1 ${{ env.DATA_PLANE1 }}"
-          args="$args -dataPlane2 ${{ env.DATA_PLANE2 }}"
+          args="-configFile '${{ env.KUBECONFIG_PATH }}'"
+          args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
+          args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
           make E2E_TEST="$e2e_test" TEST_ARGS="$args" e2e-test
       - name: Get artefact upload directory
         if: ${{ failure() }}
