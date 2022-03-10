@@ -44,9 +44,6 @@ spec:
         heapSize: 384Mi
     networking:
       hostNetwork: true
-    resources:
-      limits:
-        memory: 1024Mi
     datacenters:
       - metadata:
           name: dc1

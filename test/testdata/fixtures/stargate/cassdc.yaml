@@ -26,9 +26,6 @@ spec:
         - -Dcassandra.system_distributed_replication_per_dc=1
       initial_heap_size: 512m
       max_heap_size: 512m
-  resources:
-    limits:
-      memory: 1024Mi
   serverType: cassandra
   serverVersion: 3.11.11
   networking:

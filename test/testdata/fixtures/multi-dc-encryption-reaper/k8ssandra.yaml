@@ -82,9 +82,6 @@ spec:
             enabled: true
       jvmOptions:
         heapSize: 384Mi
-    resources:
-      limits:
-        memory: 1024Mi
     networking:
       hostNetwork: true
     datacenters:

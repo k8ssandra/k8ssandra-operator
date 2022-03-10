@@ -8,9 +8,6 @@ spec:
   size: 1
   allowStargateOnDataNodes: true
   heapSize: 512Mi
-  resources:
-    limits:
-      memory: "1024Mi"
   livenessProbe:
     initialDelaySeconds: 100
     periodSeconds: 10

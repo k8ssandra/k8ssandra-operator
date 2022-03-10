@@ -44,9 +44,6 @@ spec:
     networking:
       hostNetwork: true
     mgmtAPIHeap: 64Mi
-    resources:
-      limits:
-        memory: 800Mi
     datacenters:
       - metadata:
           name: dc1
