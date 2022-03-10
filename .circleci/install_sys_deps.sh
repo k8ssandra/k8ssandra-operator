@@ -19,8 +19,4 @@ sudo chmod 755 bin/kustomize
 sudo mv bin/kustomize /usr/local/bin/kustomize
 
 # install Helm
-curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
-sudo apt-get install apt-transport-https --yes
-echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-sudo apt-get update
-sudo apt-get install helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
