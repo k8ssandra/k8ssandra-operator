@@ -53,7 +53,7 @@ jobs:
       image: ubuntu-2004:202201-01
     #docker:
     #  - image: cimg/base:2021.04
-    resource_class: large
+    resource_class: xlarge
     parameters:
       e2e-test:
         type: string
@@ -82,31 +82,31 @@ workflows:
   version: 2.1
   k8ssandra_op_qa_push:
     jobs:
-      - e2e-tests:
-          matrix:
-            parameters:
-              e2e-test: 
-                - SingleDcEncryptionWithStargate
-                - CreateSingleDatacenterCluster
-                - CreateStargateAndDatacenter
-                - CreateSingleReaper
-                - CreateReaperAndDatacenter
-                - CreateSingleMedusa
-                - ConfigControllerRestarts
-                - SingleDcEncryptionWithReaper
+      #- e2e-tests:
+      #    matrix:
+      #      parameters:
+      #        e2e-test: 
+      #          - SingleDcEncryptionWithStargate
+      #          - CreateSingleDatacenterCluster
+      #          - CreateStargateAndDatacenter
+      #          - CreateSingleReaper
+      #          - CreateReaperAndDatacenter
+      #          - CreateSingleMedusa
+      #          - ConfigControllerRestarts
+      #          - SingleDcEncryptionWithReaper
       - e2e-multi-tests:
           matrix:
             parameters:
               e2e-test: 
-                - CreateMultiReaper
-                - CreateMultiDatacenterCluster
-                - AddDcToCluster
-                - RemoveDcFromCluster
-                - CheckStargateApisWithMultiDcCluster
-                - CreateMultiStargateAndDatacenter
                 - ClusterScoped/MultiDcMultiCluster
-                - CreateMultiMedusa
-                - MultiDcAuthOnOff
-                - MultiDcEncryptionWithStargate
-                - MultiDcEncryptionWithReaper
-                - StopAndRestartDc
+                - AddDcToCluster
+                #- StopAndRestartDc
+                #- CreateMultiReaper
+                #- CreateMultiDatacenterCluster
+                #- RemoveDcFromCluster
+                #- CheckStargateApisWithMultiDcCluster
+                #- CreateMultiStargateAndDatacenter
+                #- CreateMultiMedusa
+                #- MultiDcAuthOnOff
+                #- MultiDcEncryptionWithStargate
+                #- MultiDcEncryptionWithReaper

@@ -256,7 +256,9 @@ func (f *Framework) CreateNamespace(name string) error {
 		}
 		f.logger.Info("creating namespace", "Namespace", name, "Context", k8sContext)
 		if err := remoteClient.Create(context.Background(), namespace); err != nil {
-			return err
+			if !errors.IsAlreadyExists(err) {
+				return err
+			}
 		}
 	}
 

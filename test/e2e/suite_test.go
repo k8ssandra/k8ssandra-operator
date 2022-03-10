@@ -432,7 +432,7 @@ func applyPollingDefaults() {
 	polling.operatorDeploymentReady.timeout = 1 * time.Minute
 	polling.operatorDeploymentReady.interval = 1 * time.Second
 
-	polling.datacenterReady.timeout = 15 * time.Minute
+	polling.datacenterReady.timeout = 20 * time.Minute
 	polling.datacenterReady.interval = 15 * time.Second
 
 	polling.nodetoolStatus.timeout = 2 * time.Minute
