@@ -74,9 +74,6 @@ spec:
     heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
-    resources:
-      limits:
-        memory: 512Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10
