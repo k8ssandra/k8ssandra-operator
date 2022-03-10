@@ -82,31 +82,31 @@ workflows:
   version: 2.1
   k8ssandra_op_qa_push:
     jobs:
-      #- e2e-tests:
-      #    matrix:
-      #      parameters:
-      #        e2e-test: 
-      #          - SingleDcEncryptionWithStargate
-      #          #- CreateSingleDatacenterCluster
-      #          #- CreateStargateAndDatacenter
-      #          #- CreateSingleReaper
-      #          #- CreateReaperAndDatacenter
-      #          #- CreateSingleMedusa
-      #          #- ConfigControllerRestarts
-      #          #- SingleDcEncryptionWithReaper
+      - e2e-tests:
+          matrix:
+            parameters:
+              e2e-test: 
+                - SingleDcEncryptionWithStargate
+                - CreateSingleDatacenterCluster
+                - CreateStargateAndDatacenter
+                - CreateSingleReaper
+                - CreateReaperAndDatacenter
+                - CreateSingleMedusa
+                - ConfigControllerRestarts
+                - SingleDcEncryptionWithReaper
       - e2e-multi-tests:
           matrix:
             parameters:
               e2e-test: 
                 - CreateMultiReaper
-                #- CreateMultiDatacenterCluster
-                #- AddDcToCluster
-                #- RemoveDcFromCluster
-                #- CheckStargateApisWithMultiDcCluster
-                #- CreateMultiStargateAndDatacenter
-                #- ClusterScoped/MultiDcMultiCluster
-                #- CreateMultiMedusa
-                #- MultiDcAuthOnOff
-                #- MultiDcEncryptionWithStargate
-                #- MultiDcEncryptionWithReaper
-                #- StopAndRestartDc
+                - CreateMultiDatacenterCluster
+                - AddDcToCluster
+                - RemoveDcFromCluster
+                - CheckStargateApisWithMultiDcCluster
+                - CreateMultiStargateAndDatacenter
+                - ClusterScoped/MultiDcMultiCluster
+                - CreateMultiMedusa
+                - MultiDcAuthOnOff
+                - MultiDcEncryptionWithStargate
+                - MultiDcEncryptionWithReaper
+                - StopAndRestartDc
