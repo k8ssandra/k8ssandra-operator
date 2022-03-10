@@ -4,6 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	neturl "net/url"
+	"strconv"
+	"testing"
+	"time"
+
+	retry "github.com/avast/retry-go/v4"
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
@@ -12,11 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"net/http"
-	neturl "net/url"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int) {
@@ -314,7 +316,17 @@ func sendQuery(connection *client.CqlClientConnection, query string) (*frame.Fra
 			},
 		},
 	)
-	return connection.SendAndReceive(request)
+
+	var result *frame.Frame
+	var err2 error
+	retry.Do(func() error {
+		result, err2 = connection.SendAndReceive(request)
+		if err2 != nil {
+			return err2
+		}
+		return nil
+	})
+	return result, err2
 }
 
 func formatReplicationForRestApi(replication map[string]int) string {

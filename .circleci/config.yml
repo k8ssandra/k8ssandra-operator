@@ -53,7 +53,7 @@ jobs:
       image: ubuntu-2004:202201-01
     #docker:
     #  - image: cimg/base:2021.04
-    resource_class: xlarge
+    resource_class: large
     parameters:
       e2e-test:
         type: string
