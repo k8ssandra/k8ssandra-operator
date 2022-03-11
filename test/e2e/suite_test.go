@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	retry "github.com/avast/retry-go/v4"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -387,10 +388,13 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.deployTraefik {
-		if err := f.DeployTraefik(t, opts.operatorNamespace); err != nil {
-			t.Logf("failed to deploy Traefik")
-			return err
-		}
+		retry.Do(func() error {
+			if err := f.DeployTraefik(t, opts.operatorNamespace); err != nil {
+				t.Logf("failed to deploy Traefik")
+				return err
+			}
+			return nil
+		})
 	}
 
 	if opts.fixture != nil {

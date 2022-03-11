@@ -497,7 +497,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 			f.storeOutput(outputDir, namespace, "pods", "out", output)
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
-			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets", "ReplicatedSecret", "ClientConfig", "CassandraTask"} {
+			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets", "ReplicatedSecret", "ClientConfig", "CassandraTask", "CassandraBackup", "CassandraRestore"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
 				}
