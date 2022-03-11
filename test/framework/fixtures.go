@@ -15,17 +15,22 @@ type TestFixture struct {
 	Name string
 }
 
-func (t TestFixture) fixtureDir() string {
-	path := filepath.Join("..", "testdata", "fixtures", t.Name)
+func NewTestFixture(name string) *TestFixture {
+	return &TestFixture{Name: name}
+}
+
+var (
+	fixturesSrcDir  = filepath.Join("..", "testdata", "fixtures")
+	fixturesDestDir = filepath.Join("..", "..", "build", "test-config", "fixtures")
+)
+
+func (t *TestFixture) fixtureDir() string {
+	path := filepath.Join(fixturesSrcDir, t.Name)
 	dir, err := filepath.Abs(path)
 	if err != nil {
 		panic(err)
 	}
 	return dir
-}
-
-func NewTestFixture(name string) *TestFixture {
-	return &TestFixture{Name: name}
 }
 
 func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) error {
@@ -38,11 +43,11 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 	if err != nil {
 		return err
 	}
-	destDir := filepath.Join("..", "..", "build", "test-config", "fixtures", fixture.Name)
+	destDir := filepath.Join(fixturesDestDir, fixture.Name)
 	return f.kustomizeAndApply(destDir, namespace, f.ControlPlaneContext)
 }
 
-// getNumDcContexts computes  the exact number of contexts to kustomize by counting the number of dcs/contexts in the
+// getNumDcContexts computes the exact number of contexts to kustomize by counting the number of dcs/contexts in the
 // K8ssandraCluster spec for this fixture, if any. This is a bit hacky but unfortunately kustomize errors out if we
 // attempt to patch a non-existing path.
 func getNumDcContexts(fixture *TestFixture) (int, error) {

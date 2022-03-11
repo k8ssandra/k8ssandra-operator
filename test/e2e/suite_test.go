@@ -1152,7 +1152,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
 	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t,0, namespace)
+	defer f.UndeployAllIngresses(t, 0, namespace)
 
 	t.Log("deploying Stargate ingress routes in context", f.K8sContext(1))
 	f.DeployStargateIngresses(t, 1, namespace, "test-dc2-stargate-service", username, password)

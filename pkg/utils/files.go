@@ -3,11 +3,11 @@ package utils
 import (
 	"bufio"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
+// ListFiles lists all files whose names match pattern in root directory and its subdirectories.
 func ListFiles(root, pattern string) ([]string, error) {
 	var matches []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -28,8 +28,10 @@ func ListFiles(root, pattern string) ([]string, error) {
 	return matches, nil
 }
 
+// CopyFile copies file src to file dest. File src must exist. File dest doesn't need to exist nor its parent directories,
+// they will be created if required. Existing dest file will be overwritten.
 func CopyFile(src, dest string) error {
-	buf, err := ioutil.ReadFile(src)
+	buf, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
@@ -37,15 +39,19 @@ func CopyFile(src, dest string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(dest, buf, 0644)
+	return os.WriteFile(dest, buf, 0644)
 }
 
+// CopyFileToDir copies file src to directory destDir. File src must exist. Directory destDir doesn't need exist nor its
+// parent directories, they will be created if required. The destination file will have the same name as src. If that
+// file already exists, it will be overwritten.
 func CopyFileToDir(src, destDir string) (string, error) {
 	filename := filepath.Base(src)
 	dest := filepath.Join(destDir, filename)
 	return dest, CopyFile(src, dest)
 }
 
+// ReadLines reads all lines in the given file.
 func ReadLines(file string) ([]string, error) {
 	f, err := os.Open(file)
 	if err != nil {
