@@ -89,12 +89,12 @@ type Framework struct {
 	// The Kubernetes context in which the K8ssandraCluster controller is running.
 	ControlPlaneContext string
 
-	// Extra Kubernetes contexts where K8ssandraCluster controller is not running but datacenters can be deployed. May
-	// be empty.
+	// Extra Kubernetes contexts where K8ssandraCluster controller is not running but datacenters
+	// can be deployed. May be empty.
 	DataPlaneContexts []string
 
-	// RemoteClients is mapping of Kubernetes context names to clients. It includes a client for the control plane
-	// context as well as clients for all data plane contexts, if any.
+	// RemoteClients is a mapping of Kubernetes context names to clients. It includes a client for
+	// the control plane context as well as clients for all data plane contexts, if any.
 	remoteClients map[string]client.Client
 
 	logger logr.Logger
