@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run e2e tests against arbitrary context names
+
 ## v1.0.1 2022-03-07
 
 * [BUGFIX] [#447](https://github.com/k8ssandra/k8ssandra-operator/issues/447) Reconciliation doesn't finish when adding DC with more than 1 node

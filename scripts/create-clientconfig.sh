@@ -22,7 +22,7 @@ if [[ "$getopt_version" == " --" ]]; then
   exit 1
 fi
 
-OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount,output-dir:,in-cluster-kubeconfig:,help -n 'create-client-config' -- "$@")
+OPTS=$(getopt -o h --long src-context:,src-kubeconfig:,dest-context:,dest-kubeconfig:,namespace:,serviceaccount:,output-dir:,help -n 'create-client-config' -- "$@")
 
 eval set -- "$OPTS"
 
@@ -44,8 +44,6 @@ Options:
                                   Defaults to k8ssandra-operator.
   --output-dir <path>             The directory where generated artifacts are written.
                                   If not specified a temp directory is created.
-  --in-cluster-kubeconfig <path>  Should be set when using kind cluster. This is the kubeconfig that has the
-                                  internal IP address of the API server.
   --help                          Displays this help message.
 EOF
 }
@@ -57,7 +55,6 @@ dest_kubeconfig=""
 service_account="k8ssandra-operator"
 namespace=""
 output_dir=""
-in_cluster_kubeconfig=""
 
 while true; do
   case "$1" in
@@ -68,7 +65,6 @@ while true; do
     --namespace ) namespace="$2"; shift 2 ;;
     --serviceaccount ) service_account="$2"; shift 2 ;;
     --output-dir ) output_dir="$2"; shift 2 ;;
-    --in-cluster-kubeconfig ) in_cluster_kubeconfig="$2"; shift 2 ;;
     -h | --help ) help; exit;;
     -- ) shift; break ;;
     * ) break ;;
@@ -89,7 +85,7 @@ dest_kubeconfig_opt=""
 if [ -z "$output_dir" ]; then
   output_dir=$(mktemp -d)
 else
-  mkdir -p $output_dir
+  mkdir -p "$output_dir"
 fi
 
 if [ ! -z "$src_kubeconfig" ]; then
@@ -120,13 +116,13 @@ fi
 sa_secret=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get serviceaccount $service_account -o jsonpath='{.secrets[0].name}')
 sa_token=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get secret $sa_secret -o jsonpath='{.data.token}' | base64 -d)
 ca_cert=$(kubectl $src_kubeconfig_opt $src_context_opt $namespace_opt get secret $sa_secret -o jsonpath="{.data['ca\.crt']}")
+cluster=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
 
-if [ -z "$in_cluster_kubeconfig" ]; then
-  cluster=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
-  cluster_addr=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
-else
-  cluster=$(kubectl --kubeconfig $in_cluster_kubeconfig config view -o jsonpath="{.contexts[?(@.name == \"$src_context\"})].context.cluster}")
-  cluster_addr=$(kubectl --kubeconfig $in_cluster_kubeconfig config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
+cluster_addr=$(kubectl $src_kubeconfig_opt config view -o jsonpath="{.clusters[?(@.name == \"$cluster\"})].cluster.server}")
+if [[ $cluster_addr == *"127.0.0.1"* ]]; then
+  api_server_ip=$(kubectl $src_kubeconfig_opt $src_context_opt -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
+  cluster_addr="https://$api_server_ip:6443"
+  echo "Source cluster had localhost as the API server address; replacing with $cluster_addr"
 fi
 
 output_kubeconfig="$output_dir/kubeconfig"

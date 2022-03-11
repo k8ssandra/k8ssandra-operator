@@ -15,33 +15,47 @@ if [[ "$getopt_version" == " --" ]]; then
   exit 1
 fi
 
-OPTS=$(getopt -o ho --long clusters:,cluster-names:,kind-node-version:,kind-worker-nodes:,overwrite:,help -n 'create-kind-clusters' -- "$@")
+OPTS=$(getopt -o ho --long clusters:,cluster-prefix:,kind-node-version:,kind-worker-nodes:,output-file:,overwrite,help -n 'setup-kind-multicluster' -- "$@")
 eval set -- "$OPTS"
 
+default_kind_node_version=v1.22.4
+
 function help() {
-  echo
-  echo "Syntax: create-kind-clusters.sh [options]"
-  echo "Options:"
-  echo "clusters           The number of clusters to create."
-  echo "cluster-names      A comma-delimited list of cluster names to create. Takes precedence over clusters option."
-  echo "kind-node-version  The image version of the kind nodes."
-  echo "kind-worker-nodes  The number of worker nodes to deploy."
+cat << EOF
+Syntax: setup-kind-multicluster.sh [options]
+Options:
+  --clusters <clusters>          The number of clusters to create.
+                                 Defaults to 1.
+  --cluster-prefix <prefix>      The prefix to use to name clusters.
+                                 Defaults to "k8ssandra-".
+  --kind-node-version <version>  The image version of the kind nodes.
+                                 Defaults to "$default_kind_node_version".
+  --kind-worker-nodes <nodes>    The number of worker nodes to deploy.
+                                 Defaults to 3.
+  --output-file <path>           The location of the file where the generated kubeconfig will be written to.
+                                 Defaults to "./build/kind-kubeconfig". Existing content will be overwritten.
+  -o|--overwrite                 Whether to delete existing clusters before re-creating them.
+                                 Defaults to false.
+  --help                         Displays this help message.
+EOF
 }
 
 registry_name='kind-registry'
 registry_port='5000'
 num_clusters=1
-cluster_names="kind"
-kind_node_version="v1.22.4"
+cluster_prefix="k8ssandra-"
+kind_node_version="$default_kind_node_version"
 kind_worker_nodes=3
 overwrite_clusters="no"
+output_file="./build/kind-kubeconfig"
 
 while true; do
   case "$1" in
     --clusters ) num_clusters="$2"; shift 2 ;;
-    --cluster-names ) cluster_names="$2"; shift 2 ;;
+    --cluster-prefix ) cluster_prefix="$2"; shift 2 ;;
     --kind-node-version ) kind_node_version="$2"; shift 2 ;;
     --kind-worker-nodes ) kind_worker_nodes="$2"; shift 2 ;;
+    --output-file ) output_file="$2"; shift 2 ;;
     -o | --overwrite) overwrite_clusters="yes"; shift ;;
     -h | --help ) help; exit;;
     -- ) shift; break ;;
@@ -100,10 +114,10 @@ EOF
 function delete_clusters() {
   echo "Deleting existing clusters..."
 
-  for ((i=0; i<$num_clusters; i++))
+  for ((i=0; i<num_clusters; i++))
   do
     echo "Deleting cluster $((i+1)) out of $num_clusters"
-    kind delete cluster --name "k8ssandra-$i" || echo "Cluster k8ssandra-$i doesn't exist yet"
+    kind delete cluster --name "$cluster_prefix$i" || echo "Cluster $cluster_prefix$i doesn't exist yet"
   done
   echo
 }
@@ -111,60 +125,32 @@ function delete_clusters() {
 function create_clusters() {
   echo "Creating $num_clusters clusters..."
 
-  for ((i=0; i<$num_clusters; i++))
+  for ((i=0; i<num_clusters; i++))
   do
     echo "Creating cluster $((i+1)) out of $num_clusters"
-    create_cluster $i "k8ssandra-$i" $kind_worker_nodes $kind_node_version
+    create_cluster $i "$cluster_prefix$i" $kind_worker_nodes $kind_node_version
   done
   echo
 }
 
 # Creates a kubeconfig file that has entries for each of the clusters created.
-# The file created is <project-root>/build/kubeconfig and is intended for use
+# The file created is <project-root>/build/kind-kubeconfig and is intended for use
 # primarily by tests running out of cluster.
 function create_kubeconfig() {
-  echo "Generating kubeconfig"
+  echo "Generating $output_file"
 
-  mkdir -p build/kubeconfigs
-  for ((i=0; i<$num_clusters; i++))
+  temp_dir=$(mktemp -d)
+  for ((i=0; i<num_clusters; i++))
   do
-    kubeconfig_base="build/kubeconfigs/k8ssandra-$i.yaml"
-    kind get kubeconfig --name "k8ssandra-$i" > $kubeconfig_base
+    kubeconfig_base="$temp_dir/$cluster_prefix$i.yaml"
+    kind get kubeconfig --name "$cluster_prefix$i" > "$kubeconfig_base"
   done
 
-  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/*.yaml > build/kubeconfig
-}
-
-# Creates a kubeconfig file that has entries for each of the clusters created.
-# This file created is <project-root>/build/in_cluster_kubeconfig and is
-# intended for in-cluster use primarily by the k8ssandra cluster controller.
-# This file differs from the one created in create_kubeconfig in that the
-# server addresses are set to their pod IPs which are docker container
-# adddresses.
-function create_in_cluster_kubeconfig() {
-  echo "Generating in-cluster kubeconfig"
-
-  mkdir -p build/kubeconfigs/updated
-  for ((i=0; i<$num_clusters; i++))
-  do
-    kubeconfig_base="build/kubeconfigs/k8ssandra-$i.yaml"
-    kubeconfig_updated="build/kubeconfigs/updated/k8ssandra-$i.yaml"
-    kind get kubeconfig --name "k8ssandra-$i" > $kubeconfig_base
-    api_server_ip_addr=$(kubectl --context kind-k8ssandra-$i -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].status.podIP')
-    api_server_port=6443
-    yq eval ".clusters[0].cluster.server |= \"https://$api_server_ip_addr:$api_server_port\"" "$kubeconfig_base" > "$kubeconfig_updated"
-  done
-
-  yq ea '. as $item ireduce({}; . *+ $item)' build/kubeconfigs/updated/*.yaml > build/in_cluster_kubeconfig
-}
-
-function create_k8s_contexts_secret() {
-  echo "Creating Kubernetes contexts secrets"
-
-  for ((i=0; i<$num_clusters; i++))
-  do
-    kubectl --context kind-k8ssandra-$i create secret generic k8s-contexts --from-file=./build/kubeconfig
-  done
+  basedir=$(dirname "$output_file")
+  mkdir -p "$basedir"
+  yq ea '. as $item ireduce({}; . *+ $item)' "$temp_dir"/*.yaml > "$output_file"
+  # remove current-context for security
+  yq e 'del(.current-context)' "$output_file" -i
 }
 
 create_registry
@@ -177,8 +163,5 @@ create_clusters
 
 create_kubeconfig
 
-create_in_cluster_kubeconfig
-
-#deploy_cass_operator
-
-#create_k8s_contexts_secret
+# Set current context to the first cluster
+kubectl config use "kind-${cluster_prefix}0"

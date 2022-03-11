@@ -27,14 +27,14 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "cluster1"}
 
-	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
-	reaper1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	reaper2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-reaper"}}
+	reaper1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
+	reaper2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-reaper"}}
 
-	stargate1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
-	stargate2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate"}}
+	stargate1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+	stargate2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate"}}
 
 	superuserSecretKey := types.NamespacedName{Namespace: namespace, Name: secret.DefaultSuperuserSecretName("cluster1")}
 	reaperCqlSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUserSecretName("cluster1")}
@@ -46,12 +46,12 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-0", 0, namespace, "cluster1-dc1-stargate-service", "", "")
-	f.DeployStargateIngresses(t, "kind-k8ssandra-1", 1, namespace, "cluster1-dc2-stargate-service", "", "")
-	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-0", 0, namespace, "cluster1-dc1-reaper-service")
-	f.DeployReaperIngresses(t, ctx, "kind-k8ssandra-1", 1, namespace, "cluster1-dc2-reaper-service")
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-0", namespace)
-	defer f.UndeployAllIngresses(t, "kind-k8ssandra-1", namespace)
+	f.DeployStargateIngresses(t, 0, namespace, "cluster1-dc1-stargate-service", "", "")
+	f.DeployStargateIngresses(t, 1, namespace, "cluster1-dc2-stargate-service", "", "")
+	f.DeployReaperIngresses(t, ctx, 0, namespace, "cluster1-dc1-reaper-service")
+	f.DeployReaperIngresses(t, ctx, 1, namespace, "cluster1-dc2-reaper-service")
+	defer f.UndeployAllIngresses(t, 0, namespace)
+	defer f.UndeployAllIngresses(t, 1, namespace)
 
 	pod1Name := "cluster1-dc1-default-sts-0"
 	pod2Name := "cluster1-dc2-default-sts-0"
@@ -84,28 +84,28 @@ func checkSecrets(
 	expectReaperSecretsCreated bool,
 ) {
 	t.Log("check that superuser secret exists in both contexts")
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: superuserSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: superuserSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: superuserSecretKey})
+	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: superuserSecretKey})
 	if expectReaperSecretsCreated {
 		t.Log("check that reaper CQL secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperCqlSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperCqlSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperCqlSecretKey})
 		t.Log("check that reaper JMX secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperJmxSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperJmxSecretKey})
 		t.Log("check that reaper UI secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperUiSecretKey})
+		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperUiSecretKey})
 	} else {
 		t.Log("check that reaper CQL secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperCqlSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperCqlSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperCqlSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperCqlSecretKey})
 		t.Log("check that reaper JMX secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperJmxSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperJmxSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperJmxSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperJmxSecretKey})
 		t.Log("check that reaper UI secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: reaperUiSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperUiSecretKey})
+		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: reaperUiSecretKey})
 	}
 }
 
@@ -130,8 +130,8 @@ func waitForAllComponentsReady(
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	// we need to wait until the deployments are fully rolled out before continuing, to avoid hitting an old
 	// pod that has authentication enabled while we just turned it off.
-	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-0"}
-	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: "kind-k8ssandra-1"}
+	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.K8sContext(0)}
+	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.K8sContext(1)}
 	err := kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-default-stargate-deployment")
 	assert.NoError(t, err)
 	err = kubectl.RolloutStatus(options1, "deployment", "cluster1-dc1-reaper")
@@ -164,14 +164,14 @@ func testAuthenticationDisabled(
 	t.Run("TestJmxAccessAuthDisabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth disabled, local JMX)")
-			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0)
+			checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 2, 0)
+			checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 2, 0)
 		})
 		t.Run("Remote", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
 			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-h", pod2IP)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-h", pod1IP)
+			checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 2, 0, "-h", pod2IP)
+			checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 2, 0, "-h", pod1IP)
 		})
 	})
 	t.Run("TestApisAuthDisabled", func(t *testing.T) {
@@ -205,28 +205,28 @@ func testAuthenticationEnabled(
 	t.Run("TestJmxAccessAuthEnabled", func(t *testing.T) {
 		t.Run("Local", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth enabled, local JMX)")
-			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
-			checkLocalJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name)
-			checkLocalJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name)
+			checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
+			checkLocalJmxFailsWithNoCredentials(t, f, f.K8sContext(0), namespace, pod1Name)
+			checkLocalJmxFailsWithNoCredentials(t, f, f.K8sContext(1), namespace, pod2Name)
+			checkLocalJmxFailsWithWrongCredentials(t, f, f.K8sContext(0), namespace, pod1Name)
+			checkLocalJmxFailsWithWrongCredentials(t, f, f.K8sContext(1), namespace, pod2Name)
 		})
 		t.Run("Remote", func(t *testing.T) {
 			t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
 			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
-			checkNodeToolStatus(t, f, "kind-k8ssandra-1", namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
-			checkRemoteJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithNoCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name, pod1IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-0", namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, "kind-k8ssandra-1", namespace, pod2Name, pod1IP)
+			checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
+			checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
+			checkRemoteJmxFailsWithNoCredentials(t, f, f.K8sContext(0), namespace, pod1Name, pod2IP)
+			checkRemoteJmxFailsWithNoCredentials(t, f, f.K8sContext(1), namespace, pod2Name, pod1IP)
+			checkRemoteJmxFailsWithWrongCredentials(t, f, f.K8sContext(0), namespace, pod1Name, pod2IP)
+			checkRemoteJmxFailsWithWrongCredentials(t, f, f.K8sContext(1), namespace, pod2Name, pod1IP)
 		})
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
 		t.Run("Stargate", func(t *testing.T) {
-			testStargateApis(t, ctx, "kind-k8ssandra-0", 0, username, password, replication)
-			testStargateApis(t, ctx, "kind-k8ssandra-1", 1, username, password, replication)
+			testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
+			testStargateApis(t, ctx, f.K8sContext(1), 1, username, password, replication)
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, 0)
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, 1)
 			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, 0)
@@ -238,7 +238,7 @@ func testAuthenticationEnabled(
 			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, 1)
 		})
 		t.Run("Reaper", func(t *testing.T) {
-			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: reaperUiSecretKey})
+			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: reaperUiSecretKey})
 			testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, username, password)
 			testReaperApi(t, ctx, 1, "cluster1", reaperapi.DefaultKeyspace, username, password)
 		})
@@ -311,9 +311,9 @@ func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *r
 }
 
 func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod2Name string) (string, string) {
-	pod1IP, err := f.GetPodIP("kind-k8ssandra-0", namespace, pod1Name)
-	require.NoError(t, err, "failed to get pod %s IP in context kind-k8ssandra-0", pod1Name)
-	pod2IP, err := f.GetPodIP("kind-k8ssandra-1", namespace, pod2Name)
-	require.NoError(t, err, "failed to get pod %s IP in context kind-k8ssandra-1", pod2Name)
+	pod1IP, err := f.GetPodIP(f.K8sContext(0), namespace, pod1Name)
+	require.NoError(t, err, "failed to get pod %s IP in context %s", pod1Name, f.K8sContext(0))
+	pod2IP, err := f.GetPodIP(f.K8sContext(1), namespace, pod2Name)
+	require.NoError(t, err, "failed to get pod %s IP in context %s", pod2Name, f.K8sContext(1))
 	return pod1IP, pod2IP
 }

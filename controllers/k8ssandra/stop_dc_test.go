@@ -58,8 +58,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
-					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, K8sContext: k8sCtx0, Size: 3},
-					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: k8sCtx1, Size: 3},
+					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, K8sContext: f.K8sContext(0), Size: 3},
+					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: f.K8sContext(1), Size: 3},
 				},
 			},
 			Stargate: &stargateapi.StargateClusterTemplate{Size: 3},
@@ -75,8 +75,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
-	dc1Key := framework.NewClusterKey(k8sCtx0, namespace, "dc1")
-	dc2Key := framework.NewClusterKey(k8sCtx1, namespace, "dc2")
+	dc1Key := framework.NewClusterKey(f.K8sContext(0), namespace, "dc1")
+	dc2Key := framework.NewClusterKey(f.K8sContext(1), namespace, "dc2")
 
 	t.Log("check that dc1 was created")
 	require.Eventually(t, f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -102,10 +102,10 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 		return assert.NoError(t, err) && assert.Equal(t, corev1.ConditionTrue, kc.Status.GetConditionStatus(api.CassandraInitialized))
 	}, timeout, interval, "timed out waiting for CassandraInitialized condition check")
 
-	sg1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-stargate")
-	reaper1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-reaper")
+	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
+	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
 
 	t.Log("check that stargate sg1 was created")
 	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
@@ -168,11 +168,11 @@ func stopDcManagementApiReset(replication map[string]int) {
 func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) {
 
 	kcKey := utils.GetKey(kc)
-	dc1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, "dc1")
-	sg1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-stargate")
-	reaper1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-reaper")
+	dc1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, "dc1")
+	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
+	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
 
 	replication := map[string]int{"dc1": 3, "dc2": 3}
 	stopDcManagementApiReset(replication)
@@ -254,20 +254,20 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) {
 
 	kcKey := utils.GetKey(kc)
-	dc1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, "dc1")
-	dc3Key := framework.NewClusterKey(k8sCtx2, kc.Namespace, "dc3")
-	sg1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-stargate")
-	sg3Key := framework.NewClusterKey(k8sCtx2, kc.Namespace, kc.Name+"-dc3-stargate")
-	reaper1Key := framework.NewClusterKey(k8sCtx0, kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(k8sCtx1, kc.Namespace, kc.Name+"-dc2-reaper")
-	reaper3Key := framework.NewClusterKey(k8sCtx2, kc.Namespace, kc.Name+"-dc3-reaper")
+	dc1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, "dc1")
+	dc3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, "dc3")
+	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
+	sg3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, kc.Name+"-dc3-stargate")
+	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
+	reaper3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, kc.Name+"-dc3-reaper")
 
 	t.Log("add dc3")
 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	kc.Spec.Cassandra.Datacenters = append(
 		kc.Spec.Cassandra.Datacenters,
-		api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: k8sCtx2, Size: 3},
+		api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: f.K8sContext(2), Size: 3},
 	)
 	err := f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch kc")
@@ -281,7 +281,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 
 	t.Log("check that dc3 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
-	rebuildTaskKey := framework.NewClusterKey(k8sCtx2, kc.Namespace, "dc3-rebuild")
+	rebuildTaskKey := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
 	t.Log("check that stargate sg3 was created")

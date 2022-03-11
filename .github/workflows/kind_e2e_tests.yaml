@@ -70,6 +70,9 @@ jobs:
       GOPATH: /home/runner/go
       GOROOT: /usr/local/go1.16
       CGO_ENABLED: 0
+      KUBECONFIG_FILE: "./build/kind-kubeconfig"
+      CONTROL_PLANE: kind-k8ssandra-0
+      DATA_PLANES: ""
     steps:
       - name: Free diskspace by removing unused packages
         run: |
@@ -117,7 +120,12 @@ jobs:
       - name: Setup kind cluster
         run: make IMG="k8ssandra/k8ssandra-operator:latest" create-kind-cluster kind-load-image
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: make E2E_TEST=TestOperator/${{ matrix.e2e_test }} e2e-test
+        run: |
+          e2e_test="TestOperator/${{ matrix.e2e_test }}"
+          args="-kubeconfigFile '${{ env.KUBECONFIG_FILE }}'"
+          args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
+          args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
+          make E2E_TEST="$e2e_test" TEST_ARGS="$args" e2e-test
       - name: Get artefact upload directory
         if: ${{ failure() }}
         run: |

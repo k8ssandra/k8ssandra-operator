@@ -118,7 +118,6 @@ metadata:
   name: demo
 spec:
   cassandra:
-    cluster: demo
     serverVersion: "4.0.1"
     storageConfig:
       cassandraDataVolumeClaimSpec:
@@ -164,16 +163,35 @@ Here is a brief summary of what the script does:
 * Get the k8ssandra-operator service account from the data plane cluster
 * Extract the service account token
 * Extract the CA cert
-* Create a kubeonfig using the token and cert
+* Create a kubeconfig using the token and cert
 * Create a secret for the kubeconfig in the control plane custer
 * Create a ClientConfig in the control plane cluster that references the secret.
 
-Suppose we have two clusters with context name `kind-k8ssandra-0` and `kind-k8ssandra-1`. The control plane is running in `kind-k8ssandra-0`. We want to create a ClientConfig for `kind-k8ssandra-1`. This can be accomplished by running the following:
+Suppose we have two clusters with context names `kind-k8ssandra-0` and `kind-k8ssandra-1`. The control plane is running
+in `kind-k8ssandra-0`. We want to create a ClientConfig for `kind-k8ssandra-1`. This can be accomplished by running the
+following:
 
+```sh
+./create-clientconfig.sh \
+    --namespace             k8ssandra-operator \
+    --src-kubeconfig        ./kubeconfigs/k8ssandra-1 \
+    --dest-kubeconfig       ./kubeconfigs/k8ssandra-0 
 ```
-./create-clientconfig.sh --src-kubeconfig build/kubeconfigs/k8ssandra-1.yaml --dest-kubeconfig build/kubeconfigs/k8ssandra-0.yaml --in-cluster-kubeconfig build/kubeconfigs/updated/k8ssandra-1.yaml --output-dir clientconfig
+
+The above assumes that each cluster has its configuration stored in distinct files. If you have one single kubeconfig
+for both clusters, then you can create the ClientConfig as follows:
+
+```sh
+./create-clientconfig.sh \
+    --namespace             k8ssandra-operator \
+    --src-kubeconfig        ./kubeconfig \ 
+    --dest-kubeconfig       ./kubeconfig \
+    --src-context           kind-k8ssandra-1 \ 
+    --dest-context          kind-k8ssandra-0
 ```
-The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
+
+Here `./kubeconfig` refers to the kubeconfig file containing configurations to access both contexts `kind-k8ssandra-0`
+and `kind-k8ssandra-1`.
 
 You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
 

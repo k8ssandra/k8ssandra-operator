@@ -42,13 +42,9 @@ import (
 
 const (
 	clustersToCreate          = 3
-	clusterProtoName          = "cluster-%d"
+	clusterProtoName          = "cluster-%d-%s"
 	cassOperatorVersion       = "v1.10.0"
 	prometheusOperatorVersion = "v0.9.0"
-)
-
-var (
-	controlCluster = fmt.Sprintf(clusterProtoName, 0)
 )
 
 type TestEnv struct {
@@ -157,9 +153,10 @@ type MultiClusterTestEnv struct {
 	// testEnvs is a list of the test environments that are created
 	testEnvs []*envtest.Environment
 
-	clustersToCreate int
-
 	BeforeTest func(t *testing.T)
+
+	controlPlane string
+	dataPlanes   []string
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
@@ -174,14 +171,18 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		return err
 	}
 
-	e.clustersToCreate = clustersToCreate
 	e.Clients = make(map[string]client.Client)
 	e.testEnvs = make([]*envtest.Environment, 0)
-	cfgs := make([]*rest.Config, e.clustersToCreate)
-	clusters := make([]cluster.Cluster, 0, e.clustersToCreate)
+	cfgs := make([]*rest.Config, clustersToCreate)
+	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
-	for i := 0; i < e.clustersToCreate; i++ {
-		clusterName := fmt.Sprintf(clusterProtoName, i)
+	for i := 0; i < clustersToCreate; i++ {
+		clusterName := fmt.Sprintf(clusterProtoName, i, rand.String(6))
+		if i == 0 {
+			e.controlPlane = clusterName
+		} else {
+			e.dataPlanes = append(e.dataPlanes, clusterName)
+		}
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
@@ -238,7 +239,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		}
 	}
 
-	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients[controlCluster], scheme.Scheme)
+	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients[e.controlPlane], scheme.Scheme)
 	for ctxName, cli := range e.Clients {
 		clientCache.AddClient(ctxName, cli)
 	}
@@ -284,9 +285,7 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 	namespace := framework.CleanupForKubernetes(rand.String(9))
 
 	return func(t *testing.T) {
-		primaryCluster := fmt.Sprintf(clusterProtoName, 0)
-		controlPlaneCluster := e.Clients[primaryCluster]
-		f := framework.NewFramework(controlPlaneCluster, primaryCluster, e.Clients)
+		f := framework.NewFramework(e.Clients[e.controlPlane], e.controlPlane, e.dataPlanes, e.Clients)
 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)

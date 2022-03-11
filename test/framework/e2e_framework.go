@@ -3,11 +3,13 @@ package framework
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -35,134 +37,70 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	defaultControlPlaneContext = "kind-k8ssandra-0"
-)
-
 type E2eFramework struct {
 	*Framework
-
-	nodeToolStatusUN *regexp.Regexp
-	nodeToolStatusDN *regexp.Regexp
 }
 
-func NewE2eFramework(t *testing.T) (*E2eFramework, error) {
-	configFile, err := filepath.Abs("../../build/kubeconfig")
+var (
+	nodeToolStatusUN = regexp.MustCompile("UN\\s\\s")
+	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
+)
+
+func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
+	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = os.Stat(configFile); err != nil {
-		return nil, err
-	}
-
-	config, err := clientcmd.LoadFromFile(configFile)
-	if err != nil {
-		return nil, err
-	}
-
-	controlPlaneContext := ""
-	var controlPlaneClient client.Client
 	remoteClients := make(map[string]client.Client, 0)
-	t.Logf("Using config file: %s", configFile)
+	t.Logf("Using config file: %s", kubeconfigFile)
 
-	for name, _ := range config.Contexts {
-		clientCfg := clientcmd.NewNonInteractiveClientConfig(*config, name, &clientcmd.ConfigOverrides{}, nil)
-		restCfg, err := clientCfg.ClientConfig()
-
-		if err != nil {
-			return nil, err
-		}
-
-		remoteClient, err := client.New(restCfg, client.Options{Scheme: scheme.Scheme})
-		if err == nil {
-			remoteClients[name] = remoteClient
-		}
-
-		// TODO Add a flag or option to allow the user to specify the control plane cluster
-		// if len(ControlPlaneContext) == 0 {
-		//	ControlPlaneContext = name
-		//	controlPlaneClient = remoteClient
-		// }
-	}
-	if len(remoteClients) == 0 {
-		return nil, fmt.Errorf("no valid context found in kubeconfig file")
-	}
-	t.Logf("Using config remote clients: %v", remoteClients)
-
-	if remoteClient, found := remoteClients[defaultControlPlaneContext]; found {
-		controlPlaneContext = defaultControlPlaneContext
-		controlPlaneClient = remoteClient
+	if remoteClient, err := newRemoteClient(config, controlPlane); err != nil {
+		return nil, err
+	} else if remoteClient == nil {
+		return nil, fmt.Errorf("control plane context %s does not exist", controlPlane)
 	} else {
-		for k8sContext, remoteClient := range remoteClients {
-			controlPlaneContext = k8sContext
-			controlPlaneClient = remoteClient
-			break
+		remoteClients[controlPlane] = remoteClient
+	}
+
+	var validDataPlanes []string
+	for _, name := range dataPlanes {
+		if remoteClient, err := newRemoteClient(config, name); err != nil {
+			return nil, err
+		} else if remoteClient == nil {
+			t.Logf("ignoring invalid data plane context %v: %v", name, err)
+		} else {
+			remoteClients[name] = remoteClient
+			validDataPlanes = append(validDataPlanes, name)
 		}
 	}
 
-	f := NewFramework(controlPlaneClient, controlPlaneContext, remoteClients)
+	t.Logf("Using contexts: %v", reflect.ValueOf(remoteClients).MapKeys())
 
-	return &E2eFramework{
-		Framework:        f,
-		nodeToolStatusUN: regexp.MustCompile("UN\\s\\s"),
-		nodeToolStatusDN: regexp.MustCompile("DN\\s\\s"),
-	}, nil
+	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
+
+	return &E2eFramework{Framework: f}, nil
 }
 
-// getClusterContexts returns all contexts, including both control plane and data plane.
-func (f *E2eFramework) getClusterContexts() []string {
-	contexts := make([]string, 0, len(f.remoteClients))
-	for ctx, _ := range f.remoteClients {
-		contexts = append(contexts, ctx)
+func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client, error) {
+	if len(context) == 0 {
+		// empty context name loads the current context: prevent that for security reasons
+		return nil, errors.New("empty context name provided")
 	}
-	return contexts
-}
-
-func (f *E2eFramework) getDataPlaneContexts() []string {
-	contexts := make([]string, 0, len(f.remoteClients))
-	for ctx, _ := range f.remoteClients {
-		if ctx != f.ControlPlaneContext {
-			contexts = append(contexts, ctx)
-		}
+	clientCfg := clientcmd.NewNonInteractiveClientConfig(*config, context, &clientcmd.ConfigOverrides{}, nil)
+	if restCfg, err := clientCfg.ClientConfig(); err != nil {
+		return nil, nil
+	} else if remoteClient, err := client.New(restCfg, client.Options{Scheme: scheme.Scheme}); err != nil {
+		return nil, err
+	} else {
+		return remoteClient, nil
 	}
-	return contexts
 }
 
 type Kustomization struct {
 	Namespace string
 
 	ImageTag string
-}
-
-func generateContextsKustomization(namespace string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-generatorOptions:
-  disableNameSuffixHash: true
-
-secretGenerator:
-- files:
-  - kubeconfig
-  name: k8s-contexts
-namespace: {{ .Namespace }}
-`
-	k := Kustomization{Namespace: namespace}
-
-	if err := generateKustomizationFile("k8s-contexts", k, tmpl); err != nil {
-		return err
-	}
-
-	src := filepath.Join("..", "..", "build", "in_cluster_kubeconfig")
-	dest := filepath.Join("..", "..", "build", "test-config", "k8s-contexts", "kubeconfig")
-
-	buf, err := ioutil.ReadFile(src)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(dest, buf, 0644)
 }
 
 func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
@@ -284,7 +222,7 @@ replacements:
 // generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
 // and generates a kustomization.yaml file using the template tmpl. k defines values that
 // will be substituted in the template.
-func generateKustomizationFile(name string, k Kustomization, tmpl string) error {
+func generateKustomizationFile(name string, data interface{}, tmpl string) error {
 	dir := filepath.Join("..", "..", "build", "test-config", name)
 
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -301,7 +239,7 @@ func generateKustomizationFile(name string, k Kustomization, tmpl string) error 
 		return err
 	}
 
-	return parsed.Execute(file, k)
+	return parsed.Execute(file, data)
 }
 
 func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...string) error {
@@ -312,14 +250,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 	}
 
 	if len(contexts) == 0 {
-		buf, err := kustomize.BuildDir(kdir)
-		if err != nil {
-			f.logger.Error(err, "kustomize build failed", "dir", kdir)
-			return err
-		}
-
-		options := kubectl.Options{Context: defaultControlPlaneContext, ServerSide: true}
-		return kubectl.Apply(options, buf)
+		return errors.New("no contexts provided")
 	}
 
 	for _, ctx := range contexts {
@@ -331,7 +262,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 			return err
 		}
 
-		options := kubectl.Options{Context: ctx, ServerSide: true}
+		options := kubectl.Options{Context: ctx, ServerSide: true, Namespace: namespace}
 		if err := kubectl.Apply(options, buf); err != nil {
 			return err
 		}
@@ -343,7 +274,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
 
-	for _, k8sContext := range f.getClusterContexts() {
+	for _, k8sContext := range f.AllK8sContexts() {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Create Cassandra ConfigMap", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
@@ -358,7 +289,7 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	for _, storeType := range []encryption.StoreType{encryption.StoreTypeServer, encryption.StoreTypeClient} {
 		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))
 
-		for _, k8sContext := range f.getClusterContexts() {
+		for _, k8sContext := range f.AllK8sContexts() {
 			options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 			f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
 			if err := kubectl.Apply(options, path); err != nil {
@@ -407,9 +338,8 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 		return err
 	}
 
-	dataPlaneContexts := f.getDataPlaneContexts()
-	if len(dataPlaneContexts) > 0 {
-		return f.kustomizeAndApply(dataPlane, config.Namespace, dataPlaneContexts...)
+	if len(f.DataPlaneContexts) > 0 {
+		return f.kustomizeAndApply(dataPlane, config.Namespace, f.DataPlaneContexts...)
 	}
 
 	return nil
@@ -418,7 +348,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 func (f *E2eFramework) DeployCertManager() error {
 	dir := "https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml"
 
-	for _, ctx := range f.getClusterContexts() {
+	for _, ctx := range f.AllK8sContexts() {
 		options := kubectl.Options{Context: ctx}
 		f.logger.Info("Deploy cert-manager", "Context", ctx)
 		if err := kubectl.Apply(options, dir); err != nil {
@@ -429,35 +359,16 @@ func (f *E2eFramework) DeployCertManager() error {
 	return nil
 }
 
-// DeployK8sContextsSecret Deploys the contexts secret in the control plane cluster.
-func (f *E2eFramework) DeployK8sContextsSecret(namespace string) error {
-	if err := generateContextsKustomization(namespace); err != nil {
-		return err
-	}
-
-	dir := filepath.Join("..", "..", "build", "test-config", "k8s-contexts")
-
-	return f.kustomizeAndApply(dir, namespace, f.ControlPlaneContext)
-}
-
-func (f *E2eFramework) DeployK8sClientConfigs(namespace string) error {
-	baseDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		return err
-	}
-
-	i := 0
-	for k8sContext, _ := range f.remoteClients {
-		f.logger.Info("Creating ClientConfig", "cluster", k8sContext)
-		srcCfg := fmt.Sprintf("k8ssandra-%d.yaml", i)
+func (f *E2eFramework) DeployK8sClientConfigs(namespace, srcKubeconfig, destKubeconfig, destContext string) error {
+	for srcContext := range f.remoteClients {
+		f.logger.Info("Creating ClientConfig", "src-context", srcContext)
 		cmd := exec.Command(
-			filepath.Join("scripts", "create-clientconfig.sh"),
-			"--src-kubeconfig", filepath.Join("build", "kubeconfigs", srcCfg),
-			"--dest-kubeconfig", filepath.Join("build", "kubeconfigs", "k8ssandra-0.yaml"),
-			"--in-cluster-kubeconfig", filepath.Join("build", "kubeconfigs", "updated", srcCfg),
-			"--output-dir", filepath.Join("build", "clientconfigs", srcCfg),
+			filepath.Join("..", "..", "scripts", "create-clientconfig.sh"),
+			"--src-kubeconfig", srcKubeconfig,
+			"--dest-kubeconfig", destKubeconfig,
+			"--src-context", srcContext,
+			"--dest-context", destContext,
 			"--namespace", namespace)
-		cmd.Dir = baseDir
 
 		fmt.Println(cmd)
 
@@ -467,8 +378,6 @@ func (f *E2eFramework) DeployK8sClientConfigs(namespace string) error {
 		if err != nil {
 			return err
 		}
-
-		i++
 	}
 
 	return nil
@@ -767,8 +676,8 @@ func (f *E2eFramework) GetNodeToolStatus(k8sContext, namespace, pod string, addi
 		f.logger.Error(err, fmt.Sprintf("failed to execute nodetool status on %s: %s", pod, err))
 		return -1, -1, err
 	}
-	countUN := len(f.nodeToolStatusUN.FindAllString(output, -1))
-	countDN := len(f.nodeToolStatusDN.FindAllString(output, -1))
+	countUN := len(nodeToolStatusUN.FindAllString(output, -1))
+	countDN := len(nodeToolStatusDN.FindAllString(output, -1))
 	return countUN, countDN, nil
 }
 

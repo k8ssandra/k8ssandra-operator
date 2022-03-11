@@ -36,7 +36,7 @@ export KUBECONFIG=./build/kubeconfigs/${cluster2}.yaml
 gcloud container clusters get-credentials ${cluster2} --zone ${zone2} --project ${gcp_project}
 unset KUBECONFIG
 
-scripts/create-clientconfig.sh --src-kubeconfig build/kubeconfigs/${cluster2}.yaml --dest-kubeconfig build/kubeconfigs/${cluster1}.yaml --in-cluster-kubeconfig build/kubeconfigs/${cluster2}.yaml --output-dir clientconfig
+scripts/create-clientconfig.sh --src-kubeconfig build/kubeconfigs/${cluster2}.yaml --dest-kubeconfig build/kubeconfigs/${cluster1}.yaml
 
 # Restart the k8ssandra-operator pod on the control-plane
 kubectl config use-context gke_${gcp_project}_${zone1}_${cluster1}

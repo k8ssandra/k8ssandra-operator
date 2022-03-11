@@ -20,7 +20,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: klusterNamespace, Name: "test"}, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in operatorNamespace %s", klusterNamespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -38,7 +38,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
-	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: dc2Namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: dc2Namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("check k8ssandra cluster status")
@@ -71,9 +71,9 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
-	checkNodeToolStatus(t, f, "kind-k8ssandra-0", dc1Namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.K8sContext(0), dc1Namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-rack1-sts-0"
-	checkNodeToolStatus(t, f, "kind-k8ssandra-1", dc2Namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.K8sContext(1), dc2Namespace, pod, count, 0, "-u", username, "-pw", password)
 }

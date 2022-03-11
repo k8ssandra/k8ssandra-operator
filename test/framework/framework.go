@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -85,10 +86,15 @@ type Framework struct {
 	// remote clusters.
 	Client client.Client
 
-	// The Kubernetes context in which the K8ssandraCluser controller is running.
+	// The Kubernetes context in which the K8ssandraCluster controller is running.
 	ControlPlaneContext string
 
-	// RemoteClients is mapping of Kubernetes context names to clients.
+	// Extra Kubernetes contexts where K8ssandraCluster controller is not running but datacenters
+	// can be deployed. May be empty.
+	DataPlaneContexts []string
+
+	// RemoteClients is a mapping of Kubernetes context names to clients. It includes a client for
+	// the control plane context as well as clients for all data plane contexts, if any.
 	remoteClients map[string]client.Client
 
 	logger logr.Logger
@@ -113,13 +119,43 @@ func NewClusterKey(context, namespace, name string) ClusterKey {
 		},
 	}
 }
-func NewFramework(client client.Client, controlPlanContext string, remoteClients map[string]client.Client) *Framework {
+
+func NewFramework(client client.Client, controlPlaneContext string, dataPlaneContexts []string, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
 	log = logrusr.NewLogger(logrus.New())
 	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
+	return &Framework{
+		Client:              client,
+		ControlPlaneContext: controlPlaneContext,
+		DataPlaneContexts:   dataPlaneContexts,
+		remoteClients:       remoteClients,
+		logger:              log,
+	}
+}
 
-	// TODO ControlPlaneContext should default to the first context in the kubeconfig file. We should also provide a flag to override it.
-	return &Framework{Client: client, ControlPlaneContext: controlPlanContext, remoteClients: remoteClients, logger: log}
+// AllK8sContexts returns all contexts, including the control plane and all data planes, if any. The control plane is
+// always the first element in the returned slice.
+func (f *Framework) AllK8sContexts() []string {
+	contexts := make([]string, 0, len(f.remoteClients))
+	contexts = append(contexts, f.ControlPlaneContext)
+	contexts = append(contexts, f.DataPlaneContexts...)
+	return contexts
+}
+
+// K8sContext returns the context name associated with the given zero-based index. When i = 0, the control plane is
+// returned; when i > 0, the corresponding data plane is returned, based on the order in which data planes were
+// specified. Note that this way of mapping indices to context names is also honored in e2e tests e.g. by Ingress
+// routes, especially when mapping ports to services in different contexts, and so it is important that this mapping is
+// not modified accidentally. Also note: this method panics when an invalid index is passed; this is by design since it
+// denotes a flaw in test code.
+func (f *Framework) K8sContext(k8sContextIdx int) string {
+	if k8sContextIdx == 0 {
+		return f.ControlPlaneContext
+	}
+	if k8sContextIdx > len(f.DataPlaneContexts) {
+		panic(f.k8sContextNotFound(strconv.Itoa(k8sContextIdx)))
+	}
+	return f.DataPlaneContexts[k8sContextIdx-1]
 }
 
 // Get fetches the object specified by key from the cluster specified by key. An error is
