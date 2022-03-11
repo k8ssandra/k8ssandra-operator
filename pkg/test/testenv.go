@@ -42,7 +42,7 @@ import (
 
 const (
 	clustersToCreate          = 3
-	clusterProtoName          = "cluster-%d"
+	clusterProtoName          = "cluster-%d-%s"
 	cassOperatorVersion       = "v1.10.0"
 	prometheusOperatorVersion = "v0.9.0"
 )
@@ -177,7 +177,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
 	for i := 0; i < clustersToCreate; i++ {
-		clusterName := fmt.Sprintf(clusterProtoName, i)
+		clusterName := fmt.Sprintf(clusterProtoName, i, rand.String(6))
 		if i == 0 {
 			e.controlPlane = clusterName
 		} else {
