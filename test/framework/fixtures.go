@@ -80,7 +80,7 @@ patches:
   - patch: |-
 {{range $index, $dcContext := .DcContexts}}
       - op: replace
-        path: /spec/cassandra/datacenters/{{ $index }}/K8sContext
+        path: /spec/cassandra/datacenters/{{ $index }}/k8sContext
         value: {{ $dcContext }}
 {{end}}
     target:
