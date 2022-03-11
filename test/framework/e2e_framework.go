@@ -46,14 +46,14 @@ var (
 	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
 )
 
-func NewE2eFramework(t *testing.T, configFile, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
-	config, err := clientcmd.LoadFromFile(configFile)
+func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
+	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
 	}
 
 	remoteClients := make(map[string]client.Client, 0)
-	t.Logf("Using config file: %s", configFile)
+	t.Logf("Using config file: %s", kubeconfigFile)
 
 	if remoteClient, err := newRemoteClient(config, controlPlane); err != nil {
 		return nil, err
