@@ -207,7 +207,7 @@ spec:
             windows_timer_interval: 271
             write_request_timeout_in_ms: 272
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         stargate:
           size: 1
           heapSize: 384Mi

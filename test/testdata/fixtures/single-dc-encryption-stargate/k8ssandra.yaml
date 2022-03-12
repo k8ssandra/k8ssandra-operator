@@ -35,7 +35,7 @@ spec:
             client_encryption_options:
               enabled: true
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         stargate:
           size: 1
           heapSize: 384Mi

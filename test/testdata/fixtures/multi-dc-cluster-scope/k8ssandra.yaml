@@ -41,7 +41,7 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: 384Mi
+        heapSize: 512Mi
     networking:
       hostNetwork: true
     datacenters:

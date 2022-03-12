@@ -21,7 +21,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
       - metadata:
@@ -38,7 +38,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi
