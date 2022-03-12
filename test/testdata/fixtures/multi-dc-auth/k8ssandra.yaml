@@ -5,7 +5,7 @@ metadata:
 spec:
   auth: false
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "3.11.11"
     datacenters:
       - metadata:
           name: dc1
