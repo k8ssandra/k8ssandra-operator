@@ -7,6 +7,13 @@ data:
     concurrent_reads: 32
     concurrent_writes: 32
     concurrent_counter_writes: 32
+    cas_contention_timeout_in_ms: 10000
+    counter_write_request_timeout_in_ms: 10000
+    range_request_timeout_in_ms: 10000
+    read_request_timeout_in_ms: 10000
+    request_timeout_in_ms: 10000
+    truncate_request_timeout_in_ms: 60000
+    write_request_timeout_in_ms: 10000
 ---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
