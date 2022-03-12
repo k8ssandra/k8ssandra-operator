@@ -100,13 +100,13 @@ workflows:
               e2e-test: 
                 - ClusterScoped/MultiDcMultiCluster
                 - AddDcToCluster
-                #- StopAndRestartDc
-                #- CreateMultiReaper
-                #- CreateMultiDatacenterCluster
-                #- RemoveDcFromCluster
-                #- CheckStargateApisWithMultiDcCluster
-                #- CreateMultiStargateAndDatacenter
-                #- CreateMultiMedusa
-                #- MultiDcAuthOnOff
-                #- MultiDcEncryptionWithStargate
-                #- MultiDcEncryptionWithReaper
+                - StopAndRestartDc
+                - CreateMultiReaper
+                - CreateMultiDatacenterCluster
+                - RemoveDcFromCluster
+                - CheckStargateApisWithMultiDcCluster
+                - CreateMultiStargateAndDatacenter
+                - CreateMultiMedusa
+                - MultiDcAuthOnOff
+                - MultiDcEncryptionWithStargate
+                - MultiDcEncryptionWithReaper
