@@ -33,7 +33,7 @@ func Eval(expression string, options Options, files ...string) (string, error) {
 	cmd.Args = append(cmd.Args, files...)
 	fmt.Println(cmd)
 	output, err := cmd.CombinedOutput()
-	result := strings.TrimSpace(string(output))
+	result := strings.TrimSuffix(string(output), "\n")
 	if err != nil {
 		return "", fmt.Errorf("eval failed: %s (%w)", result, err)
 	}

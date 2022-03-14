@@ -54,6 +54,16 @@ func TestEval(t *testing.T) {
 			want: "3",
 		},
 		{
+			name: "empty line",
+			args: args{
+				expression: ".spec.cassandra.datacenters.[] | { .metadata.name : .k8sContext } | to_entries | .[] | .value // \"\"",
+				files: []string{
+					"../testdata/fixtures/multi-dc-medusa/k8ssandra.yaml",
+				},
+			},
+			want: "\nkind-k8ssandra-1",
+		},
+		{
 			name: "non existent file",
 			args: args{
 				expression: ".spec.cassandra.datacenters.[] as $item ireduce (0; . +1)",
