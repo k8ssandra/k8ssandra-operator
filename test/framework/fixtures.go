@@ -21,36 +21,16 @@ type TestFixture struct {
 	// Name specifies the name of the fixture. The fixture name resolves to a subdirectory under the
 	// test/testdata/fixtures directory.
 	Name string
+
+	definitionsDir string
+	kustomizeDir   string
 }
 
 func NewTestFixture(name string) *TestFixture {
-	return &TestFixture{Name: name}
-}
-
-func (f *TestFixture) definitionsDir() string {
-	return filepath.Join(fixturesDefinitionsRoot, f.Name)
-}
-
-func (f *TestFixture) kustomizationDir() string {
-	return filepath.Join(fixturesKustomizationsRoot, f.Name)
-}
-
-// countK8ssandraDatacenters counts the number of dc definitions in the K8ssandraCluster resource of
-// this fixture. For now, we only read one single K8ssandraCluster declared in k8ssandra.yaml. If
-// some fixtures in the future decide to create more than one K8ssandraCluster, we'll have to
-// revisit this and create per-K8ssandraCluster kustomizations.
-func (f *TestFixture) countK8ssandraDatacenters() (int, error) {
-	k8ssandraYamlFile := filepath.Join(f.definitionsDir(), "k8ssandra.yaml")
-	if _, err := os.Stat(k8ssandraYamlFile); err == nil {
-		result, err := yq.Eval(".spec.cassandra.datacenters.[] as $item ireduce (0; . +1)", yq.Options{}, k8ssandraYamlFile)
-		if err != nil {
-			return -1, err
-		}
-		return strconv.Atoi(result)
-	} else if errors.Is(err, fs.ErrNotExist) {
-		return 0, nil
-	} else {
-		return -1, err
+	return &TestFixture{
+		Name:           name,
+		definitionsDir: filepath.Join(fixturesDefinitionsRoot, name),
+		kustomizeDir:   filepath.Join(fixturesKustomizationsRoot, name),
 	}
 }
 
@@ -69,13 +49,32 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 	if err != nil {
 		return err
 	}
-	return f.kustomizeAndApply(fixture.kustomizationDir(), namespace, f.ControlPlaneContext)
+	return f.kustomizeAndApply(fixture.kustomizeDir, namespace, f.ControlPlaneContext)
 }
 
 type fixtureKustomization struct {
 	Namespace  string
 	Fixture    string
 	DcContexts []string
+}
+
+// countK8ssandraDatacenters counts the number of dc definitions in the K8ssandraCluster resource of
+// this fixture. For now, we only read one single K8ssandraCluster declared in k8ssandra.yaml. If
+// some fixtures in the future decide to create more than one K8ssandraCluster, we'll have to
+// revisit this and create per-K8ssandraCluster kustomizations.
+func (f *TestFixture) countK8ssandraDatacenters() (int, error) {
+	k8ssandraYamlFile := filepath.Join(f.definitionsDir, "k8ssandra.yaml")
+	if _, err := os.Stat(k8ssandraYamlFile); err == nil {
+		result, err := yq.Eval(".spec.cassandra.datacenters.[] as $item ireduce (0; . +1)", yq.Options{}, k8ssandraYamlFile)
+		if err != nil {
+			return -1, err
+		}
+		return strconv.Atoi(result)
+	} else if errors.Is(err, fs.ErrNotExist) {
+		return 0, nil
+	} else {
+		return -1, err
+	}
 }
 
 const fixtureKustomizeTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
