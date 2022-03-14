@@ -65,7 +65,11 @@ type fixtureKustomization struct {
 func (f *TestFixture) countK8ssandraDatacenters() (int, error) {
 	k8ssandraYamlFile := filepath.Join(f.definitionsDir, "k8ssandra.yaml")
 	if _, err := os.Stat(k8ssandraYamlFile); err == nil {
-		result, err := yq.Eval(".spec.cassandra.datacenters.[] as $item ireduce (0; . +1)", yq.Options{}, k8ssandraYamlFile)
+		result, err := yq.Eval(
+			". | select(.kind == \"K8ssandraCluster\") | .spec.cassandra.datacenters.[] as $item ireduce (0; . +1)",
+			yq.Options{All: true},
+			k8ssandraYamlFile,
+		)
 		if err != nil {
 			return -1, err
 		}
