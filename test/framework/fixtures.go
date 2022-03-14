@@ -1,9 +1,17 @@
 package framework
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"errors"
+	"github.com/k8ssandra/k8ssandra-operator/test/yq"
+	"io/fs"
+	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
+)
+
+var (
+	fixturesDefinitionsRoot    = filepath.Join("..", "testdata", "fixtures")
+	fixturesKustomizationsRoot = filepath.Join("..", "..", "build", "test-config", "fixtures")
 )
 
 // TestFixture is a set of one or more yaml manifests, typically a manifest for a K8ssandraCluster. They are
@@ -13,61 +21,64 @@ type TestFixture struct {
 	// Name specifies the name of the fixture. The fixture name resolves to a subdirectory under the
 	// test/testdata/fixtures directory.
 	Name string
+
+	definitionsDir string
+	kustomizeDir   string
 }
 
 func NewTestFixture(name string) *TestFixture {
-	return &TestFixture{Name: name}
-}
-
-var (
-	fixturesSrcDir  = filepath.Join("..", "testdata", "fixtures")
-	fixturesDestDir = filepath.Join("..", "..", "build", "test-config", "fixtures")
-)
-
-func (t *TestFixture) fixtureDir() string {
-	path := filepath.Join(fixturesSrcDir, t.Name)
-	dir, err := filepath.Abs(path)
-	if err != nil {
-		panic(err)
+	return &TestFixture{
+		Name:           name,
+		definitionsDir: filepath.Join(fixturesDefinitionsRoot, name),
+		kustomizeDir:   filepath.Join(fixturesKustomizationsRoot, name),
 	}
-	return dir
 }
 
 func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) error {
-	numDcContexts, err := getNumDcContexts(fixture)
+	numDcs, err := fixture.countK8ssandraDatacenters()
 	if err != nil {
 		return err
 	}
-	dcContexts := f.AllK8sContexts()[:numDcContexts]
-	err = generateFixtureKustomizationFile(namespace, fixture.Name, dcContexts)
+	dcContexts := f.AllK8sContexts()[:numDcs]
+	data := &fixtureKustomization{
+		Namespace:  namespace,
+		Fixture:    fixture.Name,
+		DcContexts: dcContexts,
+	}
+	err = generateKustomizationFile("fixtures/"+fixture.Name, data, fixtureKustomizeTemplate)
 	if err != nil {
 		return err
 	}
-	destDir := filepath.Join(fixturesDestDir, fixture.Name)
-	return f.kustomizeAndApply(destDir, namespace, f.ControlPlaneContext)
+	return f.kustomizeAndApply(fixture.kustomizeDir, namespace, f.ControlPlaneContext)
 }
 
-// getNumDcContexts computes the exact number of contexts to kustomize by counting the number of dcs/contexts in the
-// K8ssandraCluster spec for this fixture, if any. This is a bit hacky but unfortunately kustomize errors out if we
-// attempt to patch a non-existing path.
-func getNumDcContexts(fixture *TestFixture) (int, error) {
-	files, err := utils.ListFiles(fixture.fixtureDir(), "k8ssandra.yaml")
-	if err != nil {
-		return 0, err
-	}
-	dcContexts := 0
-	if len(files) > 0 {
-		lines, err := utils.ReadLines(files[0])
+type fixtureKustomization struct {
+	Namespace  string
+	Fixture    string
+	DcContexts []string
+}
+
+// countK8ssandraDatacenters counts the number of dc definitions in the K8ssandraCluster resource of
+// this fixture. For now, we only read one single K8ssandraCluster declared in k8ssandra.yaml. If
+// some fixtures in the future decide to create more than one K8ssandraCluster, we'll have to
+// revisit this and create per-K8ssandraCluster kustomizations.
+func (f *TestFixture) countK8ssandraDatacenters() (int, error) {
+	k8ssandraYamlFile := filepath.Join(f.definitionsDir, "k8ssandra.yaml")
+	if _, err := os.Stat(k8ssandraYamlFile); err == nil {
+		result, err := yq.Eval(
+			". | select(.kind == \"K8ssandraCluster\") | .spec.cassandra.datacenters.[] as $item ireduce (0; . +1)",
+			yq.Options{All: true},
+			k8ssandraYamlFile,
+		)
 		if err != nil {
-			return 0, err
+			return -1, err
 		}
-		for _, line := range lines {
-			if strings.Contains(line, "k8sContext:") {
-				dcContexts++
-			}
-		}
+		return strconv.Atoi(result)
+	} else if errors.Is(err, fs.ErrNotExist) {
+		return 0, nil
+	} else {
+		return -1, err
 	}
-	return dcContexts, nil
 }
 
 const fixtureKustomizeTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
@@ -87,18 +98,3 @@ patches:
       kind: K8ssandraCluster
 {{end}}
 `
-
-type fixtureKustomization struct {
-	Namespace  string
-	Fixture    string
-	DcContexts []string
-}
-
-func generateFixtureKustomizationFile(namespace string, fixtureName string, dcContexts []string) error {
-	data := &fixtureKustomization{
-		Namespace:  namespace,
-		Fixture:    fixtureName,
-		DcContexts: dcContexts,
-	}
-	return generateKustomizationFile("fixtures/"+fixtureName, data, fixtureKustomizeTemplate)
-}
