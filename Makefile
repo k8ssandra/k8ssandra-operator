@@ -134,14 +134,16 @@ else
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -coverprofile cover.out
 endif
 
+E2E_TEST_TIMEOUT ?= 3600s
+
 PHONY: e2e-test
 e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
-	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
+	go test -v -timeout $(E2E_TEST_TIMEOUT) ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
 else
 	@echo Running e2e tests
-	go test -v -timeout 3600s ./test/e2e/... -args $(TEST_ARGS)
+	go test -v -timeout $(E2E_TEST_TIMEOUT) ./test/e2e/... -args $(TEST_ARGS)
 endif
 
 ##@ Build
@@ -439,3 +441,50 @@ install-kuttl:
 mocks:
 	mockery --dir=./pkg/cassandra --output=./pkg/mocks --name=ManagementApiFacade
 	mockery --dir=./pkg/reaper --output=./pkg/mocks --name=Manager  --filename=reaper_manager.go --structname=ReaperManager
+
+
+# The image base name used in GKE clusters.
+GKE_IMAGE_TAG_BASE ?= us-docker.pkg.dev/community-ecosystem/$(IMAGE_TAG_BASE)
+
+# Builds the project, builds the operator image, then pushes the operator image to GKE Container
+# Registry.
+gke-docker-push: build manifests
+	$(MAKE) docker-build IMG=$(GKE_IMAGE_TAG_BASE):latest ; \
+	$(MAKE) docker-push IMG=$(GKE_IMAGE_TAG_BASE):latest
+
+# Runs e2e tests using two GKE contexts: k8ssandra-ci-us-east and k8ssandra-ci-us-north.
+# The clusters must be up and running and your ~/.kube/config file must contain the corresponding
+# contexts.
+# For security reasons, instructions for setting up the clusters are not checked in version control.
+# You must invoke this target with 2 env vars, GKE_US_EAST_IP and GKE_US_NORTH_IP containing 2
+# valid and properly configured external IPs, e.g.:
+# make gke-e2e-test GKE_US_EAST_IP=w.x.y.z GKE_US_NORTH_IP=w.x.y.z
+gke-e2e-test:
+	$(MAKE) e2e-test TEST_ARGS=" \
+     -kubeconfigFile=$(HOME)/.kube/config \
+     -controlPlane=k8ssandra-ci-us-east \
+     -dataPlanes=k8ssandra-ci-us-east,k8ssandra-ci-us-north \
+     -ingressConfigs='{ \
+       \"k8ssandra-ci-us-east\":{ \
+         \"stargate_rest\":\"stargate.$(GKE_US_EAST_IP).nip.io:8080\", \
+         \"stargate_cql\" :\"stargate.$(GKE_US_EAST_IP).nip.io:9042\", \
+         \"reaper_rest\"  :  \"reaper.$(GKE_US_EAST_IP).nip.io:8080\" \
+       }, \
+       \"k8ssandra-ci-us-north\":{ \
+         \"stargate_rest\":\"stargate.$(GKE_US_NORTH_IP).nip.io:8080\", \
+         \"stargate_cql\" :\"stargate.$(GKE_US_NORTH_IP).nip.io:9042\", \
+         \"reaper_rest\"  :  \"reaper.$(GKE_US_NORTH_IP).nip.io:8080\" \
+       } \
+     }' \
+     -zoneMappings='{ \
+       \"region1-zone1\" : \"us-east1-b\", \
+       \"region1-zone2\" : \"us-east1-c\", \
+       \"region1-zone3\" : \"us-east1-d\", \
+       \"region2-zone1\" : \"northamerica-northeast1-a\", \
+       \"region2-zone2\" : \"northamerica-northeast1-b\", \
+       \"region2-zone3\" : \"northamerica-northeast1-c\" \
+     }' \
+     -storage=standard-rwo \
+     -hostNetwork=false \
+     -imageName=$(GKE_IMAGE_TAG_BASE) \
+     -imageTag=latest"

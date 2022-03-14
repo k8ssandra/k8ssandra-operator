@@ -36,7 +36,7 @@ func BuildUrl(url string) (*bytes.Buffer, error) {
 	output, err := cmd.CombinedOutput()
 	buffer := bytes.NewBuffer(output)
 
-	if logOutput {
+	if err != nil || logOutput {
 		fmt.Println(string(output))
 	}
 

@@ -149,7 +149,7 @@ func toggleDcStopped(t *testing.T,
 		require.Fail(t, "no DC with key: %s", dcKey)
 	}
 	t.Logf("Setting %s stopped flag to %v", dcKey.Name, stopped)
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[dcIndex].Stopped = stopped
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch kc")

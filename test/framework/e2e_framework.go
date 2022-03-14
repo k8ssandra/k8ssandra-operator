@@ -99,12 +99,6 @@ func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client
 	}
 }
 
-type Kustomization struct {
-	Namespace string
-
-	ImageTag string
-}
-
 func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
 	controlPlaneDir := "control-plane"
 	dataPlaneDir := "data-plane"
@@ -118,6 +112,7 @@ resources:
 
 images:
   - name: k8ssandra/k8ssandra-operator
+    newName: {{ .ImageName }}
     newTag: {{ .ImageTag }}
 
 patches:
@@ -169,6 +164,7 @@ resources:
 
 images:
   - name: k8ssandra/k8ssandra-operator
+    newName: {{ .ImageName }}
     newTag: {{ .ImageTag }}
 
 patches:
@@ -211,14 +207,12 @@ replacements:
       - webhooks.0.clientConfig.service.namespace
 `
 
-	k := Kustomization{Namespace: config.Namespace, ImageTag: config.ImageTag}
-
-	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), k, controlPlaneTmpl)
+	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), config, controlPlaneTmpl)
 	if err != nil {
 		return err
 	}
 
-	return generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", dataPlaneDir), k, dataPlaneTmpl)
+	return generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", dataPlaneDir), config, dataPlaneTmpl)
 }
 
 // generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
@@ -233,7 +227,7 @@ func generateKustomizationFile(name string, data interface{}, tmpl string) error
 
 	parsed, err := template.New(name).Parse(tmpl)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	file, err := os.Create(filepath.Join(dir, "kustomization.yaml"))
@@ -304,6 +298,7 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 type OperatorDeploymentConfig struct {
 	Namespace     string
 	ClusterScoped bool
+	ImageName     string
 	ImageTag      string
 }
 

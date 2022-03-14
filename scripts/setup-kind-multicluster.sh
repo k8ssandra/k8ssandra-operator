@@ -104,7 +104,7 @@ cat << EOF2
       kind: JoinConfiguration
       nodeRegistration:
         kubeletExtraArgs:
-          node-labels: "topology.kubernetes.io/zone=rack$i"
+          node-labels: "topology.kubernetes.io/zone=region$((${cluster_id}+1))-zone$i"
 EOF2
 done)
 EOF

@@ -1,12 +1,15 @@
 package framework
 
 import (
-	"errors"
+	"fmt"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/yq"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
+	"sigs.k8s.io/yaml"
 	"strings"
 )
 
@@ -39,69 +42,100 @@ func NewTestFixture(name, k8sContext string) *TestFixture {
 	}
 }
 
-func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) error {
-	numDcs, err := fixture.countK8ssandraDatacenters()
-	if err != nil {
+func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture, zones map[string]string, storage string, hostNetwork bool) error {
+	contexts := make(map[string]string)
+	for i, context := range f.DataPlaneContexts {
+		contexts[fmt.Sprintf("kind-k8ssandra-%v", i)] = context
+	}
+	if fixturesKustomizeTemplate, err := os.ReadFile(filepath.Join("..", "framework", "fixtures.tmpl")); err != nil {
 		return err
-	}
-	dcContexts := f.DataPlaneContexts[:numDcs]
-	data := &fixtureKustomization{
-		Namespace:    namespace,
-		Fixture:      fixture.Name,
-		FixtureDepth: strings.Repeat("../", 4+strings.Count(fixture.Name, "/")),
-		DcContexts:   dcContexts,
-	}
-	err = generateKustomizationFile("fixtures/"+fixture.Name, data, fixtureKustomizeTemplate)
-	if err != nil {
+	} else if kustomization, err := generateFixtureKustomization(namespace, fixture, contexts, zones, storage, hostNetwork); err != nil {
+		return err
+	} else if err = generateKustomizationFile("fixtures/"+fixture.Name, kustomization, string(fixturesKustomizeTemplate)); err != nil {
 		return err
 	}
 	return f.kustomizeAndApply(fixture.kustomizeDir, namespace, fixture.K8sContext)
 }
 
 type fixtureKustomization struct {
-	Namespace    string
-	Fixture      string
-	FixtureDepth string
-	DcContexts   []string
+	Namespace           string
+	Fixture             string
+	FixtureDepth        string
+	Contexts            map[string]string
+	Zones               map[string]string
+	Storage             string
+	HostNetwork         bool
+	K8ssandraCluster    *coreapi.K8ssandraClusterSpec
+	CassandraDatacenter *cassdcapi.CassandraDatacenterSpec
+	Stargate            *stargateapi.StargateSpec
 }
 
-// countK8ssandraDatacenters counts the number of dc definitions in the K8ssandraCluster resource of
-// this fixture. For now, we only read one single K8ssandraCluster declared in k8ssandra.yaml. If
-// some fixtures in the future decide to create more than one K8ssandraCluster, we'll have to
-// revisit this and create per-K8ssandraCluster kustomizations.
-func (f *TestFixture) countK8ssandraDatacenters() (int, error) {
-	k8ssandraYamlFile := filepath.Join(f.definitionsDir, "k8ssandra.yaml")
-	if _, err := os.Stat(k8ssandraYamlFile); err == nil {
-		result, err := yq.Eval(
-			". | select(.kind == \"K8ssandraCluster\") | .spec.cassandra.datacenters.[] as $item ireduce (0; . +1)",
-			yq.Options{All: true},
-			k8ssandraYamlFile,
-		)
-		if err != nil {
-			return -1, err
-		}
-		return strconv.Atoi(result)
-	} else if errors.Is(err, fs.ErrNotExist) {
-		return 0, nil
-	} else {
-		return -1, err
+// For now, we only read and kustomize:
+// - the single K8ssandraCluster declared in k8ssandra.yaml, if present;
+// - the single (standalone) CassandraDatacenter declared in cassdc.yaml, if present;
+// - the single (standalone) Stargate declared in stargate.yaml, if present.
+// If some fixtures in the future decide to create more resources, we'll have to revisit this and
+// create more fine-grained kustomizations.
+func generateFixtureKustomization(namespace string, fixture *TestFixture, contexts map[string]string, zones map[string]string, storage string, hostNetwork bool) (*fixtureKustomization, error) {
+	kustomization := &fixtureKustomization{
+		Namespace:    namespace,
+		Fixture:      fixture.Name,
+		FixtureDepth: strings.Repeat("../", 4+strings.Count(fixture.Name, "/")), Contexts: contexts,
+		Zones:       zones,
+		Storage:     storage,
+		HostNetwork: hostNetwork,
 	}
+	if k8c, err := getFixtureK8ssandraCluster(fixture); err != nil {
+		return nil, err
+	} else if k8c != nil {
+		kustomization.K8ssandraCluster = &k8c.Spec
+	}
+	if dc, err := getFixtureCassandraDatacenter(fixture); err != nil {
+		return nil, err
+	} else if dc != nil {
+		kustomization.CassandraDatacenter = &dc.Spec
+	}
+	if sg, err := getFixtureStargate(fixture); err != nil {
+		return nil, err
+	} else if sg != nil {
+		kustomization.Stargate = &sg.Spec
+	}
+	return kustomization, nil
 }
 
-const fixtureKustomizeTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: {{.Namespace}}
-resources:
-- {{ .FixtureDepth }}test/testdata/fixtures/{{ .Fixture }}
-{{if .DcContexts}}
-patches:
-  - patch: |-
-{{range $index, $dcContext := .DcContexts}}
-      - op: replace
-        path: /spec/cassandra/datacenters/{{ $index }}/k8sContext
-        value: {{ $dcContext }}
-{{end}}
-    target:
-      kind: K8ssandraCluster
-{{end}}
-`
+func getFixtureK8ssandraCluster(fixture *TestFixture) (*coreapi.K8ssandraCluster, error) {
+	obj, err := evalAndUnmarshal(fixture, "K8ssandraCluster", &coreapi.K8ssandraCluster{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*coreapi.K8ssandraCluster), err
+}
+
+func getFixtureCassandraDatacenter(fixture *TestFixture) (*cassdcapi.CassandraDatacenter, error) {
+	obj, err := evalAndUnmarshal(fixture, "CassandraDatacenter", &cassdcapi.CassandraDatacenter{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*cassdcapi.CassandraDatacenter), err
+}
+
+func getFixtureStargate(fixture *TestFixture) (*stargateapi.Stargate, error) {
+	obj, err := evalAndUnmarshal(fixture, "Stargate", &stargateapi.Stargate{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*stargateapi.Stargate), err
+}
+
+func evalAndUnmarshal(fixture *TestFixture, kind string, obj interface{}) (interface{}, error) {
+	if files, err := utils.ListFiles(fixture.definitionsDir, "*.yaml"); err != nil {
+		return nil, err
+	} else if eval, err := yq.Eval(". | select(.kind == \""+kind+"\") ", yq.Options{All: true}, files...); err != nil {
+		return nil, err
+	} else if len(eval) == 0 {
+		return nil, nil
+	} else if err = yaml.Unmarshal([]byte(eval), obj); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}

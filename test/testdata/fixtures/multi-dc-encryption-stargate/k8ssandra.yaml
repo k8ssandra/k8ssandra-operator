@@ -30,13 +30,6 @@ spec:
         resources:
           requests:
             storage: 5Gi
-    racks:
-      - name: rack1
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack1
-      - name: rack2
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack2
     config:
       cassandraYaml:
         auto_snapshot: false
@@ -75,10 +68,76 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 2
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone2
+        stargate:
+          size: 1
+          heapSize: 384Mi
+          cassandraConfigMapRef:
+            name: cassandra-config
+          livenessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          readinessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: topology.kubernetes.io/zone
+                        operator: In
+                        values:
+                          - region1-zone3
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 2
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone2
+        stargate:
+          size: 1
+          heapSize: 384Mi
+          cassandraConfigMapRef:
+            name: cassandra-config
+          livenessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          readinessProbe:
+            initialDelaySeconds: 100
+            periodSeconds: 10
+            failureThreshold: 20
+            successThreshold: 1
+            timeoutSeconds: 20
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: topology.kubernetes.io/zone
+                        operator: In
+                        values:
+                          - region2-zone3
     serverEncryptionStores:
       keystoreSecretRef:
         name: server-encryption-stores
@@ -89,29 +148,3 @@ spec:
         name: client-encryption-stores
       truststoreSecretRef:
         name: client-encryption-stores
-  stargate:
-    size: 1
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: topology.kubernetes.io/zone
-                  operator: In
-                  values:
-                    - rack3
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    livenessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 100
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20

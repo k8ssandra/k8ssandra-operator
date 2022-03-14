@@ -39,11 +39,11 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespa
 	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName, stargateRestHostAndPort.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
 	stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
 			SetHeader("Content-Type", "application/json").
@@ -55,7 +55,7 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespa
 			return err == nil && response.StatusCode() == http.StatusBadRequest
 		}
 	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		var credentials *client.AuthCredentials
 		if username != "" {
 			credentials = &client.AuthCredentials{Username: username, Password: password}
@@ -78,7 +78,7 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, 
 	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName, reaperHostAndPort.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
 	reaperHttp := fmt.Sprintf("http://%s", reaperHostAndPort)
