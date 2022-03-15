@@ -102,7 +102,7 @@ jobs:
         make kustomize
     - name: Run kuttl-test
       run: |
-        # We are running tests against k8s 1.20 - 1.22 currently. 
+        # We are running tests against k8s 1.21
         # Additional versions must be added in kind config files under ./test/config/kind
 
         # Currently we aren't using the kuttl-test Makefile target while trying to iron out the

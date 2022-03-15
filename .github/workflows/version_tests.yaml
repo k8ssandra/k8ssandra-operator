@@ -59,16 +59,11 @@ jobs:
     strategy:
       matrix:
         k8s_version: ["1.21"]
+        serverVersion: 
+        - 3.11.12
+        - 4.0.3
         kuttl-test:
         - test-cassandra-versions
-        serverVersion: 
-        - 3.11.10
-        - 3.11.11
-        - 3.11.12
-        - 4.0.0
-        - 4.0.1
-        - 4.0.2
-        - 4.0.3
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -109,7 +104,7 @@ jobs:
         make kustomize
     - name: Run kuttl-test
       run: |
-        # We are running tests against k8s 1.20 - 1.22 currently. 
+        # We are running tests against k8s 1.21
         # Additional versions must be added in kind config files under ./test/config/kind
 
         # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
