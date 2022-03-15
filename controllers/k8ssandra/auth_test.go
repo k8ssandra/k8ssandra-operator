@@ -33,7 +33,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
-					K8sContext:    f.K8sContext(1),
+					K8sContext:    f.DataPlaneContexts[1],
 					Size:          1,
 					ServerVersion: "3.11.10",
 					StorageConfig: &cassdcapi.StorageConfig{
@@ -51,10 +51,10 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kc)
 	require.NoError(t, err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	reaperKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
@@ -131,7 +131,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
@@ -151,7 +151,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
-					K8sContext:    f.K8sContext(1),
+					K8sContext:    f.DataPlaneContexts[1],
 					Size:          1,
 					ServerVersion: "3.11.10",
 					StorageConfig: &cassdcapi.StorageConfig{
@@ -169,10 +169,10 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err := f.Client.Create(ctx, kc)
 	require.NoError(t, err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	reaperKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
@@ -258,7 +258,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)

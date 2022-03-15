@@ -58,7 +58,7 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 
@@ -135,7 +135,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	addStargateAndReaperToCluster(ctx, t, f, kc)
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-stargate",
@@ -150,7 +150,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	require.NoError(err, "failed to patch stargate status")
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-reaper",
@@ -165,7 +165,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	require.NoError(err, "failed to patch reaper status")
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-stargate",
@@ -180,7 +180,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	require.NoError(err, "failed to patch stargate status")
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-reaper",
@@ -194,7 +194,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 

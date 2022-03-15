@@ -59,24 +59,23 @@ func TestStargate(t *testing.T) {
 	t.Run("CreateStargateSingleRack", func(t *testing.T) {
 		managementApiFactory.SetT(t)
 		managementApiFactory.UseDefaultAdapter()
-		testCreateStargateSingleRack(t, testEnv.TestClient)
+		testCreateStargateSingleRack(t, ctx, testEnv.TestClient)
 	})
 	t.Run("TestCreateStargateEncryption", func(t *testing.T) {
 		managementApiFactory.SetT(t)
 		managementApiFactory.UseDefaultAdapter()
-		testCreateStargateEncryption(t, testEnv.TestClient)
+		testCreateStargateEncryption(t, ctx, testEnv.TestClient)
 	})
 	t.Run("CreateStargateMultiRack", func(t *testing.T) {
 		managementApiFactory.SetT(t)
 		managementApiFactory.UseDefaultAdapter()
-		testCreateStargateMultiRack(t, testEnv.TestClient)
+		testCreateStargateMultiRack(t, ctx, testEnv.TestClient)
 	})
 }
 
-func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
+func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient client.Client) {
 
 	namespace := "default"
-	ctx := context.Background()
 
 	dc := &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
@@ -255,10 +254,9 @@ func testCreateStargateSingleRack(t *testing.T, testClient client.Client) {
 	}, timeout, interval, "stargate was never deleted")
 }
 
-func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
+func testCreateStargateMultiRack(t *testing.T, ctx context.Context, testClient client.Client) {
 
 	namespace := "default"
-	ctx := context.Background()
 
 	dc := &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
@@ -460,10 +458,9 @@ func testCreateStargateMultiRack(t *testing.T, testClient client.Client) {
 	}, timeout, interval, "stargate was never deleted")
 }
 
-func testCreateStargateEncryption(t *testing.T, testClient client.Client) {
+func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient client.Client) {
 
 	namespace := "default"
-	ctx := context.Background()
 
 	// Create the client keystore and truststore secrets
 	clientKeystore := &corev1.Secret{

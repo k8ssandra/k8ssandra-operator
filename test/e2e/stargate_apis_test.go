@@ -20,32 +20,32 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
-func testStargateApis(t *testing.T, ctx context.Context, k8sContextName string, k8sContextIdx int, username string, password string, replication map[string]int) {
-	t.Run(fmt.Sprintf("TestStargateApis[%s]", k8sContextName), func(t *testing.T) {
+func testStargateApis(t *testing.T, ctx context.Context, k8sContext, username, password string, replication map[string]int) {
+	t.Run(fmt.Sprintf("TestStargateApis[%s]", k8sContext), func(t *testing.T) {
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
-			t.Log("test Stargate native API in context " + k8sContextName)
-			testStargateNativeApi(t, ctx, k8sContextIdx, username, password, replication)
+			t.Log("test Stargate native API in context " + k8sContext)
+			testStargateNativeApi(t, ctx, k8sContext, username, password, replication)
 		})
 		t.Run("TestStargateRestApi", func(t *testing.T) {
-			t.Log("test Stargate REST API in context " + k8sContextName)
-			testStargateRestApis(t, k8sContextIdx, username, password, replication)
+			t.Log("test Stargate REST API in context " + k8sContext)
+			testStargateRestApis(t, k8sContext, username, password, replication)
 		})
 	})
 }
 
-func testStargateRestApis(t *testing.T, k8sContextIdx int, username string, password string, replication map[string]int) {
+func testStargateRestApis(t *testing.T, k8sContext, username, password string, replication map[string]int) {
 	restClient := resty.New()
-	token := authenticate(t, restClient, k8sContextIdx, username, password)
+	token := authenticate(t, restClient, k8sContext, username, password)
 	t.Run("TestSchemaApi", func(t *testing.T) {
-		testSchemaApi(t, restClient, k8sContextIdx, token, replication)
+		testSchemaApi(t, restClient, k8sContext, token, replication)
 	})
 	t.Run("TestDocumentApi", func(t *testing.T) {
-		testDocumentApi(t, restClient, k8sContextIdx, token, replication)
+		testDocumentApi(t, restClient, k8sContext, token, replication)
 	})
 }
 
-func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int, username string, password string, replication map[string]int) {
-	connection := openCqlClientConnection(t, ctx, k8sContextIdx, username, password)
+func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContext, username, password string, replication map[string]int) {
+	connection := openCqlClientConnection(t, ctx, k8sContext, username, password)
 	defer connection.Close()
 	tableName := fmt.Sprintf("table_%s", rand.String(6))
 	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
@@ -54,27 +54,28 @@ func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContextIdx int,
 	checkRowCountNative(t, connection, 10, tableName, keyspaceName)
 }
 
-func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
+func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContext, token string, replication map[string]int) {
 	tableName := fmt.Sprintf("table_%s", rand.String(6))
 	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
-	createKeyspaceAndTableRest(t, restClient, k8sContextIdx, token, tableName, keyspaceName, replication)
-	insertRowsRest(t, restClient, k8sContextIdx, token, 10, tableName, keyspaceName)
-	checkRowCountRest(t, restClient, k8sContextIdx, token, 10, tableName, keyspaceName)
+	createKeyspaceAndTableRest(t, restClient, k8sContext, token, tableName, keyspaceName, replication)
+	insertRowsRest(t, restClient, k8sContext, token, 10, tableName, keyspaceName)
+	checkRowCountRest(t, restClient, k8sContext, token, 10, tableName, keyspaceName)
 }
 
-func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, replication map[string]int) {
+func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContext, token string, replication map[string]int) {
 	documentNamespace := fmt.Sprintf("ns_%s", rand.String(6))
 	documentId := fmt.Sprintf("watchmen_%s", rand.String(6))
-	createDocumentNamespace(t, restClient, k8sContextIdx, token, documentNamespace, replication)
-	writeDocument(t, restClient, k8sContextIdx, token, documentNamespace, documentId)
-	readDocument(t, restClient, k8sContextIdx, token, documentNamespace, documentId)
+	createDocumentNamespace(t, restClient, k8sContext, token, documentNamespace, replication)
+	writeDocument(t, restClient, k8sContext, token, documentNamespace, documentId)
+	readDocument(t, restClient, k8sContext, token, documentNamespace, documentId)
 }
 
-func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, tableName, keyspaceName string, replication map[string]int) {
+func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sContext, token, tableName, keyspaceName string, replication map[string]int) {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
 	require.Eventually(t, func() bool {
-		keyspaceUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces", k8sContextIdx)
+		keyspaceUrl := fmt.Sprintf("http://%s/v2/schemas/keyspaces", stargateRestHostAndPort)
 		keyspaceJson := fmt.Sprintf(`{"name":"%v","datacenters":%v}`, keyspaceName, formatReplicationForRestApi(replication))
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
@@ -84,7 +85,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Create keyspace with Schema API failed")
 	require.Eventually(t, func() bool {
-		keyspaceUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v", k8sContextIdx, keyspaceName)
+		keyspaceUrl := fmt.Sprintf("http://%v/v2/schemas/keyspaces/%v", stargateRestHostAndPort, keyspaceName)
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
@@ -92,7 +93,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		return err == nil && response.StatusCode() == http.StatusOK
 	}, timeout, interval, "Retrieve keyspace with Schema API failed")
 	require.Eventually(t, func() bool {
-		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%s/tables", k8sContextIdx, keyspaceName)
+		tableUrl := fmt.Sprintf("http://%s/v2/schemas/keyspaces/%s/tables", stargateRestHostAndPort, keyspaceName)
 		tableJson := fmt.Sprintf(
 			`{ 
           "name": "%v", 
@@ -112,7 +113,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Create table with Schema API failed")
 	require.Eventually(t, func() bool {
-		tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/keyspaces/%v/tables/%v", k8sContextIdx, keyspaceName, tableName)
+		tableUrl := fmt.Sprintf("http://%s/v2/schemas/keyspaces/%v/tables/%v", stargateRestHostAndPort, keyspaceName, tableName)
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
@@ -121,8 +122,9 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 	}, timeout, interval, "Retrieve table with Schema API failed")
 }
 
-func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, nbRows int, tableName, keyspaceName string) {
-	tableUrl := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/keyspaces/%s/%s", k8sContextIdx, keyspaceName, tableName)
+func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContext, token string, nbRows int, tableName, keyspaceName string) {
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	tableUrl := fmt.Sprintf("http://%s/v2/keyspaces/%s/%s", stargateRestHostAndPort, keyspaceName, tableName)
 	for i := 0; i < nbRows; i++ {
 		rowJson := fmt.Sprintf(`{"pk":"0","cc":"%v","v":"%v"}`, i, i)
 		request := restClient.NewRequest().
@@ -135,10 +137,11 @@ func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, t
 	}
 }
 
-func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContextIdx int, token string, nbRows int, tableName, keyspaceName string) {
+func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContext, token string, nbRows int, tableName, keyspaceName string) {
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
 	tableUrl := fmt.Sprintf(
-		"http://stargate.127.0.0.1.nip.io:3%v080/v2/keyspaces/%s/%s?",
-		k8sContextIdx,
+		"http://%s/v2/keyspaces/%s/%s?",
+		stargateRestHostAndPort,
 		keyspaceName,
 		tableName,
 	)
@@ -156,11 +159,12 @@ func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContextIdx int
 	}
 }
 
-func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace string, replication map[string]int) string {
+func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace string, replication map[string]int) string {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
 	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces", k8sContextIdx)
+		url := fmt.Sprintf("http://%s/v2/schemas/namespaces", stargateRestHostAndPort)
 		documentNamespaceJson := fmt.Sprintf(`{"name":"%s","datacenters":%v}`, documentNamespace, formatReplicationForRestApi(replication))
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
@@ -170,7 +174,7 @@ func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContextI
 		return err == nil && response.StatusCode() == http.StatusCreated
 	}, timeout, interval, "Create namespace with Document API failed")
 	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/schemas/namespaces/%v", k8sContextIdx, documentNamespace)
+		url := fmt.Sprintf("http://%s/v2/schemas/namespaces/%v", stargateRestHostAndPort, documentNamespace)
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
 			SetHeader("X-Cassandra-Token", token)
@@ -185,8 +189,9 @@ const (
 	awesomeMovieName     = "Watchmen"
 )
 
-func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace, documentId string) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/namespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
+func writeDocument(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace, documentId string) {
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	url := fmt.Sprintf("http://%s/v2/namespaces/%s/collections/movies/%s", stargateRestHostAndPort, documentNamespace, documentId)
 	awesomeMovieDocument := map[string]string{"Director": awesomeMovieDirector, "Name": awesomeMovieName}
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
@@ -200,8 +205,9 @@ func writeDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, to
 	}
 }
 
-func readDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, token, documentNamespace, documentId string) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v2/namespaces/%s/collections/movies/%s", k8sContextIdx, documentNamespace, documentId)
+func readDocument(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace, documentId string) {
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	url := fmt.Sprintf("http://%s/v2/namespaces/%s/collections/movies/%s", stargateRestHostAndPort, documentNamespace, documentId)
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("X-Cassandra-Token", token).
@@ -221,10 +227,11 @@ func readDocument(t *testing.T, restClient *resty.Client, k8sContextIdx int, tok
 	}
 }
 
-func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, username, password string) string {
+func authenticate(t *testing.T, restClient *resty.Client, k8sContext, username, password string) string {
 	var result map[string]interface{}
+	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
 	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
+		url := fmt.Sprintf("http://%s/v1/auth", stargateRestHostAndPort)
 		body := map[string]string{"username": username, "password": password}
 		request := restClient.NewRequest().
 			SetHeader("Content-Type", "application/json").
@@ -244,8 +251,8 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContextIdx int, use
 	return tokenStr
 }
 
-func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx int, username, password string) *client.CqlClientConnection {
-	contactPoint := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
+func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContext, username, password string) *client.CqlClientConnection {
+	contactPoint := ingresses[k8sContext]["stargate_cql"]
 	var credentials *client.AuthCredentials
 	if username != "" {
 		credentials = &client.AuthCredentials{Username: username, Password: password}

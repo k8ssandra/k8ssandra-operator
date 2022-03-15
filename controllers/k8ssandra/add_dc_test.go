@@ -59,7 +59,7 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.K8sContext(0),
+						K8sContext:    f.DataPlaneContexts[0],
 						Size:          3,
 						ServerVersion: "4.0.1",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -76,12 +76,12 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 
 	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
-	createReplicatedSecret(ctx, t, f, kcKey, f.K8sContext(0))
+	createReplicatedSecret(ctx, t, f, kcKey, f.DataPlaneContexts[0])
 	setReplicationStatusDone(ctx, t, f, kcKey)
 
 	createCassandraDatacenter(ctx, t, f, kc, 0)
 
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dc1Key, dc)
@@ -127,14 +127,14 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext: f.K8sContext(0),
+						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: f.K8sContext(1),
+						K8sContext: f.DataPlaneContexts[1],
 						Size:       3,
 					},
 				},
@@ -145,12 +145,12 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
-	createReplicatedSecret(ctx, t, f, kcKey, f.K8sContext(0), f.K8sContext(1))
+	createReplicatedSecret(ctx, t, f, kcKey, f.DataPlaneContexts[0], f.DataPlaneContexts[1])
 	setReplicationStatusDone(ctx, t, f, kcKey)
 
 	createCassandraDatacenter(ctx, t, f, kc, 0)
 
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dc1Key, dc)
 	require.NoError(err)
@@ -160,7 +160,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	createCassandraDatacenter(ctx, t, f, kc, 1)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	dc = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc)
 	require.NoError(err)
@@ -203,7 +203,7 @@ func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, 
 
 		test(ctx, t, f, kc)
 
-		if err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc)); err != nil {
+		if err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval); err != nil {
 			t.Fatalf("failed to delete k8ssandracluster: %v", err)
 		}
 	}
@@ -241,7 +241,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -260,7 +260,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 		verifyReplicationOfKeyspaceUpdated(t, mockMgmtApi, ks, updatedReplication)
 	}
 
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
 }
@@ -289,7 +289,7 @@ func schemaDisagreementOnSystemKeyspaces(ctx context.Context, t *testing.T, f *f
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -335,7 +335,7 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc3Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc3"}, K8sContext: f.K8sContext(2)}
+	dc3Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc3"}, K8sContext: f.DataPlaneContexts[2]}
 
 	kcKey := utils.GetKey(kc)
 	kc = &api.K8ssandraCluster{}
@@ -359,12 +359,12 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 
 	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc2Key)
 
 	rebuildTaskKey := framework.ClusterKey{
-		K8sContext: f.K8sContext(2),
+		K8sContext: f.DataPlaneContexts[2],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      "dc3-rebuild",
@@ -406,7 +406,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	addStargateAndReaperToCluster(ctx, t, f, kc)
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-stargate",
@@ -421,7 +421,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	require.NoError(err, "failed to patch stargate status")
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-reaper",
@@ -435,7 +435,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -450,12 +450,12 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 
 	verifyReplicationOfInternalKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
 
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
 
 	rebuildTaskKey := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      "dc2-rebuild",
@@ -464,7 +464,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-stargate"},
@@ -478,7 +478,7 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	require.NoError(err, "failed to patch stargate status")
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-reaper",
@@ -521,7 +521,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	addStargateAndReaperToCluster(ctx, t, f, kc)
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-stargate",
@@ -536,7 +536,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	require.NoError(err, "failed to patch stargate status")
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc1-reaper",
@@ -550,7 +550,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -564,7 +564,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	require.NoError(err, "failed to set dc2 status ready")
 
 	rebuildTaskKey := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      "dc2-rebuild",
@@ -573,7 +573,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	f.AssertObjectDoesNotExist(ctx, t, rebuildTaskKey, &cassctlapi.CassandraTask{}, timeout, interval)
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-stargate"},
@@ -581,7 +581,7 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, timeout, interval)
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: kc.Namespace,
 			Name:      kc.Name + "-dc2-reaper",
@@ -613,7 +613,7 @@ func failSystemKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fr
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -667,7 +667,7 @@ func failUserKeyspaceUpdate(ctx context.Context, t *testing.T, f *framework.Fram
 	kcKey := utils.GetKey(kc)
 	namespace := kcKey.Namespace
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDcToCluster(ctx, t, f, kc, dc2Key)
 
@@ -840,7 +840,7 @@ func verifyRebuildTaskNotCreated(ctx context.Context, t *testing.T, f *framework
 
 	taskKey := framework.ClusterKey{
 		NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcName + "-rebuild"},
-		K8sContext:     f.K8sContext(1),
+		K8sContext:     f.DataPlaneContexts[1],
 	}
 	require.Never(t, func() bool {
 		err := f.Get(ctx, taskKey, &cassctlapi.CassandraTask{})

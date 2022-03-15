@@ -25,13 +25,13 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.NewClusterKey(f.K8sContext(0), namespace, "dc1")
-	sg1Key := framework.NewClusterKey(f.K8sContext(0), namespace, "cluster1-dc1-stargate")
-	reaper1Key := framework.NewClusterKey(f.K8sContext(0), namespace, "cluster1-dc1-reaper")
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
+	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate")
+	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper")
 
-	dc2Key := framework.NewClusterKey(f.K8sContext(1), namespace, "dc2")
-	sg2Key := framework.NewClusterKey(f.K8sContext(1), namespace, "cluster1-dc2-stargate")
-	reaper2Key := framework.NewClusterKey(f.K8sContext(1), namespace, "cluster1-dc2-reaper")
+	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "dc2")
+	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate")
+	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper")
 
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
@@ -46,26 +46,24 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperNotFound(t, f, ctx, reaper1Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, kcKey.Namespace, "cluster1")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")
 
-	t.Log("deploying Stargate and Reaper ingress routes in", f.K8sContext(1))
-	f.DeployStargateIngresses(t, 1, namespace, "cluster1-dc2-stargate-service", username, password)
-	f.DeployReaperIngresses(t, ctx, 1, namespace, "cluster1-dc2-reaper-service")
-
-	defer f.UndeployAllIngresses(t, 0, namespace)
-	defer f.UndeployAllIngresses(t, 1, namespace)
+	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[1])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", username, password)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service")
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	pod1Name := "cluster1-dc1-default-sts-0"
 	pod2Name := "cluster1-dc2-default-sts-0"
 
-	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.K8sContext(1), namespace, pod2Name)
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[1], namespace, pod2Name)
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
-		testStargateApis(t, ctx, f.K8sContext(1), 1, username, password, map[string]int{"dc2": 1})
-		uiKey := framework.NewClusterKey(f.K8sContext(1), namespace, reaper.DefaultUiSecretName("cluster1"))
+		testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, map[string]int{"dc2": 1})
+		uiKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		connectReaperApi(t, ctx, 1, "cluster1", uiUsername, uiPassword)
-		checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 1, 1, "-u", username, "-pw", password)
+		connectReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", uiUsername, uiPassword)
+		checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 1, 1, "-u", username, "-pw", password)
 	})
 
 	toggleDcStopped(t, f, ctx, kcKey, dc2Key, true)
@@ -80,18 +78,19 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkStargateReady(t, f, ctx, sg1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 
-	t.Log("deploying Stargate and Reaper ingress routes in", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "cluster1-dc1-stargate-service", username, password)
-	f.DeployReaperIngresses(t, ctx, 0, namespace, "cluster1-dc1-reaper-service")
+	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", username, password)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service")
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
-	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.K8sContext(0), namespace, pod1Name)
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name)
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
-		testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, map[string]int{"dc1": 1})
-		uiKey := framework.NewClusterKey(f.K8sContext(0), namespace, reaper.DefaultUiSecretName("cluster1"))
+		testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, map[string]int{"dc1": 1})
+		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		connectReaperApi(t, ctx, 0, "cluster1", uiUsername, uiPassword)
-		checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 1, 1, "-u", username, "-pw", password)
+		connectReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", uiUsername, uiPassword)
+		checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 1, 1, "-u", username, "-pw", password)
 	})
 
 	toggleDcStopped(t, f, ctx, kcKey, dc2Key, false)
@@ -101,13 +100,13 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperNotFound(t, f, ctx, reaper2Key)
 
 	t.Run("TestApisDcsRestarted", func(t *testing.T) {
-		testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, map[string]int{"dc1": 1, "dc2": 1})
-		testStargateApis(t, ctx, f.K8sContext(1), 1, username, password, map[string]int{"dc1": 1, "dc2": 1})
-		uiKey := framework.NewClusterKey(f.K8sContext(0), namespace, reaper.DefaultUiSecretName("cluster1"))
+		testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, map[string]int{"dc1": 1, "dc2": 1})
+		testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, map[string]int{"dc1": 1, "dc2": 1})
+		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		testReaperApi(t, ctx, 0, "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
-		checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
-		checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
+		testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
+		checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
+		checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
 	})
 }
 

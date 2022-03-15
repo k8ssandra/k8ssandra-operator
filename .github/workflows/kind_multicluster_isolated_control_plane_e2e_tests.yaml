@@ -1,5 +1,4 @@
-# This workflow is for tests that require multiple clusters.
-name: Run multi-cluster e2e tests
+name: Run e2e tests with isolated control plane
 on:
   push:
     branches:
@@ -57,26 +56,14 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          - CreateMultiDatacenterCluster
-          - CreateMixedMultiDataCenterCluster
-          - AddDcToCluster
-          - RemoveDcFromCluster
-          - CheckStargateApisWithMultiDcCluster
-          - CreateMultiStargateAndDatacenter
           - CreateMultiReaper
-          - ClusterScoped/MultiDcMultiCluster
-          - CreateMultiMedusa
-          - MultiDcAuthOnOff
-          - MultiDcEncryptionWithStargate
-          - MultiDcEncryptionWithReaper
-          - StopAndRestartDc
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
       CGO_ENABLED: 0
       KUBECONFIG_FILE: "./build/kind-kubeconfig"
       CONTROL_PLANE: kind-k8ssandra-0
-      DATA_PLANES: kind-k8ssandra-0,kind-k8ssandra-1
+      DATA_PLANES: kind-k8ssandra-1,kind-k8ssandra-2
     steps:
       - name: Free diskspace by removing unused packages
         run: |
@@ -122,7 +109,7 @@ jobs:
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind clusters
-        run: make IMG="k8ssandra/k8ssandra-operator:latest" create-kind-multicluster kind-load-image-multi
+        run: make IMG="k8ssandra/k8ssandra-operator:latest" NUM_CLUSTERS=3 NUM_WORKER_NODES=1,2,2 create-kind-multicluster kind-load-image-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
           e2e_test="TestOperator/${{ matrix.e2e_test }}"

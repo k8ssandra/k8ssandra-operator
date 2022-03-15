@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,7 +36,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 						Meta: k8ss.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.K8sContext(0),
+						K8sContext:    f.DataPlaneContexts[0],
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -70,7 +69,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -83,7 +82,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, "test")
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -135,7 +134,8 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 		},
 	}
 
-	err = f.Client.Create(ctx, backup)
+	backupKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restoredBackupName)
+	err = f.Create(ctx, backupKey, backup)
 	require.NoError(err, "failed to create CassandraBackup")
 
 	restore := &api.CassandraRestore{
@@ -154,32 +154,29 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 		},
 	}
 
-	restoreKey := types.NamespacedName{Namespace: restore.Namespace, Name: restore.Name}
-	testClient := f.Client
-	err = testClient.Create(ctx, restore)
+	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "test-restore")
+	err = f.Create(ctx, restoreKey, restore)
 	require.NoError(err, "failed to create CassandraRestore")
 
-	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc1"}
-
-	withDc := newWithDatacenter(t, ctx, dcKey, testClient)
+	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 
 	t.Log("check that the datacenter is set to be stopped")
-	require.Eventually(withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
 		return dc.Spec.Stopped == true
 	}), timeout, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
 
 	t.Log("delete datacenter pods to simulate shutdown")
-	err = testClient.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "dc1"})
+	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "dc1"})
 	require.NoError(err, "failed to delete datacenter pods")
 
 	restore = &api.CassandraRestore{}
-	err = testClient.Get(ctx, restoreKey, restore)
+	err = f.Get(ctx, restoreKey, restore)
 	require.NoError(err, "failed to get CassandraRestore")
 
 	dcStoppedTime := restore.Status.StartTime.Time.Add(1 * time.Second)
 
 	t.Log("set datacenter status to stopped")
-	err = patchDatacenterStatus(ctx, dcKey, testClient, func(dc *cassdcapi.CassandraDatacenter) {
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterStopped,
 			Status:             corev1.ConditionTrue,
@@ -189,7 +186,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	require.NoError(err, "failed to update datacenter status with stopped condition")
 
 	t.Log("check that the datacenter podTemplateSpec is updated")
-	require.Eventually(withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
 		restoreContainer := findContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers, "medusa-restore")
 		if restoreContainer == nil {
 			t.Log("restore container not found")
@@ -208,7 +205,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	}), timeout, interval, "timed out waiting for CassandraDatacenter PodTemplateSpec update")
 
 	restore = &api.CassandraRestore{}
-	err = testClient.Get(ctx, restoreKey, restore)
+	err = f.Get(ctx, restoreKey, restore)
 	require.NoError(err, "failed to get CassandraRestore")
 
 	// In addition to checking Updating condition, the restore controller also checks the
@@ -217,7 +214,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	// the StatefulSets. While we could create the StatefulSets in this test, it will be
 	// easier/better to verify the StatefulSet checks in unit and e2e tests.
 	t.Log("set datacenter status to updated")
-	err = patchDatacenterStatus(ctx, dcKey, testClient, func(dc *cassdcapi.CassandraDatacenter) {
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterUpdating,
 			Status:             corev1.ConditionFalse,
@@ -227,20 +224,20 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	require.NoError(err, "failed to update datacenter status with updating condition")
 
 	dc := &cassdcapi.CassandraDatacenter{}
-	err = testClient.Get(ctx, dcKey, dc)
+	err = f.Get(ctx, dc1Key, dc)
 	require.NoError(err)
 
 	restore = &api.CassandraRestore{}
-	err = testClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test-restore"}, restore)
+	err = f.Get(ctx, restoreKey, restore)
 	require.NoError(err)
 
 	t.Log("check datacenter restarted")
-	require.Eventually(withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
 		return !dc.Spec.Stopped
 	}), timeout, interval)
 
 	t.Log("set datacenter status to ready")
-	err = patchDatacenterStatus(ctx, dcKey, testClient, func(dc *cassdcapi.CassandraDatacenter) {
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
 		dc.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterReady,
@@ -254,7 +251,7 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 	t.Log("check restore status finish time set")
 	require.Eventually(func() bool {
 		restore := &api.CassandraRestore{}
-		err := testClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test-restore"}, restore)
+		err := f.Get(ctx, restoreKey, restore)
 		if err != nil {
 			return false
 		}
@@ -262,28 +259,8 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 		return !restore.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
-}
-
-// newWithDatacenter is a function generator for withDatacenter that is bound to t, ctx, and key.
-func newWithDatacenter(t *testing.T, ctx context.Context, key types.NamespacedName, testClient client.Client) func(func(*cassdcapi.CassandraDatacenter) bool) func() bool {
-	return func(condition func(dc *cassdcapi.CassandraDatacenter) bool) func() bool {
-		return withDatacenter(t, ctx, key, testClient, condition)
-	}
-}
-
-// withDatacenter Fetches the CassandraDatacenter specified by key and then calls condition.
-func withDatacenter(t *testing.T, ctx context.Context, key types.NamespacedName, testClient client.Client, condition func(*cassdcapi.CassandraDatacenter) bool) func() bool {
-	return func() bool {
-		dc := &cassdcapi.CassandraDatacenter{}
-		if err := testClient.Get(ctx, key, dc); err == nil {
-			return condition(dc)
-		} else {
-			t.Logf("failed to get CassandraDatacenter: %s", err)
-			return false
-		}
-	}
 }
 
 func findContainer(containers []corev1.Container, name string) *corev1.Container {
@@ -302,18 +279,4 @@ func findEnvVar(envVars []corev1.EnvVar, name string) *corev1.EnvVar {
 		}
 	}
 	return nil
-}
-
-func patchDatacenterStatus(ctx context.Context, key types.NamespacedName, testClient client.Client, updateFn func(dc *cassdcapi.CassandraDatacenter)) error {
-	dc := &cassdcapi.CassandraDatacenter{}
-	err := testClient.Get(ctx, key, dc)
-
-	if err != nil {
-		return err
-	}
-
-	patch := client.MergeFromWithOptions(dc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	updateFn(dc)
-
-	return testClient.Status().Patch(ctx, dc, patch)
 }

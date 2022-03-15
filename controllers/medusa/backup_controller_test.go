@@ -26,7 +26,6 @@ import (
 
 const (
 	medusaImageRepo     = "test/medusa"
-	storageSecret       = "storage-secret"
 	cassandraUserSecret = "medusa-secret"
 	defaultBackupName   = "backup1"
 )
@@ -46,7 +45,7 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: k8ss.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.K8sContext(0),
+						K8sContext:    f.DataPlaneContexts[0],
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -79,7 +78,7 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -92,7 +91,7 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, "test")
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -132,7 +131,7 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
 
-	backupCreated := createAndVerifyBackup(dc1Key, dc1, f, ctx, require, t, namespace, defaultBackupName)
+	backupCreated := createAndVerifyBackup(t, f, ctx, dc1Key, dc1, defaultBackupName)
 	require.True(backupCreated, "failed to create backup")
 
 	t.Log("verify that medusa gRPC clients are invoked")
@@ -142,7 +141,7 @@ func testBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framew
 		fmt.Sprintf("%s:%d", getPodIpAddress(2), backupSidecarPort): {defaultBackupName},
 	}, medusaClientFactory.GetRequestedBackups())
 
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 }
@@ -154,8 +153,15 @@ func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Fr
 	}, timeout, interval, "failed to verify object does not exist", key)
 }
 
-func createAndVerifyBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, ctx context.Context, require *require.Assertions, t *testing.T, namespace, backupName string) bool {
-	dcServiceKey := types.NamespacedName{Namespace: dcKey.Namespace, Name: dc.GetAllPodsServiceName()}
+func createAndVerifyBackup(
+	t *testing.T,
+	f *framework.Framework,
+	ctx context.Context,
+	dcKey framework.ClusterKey,
+	dc *cassdcapi.CassandraDatacenter,
+	backupName string,
+) bool {
+	dcServiceKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, dc.GetAllPodsServiceName())
 	dcService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dcServiceKey.Namespace,
@@ -174,16 +180,16 @@ func createAndVerifyBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDa
 		},
 	}
 
-	err := f.Client.Create(ctx, dcService)
-	require.NoError(err)
+	err := f.Create(ctx, dcServiceKey, dcService)
+	require.NoError(t, err)
 
-	createDatacenterPods(t, ctx, dc, f.Client)
+	createDatacenterPods(t, f, ctx, dcKey, dc)
 
 	t.Log("creating CassandraBackup")
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
+	backupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	backup := &api.CassandraBackup{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
+			Namespace: dcKey.Namespace,
 			Name:      backupName,
 		},
 		Spec: api.CassandraBackupSpec{
@@ -192,13 +198,13 @@ func createAndVerifyBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDa
 		},
 	}
 
-	err = f.Client.Create(ctx, backup)
-	require.NoError(err, "failed to create CassandraBackup")
+	err = f.Create(ctx, backupKey, backup)
+	require.NoError(t, err, "failed to create CassandraBackup")
 
 	t.Log("verify that the backups are started")
-	require.Eventually(func() bool {
+	require.Eventually(t, func() bool {
 		updated := &api.CassandraBackup{}
-		err := f.Client.Get(context.Background(), backupKey, updated)
+		err := f.Get(ctx, backupKey, updated)
 		if err != nil {
 			t.Logf("failed to get CassandraBackup: %v", err)
 			return false
@@ -207,9 +213,9 @@ func createAndVerifyBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDa
 	}, timeout, interval)
 
 	t.Log("verify that the CassandraDatacenter spec is added to the backup status")
-	require.Eventually(func() bool {
+	require.Eventually(t, func() bool {
 		updated := &api.CassandraBackup{}
-		err := f.Client.Get(context.Background(), backupKey, updated)
+		err := f.Get(ctx, backupKey, updated)
 		if err != nil {
 			return false
 		}
@@ -234,9 +240,9 @@ func createAndVerifyBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDa
 	}, timeout, interval)
 
 	t.Log("verify the backup finished")
-	require.Eventually(func() bool {
+	require.Eventually(t, func() bool {
 		updated := &api.CassandraBackup{}
-		err := f.Client.Get(context.Background(), backupKey, updated)
+		err := f.Get(ctx, backupKey, updated)
 		if err != nil {
 			return false
 		}
@@ -276,7 +282,7 @@ func reconcileReplicatedSecret(ctx context.Context, t *testing.T, f *framework.F
 	require.NoError(t, err, "Failed to update ReplicationSecret status")
 }
 
-// Creates a fake ip address with the pod's orginal index from the StatefulSet
+// Creates a fake ip address with the pod's original index from the StatefulSet
 func getPodIpAddress(index int) string {
 	return "192.168.1." + strconv.Itoa(50+index)
 }
@@ -340,17 +346,19 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 	return nil
 }
 
-func createDatacenterPods(t *testing.T, ctx context.Context, dc *cassdcapi.CassandraDatacenter, testClient client.Client) {
+func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
 	for i := int32(0); i < dc.Spec.Size; i++ {
 		pod := &corev1.Pod{}
-		err := testClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i), Namespace: dc.Namespace}, pod)
+		podName := fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i)
+		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
+		err := f.Get(ctx, podKey, pod)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				t.Logf("pod %s-%d not found", dc.Spec.ClusterName, i)
 				pod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
-						Name:      fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i),
+						Name:      podName,
 						Labels: map[string]string{
 							cassdcapi.ClusterLabel:    dc.Spec.ClusterName,
 							cassdcapi.DatacenterLabel: dc.Name,
@@ -369,14 +377,14 @@ func createDatacenterPods(t *testing.T, ctx context.Context, dc *cassdcapi.Cassa
 						},
 					},
 				}
-				err = testClient.Create(ctx, pod)
-				assert.NoError(t, err, "failed to create datacenter pod")
+				err = f.Create(ctx, podKey, pod)
+				require.NoError(t, err, "failed to create datacenter pod")
 
 				patch := client.MergeFrom(pod.DeepCopy())
 				pod.Status.PodIP = getPodIpAddress(int(i))
 
-				err = testClient.Status().Patch(ctx, pod, patch)
-				assert.NoError(t, err, "failed to patch datacenter pod status")
+				err = f.PatchStatus(ctx, pod, patch, podKey)
+				require.NoError(t, err, "failed to patch datacenter pod status")
 			}
 		}
 	}

@@ -2,8 +2,10 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,10 +69,31 @@ var (
 	)
 	dataPlanesFlag = flag.String(
 		"dataPlanes",
-		"kind-k8ssandra-1",
+		"kind-k8ssandra-0,kind-k8ssandra-1",
 		"A comma-separated list of Kubernetes context names to use as data planes. "+
-			"The control plane should not be included here. "+
-			"Can be empty if not data planes are required.",
+			"Must contain at least one data plane. "+
+			"If the control plane is a data plane, it must be included here too.",
+	)
+	ingressesFlag = flag.String(
+		"ingresses",
+		`{
+					"kind-k8ssandra-0" : {
+						"stargate_rest" : "stargate.127.0.0.1.nip.io:30080",
+						"stargate_cql"  : "stargate.127.0.0.1.nip.io:30942",
+						"reaper_rest"   :   "reaper.127.0.0.1.nip.io:30080"
+					},
+					"kind-k8ssandra-1" : {
+						"stargate_rest" : "stargate.127.0.0.1.nip.io:31080",
+						"stargate_cql"  : "stargate.127.0.0.1.nip.io:31942",
+						"reaper_rest"   :   "reaper.127.0.0.1.nip.io:31080"
+					},
+					"kind-k8ssandra-2" : {
+						"stargate_rest" : "stargate.127.0.0.1.nip.io:32080",
+						"stargate_cql"  : "stargate.127.0.0.1.nip.io:32942",
+						"reaper_rest"   :   "reaper.127.0.0.1.nip.io:32080"
+					}
+  				}`,
+		"A JSON string containing ingress mappings for each data plane and each REST/CQL API.",
 	)
 	logKustomizeOutput = flag.Bool(
 		"logKustomizeOutput",
@@ -93,6 +116,7 @@ var (
 	kubeconfigFile string
 	controlPlane   string
 	dataPlanes     []string
+	ingresses      map[string]map[string]string
 )
 
 func TestOperator(t *testing.T) {
@@ -102,19 +126,19 @@ func TestOperator(t *testing.T) {
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterCluster,
-		fixture:       framework.NewTestFixture("single-dc"),
+		fixture:       framework.NewTestFixture("single-dc", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
-		fixture:                      framework.NewTestFixture("stargate"),
+		fixture:                      framework.NewTestFixture("stargate", dataPlanes[0]),
 		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
 	t.Run("CreateMultiDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterCluster,
-		fixture:  framework.NewTestFixture("multi-dc"),
+		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
 	}))
 	t.Run("CreateMixedMultiDataCenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterClusterDifferentTopologies,
@@ -122,37 +146,37 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("AddDcToCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: addDcToCluster,
-		fixture:  framework.NewTestFixture("add-dc"),
+		fixture:  framework.NewTestFixture("add-dc", controlPlane),
 	}))
 	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeDcFromCluster,
-		fixture:  framework.NewTestFixture("remove-dc"),
+		fixture:  framework.NewTestFixture("remove-dc", controlPlane),
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
-		fixture:                      framework.NewTestFixture("multi-stargate"),
+		fixture:                      framework.NewTestFixture("multi-stargate", dataPlanes[0]),
 		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      checkStargateApisWithMultiDcCluster,
-		fixture:       framework.NewTestFixture("multi-dc-stargate"),
+		fixture:       framework.NewTestFixture("multi-dc-stargate", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleReaper,
-		fixture:       framework.NewTestFixture("single-dc-reaper"),
+		fixture:       framework.NewTestFixture("single-dc-reaper", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createMultiReaper,
-		fixture:       framework.NewTestFixture("multi-dc-reaper"),
+		fixture:       framework.NewTestFixture("multi-dc-reaper", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createReaperAndDatacenter,
-		fixture:                      framework.NewTestFixture("reaper"),
+		fixture:                      framework.NewTestFixture("reaper", dataPlanes[0]),
 		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
@@ -160,7 +184,7 @@ func TestOperator(t *testing.T) {
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,
-			fixture:              framework.NewTestFixture("multi-dc-cluster-scope"),
+			fixture:              framework.NewTestFixture("multi-dc-cluster-scope", controlPlane),
 			clusterScoped:        true,
 			sutNamespace:         "test-0",
 			additionalNamespaces: []string{"test-1", "test-2"},
@@ -168,21 +192,21 @@ func TestOperator(t *testing.T) {
 	})
 	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusa,
-		fixture:                      framework.NewTestFixture("single-dc-medusa"),
+		fixture:                      framework.NewTestFixture("single-dc-medusa", controlPlane),
 		deployTraefik:                false,
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("CreateMultiMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusa,
-		fixture:                      framework.NewTestFixture("multi-dc-medusa"),
+		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
 		deployTraefik:                false,
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      multiDcAuthOnOff,
-		fixture:       framework.NewTestFixture("multi-dc-auth"),
+		fixture:       framework.NewTestFixture("multi-dc-auth", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
@@ -191,27 +215,27 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterClusterWithEncryption,
-		fixture:       framework.NewTestFixture("single-dc-encryption-stargate"),
+		fixture:       framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleReaperWithEncryption,
-		fixture:       framework.NewTestFixture("single-dc-encryption-reaper"),
+		fixture:       framework.NewTestFixture("single-dc-encryption-reaper", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      checkStargateApisWithMultiDcEncryptedCluster,
-		fixture:       framework.NewTestFixture("multi-dc-encryption-stargate"),
+		fixture:       framework.NewTestFixture("multi-dc-encryption-stargate", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("MultiDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createMultiReaperWithEncryption,
-		fixture:       framework.NewTestFixture("multi-dc-encryption-reaper"),
+		fixture:       framework.NewTestFixture("multi-dc-encryption-reaper", controlPlane),
 		deployTraefik: true,
 	}))
 	t.Run("StopAndRestartDc", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      stopAndRestartDc,
-		fixture:       framework.NewTestFixture("stop-dc"),
+		fixture:       framework.NewTestFixture("stop-dc", controlPlane),
 		deployTraefik: true,
 	}))
 }
@@ -393,7 +417,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	if opts.deployTraefik {
 		var errTraefik error
 		require.Eventually(t, func() bool {
-			errTraefik = f.DeployTraefik(t, opts.operatorNamespace)
+			errTraefik = f.DeployTraefik(t, opts.operatorNamespace, ingresses)
 			return errTraefik == nil
 		}, time.Minute, 10*time.Second, fmt.Sprintf("Failed to deploy Traefik: %v", errTraefik))
 	}
@@ -428,13 +452,18 @@ func processFlags(t *testing.T) {
 		t.Fatal("no control plane provided")
 	}
 	controlPlane = *controlPlaneFlag
-	if len(*dataPlanesFlag) > 0 {
-		dataPlanes = strings.Split(*dataPlanesFlag, ",")
+	dataPlanes = strings.Split(*dataPlanesFlag, ",")
+	if len(dataPlanes) == 0 {
+		t.Fatal("no data planes provided")
+	}
+	err = json.Unmarshal([]byte(*ingressesFlag), &ingresses)
+	if err != nil {
+		t.Fatalf("invalid ingresses json: %s: %v", *ingressesFlag, err)
 	}
 }
 
 func applyPollingDefaults() {
-	polling.operatorDeploymentReady.timeout = 1 * time.Minute
+	polling.operatorDeploymentReady.timeout = 3 * time.Minute
 	polling.operatorDeploymentReady.interval = 1 * time.Second
 
 	polling.datacenterReady.timeout = 20 * time.Minute
@@ -470,7 +499,9 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 
 	namespaces := make([]string, 0)
 	namespaces = append(namespaces, opts.operatorNamespace)
-	namespaces = append(namespaces, opts.sutNamespace)
+	if !utils.SliceContains(namespaces, opts.sutNamespace) {
+		namespaces = append(namespaces, opts.sutNamespace)
+	}
 	if len(opts.additionalNamespaces) > 0 {
 		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
@@ -521,11 +552,11 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
@@ -574,15 +605,15 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 0, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
-	testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -597,24 +628,24 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 0, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
-	testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -629,39 +660,39 @@ func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Con
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
-	reaperKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0", "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0", "reaper_db")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, "test")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, "test")
 	require.NoError(t, err, "failed to retrieve database credentials")
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 0, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 3}
-	testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
@@ -675,28 +706,28 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
 	count := 6
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-rack1-sts-0"
-	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 }
@@ -753,7 +784,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "dc1",
@@ -762,7 +793,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc1-stargate",
@@ -771,7 +802,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkStargateReady(t, f, ctx, sg1Key)
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc1-reaper",
@@ -781,11 +812,11 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	dcSize := 2
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
@@ -803,7 +834,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			Meta: api.EmbeddedObjectMeta{
 				Name: "dc2",
 			},
-			K8sContext: f.K8sContext(1),
+			K8sContext: f.DataPlaneContexts[1],
 			Size:       int32(dcSize),
 		})
 		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
@@ -817,30 +848,30 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		return true
 	}, 30*time.Second, 1*time.Second, "timed out waiting to add DC to K8ssandraCluster")
 
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := dcSize * 2
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -851,7 +882,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc2-stargate",
@@ -860,7 +891,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc2-reaper",
@@ -880,7 +911,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "dc1",
@@ -889,7 +920,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
 	dc2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "dc2",
@@ -898,24 +929,24 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := 2
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
 	sg1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc1-stargate",
@@ -924,7 +955,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkStargateReady(t, f, ctx, sg1Key)
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc1-reaper",
@@ -933,7 +964,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkReaperReady(t, f, ctx, reaper1Key)
 
 	sg2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc2-stargate",
@@ -942,7 +973,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc2-reaper",
@@ -951,11 +982,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkReaperReady(t, f, ctx, reaper2Key)
 
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 		"CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 		"CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
 	require.NoError(err, "failed to create keyspace")
 
@@ -973,7 +1004,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", "test-dc1-default-sts-0",
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -986,7 +1017,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	t.Log("check that nodes in dc1 do not see nodes in dc2 anymore")
 	pod = "test-dc1-default-sts-0"
 	count = 1
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -999,15 +1030,15 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc1-stargate")
@@ -1036,7 +1067,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	stargateKey = framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
+	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
@@ -1066,34 +1097,34 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-rack1-sts-0"
 	count := 4
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-rack1-sts-0"
-	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 0, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(1))
-	f.DeployStargateIngresses(t, 1, namespace, "test-dc2-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 1, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
-	testStargateApis(t, ctx, f.K8sContext(1), 1, username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, replication)
 }
 
 func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -1106,16 +1137,16 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 	t.Log("check k8ssandra cluster status")
 
-	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc1-stargate")
@@ -1144,7 +1175,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	stargateKey = framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
+	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc2-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("check k8ssandra cluster status updated for Stargate test-dc2-stargate")
@@ -1174,21 +1205,21 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
 	require.NoError(err, "failed to retrieve database credentials")
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(0))
-	f.DeployStargateIngresses(t, 0, namespace, "test-dc1-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 0, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
-	t.Log("deploying Stargate ingress routes in context", f.K8sContext(1))
-	f.DeployStargateIngresses(t, 1, namespace, "test-dc2-stargate-service", username, password)
-	defer f.UndeployAllIngresses(t, 1, namespace)
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
-	testStargateApis(t, ctx, f.K8sContext(0), 0, username, password, replication)
-	testStargateApis(t, ctx, f.K8sContext(1), 1, username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
+	testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, replication)
 }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

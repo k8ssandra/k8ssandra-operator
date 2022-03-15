@@ -3,8 +3,8 @@ package framework
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -25,7 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,14 +82,15 @@ func Init(t *testing.T) {
 type Framework struct {
 	// Client is the client for the control plane cluster, i.e., the cluster in which the
 	// K8ssandraCluster controller is deployed. Note that this may also be one of the
-	// remote clusters.
+	// data plane clients, if the control plane is being deployed in data plane.
 	Client client.Client
 
-	// The Kubernetes context in which the K8ssandraCluster controller is running.
+	// The control plane, that is, the Kubernetes context in which the K8ssandraCluster controller
+	// is running.
 	ControlPlaneContext string
 
-	// Extra Kubernetes contexts where K8ssandraCluster controller is not running but datacenters
-	// can be deployed. May be empty.
+	// The data planes, that is, the Kubernetes contexts where K8ssandraCluster controller is going
+	// to deploy datacenters. There must be at least one data plane defined.
 	DataPlaneContexts []string
 
 	// RemoteClients is a mapping of Kubernetes context names to clients. It includes a client for
@@ -133,116 +133,87 @@ func NewFramework(client client.Client, controlPlaneContext string, dataPlaneCon
 	}
 }
 
-// AllK8sContexts returns all contexts, including the control plane and all data planes, if any. The control plane is
-// always the first element in the returned slice.
-func (f *Framework) AllK8sContexts() []string {
-	contexts := make([]string, 0, len(f.remoteClients))
-	contexts = append(contexts, f.ControlPlaneContext)
-	contexts = append(contexts, f.DataPlaneContexts...)
-	return contexts
-}
-
-// K8sContext returns the context name associated with the given zero-based index. When i = 0, the control plane is
-// returned; when i > 0, the corresponding data plane is returned, based on the order in which data planes were
-// specified. Note that this way of mapping indices to context names is also honored in e2e tests e.g. by Ingress
-// routes, especially when mapping ports to services in different contexts, and so it is important that this mapping is
-// not modified accidentally. Also note: this method panics when an invalid index is passed; this is by design since it
-// denotes a flaw in test code.
-func (f *Framework) K8sContext(k8sContextIdx int) string {
-	if k8sContextIdx == 0 {
-		return f.ControlPlaneContext
+func (f *Framework) getRemoteClient(k8sContext string) (client.Client, error) {
+	if len(k8sContext) == 0 {
+		return nil, fmt.Errorf("k8sContext must be specified")
 	}
-	if k8sContextIdx > len(f.DataPlaneContexts) {
-		panic(f.k8sContextNotFound(strconv.Itoa(k8sContextIdx)))
+	remoteClient, found := f.remoteClients[k8sContext]
+	if !found {
+		return nil, f.k8sContextNotFound(k8sContext)
 	}
-	return f.DataPlaneContexts[k8sContextIdx-1]
+	return remoteClient, nil
 }
 
 // Get fetches the object specified by key from the cluster specified by key. An error is
 // returned is ClusterKey.K8sContext is not set or if there is no corresponding client.
 func (f *Framework) Get(ctx context.Context, key ClusterKey, obj client.Object) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
-
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
-	}
-
 	return remoteClient.Get(ctx, key.NamespacedName, obj)
 }
 
 func (f *Framework) List(ctx context.Context, key ClusterKey, obj client.ObjectList, opts ...client.ListOption) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
-	}
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
 	return remoteClient.List(ctx, obj, opts...)
 }
 
 func (f *Framework) Update(ctx context.Context, key ClusterKey, obj client.Object) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
-
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
-	}
-
 	return remoteClient.Update(ctx, obj)
 }
 
 func (f *Framework) Delete(ctx context.Context, key ClusterKey, obj client.Object) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
-
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
-	}
-
 	return remoteClient.Delete(ctx, obj)
 }
 
+func (f *Framework) DeleteAllOf(ctx context.Context, k8sContext string, obj client.Object, opts ...client.DeleteAllOfOption) error {
+	remoteClient, err := f.getRemoteClient(k8sContext)
+	if err != nil {
+		return err
+	}
+	return remoteClient.DeleteAllOf(ctx, obj, opts...)
+}
+
 func (f *Framework) UpdateStatus(ctx context.Context, key ClusterKey, obj client.Object) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
-
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
-	}
-
 	return remoteClient.Status().Update(ctx, obj)
 }
 
 func (f *Framework) Patch(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.PatchOption) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
-	}
-
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
 	return remoteClient.Patch(ctx, obj, patch, opts...)
 }
 
-func (f *Framework) Create(ctx context.Context, key ClusterKey, obj client.Object) error {
-	if len(key.K8sContext) == 0 {
-		return fmt.Errorf("the K8sContext must be specified for key %s", key)
+func (f *Framework) PatchStatus(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.PatchOption) error {
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
+	return remoteClient.Status().Patch(ctx, obj, patch, opts...)
+}
 
-	remoteClient, found := f.remoteClients[key.K8sContext]
-	if !found {
-		return fmt.Errorf("no remote client found for context %s", key.K8sContext)
+func (f *Framework) Create(ctx context.Context, key ClusterKey, obj client.Object) error {
+	remoteClient, err := f.getRemoteClient(key.K8sContext)
+	if err != nil {
+		return err
 	}
 	return remoteClient.Create(ctx, obj)
 }
@@ -400,44 +371,48 @@ func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updat
 // ClusterKey.K8sContext is empty, this method blocks until the deployment is ready in all
 // remote clusters.
 func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval time.Duration) error {
-	return wait.Poll(interval, timeout, func() (bool, error) {
-		if len(key.K8sContext) == 0 {
-			for _, remoteClient := range f.remoteClients {
-				deployment := &appsv1.Deployment{}
-				if err := remoteClient.Get(context.TODO(), key.NamespacedName, deployment); err != nil {
-					f.logger.Error(err, "failed to get deployment", "key", key)
+	if len(key.K8sContext) == 0 {
+		for k8sContext, _ := range f.remoteClients {
+			opts := kubectl.Options{Namespace: key.Namespace, Context: k8sContext}
+			err := wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
+				if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 					return false, err
 				}
-
-				if deployment.Status.Replicas != deployment.Status.ReadyReplicas {
-					return false, nil
-				}
+				return true, nil
+			})
+			if err != nil {
+				return err
 			}
-
+		}
+		return nil
+	} else {
+		if _, found := f.remoteClients[key.K8sContext]; !found {
+			return f.k8sContextNotFound(key.K8sContext)
+		}
+		opts := kubectl.Options{Namespace: key.Namespace, Context: key.K8sContext}
+		return wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
+			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
+				return false, err
+			}
 			return true, nil
-		}
-
-		remoteClient, found := f.remoteClients[key.K8sContext]
-		if !found {
-			return false, f.k8sContextNotFound(key.K8sContext)
-		}
-
-		deployment := &appsv1.Deployment{}
-		if err := remoteClient.Get(context.TODO(), key.NamespacedName, deployment); err != nil {
-			f.logger.Error(err, "failed to get deployment", "key", key)
-			return false, err
-		}
-		return deployment.Status.Replicas == deployment.Status.ReadyReplicas, nil
-	})
+		})
+	}
 }
 
-func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.ObjectKey) error {
+func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.ObjectKey, timeout time.Duration, interval time.Duration) error {
 	kc := &api.K8ssandraCluster{}
 	err := f.Client.Get(ctx, key, kc)
 	if err != nil {
 		return err
 	}
-	return f.Client.Delete(ctx, kc)
+	err = f.Client.Delete(ctx, kc)
+	if err != nil {
+		return err
+	}
+	return wait.Poll(interval, timeout, func() (bool, error) {
+		err := f.Client.Get(ctx, key, kc)
+		return err != nil && errors.IsNotFound(err), nil
+	})
 }
 
 func (f *Framework) DeleteK8ssandraClusters(namespace string, interval, timeout time.Duration) error {

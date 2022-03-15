@@ -41,7 +41,6 @@ import (
 )
 
 const (
-	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d-%s"
 	cassOperatorVersion       = "v1.10.0"
 	prometheusOperatorVersion = "v0.9.0"
@@ -129,7 +128,7 @@ func waitForWebhookServer(webhookInstallOptions *envtest.WebhookInstallOptions) 
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		conn.Close()
+		_ = conn.Close()
 		return nil
 	}
 
@@ -153,6 +152,9 @@ type MultiClusterTestEnv struct {
 	// testEnvs is a list of the test environments that are created
 	testEnvs []*envtest.Environment
 
+	// NumDataPlanes is the number of data planes to create.
+	NumDataPlanes int
+
 	BeforeTest func(t *testing.T)
 
 	controlPlane string
@@ -173,6 +175,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 
 	e.Clients = make(map[string]client.Client)
 	e.testEnvs = make([]*envtest.Environment, 0)
+	clustersToCreate := e.NumDataPlanes + 1
 	cfgs := make([]*rest.Config, clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
@@ -279,10 +282,14 @@ func (e *MultiClusterTestEnv) GetControlPlaneEnvTest() *envtest.Environment {
 	return e.testEnvs[0]
 }
 
+func (e *MultiClusterTestEnv) GetDataPlaneEnvTests() []*envtest.Environment {
+	return e.testEnvs[1:]
+}
+
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
 func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
-	namespace := framework.CleanupForKubernetes(rand.String(9))
+	namespace := "ns-" + framework.CleanupForKubernetes(rand.String(9))
 
 	return func(t *testing.T) {
 		f := framework.NewFramework(e.Clients[e.controlPlane], e.controlPlane, e.dataPlanes, e.Clients)

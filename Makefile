@@ -79,6 +79,10 @@ DEPLOYMENT =
 # be created with scripts/setup-kind-multicluster.sh.
 NUM_CLUSTERS = 2
 
+# Indicates the number of worker nodes per cluster created with scripts/setup-kind-multicluster.sh.
+# It can either be a single number or a comma-separated list of numbers, one per cluster.
+NUM_WORKER_NODES = 4
+
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
 else
@@ -235,10 +239,10 @@ cleanup:
 	done
 
 create-kind-cluster:
-	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes 4 --output-file $(KIND_KUBECONFIG)
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes 4 --output-file $(KIND_KUBECONFIG)
+	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \

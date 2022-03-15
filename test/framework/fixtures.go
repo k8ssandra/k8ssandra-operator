@@ -22,13 +22,17 @@ type TestFixture struct {
 	// test/testdata/fixtures directory.
 	Name string
 
+	// K8sContext is the name of the context where the fixture should be deployed.
+	K8sContext string
+
 	definitionsDir string
 	kustomizeDir   string
 }
 
-func NewTestFixture(name string) *TestFixture {
+func NewTestFixture(name, k8sContext string) *TestFixture {
 	return &TestFixture{
 		Name:           name,
+		K8sContext:     k8sContext,
 		definitionsDir: filepath.Join(fixturesDefinitionsRoot, name),
 		kustomizeDir:   filepath.Join(fixturesKustomizationsRoot, name),
 	}
@@ -39,7 +43,7 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 	if err != nil {
 		return err
 	}
-	dcContexts := f.AllK8sContexts()[:numDcs]
+	dcContexts := f.DataPlaneContexts[:numDcs]
 	data := &fixtureKustomization{
 		Namespace:  namespace,
 		Fixture:    fixture.Name,
@@ -49,7 +53,7 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 	if err != nil {
 		return err
 	}
-	return f.kustomizeAndApply(fixture.kustomizeDir, namespace, f.ControlPlaneContext)
+	return f.kustomizeAndApply(fixture.kustomizeDir, namespace, fixture.K8sContext)
 }
 
 type fixtureKustomization struct {

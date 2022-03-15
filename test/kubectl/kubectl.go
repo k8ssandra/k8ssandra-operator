@@ -2,6 +2,7 @@ package kubectl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -133,11 +134,20 @@ func DeleteAllOf(opts Options, kind string) error {
 	return err
 }
 
-func WaitForCondition(condition string, args ...string) error {
-	kargs := []string{"wait", "--for", "condition=" + condition}
-	kargs = append(kargs, args...)
+func WaitForCondition(opts Options, condition string, args ...string) error {
 
-	cmd := exec.Command("kubectl", kargs...)
+	cmd := exec.Command("kubectl")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "wait", "--for", "condition="+condition)
+	cmd.Args = append(cmd.Args, args...)
 
 	output, err := cmd.CombinedOutput()
 
@@ -254,8 +264,8 @@ func Get(opts Options, args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func RolloutStatus(opts Options, kind, name string) error {
-	cmd := exec.Command("kubectl", "rollout", "status")
+func RolloutStatus(ctx context.Context, opts Options, kind, name string) error {
+	cmd := exec.CommandContext(ctx, "kubectl", "rollout", "status")
 	if len(opts.Context) > 0 {
 		cmd.Args = append(cmd.Args, "--context", opts.Context)
 	}
