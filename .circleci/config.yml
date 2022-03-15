@@ -51,9 +51,7 @@ jobs:
   e2e-multi-tests:
     machine:
       image: ubuntu-2004:202201-01
-    #docker:
-    #  - image: cimg/base:2021.04
-    resource_class: medium
+    resource_class: large
     parameters:
       e2e-test:
         type: string
@@ -82,18 +80,18 @@ workflows:
   version: 2.1
   k8ssandra_op_qa_push:
     jobs:
-      #- e2e-tests:
-      #    matrix:
-      #      parameters:
-      #        e2e-test: 
-      #          - SingleDcEncryptionWithStargate
-      #          - CreateSingleDatacenterCluster
-      #          - CreateStargateAndDatacenter
-      #          - CreateSingleReaper
-      #          - CreateReaperAndDatacenter
-      #          - CreateSingleMedusa
-      #          - ConfigControllerRestarts
-      #          - SingleDcEncryptionWithReaper
+      - e2e-tests:
+          matrix:
+            parameters:
+              e2e-test: 
+                - SingleDcEncryptionWithStargate
+                - CreateSingleDatacenterCluster
+                - CreateStargateAndDatacenter
+                - CreateSingleReaper
+                - CreateReaperAndDatacenter
+                - CreateSingleMedusa
+                - ConfigControllerRestarts
+                - SingleDcEncryptionWithReaper
       - e2e-multi-tests:
           matrix:
             parameters:
