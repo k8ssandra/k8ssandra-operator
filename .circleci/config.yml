@@ -23,7 +23,7 @@ jobs:
       image: ubuntu-2004:202201-01
     #docker:
     #  - image: cimg/base:2021.04
-    resource_class: large
+    resource_class: medium
     parameters:
       e2e-test:
         type: string
@@ -43,7 +43,7 @@ jobs:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
-              make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+              make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}" NUM_WORKERS="4"
       
       - store_artifacts:
           path: build/test/
@@ -71,7 +71,7 @@ jobs:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
-              make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
+              make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}" NUM_WORKERS="6"
 
       - store_artifacts:
           path: build/test/
