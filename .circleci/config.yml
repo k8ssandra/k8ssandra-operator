@@ -43,7 +43,7 @@ jobs:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
-              make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}" NUM_WORKERS="4"
+              make kind-single-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
       
       - store_artifacts:
           path: build/test/
@@ -71,7 +71,7 @@ jobs:
           name: Run integration tests
           no_output_timeout: 45m
           command: |
-              make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}" NUM_WORKERS="6"
+              make kind-multi-e2e-test E2E_TEST="TestOperator/${E2E_TEST}"
 
       - store_artifacts:
           path: build/test/
