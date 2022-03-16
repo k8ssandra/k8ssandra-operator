@@ -823,7 +823,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkReaperReady(t, f, ctx, reaper1Key)
 
-	dcSize := 3
+	dcSize := 2
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
