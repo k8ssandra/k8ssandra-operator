@@ -29,8 +29,15 @@ spec:
         concurrent_reads: 2
         concurrent_writes: 2
         concurrent_counter_writes: 2
+        cas_contention_timeout_in_ms: 60000
+        counter_write_request_timeout_in_ms: 60000
+        range_request_timeout_in_ms: 60000
+        read_request_timeout_in_ms: 60000
+        request_timeout_in_ms: 60000
+        truncate_request_timeout_in_ms: 60000
+        write_request_timeout_in_ms: 60000
       jvmOptions:
-        heapSize: 512Mi
+        heapSize: 384Mi
     networking:
       hostNetwork: true
     datacenters:
@@ -42,7 +49,7 @@ spec:
   reaper: {}
   stargate:
     size: 1
-    heapSize: 384Mi
+    heapSize: 256Mi
     cassandraConfigMapRef:
       name: cassandra-config
     livenessProbe:
