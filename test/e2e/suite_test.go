@@ -814,14 +814,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg1Key)
 
-	// reaper1Key := framework.ClusterKey{
-	//	K8sContext: f.K8sContext(0),
-	//	NamespacedName: types.NamespacedName{
-	//		Namespace: namespace,
-	//		Name:      "test-dc1-reaper",
-	//	},
-	// }
-	// checkReaperReady(t, f, ctx, reaper1Key)
+	reaper1Key := framework.ClusterKey{
+		K8sContext: k8sCtx0,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper1Key)
 
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
@@ -833,7 +833,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("add dc2 to cluster")
-	dcSize := 2
+	dcSize := 3
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
 		err = f.Client.Get(ctx, kcKey, kc)
@@ -869,8 +869,8 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
-	count := 4
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	count := 6
+	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
@@ -902,14 +902,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
 
-	// reaper2Key := framework.ClusterKey{
-	//	K8sContext: f.K8sContext(1),
-	//	NamespacedName: types.NamespacedName{
-	//		Namespace: namespace,
-	//		Name:      "test-dc2-reaper",
-	//	},
-	// }
-	// checkReaperReady(t, f, ctx, reaper2Key)
+	reaper2Key := framework.ClusterKey{
+		K8sContext: k8sCtx1,
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc2-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper2Key)
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

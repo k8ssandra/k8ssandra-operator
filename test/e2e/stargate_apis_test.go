@@ -254,7 +254,14 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 	cqlClient := client.NewCqlClient(contactPoint, credentials)
 	cqlClient.ConnectTimeout = 30 * time.Second
 	cqlClient.ReadTimeout = 1 * time.Minute
-	connection, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
+
+	var err error
+	var connection *client.CqlClientConnection
+	retry.Do(func() error {
+		connection, err = cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
+		return err
+	})
+
 	require.NoError(t, err, "Failed to connect via CQL native port to %s", contactPoint)
 	return connection
 }
@@ -321,10 +328,7 @@ func sendQuery(connection *client.CqlClientConnection, query string) (*frame.Fra
 	var err2 error
 	retry.Do(func() error {
 		result, err2 = connection.SendAndReceive(request)
-		if err2 != nil {
-			return err2
-		}
-		return nil
+		return err2
 	})
 	return result, err2
 }
