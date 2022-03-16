@@ -891,7 +891,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				return false
 			}
 			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
-		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
+		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 
 	sg2Key := framework.ClusterKey{
