@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -86,7 +87,7 @@ type DatacenterConfig struct {
 	Cluster                  string
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
-	ServerVersion            string
+	ServerVersion            *semver.Version
 	JmxInitContainerImage    *images.Image
 	Size                     int32
 	Stopped                  bool
@@ -120,6 +121,14 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		namespace = klusterKey.Namespace
 	}
 
+	if template.ServerVersion == nil {
+		return nil, DCConfigIncomplete{"template.ServerVersion"}
+	}
+
+	if err := validateCassandraYaml(&template.CassandraConfig.CassandraYaml); err != nil {
+		return nil, err
+	}
+
 	// If client or server encryption is enabled, create the required volumes and mounts
 	if err := handleEncryptionOptions(template); err != nil {
 		return nil, err
@@ -151,7 +160,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                template.Size,
 			Stopped:             template.Stopped,
-			ServerVersion:       template.ServerVersion,
+			ServerVersion:       template.ServerVersion.String(),
 			ServerImage:         template.ServerImage,
 			ServerType:          "cassandra",
 			Config:              rawConfig,
@@ -265,10 +274,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
 
-	if len(dcTemplate.ServerVersion) == 0 {
-		dcConfig.ServerVersion = clusterTemplate.ServerVersion
-	} else {
-		dcConfig.ServerVersion = dcTemplate.ServerVersion
+	if len(dcTemplate.ServerVersion) > 0 {
+		dcConfig.ServerVersion = semver.MustParse(dcTemplate.ServerVersion)
+	} else if len(clusterTemplate.ServerVersion) > 0 {
+		dcConfig.ServerVersion = semver.MustParse(clusterTemplate.ServerVersion)
 	}
 
 	if len(dcTemplate.ServerImage) == 0 {

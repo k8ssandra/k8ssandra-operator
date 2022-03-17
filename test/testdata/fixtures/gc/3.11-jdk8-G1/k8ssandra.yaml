@@ -1,0 +1,31 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 3.11.11
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heap_initial_size: 384Mi
+            heap_max_size: 384Mi
+            gc: G1GC
+            gc_g1_rset_updating_pause_time_percent: 6
+            gc_g1_max_gc_pause_ms: 600
+            gc_g1_initiating_heap_occupancy_percent: 75
+            gc_g1_parallel_threads: 2
+            gc_g1_conc_threads: 2
+    mgmtAPIHeap: 64Mi

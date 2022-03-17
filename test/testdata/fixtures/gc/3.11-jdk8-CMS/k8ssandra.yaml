@@ -1,0 +1,30 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 3.11.11
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heap_initial_size: 384Mi
+            heap_max_size: 384Mi
+            gc: CMS
+            gc_cms_survivor_ratio: 4
+            gc_cms_max_tenuring_threshold: 2
+            gc_cms_initiating_occupancy_fraction: 76
+            gc_cms_wait_duration_ms: 11000
+    mgmtAPIHeap: 64Mi

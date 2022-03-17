@@ -207,7 +207,60 @@ spec:
             windows_timer_interval: 271
             write_request_timeout_in_ms: 272
           jvmOptions:
-            heapSize: 512Mi
+            heap_initial_size: 512Mi
+            heap_max_size: 512Mi
+            vm_enable_assertions: false
+            vm_enable_thread_priorities: false
+            vm_enable_non_root_thread_priority: false
+            vm_heap_dump_on_out_of_memory_error: false
+            vm_per_thread_stack_size: 256Ki
+            vm_string_table_size: 1Mi
+            vm_always_pre_touch: false
+            vm_disable_biased_locking: false
+            vm_use_tlab: false
+            vm_resize_tlab: false
+            vm_disable_perf_shared_mem: false
+            vm_prefer_ipv4: true
+            cassandra_available_processors: 2
+            cassandra_join_ring: true
+            cassandra_load_ring_state: true
+            cassandra_ring_delay_ms: 100
+            cassandra_write_survey: false
+            cassandra_disable_auth_caches_remote_configuration: false
+            cassandra_force_default_indexing_page_size: false
+            cassandra_force_3_0_protocol_version: false
+            gc: G1GC
+            gc_cms_heap_size_young_generation: 4Mi
+            gc_cms_survivor_ratio: 8
+            gc_cms_max_tenuring_threshold: 2
+            gc_cms_initiating_occupancy_fraction: 75
+            gc_cms_wait_duration_ms: 10000
+            gc_g1_rset_updating_pause_time_percent: 5
+            gc_g1_max_gc_pause_ms: 500
+            gc_g1_initiating_heap_occupancy_percent: 75
+            gc_g1_parallel_threads: 2
+            gc_g1_conc_threads: 2
+            gc_print_details: false
+            gc_print_date_stamps: false
+            gc_print_heap: false
+            gc_print_tenuring_distribution: false
+            gc_print_application_stopped_time: false
+            gc_print_promotion_failure: false
+            gc_print_flss_statistics: false
+            gc_print_use_log_file: false
+            gc_print_use_log_file_rotation: false
+            gc_print_number_of_log_files: 4
+            gc_print_log_file_size: 1Mi
+            jmx_port: 7199
+            jmx_connection_type: local-no-auth
+            jmx_remote_ssl: false
+            jmx_remote_ssl_opts: abc
+            debug_unlock_commercial_features: false
+            debug_enable_flight_recorder: false
+            debug_listen_remote_debuggers: false
+            additionalOptions:
+              - -Dfoo=true
+              - -Dbar
         stargate:
           size: 1
           heapSize: 384Mi

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ func TestCoalesce(t *testing.T) {
 				ServerVersion: "4.0.1",
 			},
 			want: &DatacenterConfig{
-				ServerVersion: "4.0.1",
+				ServerVersion: semver.MustParse("4.0.1"),
 			},
 		},
 		{
@@ -186,7 +187,7 @@ func TestCoalesce(t *testing.T) {
 						ConcurrentWrites: pointer.Int(8),
 					},
 					JvmOptions: api.JvmOptions{
-						HeapSize: parseResource("1024Mi"),
+						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
 			},
@@ -196,7 +197,7 @@ func TestCoalesce(t *testing.T) {
 						ConcurrentWrites: pointer.Int(8),
 					},
 					JvmOptions: api.JvmOptions{
-						HeapSize: parseResource("1024Mi"),
+						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
 			},
@@ -394,6 +395,17 @@ func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 
+// TestNewDatacenter_Fail_NoServerVersion tests that NewDatacenter fails when no server version is provided.
+func TestNewDatacenter_Fail_NoServerVersion(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.ServerVersion = nil
+	_, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.IsType(t, DCConfigIncomplete{}, err)
+}
+
 func TestDatacentersReplication(t *testing.T) {
 	assert := assert.New(t)
 
@@ -442,10 +454,12 @@ func TestDatacentersReplication(t *testing.T) {
 }
 
 // GetDatacenterConfig returns a minimum viable DataCenterConfig.
+//goland:noinspection GoDeprecation
 func GetDatacenterConfig() DatacenterConfig {
 	storageClass := "default"
 	return DatacenterConfig{
-		Cluster: "k8ssandra",
+		Cluster:       "k8ssandra",
+		ServerVersion: semver.MustParse("4.0.3"),
 		Meta: api.EmbeddedObjectMeta{
 			Namespace: "k8ssandra",
 			Name:      "dc1",
@@ -457,7 +471,6 @@ func GetDatacenterConfig() DatacenterConfig {
 		Size:               3,
 		CassandraConfig: api.CassandraConfig{
 			JvmOptions: api.JvmOptions{
-				HeapSize: parseResource("1024Mi"),
 				AdditionalOptions: []string{
 					SystemReplicationFactorStrategy + "=dc1:3",
 				},
