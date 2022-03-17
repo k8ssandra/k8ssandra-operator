@@ -2,12 +2,13 @@ package stargate
 
 import (
 	"errors"
+	"testing"
+
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"testing"
 )
 
 func TestReconcileAuthTable(t *testing.T) {
@@ -58,7 +59,7 @@ func TestReconcileAuthTable(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ReconcileAuthTable(tt.managementApi(), log.NullLogger{})
+			err := ReconcileAuthTable(tt.managementApi(), logr.Discard())
 			assert.Equal(t, tt.err, err)
 		})
 	}

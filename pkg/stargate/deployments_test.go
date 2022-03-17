@@ -117,14 +117,14 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.EqualValues(t, 10, container.LivenessProbe.TimeoutSeconds)
 	assert.EqualValues(t, 30, container.LivenessProbe.InitialDelaySeconds)
 	assert.EqualValues(t, 5, container.LivenessProbe.FailureThreshold)
-	assert.Equal(t, "/checker/liveness", container.LivenessProbe.Handler.HTTPGet.Path)
-	assert.Equal(t, "health", container.LivenessProbe.Handler.HTTPGet.Port.String())
+	assert.Equal(t, "/checker/liveness", container.LivenessProbe.ProbeHandler.HTTPGet.Path)
+	assert.Equal(t, "health", container.LivenessProbe.ProbeHandler.HTTPGet.Port.String())
 
 	assert.EqualValues(t, 10, container.ReadinessProbe.TimeoutSeconds)
 	assert.EqualValues(t, 30, container.ReadinessProbe.InitialDelaySeconds)
 	assert.EqualValues(t, 5, container.ReadinessProbe.FailureThreshold)
-	assert.Equal(t, "/checker/readiness", container.ReadinessProbe.Handler.HTTPGet.Path)
-	assert.Equal(t, "health", container.ReadinessProbe.Handler.HTTPGet.Port.String())
+	assert.Equal(t, "/checker/readiness", container.ReadinessProbe.ProbeHandler.HTTPGet.Path)
+	assert.Equal(t, "health", container.ReadinessProbe.ProbeHandler.HTTPGet.Port.String())
 
 	clusterVersion := findEnvVar(container, "CLUSTER_VERSION")
 	require.NotNil(t, clusterVersion, "failed to find CLUSTER_VERSION env var")

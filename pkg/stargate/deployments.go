@@ -288,7 +288,7 @@ func computeLivenessProbe(template *api.StargateTemplate) corev1.Probe {
 		}
 	}
 	// The handlers cannot be user-specified, so force them now
-	livenessProbe.Handler = corev1.Handler{
+	livenessProbe.ProbeHandler = corev1.ProbeHandler{
 		HTTPGet: &corev1.HTTPGetAction{
 			Path: "/checker/liveness",
 			Port: intstr.FromString("health"),
@@ -309,7 +309,7 @@ func computeReadinessProbe(template *api.StargateTemplate) corev1.Probe {
 		}
 	}
 	// The handlers cannot be user-specified, so force them now
-	readinessProbe.Handler = corev1.Handler{
+	readinessProbe.ProbeHandler = corev1.ProbeHandler{
 		HTTPGet: &corev1.HTTPGetAction{
 			Path: "/checker/readiness",
 			Port: intstr.FromString("health"),

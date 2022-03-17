@@ -72,8 +72,6 @@ jobs:
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
-      GOPATH: /home/runner/go
-      GOROOT: /usr/local/go1.16
       CGO_ENABLED: 0
       KUBECONFIG_FILE: "./build/kind-kubeconfig"
       CONTROL_PLANE: kind-k8ssandra-0
@@ -89,10 +87,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/checkout@v2
         if: github.event_name != 'pull_request'
-      - name: Set up Go 1.16
+      - name: Set up Go 1.17
         uses: actions/setup-go@v1
         with:
-          go-version: 1.16
+          go-version: 1.17
       - uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod

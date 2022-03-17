@@ -31,7 +31,7 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 	r := newDummyK8ssandraClusterReconciler()
 	ctx := context.Background()
 	fakeClient := test.NewFakeClientWRestMapper()
-	testLogger := testlogr.TestLogger{T: t}
+	testLogger := testlogr.NewTestLogger(t)
 	// Resources to create
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   "test-namespace",

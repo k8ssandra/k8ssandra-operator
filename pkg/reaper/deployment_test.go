@@ -213,7 +213,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	probe := &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/healthcheck",
 				Port: intstr.FromInt(8081),
@@ -229,7 +229,7 @@ func TestNewDeployment(t *testing.T) {
 func TestReadinessProbe(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.ReadinessProbe = &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/custom",
 				Port: intstr.FromInt(8080),
@@ -239,7 +239,7 @@ func TestReadinessProbe(t *testing.T) {
 	}
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	expected := &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/healthcheck",
 				Port: intstr.FromInt(8081),
@@ -253,7 +253,7 @@ func TestReadinessProbe(t *testing.T) {
 func TestLivenessProbe(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.LivenessProbe = &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/custom",
 				Port: intstr.FromInt(8080),
@@ -263,7 +263,7 @@ func TestLivenessProbe(t *testing.T) {
 	}
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	expected := &corev1.Probe{
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/healthcheck",
 				Port: intstr.FromInt(8081),

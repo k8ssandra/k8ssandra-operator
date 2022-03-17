@@ -1,5 +1,5 @@
 # Requirements
-* Go >= 1.16
+* Go >= 1.17
 * kubectl >= 1.17
 * kustomize >= 4.0.5 
 * kind >= 0.11.1

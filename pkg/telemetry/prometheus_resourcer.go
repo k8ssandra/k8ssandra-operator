@@ -25,7 +25,7 @@ type PrometheusResourcer struct {
 }
 
 func (cfg PrometheusResourcer) validate() error {
-	if cfg.MonitoringTargetNS == "" || cfg.MonitoringTargetName == "" || cfg.ServiceMonitorName == "" || cfg.Logger == nil {
+	if cfg.MonitoringTargetNS == "" || cfg.MonitoringTargetName == "" || cfg.ServiceMonitorName == "" {
 		return TelemetryConfigIncomplete{}
 	}
 	return nil

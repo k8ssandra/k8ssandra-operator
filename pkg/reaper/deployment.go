@@ -254,7 +254,7 @@ func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
 		}
 	}
 	// The handler cannot be user-specified, so force it now
-	probe.Handler = corev1.Handler{
+	probe.ProbeHandler = corev1.ProbeHandler{
 		HTTPGet: &corev1.HTTPGetAction{
 			Path: "/healthcheck",
 			Port: intstr.FromInt(8081),

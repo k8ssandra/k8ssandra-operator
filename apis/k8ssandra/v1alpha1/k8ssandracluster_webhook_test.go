@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bombsimon/logrusr"
+	logrusr "github.com/bombsimon/logrusr/v2"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/sirupsen/logrus"
@@ -55,7 +55,8 @@ func TestWebhook(t *testing.T) {
 	require := require.New(t)
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	log := logrusr.NewLogger(logrus.New())
+	logrusLog := logrus.New()
+	log := logrusr.New(logrusLog)
 	logf.SetLogger(log)
 
 	testEnv = &envtest.Environment{

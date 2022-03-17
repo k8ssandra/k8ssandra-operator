@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] [#310](https://github.com/k8ssandra/k8ssandra-operator/issues/310) Update to Go 1.17 and Kubernetes dependencies (incl. controller-runtime)
 * [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run e2e tests against arbitrary context names
 * [TESTING] [#462](https://github.com/k8ssandra/k8ssandra-operator/issues/462) ⁃ Use yq to parse fixture files
 

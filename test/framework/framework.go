@@ -12,7 +12,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
-	"github.com/bombsimon/logrusr"
+	logrusr "github.com/bombsimon/logrusr/v2"
 	"github.com/go-logr/logr"
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
@@ -122,7 +122,7 @@ func NewClusterKey(context, namespace, name string) ClusterKey {
 
 func NewFramework(client client.Client, controlPlaneContext string, dataPlaneContexts []string, remoteClients map[string]client.Client) *Framework {
 	var log logr.Logger
-	log = logrusr.NewLogger(logrus.New())
+	log = logrusr.New(logrus.New())
 	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
 	return &Framework{
 		Client:              client,
