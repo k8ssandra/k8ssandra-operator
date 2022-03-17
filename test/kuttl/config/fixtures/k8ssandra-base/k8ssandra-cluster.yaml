@@ -8,7 +8,6 @@ spec:
     datacenters:
       - metadata:
           name: dc1
-        k8sContext: kind-k8ssandra-0
         size: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:
@@ -21,20 +20,3 @@ spec:
         config:
           jvmOptions:
             heapSize: 384Mi
-        stargate:
-          size: 1
-          heapSize: 384Mi
-          livenessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          readinessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          cassandraConfigMapRef:
-            name: cassandra-config

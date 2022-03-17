@@ -19,10 +19,6 @@ patches:
       value:
         prometheus:
             enabled: true
-    - op: remove
-      path: /spec/cassandra/datacenters/0/k8sContext
-    - op: remove
-      path: /spec/cassandra/datacenters/0/stargate
   target:
     kind: K8ssandraCluster
     name: test

@@ -59,9 +59,11 @@ jobs:
     strategy:
       matrix:
         k8s_version: ["1.21"]
+        serverVersion: 
+        - 3.11.12
+        - 4.0.3
         kuttl-test:
-        - test-servicemonitors
-        - test-user-defined-ns
+        - test-cassandra-versions
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -111,7 +113,4 @@ jobs:
         # image tag of the operator.
         
         make install-kuttl
-        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
-        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
-        ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
-        kind delete cluster --name k8ssandra-0
+        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --test ${{ matrix.kuttl-test }}
