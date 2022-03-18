@@ -27,7 +27,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] [#423](https://github.com/k8ssandra/k8ssandra-operator/pull/423) Update to cass-operator v1.10.0
 * [CHANGE] [#411](https://github.com/k8ssandra/k8ssandra-operator/issues/411) Rename `cassandraTelemetry` to just `telemetry`
-* [CHANGE] [#417](https://github.com/k8ssandra/k8ssandra-operator/issues/417) Upgrade to Reaper 3.1.1
+* [CHANGE] [#417](https://github.com/k8ssandra/k8ssandra-operator/issues/417) Upgrade to Reaper config-heap-size
 * [FEATURE] [#121](https://github.com/k8ssandra/k8ssandra-operator/issues/121) Add validating webhook for K8ssandraCluster
 * [FEATURE] [#402](https://github.com/k8ssandra/k8ssandra-operator/issues/402) Expose CassandraDatacenter Tolerations property
 * [BUGFIX] [#400](https://github.com/k8ssandra/k8ssandra-operator/issues/381) Keyspaces get altered incorrectly during DC migration

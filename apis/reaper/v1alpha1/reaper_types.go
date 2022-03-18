@@ -20,6 +20,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,15 +61,15 @@ type ReaperTemplate struct {
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:config-heap-size".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"config-heap-size"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:config-heap-size".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"config-heap-size"}
 	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
@@ -110,6 +111,11 @@ type ReaperTemplate struct {
 	// migrations.
 	// +optional
 	InitContainerSecurityContext *corev1.SecurityContext `json:"initContainerSecurityContext,omitempty"`
+
+	// HeapSize sets the JVM heap size to use for Reaper.
+	// +kubebuilder:default="2Gi"
+	// +optional
+	HeapSize *resource.Quantity `json:"heapSize,omitempty"`
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.

@@ -22,3 +22,4 @@ spec:
     name: cassandra-reaper
     tag: "3.0.0"
     pullPolicy: IfNotPresent
+  heapSize: 256Mi

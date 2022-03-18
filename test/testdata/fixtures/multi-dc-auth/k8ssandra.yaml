@@ -61,3 +61,4 @@ spec:
       timeoutSeconds: 20
   reaper:
     deploymentMode: PER_DC
+    heapSize: 256Mi

@@ -998,9 +998,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.1
+                  tag: config-heap-size
                 description: The image to use for the Reaper pod main container. The
-                  default is "thelastpickle/cassandra-reaper:3.1.1".
+                  default is "thelastpickle/cassandra-reaper:config-heap-size".
                 properties:
                   name:
                     description: The image name to use.
@@ -1070,13 +1070,21 @@ spec:
                 required:
                 - name
                 type: object
+              heapSize:
+                anyOf:
+                - type: integer
+                - type: string
+                default: 2Gi
+                description: HeapSize sets the JVM heap size to use for Reaper.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               initContainerImage:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.1
+                  tag: config-heap-size
                 description: The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.1".
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:config-heap-size".
                 properties:
                   name:
                     description: The image name to use.

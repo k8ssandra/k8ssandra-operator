@@ -44,6 +44,7 @@ spec:
         size: 1
   reaper:
     deploymentMode: SINGLE
+    heapSize: 256Mi
   stargate:
     size: 1
     heapSize: 384Mi

@@ -20,7 +20,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.1.1"
+	DefaultVersion         = "config-heap-size"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 )
@@ -132,6 +132,13 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
 			Value: "true",
+		})
+	}
+
+	if reaper.Spec.HeapSize != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_HEAP_SIZE",
+			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
 		})
 	}
 

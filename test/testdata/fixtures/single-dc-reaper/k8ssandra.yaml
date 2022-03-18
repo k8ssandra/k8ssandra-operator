@@ -4,6 +4,7 @@ metadata:
   name: test
 spec:
   reaper:
+    heapSize: 256Mi
     autoScheduling:
       enabled: false
   cassandra:
