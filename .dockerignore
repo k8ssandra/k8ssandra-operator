@@ -3,3 +3,6 @@
 !**/*.go
 !**/*.mod
 !**/*.sum
+# Ignore build and test binaries.
+bin/
+testbin/
