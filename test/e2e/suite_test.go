@@ -815,7 +815,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkStargateReady(t, f, ctx, sg1Key)
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: k8sCtx0,
+		K8sContext: f.K8sContext(0),
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc1-reaper",
@@ -825,11 +825,11 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	dcSize := 2
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, k8sCtx0, namespace, "test", "test-dc1-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
@@ -904,7 +904,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: k8sCtx1,
+		K8sContext: f.K8sContext(1),
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      "test-dc2-reaper",
