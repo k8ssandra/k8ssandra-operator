@@ -64,12 +64,6 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
-
-	// turn auth off again
-	// toggleAuthentication(t, f, ctx, kcKey, false)
-	// checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
-	// waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	// testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
 }
 
 func checkSecrets(
