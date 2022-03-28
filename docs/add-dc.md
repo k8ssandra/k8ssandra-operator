@@ -114,7 +114,7 @@ keyspaces to include replicas in `dc2`. Internal keyspaces includes the followin
 * `reaper_db`
 
 ## User Defined Keyspaces
-Next the operator updates the replication strategy of user-defined keyspsaces. The 
+Next the operator updates the replication strategy of user-defined keyspaces. The 
 `k8ssandra.io/dc-replication` annotation must be set in order for the operator to update 
 user-defined keyspaces. The value should be valid JSON. 
 
