@@ -19,10 +19,13 @@ package v1alpha1
 import (
 	"fmt"
 
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	validationpkg "github.com/k8ssandra/k8ssandra-operator/pkg/validation"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -67,6 +70,7 @@ func (r *K8ssandraCluster) ValidateCreate() error {
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
 	// Verify given k8s-contexts are correct
+
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		_, err := clientCache.GetRemoteClient(dc.K8sContext)
 		if err != nil {
@@ -85,7 +89,58 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 			}
 		}
 	}
+	if err := TelemetrySpecsAreValid(r, clientCache); err != nil {
+		return err
+	}
+	return nil
+}
 
+type clientGetter interface {
+	GetRemoteClient(k8sContextName string) (client.Client, error)
+}
+
+func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, clientCache clientGetter) error {
+	// Validate Cassandra telemetry
+	for _, dc := range kCluster.Spec.Cassandra.Datacenters {
+		dcClient, err := clientCache.GetRemoteClient(dc.K8sContext)
+		promInstalled, err := validationpkg.IsPromInstalled(dcClient, webhookLog)
+		if err != nil {
+			return err
+		}
+		cassToValidate := &telemetryapi.TelemetrySpec{}
+		if kCluster.Spec.Cassandra.Telemetry != nil {
+			cassToValidate = kCluster.Spec.Cassandra.Telemetry.Merge(dc.Telemetry)
+		} else if dc.Telemetry != nil {
+			cassToValidate = dc.Telemetry
+		}
+		if cassToValidate != nil {
+			webhookLog.Info("validating cass telemetry in webhook", "cassToValidate", cassToValidate)
+			cassIsValid, err := validationpkg.TelemetrySpecIsValid(cassToValidate, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !cassIsValid {
+				webhookLog.Info("throwing an error, cass telemetry spec invalid")
+				return errors.New(fmt.Sprint("Cassandra telemetry specification was incorrect in context", dc.K8sContext))
+			}
+
+		}
+		sgToValidate := &telemetryapi.TelemetrySpec{}
+		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
+			sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
+		} else if dc.Stargate != nil && dc.Stargate.Telemetry != nil {
+			sgToValidate = dc.Stargate.Telemetry
+		}
+		if sgToValidate != nil {
+			sgIsValid, err := validationpkg.TelemetrySpecIsValid(sgToValidate, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !sgIsValid {
+				return errors.New(fmt.Sprint("Stargate telemetry specification was incorrect in context", dc.K8sContext))
+			}
+		}
+	}
 	return nil
 }
 
