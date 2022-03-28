@@ -1,7 +1,8 @@
 # Adding a Datacenter to a Cluster
 K8ssandra Operator supports adding a new datacenter to an existing cluster. 
 
-**Note:** See [Adding a datacenter to a cluster](https://docs.datastax.com/en/cassandra-oss/3.0/cassandra/operations/opsAddDCToCluster.htm) 
+**Note:** See [Adding a datacenter to a cluster](https://docs.datastax.
+com/en/cassandra-oss/3.0/cassandra/operations/opsAddDCToCluster.html) 
 
 Let's say we have 3 Kubernetes clusters - `control-plane`, `east`, and `west`. We want to create a K8ssandraCluster with a 3-node DC in `east`. We also want Stargate and Reaper enabled.
 
@@ -14,7 +15,8 @@ metadata:
   name: test
   namespace: k8ssandra-cluster
 spec:
-    serverVersion: "4.0.1"
+  cassandra
+    serverVersion: "4.0.3"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -61,7 +63,8 @@ metadata:
   annotations:
     k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 spec:
-    serverVersion: "4.0.1"
+  cassandra:
+    serverVersion: "4.0.3"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -90,16 +93,19 @@ spec:
       enabled: true
 ```
 # Deploy CassandraDatacenter
-After the K8ssandraCluster spec is updated, the operator creates the new CassandraDatacenter, `dc2`, in the `k8ssandra-operator` namespace in the `west` cluster. 
+After the K8ssandraCluster spec is updated, the operator creates the new 
+CassandraDatacenter, `dc2`, in the `k8ssandra-operator` namespace in the `west` cluster. 
 
 Seeds are updated so that nodes in each DC can communicate.
 
-The `k8ssandra.io/rebuild-dc` annotation is added to the CassandraDatacenter to indicate that a rebuild operation (i.e., `nodetool rebuild`) is needed.
-
- The operator will requeue reconciliation requests until the CassandraDatacenter is ready.
+The `k8ssandra.io/rebuild-dc` annotation is added to the CassandraDatacenter to indicate 
+that a rebuild operation (i.e., `nodetool rebuild`) is needed.
+ 
+The operator will requeue reconciliation requests until the CassandraDatacenter is ready.
 
 # Update Replication of Keyspaces
-After `dc2` becomes ready the operator updates the replication strategy of *internal* keyspaces include replicas in `dc2`. Internal keyspaces includes the following:
+After `dc2` becomes ready the operator updates the replication strategy of *internal* 
+keyspaces to include replicas in `dc2`. Internal keyspaces includes the following:
 
 * `system_auth`
 * `system_traces`
@@ -108,7 +114,9 @@ After `dc2` becomes ready the operator updates the replication strategy of *inte
 * `reaper_db`
 
 ## User Defined Keyspaces
-Next the operator updates the replication strategy of user-defined keyspsaces. The `k8ssandra.io/dc-replication` annotation must be set in order for the operator to update user-defined keyspaces. The value should be valid JSON. 
+Next the operator updates the replication strategy of user-defined keyspsaces. The 
+`k8ssandra.io/dc-replication` annotation must be set in order for the operator to update 
+user-defined keyspaces. The value should be valid JSON. 
 
 Here is what was specified in the updated manifest:
 
@@ -117,11 +125,13 @@ annotations:
   k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 ```
 
-**Note:** All user-defined keyspaces must specified; otherwise, the operator aborts reconciliation with a validation error.
+**Note:** All user-defined keyspaces must be specified; otherwise, the operator aborts 
+reconciliation with a validation error.
 
 If you do not want replicas for a particular keyspace, specify a value of zero.
 
-The operator only processes this annotation when a new CassandraDatacenter is added. Let's say at some point after `dc2` is ready we update the annotation as follows:
+The operator only processes this annotation when a new CassandraDatacenter is added. 
+Let's say at some point after `dc2` is ready we update the annotation as follows:
 
 ```yaml
 annotations:
@@ -129,16 +139,20 @@ annotations:
 ```
 The operator will not update the replication strategies of the keysapces.
 
-Replication settings can be specified for multiple DCs. The operator only applies changes for the DC currently being added. For example, we could have:
+Replication settings can be specified for multiple DCs. The operator only applies 
+changes for the DC currently being added. For example, we could have:
 
 ```yaml
 annotations:
   k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}, "dc3": {"ks1": 1, "ks2": 3}}'
 ```
-The operator will ignore `dc3`. If we later add `dc3` to the cluster, then the operator will apply the replication changes for it and the settings for `dc2` will be ignored.
+The operator will ignore `dc3`. If we later add `dc3` to the cluster, then the operator 
+will apply the replication changes for it and the settings for `dc2` will be ignored.
 
 # Rebuild Datacenter
-At this point the operator has updated replication strategies of keyspaces such that `dc2` is now receiving writes. It proceeds to rebuild `dc2` by creating a CassandraTask object that looks like this:
+At this point the operator has updated replication strategies of keyspaces such that 
+`dc2` is now receiving writes. It proceeds to rebuild `dc2` by creating a CassandraTask 
+object that looks like this:
 
 ```yaml
 apiVersion: control.k8ssandra.io/v1alpha1
@@ -157,14 +171,21 @@ spec:
       arguments:
         source_datacenter: dc1      
 ```
-Cass Operator manages and reconciles CassandraTasks. A rebuild of all keyspaces will be performed on each node in `dc2`, one node at a time.
+Cass Operator manages and reconciles CassandraTasks. A rebuild of all keyspaces will be 
+performed on each node in `dc2`, one node at a time.
 
-The operator requeues reconciliation requests until the rebuild is finished
+The operator requeues reconciliation requests until the rebuild is finished.
 
 **Note:** Upon successful completion Cass Operator deletes the CassandraTask.
 
 ## Choose Source Datacenter for Streaming
-Suppose our K8ssandraCluster already has `dc1` and `dc2`, and now we want to add `dc3`. By default K8ssandra Operator will choose the first DC as the source for streaming. Set the `k8ssandra.io/rebuild-src-dc` annotation to tell the operator from which DC to stream.
+Suppose our K8ssandraCluster already has `dc1` and `dc2`, and now we want to add `dc3`. 
+There will be replicas in each datacenter. When a new datacenter is brought online, data 
+needs to synced across replicas. This is typically done with rebuild operations which 
+stream data from nodes in one datacenter to nodes in another datacenter.
+
+By default K8ssandra Operator will choose the first DC as the source for streaming. Set 
+the `k8ssandra.io/rebuild-src-dc` annotation to tell the operator from which DC to stream.
 
 If we want to stream from `dc2`, then we would have something like this:
 
@@ -180,11 +201,14 @@ metadata:
 ```
 
 # Deploy Stargate
-Next K8ssandra Operator creates a Stargate object, `test-dc2-stargate`, in the `k8ssandra-operator` namesapce in the `west` cluster.
+Next K8ssandra Operator creates a Stargate object, `test-dc2-stargate`, in the 
+`k8ssandra-operator` namesapce in the `west` cluster.
 
 The operator requeues reconciliation requests until Stargate is ready.
 
 # Deploy Reaper
-Lastly, K8ssandra Operator creates a Reaper object, `test-dc2-reaper`, in the `k8ssandra-operator` namespace in the `west` cluster.
+Lastly, K8ssandra Operator creates a Reaper object, `test-dc2-reaper`, in the 
+`k8ssandra-operator` namespace in the `west` cluster.
 
-The operator requeues reconciliation requests until Reaper is ready.  Once Reaper is ready, the K8ssandraCluster is fully reconciled.
+The operator requeues reconciliation requests until Reaper is ready.  Once Reaper is 
+ready, the K8ssandraCluster is fully reconciled.
