@@ -1,4 +1,4 @@
-package telemetry
+package validation
 
 import (
 	"errors"
@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) (bool, error) {
+func TelemetrySpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) (bool, error) {
 	switch {
 	case tspec == nil:
 		return true, nil

@@ -5,6 +5,7 @@ package stargate
 import (
 	"context"
 	"errors"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/validation"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
@@ -35,11 +36,11 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		cfg.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel] = klusterName
 	}
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
-	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
+	promInstalled, err := validation.IsPromInstalled(remoteClient, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	validConfig, err := telemetry.SpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
+	validConfig, err := validation.TelemetrySpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
 	if err != nil {
 		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
 	}
