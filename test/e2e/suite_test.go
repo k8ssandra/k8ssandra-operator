@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	retry "github.com/avast/retry-go/v4"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -388,13 +387,11 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.deployTraefik {
-		retry.Do(func() error {
-			if err := f.DeployTraefik(t, opts.operatorNamespace); err != nil {
-				t.Logf("failed to deploy Traefik")
-				return err
-			}
-			return nil
-		})
+		var errTraefik error
+		require.Eventually(t, func() bool {
+			errTraefik = f.DeployTraefik(t, opts.operatorNamespace)
+			return errTraefik == nil
+		}, time.Minute, 10*time.Second, fmt.Sprintf("Failed to deploy Traefik: %v", errTraefik))
 	}
 
 	if opts.fixture != nil {
@@ -871,7 +868,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := dcSize * 2
-	checkNodeToolStatus(t, f, "kind-k8ssandra-0", namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 

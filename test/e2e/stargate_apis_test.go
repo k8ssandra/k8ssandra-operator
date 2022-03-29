@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	retry "github.com/avast/retry-go/v4"
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
@@ -257,10 +256,10 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 
 	var err error
 	var connection *client.CqlClientConnection
-	retry.Do(func() error {
+	require.Eventually(t, func() bool {
 		connection, err = cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
-		return err
-	})
+		return err == nil
+	}, time.Minute, 10*time.Second, "Connecting to Stargate CQL failed")
 
 	require.NoError(t, err, "Failed to connect via CQL native port to %s", contactPoint)
 	return connection
@@ -268,7 +267,7 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContextIdx in
 
 func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConnection, tableName, keyspaceName string, replication map[string]int) {
 	require.Eventually(t, func() bool {
-		response, err := sendQuery(connection, fmt.Sprintf(
+		response, err := sendQuery(t, connection, fmt.Sprintf(
 			"CREATE KEYSPACE IF NOT EXISTS %s with replication = {'class':'NetworkTopologyStrategy', %s}",
 			keyspaceName,
 			formatReplicationForCql(replication),
@@ -280,7 +279,7 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 		return ok
 	}, time.Minute, time.Second, "CREATE KEYSPACE via CQL failed")
 	require.Eventually(t, func() bool {
-		response, err := sendQuery(connection, fmt.Sprintf(
+		response, err := sendQuery(t, connection, fmt.Sprintf(
 			"CREATE TABLE IF NOT EXISTS %s.%s (id timeuuid PRIMARY KEY, val text)",
 			keyspaceName,
 			tableName,
@@ -296,7 +295,7 @@ func createKeyspaceAndTableNative(t *testing.T, connection *client.CqlClientConn
 func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
 	for i := 0; i < nbRows; i++ {
 		query := fmt.Sprintf("INSERT INTO %s.%s (id, val) VALUES (now(), '%d')", keyspaceName, tableName, i)
-		response, err := sendQuery(connection, query)
+		response, err := sendQuery(t, connection, query)
 		assert.NoError(t, err, "Query failed: %s", query)
 		assert.IsType(t, &message.VoidResult{}, response.Body.Message, "Expected INSERT INTO response to be of type VoidResult")
 	}
@@ -304,7 +303,7 @@ func insertRowsNative(t *testing.T, connection *client.CqlClientConnection, nbRo
 
 func checkRowCountNative(t *testing.T, connection *client.CqlClientConnection, nbRows int, tableName, keyspaceName string) {
 	query := fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName)
-	response, err := sendQuery(connection, query)
+	response, err := sendQuery(t, connection, query)
 	if assert.NoError(t, err, "Query failed: %s", query) &&
 		assert.IsType(t, &message.RowsResult{}, response.Body.Message, "Expected SELECT response to be of type RowsResult") {
 		result := response.Body.Message.(*message.RowsResult)
@@ -312,7 +311,7 @@ func checkRowCountNative(t *testing.T, connection *client.CqlClientConnection, n
 	}
 }
 
-func sendQuery(connection *client.CqlClientConnection, query string) (*frame.Frame, error) {
+func sendQuery(t *testing.T, connection *client.CqlClientConnection, query string) (*frame.Frame, error) {
 	request := frame.NewFrame(
 		primitive.ProtocolVersion4,
 		client.ManagedStreamId,
@@ -326,10 +325,11 @@ func sendQuery(connection *client.CqlClientConnection, query string) (*frame.Fra
 
 	var result *frame.Frame
 	var err2 error
-	retry.Do(func() error {
+	require.Eventually(t, func() bool {
 		result, err2 = connection.SendAndReceive(request)
-		return err2
-	})
+		return err2 == nil
+	}, time.Minute, 10*time.Second, "Connecting to Stargate CQL failed")
+
 	return result, err2
 }
 
