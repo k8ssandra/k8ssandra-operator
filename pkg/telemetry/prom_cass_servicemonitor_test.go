@@ -1,15 +1,16 @@
 package telemetry
 
 import (
+	"testing"
+
 	testlogr "github.com/go-logr/logr/testing"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 //Test_NewCassServiceMonitor_SUCCESS tests that a new service monitor is successfully returned.
 func Test_NewCassServiceMonitor_SUCCESS(t *testing.T) {
-	logger := testlogr.TestLogger{T: t}
+	logger := testlogr.NewTestLogger(t)
 	cfg := PrometheusResourcer{
 		MonitoringTargetNS:   "test-namespace",
 		MonitoringTargetName: "test-dc-name",

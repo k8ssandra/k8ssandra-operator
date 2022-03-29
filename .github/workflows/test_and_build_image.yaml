@@ -17,13 +17,11 @@ jobs:
     name: Run unit/integration tests
     runs-on: ubuntu-latest
     env:
-      GOPATH: /home/runner/go
-      GOROOT: /usr/local/go1.16
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
         id: go
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2

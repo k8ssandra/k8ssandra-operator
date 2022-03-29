@@ -4,8 +4,9 @@ package telemetry
 
 import (
 	"context"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"testing"
+
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	testlogr "github.com/go-logr/logr/testing"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
@@ -24,7 +25,7 @@ func Test_PrometheusResourcer_UpdateResources_Create_CassDC(t *testing.T) {
 	}
 	ctx := context.Background()
 	// Create k8ssandra cluster and pass through to PrometheusResourcer.UpdateResources()
-	logger := testlogr.TestLogger{T: t}
+	logger := testlogr.NewTestLogger(t)
 	cfg := PrometheusResourcer{
 		MonitoringTargetNS:   "test-namespace",
 		MonitoringTargetName: "test-dc-name",
@@ -58,7 +59,7 @@ func Test_PrometheusResourcer_Cleanup_CassDC(t *testing.T) {
 		assert.Fail(t, "could not create fake client", err)
 	}
 	ctx := context.Background()
-	testLogger := testlogr.TestLogger{T: t}
+	testLogger := testlogr.NewTestLogger(t)
 	// Create ServiceMonitor in the fakeClient
 	cfg := PrometheusResourcer{
 		MonitoringTargetNS:   "test-namespace",

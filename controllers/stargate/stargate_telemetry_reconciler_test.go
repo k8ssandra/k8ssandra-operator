@@ -4,8 +4,9 @@ package stargate
 
 import (
 	"context"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"testing"
+
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	testlogr "github.com/go-logr/logr/testing"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -29,7 +30,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	r := newDummyK8ssandraClusterReconciler()
 	ctx := context.Background()
 	fakeClient := test.NewFakeClientWRestMapper()
-	testLogger := testlogr.TestLogger{T: t}
+	testLogger := testlogr.NewTestLogger(t)
 	// Resources to create
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
