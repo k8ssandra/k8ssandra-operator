@@ -100,13 +100,18 @@ type clientGetter interface {
 }
 
 func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, clientCache clientGetter) error {
-	// Validate Cassandra telemetry
+	// Iterate through the DCs, checking Stargate and Cassandra telemetry
 	for _, dc := range kCluster.Spec.Cassandra.Datacenters {
+		//Get client and determine if prom installed.
 		dcClient, err := clientCache.GetRemoteClient(dc.K8sContext)
+		if err != nil {
+			return err
+		}
 		promInstalled, err := validationpkg.IsPromInstalled(dcClient, webhookLog)
 		if err != nil {
 			return err
 		}
+
 		cassToValidate := &telemetryapi.TelemetrySpec{}
 		if kCluster.Spec.Cassandra.Telemetry != nil {
 			cassToValidate = kCluster.Spec.Cassandra.Telemetry.Merge(dc.Telemetry)
@@ -125,6 +130,7 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, clientCache clientGetter
 			}
 
 		}
+
 		sgToValidate := &telemetryapi.TelemetrySpec{}
 		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
 			sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
@@ -141,13 +147,42 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, clientCache clientGetter
 			}
 		}
 	}
+	// Deal with the case that datacenters is completely undefined and the above for loop is empty.
+	if len(kCluster.Spec.Cassandra.Datacenters) == 0 {
+		localClient, err := clientCache.GetRemoteClient("")
+		if err != nil {
+			return err
+		}
+		promInstalled, err := validationpkg.IsPromInstalled(localClient, webhookLog)
+		if err != nil {
+			return err
+		}
+		if kCluster.Spec.Cassandra.Telemetry != nil {
+			cassIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Cassandra.Telemetry, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !cassIsValid {
+				return errors.New("Cassandra telemetry specification was incorrect in control plane")
+			}
+		}
+		if kCluster.Spec.Stargate.Telemetry != nil {
+			sgIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Cassandra.Telemetry, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !sgIsValid {
+				return errors.New("Stargate telemetry specification was incorrect in control plane")
+			}
+		}
+
+	}
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
-
 	if err := r.validateK8ssandraCluster(); err != nil {
 		return err
 	}
