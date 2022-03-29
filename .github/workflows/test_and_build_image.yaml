@@ -16,7 +16,6 @@ jobs:
   unit_integration_tests:
     name: Run unit/integration tests
     runs-on: ubuntu-latest
-    env:
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
