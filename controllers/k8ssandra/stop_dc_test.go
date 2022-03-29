@@ -176,17 +176,21 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 
 	replication := map[string]int{"dc1": 3, "dc2": 3}
 	stopDcManagementApiReset(replication)
-
 	t.Log("stop dc1")
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].Stopped = true
-	err := f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
+	require.Eventually(t, func() bool {
+		kc = &api.K8ssandraCluster{}
+		f.Client.Get(ctx, kcKey, kc)
+		patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		kc.Spec.Cassandra.Datacenters[0].Stopped = true
+		err := f.Client.Patch(ctx, kc, patch)
+		t.Log(err)
+		return err == nil
+	}, timeout, interval, "failed to patch dc1 status to stopped")
 	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
 		return assert.True(t, dc1.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc1 to be stopped")
-	err = f.SetDatacenterStatusStopped(ctx, dc1Key)
+	err := f.SetDatacenterStatusStopped(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status stopped")
 
 	t.Log("wait for the dc conditions to be met")
@@ -211,7 +215,7 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
 	t.Log("start dc1")
-	patch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	kc.Spec.Cassandra.Datacenters[0].Stopped = false
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch kc")
