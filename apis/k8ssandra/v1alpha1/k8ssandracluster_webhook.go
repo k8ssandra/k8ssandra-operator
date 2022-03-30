@@ -95,15 +95,16 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 	return nil
 }
 
+// clientGetter is an interface here purely to enable DI. It is anything that implements `GetRemoteClient()` mechanism to get remote clients by name.
 type clientGetter interface {
 	GetRemoteClient(k8sContextName string) (client.Client, error)
 }
 
-func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, clientCache clientGetter) error {
+func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) error {
 	// Iterate through the DCs, checking Stargate and Cassandra telemetry
 	for _, dc := range kCluster.Spec.Cassandra.Datacenters {
 		//Get client and determine if prom installed.
-		dcClient, err := clientCache.GetRemoteClient(dc.K8sContext)
+		dcClient, err := cGetter.GetRemoteClient(dc.K8sContext)
 		if err != nil {
 			return err
 		}
