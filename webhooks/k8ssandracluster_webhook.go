@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package webhooks
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
@@ -35,36 +36,38 @@ var (
 	ErrNoResourcesSet  = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
 )
 
+type ValidatedK8ssandraCluster struct{ v1alpha1.K8ssandraCluster }
+
 // log is for logging in this package.
 var webhookLog = logf.Log.WithName("k8ssandracluster-webhook")
 
-func (r *K8ssandraCluster) SetupWebhookWithManager(mgr ctrl.Manager, cCache *clientcache.ClientCache) error {
+func (r *ValidatedK8ssandraCluster) SetupWebhookWithManager(mgr ctrl.Manager, cCache *clientcache.ClientCache) error {
 	clientCache = cCache
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
-var _ webhook.Defaulter = &K8ssandraCluster{}
+var _ webhook.Defaulter = &ValidatedK8ssandraCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *K8ssandraCluster) Default() {
+func (r *ValidatedK8ssandraCluster) Default() {
 	webhookLog.Info("K8ssandraCluster default values", "K8ssandraCluster", r.Name)
 
 }
 
 //+kubebuilder:webhook:path=/validate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=vk8ssandracluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &K8ssandraCluster{}
+var _ webhook.Validator = &ValidatedK8ssandraCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateCreate() error {
+func (r *ValidatedK8ssandraCluster) ValidateCreate() error {
 	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
 
 	return r.validateK8ssandraCluster()
 }
 
-func (r *K8ssandraCluster) validateK8ssandraCluster() error {
+func (r *ValidatedK8ssandraCluster) validateK8ssandraCluster() error {
 	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
 	// Verify given k8s-contexts are correct
 	for _, dc := range r.Spec.Cassandra.Datacenters {
@@ -90,14 +93,14 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
+func (r *ValidatedK8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
 
 	if err := r.validateK8ssandraCluster(); err != nil {
 		return err
 	}
 
-	oldCluster, ok := old.(*K8ssandraCluster)
+	oldCluster, ok := old.(*v1alpha1.K8ssandraCluster)
 	if !ok {
 		return fmt.Errorf("previous object could not be casted to K8ssandraCluster")
 	}
@@ -147,7 +150,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateDelete() error {
+func (r *ValidatedK8ssandraCluster) ValidateDelete() error {
 	webhookLog.Info("validate K8ssandraCluster delete", "name", r.Name)
 	return nil
 }

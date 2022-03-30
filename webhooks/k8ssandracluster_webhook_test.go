@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package webhooks
 
 import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"net"
 	"path/filepath"
 	"testing"
@@ -75,7 +76,7 @@ func TestWebhook(t *testing.T) {
 	defer testEnv.Stop()
 
 	scheme := runtime.NewScheme()
-	err = AddToScheme(scheme)
+	err = v1alpha1.AddToScheme(scheme)
 	require.NoError(err)
 
 	err = corev1.AddToScheme(scheme)
@@ -84,7 +85,7 @@ func TestWebhook(t *testing.T) {
 	err = admissionv1.AddToScheme(scheme)
 	require.NoError(err)
 
-	err = AddToScheme(scheme)
+	err = v1alpha1.AddToScheme(scheme)
 	require.NoError(err)
 
 	err = reaperapi.AddToScheme(scheme)
@@ -110,7 +111,7 @@ func TestWebhook(t *testing.T) {
 
 	clientCache := clientcache.New(k8sClient, k8sClient, scheme)
 	clientCache.AddClient("envtest", k8sClient)
-	err = (&K8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache)
+	err = (&ValidatedK8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache)
 	require.NoError(err)
 
 	//+kubebuilder:scaffold:webhook
@@ -189,7 +190,7 @@ func testStorageConfigValidation(t *testing.T) {
 	err = k8sClient.Update(ctx, cluster)
 	require.NoError(err)
 
-	cluster.Spec.Cassandra.Datacenters = append(cluster.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+	cluster.Spec.Cassandra.Datacenters = append(cluster.Spec.Cassandra.Datacenters, v1alpha1.CassandraDatacenterTemplate{
 		K8sContext: "envtest",
 		Size:       1,
 	})
@@ -208,7 +209,7 @@ func testNumTokens(t *testing.T) {
 	cluster := createMinimalClusterObj("numtokens-test", "numtokens-namespace")
 
 	// Create without token definition
-	cluster.Spec.Cassandra.CassandraConfig = &CassandraConfig{}
+	cluster.Spec.Cassandra.CassandraConfig = &v1alpha1.CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
 	require.NoError(err)
 
@@ -245,16 +246,16 @@ func createNamespace(require *require.Assertions, namespace string) {
 	require.NoError(err)
 }
 
-func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
-	return &K8ssandraCluster{
+func createMinimalClusterObj(name, namespace string) *v1alpha1.K8ssandraCluster {
+	return &v1alpha1.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: K8ssandraClusterSpec{
-			Cassandra: &CassandraClusterTemplate{
+		Spec: v1alpha1.K8ssandraClusterSpec{
+			Cassandra: &v1alpha1.CassandraClusterTemplate{
 				StorageConfig: &v1beta1.StorageConfig{},
-				Datacenters: []CassandraDatacenterTemplate{
+				Datacenters: []v1alpha1.CassandraDatacenterTemplate{
 					{
 						K8sContext: "envtest",
 						Size:       1,
