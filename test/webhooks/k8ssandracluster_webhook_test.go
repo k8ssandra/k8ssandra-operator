@@ -263,8 +263,12 @@ func testTelemetryValidation(t *testing.T) {
 	kc.Spec.Cassandra.Telemetry = telemetryEnabled
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, promCache)
 	require.NoError(t, err, "unexpected error when validating telemetry spec on prom cluster WITH cass telemetry, no DCs")
-	kc.Spec.Stargate.Telemetry = telemetryEnabled
-	kc.Spec.Stargate.Size = 1
+	kc.Spec.Stargate = &v1alpha1.StargateClusterTemplate{
+		Size: 1,
+		StargateTemplate: v1alpha1.StargateTemplate{
+			Telemetry: telemetryEnabled,
+		},
+	}
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, promCache)
 	require.NoError(t, err, "unexpected error when validating telemetry spec on prom cluster WITH cass, stargate telemetry, no DCs")
 	kc.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
