@@ -27,6 +27,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	testpkg "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"net"
 	"path/filepath"
 	"testing"
@@ -308,7 +309,16 @@ func testTelemetryValidation(t *testing.T) {
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
 	require.Error(t, err,"did not get expected error when trying to enable cass telemetry on a cluster with no prom installed")
 	kc.Spec.Cassandra.Telemetry = nil
-	kc.Spec.Stargate.Telemetry = telemetryEnabled
+	kc.Spec.Stargate = &v1alpha1.StargateClusterTemplate{
+		Size: 1,
+		StargateTemplate: v1alpha1.StargateTemplate{
+			Telemetry: telemetryEnabled,
+		},
+	}
+	c, _ := noPromCache.GetRemoteClient("")
+	tmp := promapi.SchemeGroupVersion.WithResource("servicemonitors")
+	println(tmp.Version)
+	println(c.RESTMapper().KindsFor(tmp))
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
 	require.Error(t, err,"did not get expected error when trying to enable stargate telemetry on a cluster with no prom installed")
 }

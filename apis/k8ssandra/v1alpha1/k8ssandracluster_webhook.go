@@ -169,7 +169,7 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) er
 			}
 		}
 		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
-			sgIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Cassandra.Telemetry, promInstalled)
+			sgIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Stargate.Telemetry, promInstalled)
 			if err != nil {
 				return err
 			}
