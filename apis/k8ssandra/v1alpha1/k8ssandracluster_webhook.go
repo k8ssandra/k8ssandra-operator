@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"fmt"
-
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	validationpkg "github.com/k8ssandra/k8ssandra-operator/pkg/validation"
@@ -152,7 +151,7 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) er
 	}
 	// Deal with the case that datacenters is completely undefined and the above for loop is empty.
 	if len(kCluster.Spec.Cassandra.Datacenters) == 0 {
-		localClient, err := clientCache.GetRemoteClient("")
+		localClient, err := cGetter.GetRemoteClient("")
 		if err != nil {
 			return err
 		}
