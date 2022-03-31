@@ -27,7 +27,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	testpkg "github.com/k8ssandra/k8ssandra-operator/pkg/test"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"net"
 	"path/filepath"
 	"testing"
@@ -315,12 +314,40 @@ func testTelemetryValidation(t *testing.T) {
 			Telemetry: telemetryEnabled,
 		},
 	}
-	c, _ := noPromCache.GetRemoteClient("")
-	tmp := promapi.SchemeGroupVersion.WithResource("servicemonitors")
-	println(tmp.Version)
-	println(c.RESTMapper().KindsFor(tmp))
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
 	require.Error(t, err,"did not get expected error when trying to enable stargate telemetry on a cluster with no prom installed")
+
+	// Test when some DCs have Prometheus and others do not
+	halfPromCache :=  testpkg.MockClientCache{
+		PromInstalled: map[string]bool{"context1": true, "context2": false},
+	}
+	kc = testpkg.NewK8ssandraCluster("test-cluster", "test-namespace")
+	kc.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
+		{
+			Telemetry: telemetryEnabled,
+			K8sContext: "context1",
+			Stargate: &v1alpha1.StargateDatacenterTemplate{
+				StargateClusterTemplate: v1alpha1.StargateClusterTemplate{
+					StargateTemplate: v1alpha1.StargateTemplate{
+						Telemetry: telemetryEnabled,
+					},
+				},
+			},
+		},
+		{
+			K8sContext: "context2",
+			Telemetry: telemetryDisabled,
+			Stargate: &v1alpha1.StargateDatacenterTemplate{
+				StargateClusterTemplate: v1alpha1.StargateClusterTemplate{
+					StargateTemplate: v1alpha1.StargateTemplate{
+						Telemetry: telemetryDisabled,
+					},
+				},
+			},
+		},
+	}
+	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, halfPromCache)
+	require.NoError(t, err, "unexpected error when validating telemetry spec on cluster with prom partly enabled with telemetry partly enabled")
 }
 
 func createNamespace(require *require.Assertions, namespace string) {
