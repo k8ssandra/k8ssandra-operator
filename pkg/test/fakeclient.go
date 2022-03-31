@@ -21,15 +21,24 @@ func NewFakeClient() (client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	utilruntime.Must(promapi.AddToScheme(testScheme))
 	utilruntime.Must(cassdcapi.AddToScheme(testScheme))
 	utilruntime.Must(k8ssandraapi.AddToScheme(testScheme))
 	utilruntime.Must(reaperapi.AddToScheme(testScheme))
 	utilruntime.Must(stargateapi.AddToScheme(testScheme))
+	utilruntime.Must(promapi.AddToScheme(testScheme))
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(testScheme).
 		Build()
 	return fakeClient, nil
+}
+// NewFakeClientWithProm gets a fake client loaded up with a scheme that contains all the APIs used in this project + Prometheus.
+//It also returns the right results from .KindsFor() calls.
+func NewFakeClientWithProm() (client.Client, error) {
+	fakeClient, err := NewFakeClient()
+	if err != nil {
+		return nil, err
+	}
+	return composedClient{fakeClient}, nil
 }
 
 // Some magic to override the RESTMapper().KindsFor(...) call. fake client blows up with a panic otherwise.
@@ -52,7 +61,31 @@ func (rm fakeRESTMapper) KindsFor(resource schema.GroupVersionResource) ([]schem
 		},
 	}, nil
 }
-func NewFakeClientWRestMapper() client.Client {
-	fakeClient, _ := NewFakeClient()
-	return composedClient{fakeClient}
+// MockClientCache is a mock to retrieve remote clients.
+// Use the PromInstalled field to set which clients should have Prometheus fake-installed according to their RESTMapper calls.
+type MockClientCache struct {
+	PromInstalled map[string]bool
+}
+
+func (this MockClientCache) GetRemoteClient (k8sContextName string) (client.Client, error){
+	if this.PromInstalled == nil {
+		fakeClient, err := NewFakeClientWithProm()
+		if err != nil {
+			return nil, err
+		}
+		return fakeClient, nil
+	}
+	if this.PromInstalled[k8sContextName] {
+		fakeClient, err := NewFakeClientWithProm()
+		if err != nil {
+			return nil ,err
+		}
+		return fakeClient, nil
+	} else {
+		fakeClient, err := NewFakeClient()
+		if err != nil {
+			return nil ,err
+		}
+		return fakeClient, nil
+	}
 }

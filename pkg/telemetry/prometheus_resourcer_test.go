@@ -19,10 +19,7 @@ import (
 
 // Test_PrometheusResourcer_UpdateResources_Create_CassDC tests that a serviceMonitor is created if one does not exist.
 func Test_PrometheusResourcer_UpdateResources_Create_CassDC(t *testing.T) {
-	fakeClient, err := test.NewFakeClient()
-	if err != nil {
-		assert.Fail(t, "could not create fake client", err)
-	}
+	fakeClient, _ := test.NewFakeClientWithProm()
 	ctx := context.Background()
 	// Create k8ssandra cluster and pass through to PrometheusResourcer.UpdateResources()
 	logger := testlogr.NewTestLogger(t)
@@ -54,7 +51,7 @@ func Test_PrometheusResourcer_UpdateResources_Create_CassDC(t *testing.T) {
 // Test_PrometheusResourcer_Cleanup_CassDC tests that the Cleanup method on PrometheusResourcer correctly
 // cleans up all resources it creates using its UpdateResources method.
 func Test_PrometheusResourcer_Cleanup_CassDC(t *testing.T) {
-	fakeClient, err := test.NewFakeClient()
+	fakeClient, err := test.NewFakeClientWithProm()
 	if err != nil {
 		assert.Fail(t, "could not create fake client", err)
 	}
