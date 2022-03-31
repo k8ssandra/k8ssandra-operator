@@ -102,49 +102,51 @@ type clientGetter interface {
 
 func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) error {
 	// Iterate through the DCs, checking Stargate and Cassandra telemetry
-	for _, dc := range kCluster.Spec.Cassandra.Datacenters {
-		//Get client and determine if prom installed.
-		dcClient, err := cGetter.GetRemoteClient(dc.K8sContext)
-		if err != nil {
-			return err
-		}
-		promInstalled, err := validationpkg.IsPromInstalled(dcClient, webhookLog)
-		if err != nil {
-			return err
-		}
-
-		cassToValidate := &telemetryapi.TelemetrySpec{}
-		if kCluster.Spec.Cassandra.Telemetry != nil {
-			cassToValidate = kCluster.Spec.Cassandra.Telemetry.Merge(dc.Telemetry)
-		} else if dc.Telemetry != nil {
-			cassToValidate = dc.Telemetry
-		}
-		if cassToValidate != nil {
-			webhookLog.Info("validating cass telemetry in webhook", "cassToValidate", cassToValidate)
-			cassIsValid, err := validationpkg.TelemetrySpecIsValid(cassToValidate, promInstalled)
+	if kCluster.Spec.Cassandra.Datacenters != nil {
+		for _, dc := range kCluster.Spec.Cassandra.Datacenters {
+			//Get client and determine if prom installed.
+			dcClient, err := cGetter.GetRemoteClient(dc.K8sContext)
 			if err != nil {
 				return err
 			}
-			if !cassIsValid {
-				webhookLog.Info("throwing an error, cass telemetry spec invalid")
-				return errors.New(fmt.Sprint("Cassandra telemetry specification was incorrect in context", dc.K8sContext))
-			}
-
-		}
-
-		sgToValidate := &telemetryapi.TelemetrySpec{}
-		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
-			sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
-		} else if dc.Stargate != nil && dc.Stargate.Telemetry != nil {
-			sgToValidate = dc.Stargate.Telemetry
-		}
-		if sgToValidate != nil {
-			sgIsValid, err := validationpkg.TelemetrySpecIsValid(sgToValidate, promInstalled)
+			promInstalled, err := validationpkg.IsPromInstalled(dcClient, webhookLog)
 			if err != nil {
 				return err
 			}
-			if !sgIsValid {
-				return errors.New(fmt.Sprint("Stargate telemetry specification was incorrect in context", dc.K8sContext))
+
+			cassToValidate := &telemetryapi.TelemetrySpec{}
+			if kCluster.Spec.Cassandra.Telemetry != nil {
+				cassToValidate = kCluster.Spec.Cassandra.Telemetry.Merge(dc.Telemetry)
+			} else if dc.Telemetry != nil {
+				cassToValidate = dc.Telemetry
+			}
+			if cassToValidate != nil {
+				webhookLog.Info("validating cass telemetry in webhook", "cassToValidate", cassToValidate)
+				cassIsValid, err := validationpkg.TelemetrySpecIsValid(cassToValidate, promInstalled)
+				if err != nil {
+					return err
+				}
+				if !cassIsValid {
+					webhookLog.Info("throwing an error, cass telemetry spec invalid")
+					return errors.New(fmt.Sprint("Cassandra telemetry specification was incorrect in context", dc.K8sContext))
+				}
+
+			}
+
+			sgToValidate := &telemetryapi.TelemetrySpec{}
+			if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
+				sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
+			} else if dc.Stargate != nil && dc.Stargate.Telemetry != nil {
+				sgToValidate = dc.Stargate.Telemetry
+			}
+			if sgToValidate != nil {
+				sgIsValid, err := validationpkg.TelemetrySpecIsValid(sgToValidate, promInstalled)
+				if err != nil {
+					return err
+				}
+				if !sgIsValid {
+					return errors.New(fmt.Sprint("Stargate telemetry specification was incorrect in context", dc.K8sContext))
+				}
 			}
 		}
 	}
