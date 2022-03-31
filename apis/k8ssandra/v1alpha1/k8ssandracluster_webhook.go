@@ -169,7 +169,7 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) er
 				return errors.New("Cassandra telemetry specification was incorrect in control plane")
 			}
 		}
-		if kCluster.Spec.Stargate.Telemetry != nil {
+		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
 			sgIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Cassandra.Telemetry, promInstalled)
 			if err != nil {
 				return err
