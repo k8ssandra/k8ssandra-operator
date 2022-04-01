@@ -1001,8 +1001,10 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
 	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
-	err = f.Client.Update(ctx, kc)
-	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+	require.Eventually(func() bool {
+		err = f.Client.Update(ctx, kc)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "failed to remove dc2 from K8ssandraCluster spec")
 
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
 	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1*time.Minute, 3*time.Second)
