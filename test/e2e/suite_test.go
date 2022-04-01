@@ -550,13 +550,17 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("delete Stargate in k8ssandracluster CRD")
-	err = f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
-	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	stargateTemplate := &stargateapi.StargateDatacenterTemplate{}
+	require.Eventually(func() bool {
+		k8ssandra = &api.K8ssandraCluster{}
+		err = f.Client.Get(ctx, kcKey, k8ssandra)
+		require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+		patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		stargateTemplate = k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
+		k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
+		err = f.Client.Patch(ctx, k8ssandra, patch)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "failed to patch K8ssandraCluster in namespace %s", "namespace", namespace)
 
 	t.Log("check Stargate deleted")
 	require.Eventually(func() bool {
@@ -578,7 +582,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("re-create Stargate in k8ssandracluster resource")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
 	err = f.Client.Patch(ctx, k8ssandra, patch)
 	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
