@@ -67,7 +67,7 @@ func TestWebhook(t *testing.T) {
 	logf.SetLogger(log)
 
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join( "..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: false,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
@@ -248,7 +248,7 @@ func testTelemetryValidation(t *testing.T) {
 	kc := testpkg.NewK8ssandraCluster("test-cluster", "test-namespace")
 	telemetryEnabled := &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled:      true,
 			CommonLabels: map[string]string{"thisLabel": "maybe", "thatLabel": "definitely"},
 		},
 	}
@@ -284,7 +284,7 @@ func testTelemetryValidation(t *testing.T) {
 		},
 		{
 			K8sContext: "context2",
-			Telemetry: telemetryEnabled,
+			Telemetry:  telemetryEnabled,
 			Stargate: &v1alpha1.StargateDatacenterTemplate{
 				StargateClusterTemplate: v1alpha1.StargateClusterTemplate{
 					StargateTemplate: v1alpha1.StargateTemplate{
@@ -306,14 +306,14 @@ func testTelemetryValidation(t *testing.T) {
 	require.NoError(t, err, "unexpected error when validating telemetry spec on prom cluster with MIXED cass, stargate at cluster level, 2 DCs")
 	// Cases where Prometheus is NOT installed
 	noPromCache := testpkg.MockClientCache{
-		PromInstalled: map[string]bool{"":false, "context2": false},
+		PromInstalled: map[string]bool{"": false, "context2": false},
 	}
 	kc = testpkg.NewK8ssandraCluster("test-cluster", "test-namespace")
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
 	require.NoError(t, err, "unexpected error when validating telemetry spec on NON-PROM cluster with telemetry DISABLED")
 	kc.Spec.Cassandra.Telemetry = telemetryEnabled
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
-	require.Error(t, err,"did not get expected error when trying to enable cass telemetry on a cluster with no prom installed")
+	require.Error(t, err, "did not get expected error when trying to enable cass telemetry on a cluster with no prom installed")
 	kc.Spec.Cassandra.Telemetry = nil
 	kc.Spec.Stargate = &v1alpha1.StargateClusterTemplate{
 		Size: 1,
@@ -322,16 +322,16 @@ func testTelemetryValidation(t *testing.T) {
 		},
 	}
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, noPromCache)
-	require.Error(t, err,"did not get expected error when trying to enable stargate telemetry on a cluster with no prom installed")
+	require.Error(t, err, "did not get expected error when trying to enable stargate telemetry on a cluster with no prom installed")
 
 	// Test when some DCs have Prometheus and others do not
-	halfPromCache :=  testpkg.MockClientCache{
+	halfPromCache := testpkg.MockClientCache{
 		PromInstalled: map[string]bool{"context1": true, "context2": false},
 	}
 	kc = testpkg.NewK8ssandraCluster("test-cluster", "test-namespace")
 	kc.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
 		{
-			Telemetry: telemetryEnabled,
+			Telemetry:  telemetryEnabled,
 			K8sContext: "context1",
 			Stargate: &v1alpha1.StargateDatacenterTemplate{
 				StargateClusterTemplate: v1alpha1.StargateClusterTemplate{
@@ -343,7 +343,7 @@ func testTelemetryValidation(t *testing.T) {
 		},
 		{
 			K8sContext: "context2",
-			Telemetry: telemetryDisabled,
+			Telemetry:  telemetryDisabled,
 			Stargate: &v1alpha1.StargateDatacenterTemplate{
 				StargateClusterTemplate: v1alpha1.StargateClusterTemplate{
 					StargateTemplate: v1alpha1.StargateTemplate{
