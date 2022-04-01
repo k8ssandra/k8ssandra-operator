@@ -31,6 +31,7 @@ spec:
       name: reaper-jmx-secret # will be created with non-default name
     uiUserSecretRef:
       name: reaper-ui-secret # pre-existing secret with non-default name
+    heapSize: 256Mi
   cassandra:
     serverVersion: "4.0.1"
     datacenters:
@@ -48,7 +49,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
       - metadata:
@@ -65,7 +66,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi
@@ -74,9 +75,6 @@ spec:
     heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
-    resources:
-      limits:
-        memory: 512Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10

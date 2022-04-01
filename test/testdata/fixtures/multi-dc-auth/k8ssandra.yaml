@@ -5,7 +5,7 @@ metadata:
 spec:
   auth: false
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "3.11.11"
     datacenters:
       - metadata:
           name: dc1
@@ -21,7 +21,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
       - metadata:
@@ -38,7 +38,7 @@ spec:
                 storage: 5Gi
         config:
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi
@@ -47,9 +47,6 @@ spec:
     heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
-    resources:
-      limits:
-        memory: 1024Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10
@@ -64,3 +61,4 @@ spec:
       timeoutSeconds: 20
   reaper:
     deploymentMode: PER_DC
+    heapSize: 256Mi

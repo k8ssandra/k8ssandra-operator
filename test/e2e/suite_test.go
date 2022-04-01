@@ -182,7 +182,8 @@ func TestOperator(t *testing.T) {
 		deployTraefik: true,
 	}))
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
-		testFunc: controllerRestart,
+		testFunc:                    controllerRestart,
+		skipK8ssandraClusterCleanup: true,
 	}))
 	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc:      createSingleDatacenterClusterWithEncryption,
@@ -386,10 +387,11 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.deployTraefik {
-		if err := f.DeployTraefik(t, opts.operatorNamespace); err != nil {
-			t.Logf("failed to deploy Traefik")
-			return err
-		}
+		var errTraefik error
+		require.Eventually(t, func() bool {
+			errTraefik = f.DeployTraefik(t, opts.operatorNamespace)
+			return errTraefik == nil
+		}, time.Minute, 10*time.Second, fmt.Sprintf("Failed to deploy Traefik: %v", errTraefik))
 	}
 
 	if opts.fixture != nil {
@@ -431,7 +433,7 @@ func applyPollingDefaults() {
 	polling.operatorDeploymentReady.timeout = 1 * time.Minute
 	polling.operatorDeploymentReady.interval = 1 * time.Second
 
-	polling.datacenterReady.timeout = 15 * time.Minute
+	polling.datacenterReady.timeout = 20 * time.Minute
 	polling.datacenterReady.interval = 15 * time.Second
 
 	polling.nodetoolStatus.timeout = 2 * time.Minute
@@ -809,26 +811,27 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg1Key)
 
-	// reaper1Key := framework.ClusterKey{
-	//	K8sContext: f.K8sContext(0),
-	//	NamespacedName: types.NamespacedName{
-	//		Namespace: namespace,
-	//		Name:      "test-dc1-reaper",
-	//	},
-	// }
-	// checkReaperReady(t, f, ctx, reaper1Key)
+	reaper1Key := framework.ClusterKey{
+		K8sContext: f.K8sContext(0),
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper1Key)
 
+	dcSize := 2
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
-		"CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 2}")
+		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	_, err = f.ExecuteCql(ctx, f.K8sContext(0), namespace, "test", "test-dc1-default-sts-0",
-		"CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 2}")
+		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("add dc2 to cluster")
-	dcSize := 2
+
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
 		err = f.Client.Get(ctx, kcKey, kc)
@@ -864,7 +867,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
-	count := 4
+	count := dcSize * 2
 	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
@@ -885,7 +888,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				return false
 			}
 			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
-		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
+		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 
 	sg2Key := framework.ClusterKey{
@@ -897,14 +900,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
 
-	// reaper2Key := framework.ClusterKey{
-	//	K8sContext: f.K8sContext(1),
-	//	NamespacedName: types.NamespacedName{
-	//		Namespace: namespace,
-	//		Name:      "test-dc2-reaper",
-	//	},
-	// }
-	// checkReaperReady(t, f, ctx, reaper2Key)
+	reaper2Key := framework.ClusterKey{
+		K8sContext: f.K8sContext(1),
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc2-reaper",
+		},
+	}
+	checkReaperReady(t, f, ctx, reaper2Key)
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

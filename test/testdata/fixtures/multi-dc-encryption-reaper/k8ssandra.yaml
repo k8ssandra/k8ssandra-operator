@@ -43,6 +43,7 @@ spec:
       name: reaper-ui-secret # pre-existing secret with non-default name
     autoScheduling:
       enabled: false
+    heapSize: 256Mi
   cassandra:
     serverVersion: "3.11.11"
     storageConfig:
@@ -81,10 +82,7 @@ spec:
         client_encryption_options:
             enabled: true
       jvmOptions:
-        heapSize: 384Mi
-    resources:
-      limits:
-        memory: 1024Mi
+        heapSize: 512Mi
     networking:
       hostNetwork: true
     datacenters:

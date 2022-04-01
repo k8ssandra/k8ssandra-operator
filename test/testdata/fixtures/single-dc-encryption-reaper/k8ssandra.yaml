@@ -16,6 +16,7 @@ spec:
   reaper:
     autoScheduling:
       enabled: false
+    heapSize: 256Mi
   cassandra:
     serverVersion: 3.11.11
     datacenters:
@@ -38,7 +39,7 @@ spec:
             client_encryption_options:
               enabled: true
           jvmOptions:
-            heapSize: 384Mi
+            heapSize: 512Mi
     serverEncryptionStores:
       keystoreSecretRef:
         name: server-encryption-stores

@@ -1070,6 +1070,14 @@ spec:
                 required:
                 - name
                 type: object
+              heapSize:
+                anyOf:
+                - type: integer
+                - type: string
+                default: 2Gi
+                description: HeapSize sets the JVM heap size to use for Reaper.
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
               initContainerImage:
                 default:
                   name: cassandra-reaper

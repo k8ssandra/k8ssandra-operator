@@ -7,6 +7,13 @@ data:
     concurrent_reads: 32
     concurrent_writes: 32
     concurrent_counter_writes: 32
+    cas_contention_timeout_in_ms: 10000
+    counter_write_request_timeout_in_ms: 10000
+    range_request_timeout_in_ms: 10000
+    read_request_timeout_in_ms: 10000
+    request_timeout_in_ms: 10000
+    truncate_request_timeout_in_ms: 60000
+    write_request_timeout_in_ms: 10000
 ---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
@@ -42,6 +49,14 @@ spec:
         thrift_prepared_statements_cache_size_mb: 1
         prepared_statements_cache_size_mb: 1
         slow_query_log_timeout_in_ms: 0
+        block_for_peers_timeout_in_secs: 10000
+        cas_contention_timeout_in_ms: 10000
+        counter_write_request_timeout_in_ms: 10000
+        range_request_timeout_in_ms: 10000
+        read_request_timeout_in_ms: 10000
+        request_timeout_in_ms: 10000
+        truncate_request_timeout_in_ms: 60000
+        write_request_timeout_in_ms: 10000
         counter_cache_size_in_mb: 0
         concurrent_reads: 2
         concurrent_writes: 2
@@ -52,10 +67,7 @@ spec:
         client_encryption_options:
             enabled: true
       jvmOptions:
-        heapSize: 384Mi
-    resources:
-      limits:
-        memory: 1024Mi
+        heapSize: 512Mi
     networking:
       hostNetwork: true
     datacenters:
@@ -91,9 +103,6 @@ spec:
     heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
-    resources:
-      limits:
-        memory: 1024Mi
     livenessProbe:
       initialDelaySeconds: 100
       periodSeconds: 10

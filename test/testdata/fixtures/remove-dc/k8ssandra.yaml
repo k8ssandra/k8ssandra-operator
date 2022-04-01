@@ -30,12 +30,9 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
-        heapSize: 384Mi
+        heapSize: 512Mi
     networking:
       hostNetwork: true
-    resources:
-      limits:
-        memory: 512Mi
     datacenters:
       - metadata:
           name: dc1
@@ -45,15 +42,13 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 1
-  reaper: {}
+  reaper:
+    heapSize: 256Mi
   stargate:
     size: 1
     heapSize: 384Mi
     cassandraConfigMapRef:
       name: cassandra-config
-    resources:
-      limits:
-        memory: 512Mi
     livenessProbe:
       initialDelaySeconds: 60
       periodSeconds: 10

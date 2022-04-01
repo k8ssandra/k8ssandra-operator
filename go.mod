@@ -4,7 +4,9 @@ go 1.17
 
 require (
 	github.com/Jeffail/gabs v1.4.0
+	github.com/aws/aws-sdk-go v1.40.37 // indirect
 	github.com/bombsimon/logrusr/v2 v2.0.1
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/datastax/go-cassandra-native-protocol v0.0.0-20210829124742-a80a54434112
 	github.com/go-logr/logr v1.2.0
 	github.com/go-logr/zapr v1.2.0
@@ -38,10 +40,8 @@ require (
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/aws/aws-sdk-go v1.40.37 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect

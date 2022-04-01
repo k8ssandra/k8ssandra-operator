@@ -135,6 +135,13 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
+	if reaper.Spec.HeapSize != nil {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_HEAP_SIZE",
+			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
+		})
+	}
+
 	volumeMounts := []corev1.VolumeMount{}
 	volumes := []corev1.Volume{}
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
