@@ -296,7 +296,14 @@ func testTelemetryValidation(t *testing.T) {
 	}
 	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, promCache)
 	require.NoError(t, err, "unexpected error when validating telemetry spec on prom cluster with MIXED cass, stargate telemetry, 2 DCs")
-
+	kc.Spec.Cassandra.Datacenters[0].Stargate = nil
+	kc.Spec.Stargate = &v1alpha1.StargateClusterTemplate{
+		StargateTemplate: v1alpha1.StargateTemplate{
+			Telemetry: telemetryDisabled,
+		},
+	}
+	err = k8ssandraapi.TelemetrySpecsAreValid(&kc, promCache)
+	require.NoError(t, err, "unexpected error when validating telemetry spec on prom cluster with MIXED cass, stargate at cluster level, 2 DCs")
 	// Cases where Prometheus is NOT installed
 	noPromCache := testpkg.MockClientCache{
 		PromInstalled: map[string]bool{"":false, "context2": false},

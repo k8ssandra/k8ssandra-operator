@@ -133,8 +133,16 @@ func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) er
 			}
 
 			sgToValidate := &telemetryapi.TelemetrySpec{}
+			if kCluster.Spec.Stargate != nil {
+				webhookLog.Info( "stargate telemetry exists", "kCluster.Spec.Stargate.Telemetry", kCluster.Spec.Stargate.Telemetry)
+			}
+			webhookLog.Info("validating stargate", "kCluster.Spec.Stargate", kCluster.Spec.Stargate)
 			if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
-				sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
+				if dc.Stargate != nil {
+					sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
+				} else {
+					sgToValidate = kCluster.Spec.Stargate.Telemetry
+				}
 			} else if dc.Stargate != nil && dc.Stargate.Telemetry != nil {
 				sgToValidate = dc.Stargate.Telemetry
 			}
