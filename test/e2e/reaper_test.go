@@ -325,12 +325,16 @@ func testRemoveReaperFromK8ssandraCluster(
 	}, polling.reaperReady.timeout, polling.reaperReady.interval)
 
 	t.Log("re-create Reaper in k8ssandracluster resource")
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", kcKey.Namespace)
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	k8ssandra.Spec.Reaper = reaperTemplate.DeepCopy()
-	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(t, err, "failed to patch K8ssandraCluster in namespace %s", kcKey.Namespace)
+
+	require.Eventually(t, func() bool {
+		if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+			return false
+		}
+		patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		k8ssandra.Spec.Reaper = reaperTemplate.DeepCopy()
+		err := f.Client.Patch(ctx, k8ssandra, patch)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "failed to patch K8ssandraCluster in namespace", "namespace", kcKey.Namespace)
 
 	t.Log("check Reaper re-created")
 	withReaper := f.NewWithReaper(ctx, reaperKey)
