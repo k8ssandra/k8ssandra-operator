@@ -13,6 +13,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,6 +89,26 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("check that the standalone Medusa deployment was created")
+	medusaDeploymentKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-standalone"}, K8sContext: f.DataPlaneContexts[0]}
+	medusaDeployment := &appsv1.Deployment{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaDeploymentKey, medusaDeployment); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+
+	t.Log("check that the standalone Medusa service was created")
+	medusaServiceKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-service"}, K8sContext: f.DataPlaneContexts[0]}
+	medusaService := &corev1.Service{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaServiceKey, medusaService); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
