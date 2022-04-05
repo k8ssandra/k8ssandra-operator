@@ -12,9 +12,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Create all things Medusa related in the cassdc podTemplateSpec
@@ -58,10 +60,23 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
+
+		// Generate the Medusa main container
+		medusaMainContainer := medusa.GenerateMedusaMainContainer(dcConfig, medusaSpec, logger)
+		// Add the containers definitions in the podTemplateSpec
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, logger)
-		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, logger)
-		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, logger)
+		medusa.UpdateMedusaMainContainer(dcConfig, medusaMainContainer, logger)
+		// Create required volumes for Medusa
+		additionalVolumes := medusa.UpdateMedusaVolumes(dcConfig.PodTemplateSpec, medusaSpec, dcConfig.Cluster, logger)
+		for _, volume := range additionalVolumes {
+			cassandra.AddOrUpdateAdditionalVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
 		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.Name))
+		// Create the Medusa standalone pod
+		medusaStandalone := medusa.StandaloneMedusaDeployment(medusaMainContainer, kc.Name, namespace, logger)
+		medusa.UpdateMedusaVolumes(&medusaStandalone.Spec.Template, medusaSpec, dcConfig.Cluster, logger)
+		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
+		r.reconcileMedusaStandalone(ctx, kc, remoteClient, medusaStandalone, medusaService, logger)
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
@@ -141,5 +156,83 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		}
 	}
 	logger.Info("Medusa ConfigMap successfully reconciled")
+	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) reconcileMedusaStandalone(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	remoteClient client.Client,
+	desiredDeployment *appsv1.Deployment,
+	desiredService *corev1.Service,
+	logger logr.Logger,
+) result.ReconcileResult {
+
+	logger.Info("Reconciling Medusa standalone deployment on namespace : " + desiredDeployment.ObjectMeta.Namespace)
+	if kc.Spec.Medusa != nil {
+		deploymentKey := utils.GetKey(desiredDeployment)
+
+		logger := logger.WithValues("MedusaDeployment", deploymentKey)
+
+		// Compute a hash which will allow to compare desired and actual deployments
+		annotations.AddHashAnnotation(desiredDeployment)
+
+		actualDeployment := &appsv1.Deployment{}
+		if err := remoteClient.Get(ctx, deploymentKey, actualDeployment); err != nil {
+			if errors.IsNotFound(err) {
+				if err := remoteClient.Create(ctx, desiredDeployment); err != nil {
+					logger.Error(err, "Failed to create Medusa deployment")
+					return result.Error(err)
+				}
+			}
+		}
+
+		actualDeployment = actualDeployment.DeepCopy()
+
+		if actualDeployment.OwnerReferences == nil {
+			if err := controllerutil.SetControllerReference(kc, actualDeployment, r.Scheme); err != nil {
+				logger.Error(err, "failed to set controller reference", "CassandraDatacenter", utils.GetKey(kc))
+				return result.Error(err)
+			}
+			if err := r.Update(ctx, actualDeployment); err != nil {
+				return result.Error(err)
+			} else {
+				logger.Info("updated task with owner reference", "CassandraDatacenter", utils.GetKey(kc))
+				return result.RequeueSoon(r.DefaultDelay)
+			}
+		}
+
+		if !annotations.CompareHashAnnotations(actualDeployment, desiredDeployment) {
+			logger.Info("Updating Medusa deployment on namespace " + actualDeployment.ObjectMeta.Namespace)
+			resourceVersion := actualDeployment.GetResourceVersion()
+			desiredDeployment.DeepCopyInto(actualDeployment)
+			actualDeployment.SetResourceVersion(resourceVersion)
+			if err := remoteClient.Update(ctx, actualDeployment); err != nil {
+				logger.Error(err, "Failed to update Medusa deployment resource")
+				return result.Error(err)
+			}
+			return result.RequeueSoon(r.DefaultDelay)
+		}
+
+		// Create a service for the medusa standalone deployment
+		logger.Info("Reconciling Medusa standalone service on namespace : " + desiredService.ObjectMeta.Namespace)
+		serviceKey := utils.GetKey(desiredService)
+		if err := controllerutil.SetControllerReference(kc, desiredService, r.Scheme); err != nil {
+			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", utils.GetKey(kc))
+			return result.Error(err)
+		}
+		logger = logger.WithValues("MedusaService", serviceKey)
+		if err := remoteClient.Get(ctx, serviceKey, desiredService); err != nil {
+			if errors.IsNotFound(err) {
+				if err := remoteClient.Create(ctx, desiredService); err != nil {
+					return result.Error(err)
+				}
+			} else {
+				return result.Error(err)
+			}
+		}
+	}
+
+	logger.Info("Medusa standalone deployment successfully reconciled")
 	return result.Continue()
 }

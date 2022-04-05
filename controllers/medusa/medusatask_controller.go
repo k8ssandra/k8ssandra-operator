@@ -147,7 +147,7 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if task.Spec.Operation == medusav1alpha1.OperationTypePurge {
 		return r.purgeOperation(ctx, task, pods, logger)
 	} else if task.Spec.Operation == medusav1alpha1.OperationTypeSync {
-		return r.syncOperation(ctx, task, pods, logger)
+		return r.syncOperation(ctx, task, cassdc, logger)
 	} else if task.Spec.Operation == medusav1alpha1.OperationTypePrepareRestore {
 		return r.prepareRestoreOperation(ctx, task, pods, logger)
 	} else {
@@ -254,7 +254,7 @@ func (r *MedusaTaskReconciler) executePodOperations(
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
-func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, logger logr.Logger) (reconcile.Result, error) {
+func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
 	logger.Info("Starting sync operation")
 	patch := client.MergeFrom(task.DeepCopy())
 	task.Status.StartTime = metav1.Now()
@@ -262,60 +262,57 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 		logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
 		return ctrl.Result{}, err
 	}
-	for _, pod := range pods {
-		logger.Info("Listing Backups...", "CassandraPod", pod.Name)
-		if remoteBackups, err := getBackups(ctx, &pod, r.ClientFactory); err != nil {
-			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
-		} else {
-			for _, backup := range remoteBackups {
-				logger.Info("Syncing Backup", "Backup", backup.BackupName)
-				// Create backups that should exist but are missing
-				backupKey := types.NamespacedName{Namespace: task.Namespace, Name: backup.BackupName}
-				backupResource := &medusav1alpha1.MedusaBackup{}
-				if err := r.Get(ctx, backupKey, backupResource); err != nil {
-					if errors.IsNotFound(err) {
-						// Backup doesn't exist, create it
-						shouldReturn, ctrlResult, err := createMedusaBackup(logger, backup, task.Spec.CassandraDatacenter, task.Namespace, r, ctx)
-						if shouldReturn {
-							return ctrlResult, err
-						}
-					} else {
-						logger.Error(err, "failed to get backup", "Backup", backup.BackupName)
-						return ctrl.Result{}, err
+
+	if remoteBackups, err := getBackups(ctx, cassdc, r.ClientFactory, logger); err != nil {
+		logger.Error(err, "failed to list backups")
+	} else {
+		for _, backup := range remoteBackups {
+			// Create backups that should exist but are missing
+			backupKey := types.NamespacedName{Namespace: task.Namespace, Name: backup.BackupName}
+			backupResource := &medusav1alpha1.MedusaBackup{}
+			if err := r.Get(ctx, backupKey, backupResource); err != nil {
+				if errors.IsNotFound(err) {
+					// Backup doesn't exist, create it
+					shouldReturn, ctrlResult, err := createMedusaBackup(logger, backup, task.Spec.CassandraDatacenter, task.Namespace, r, ctx)
+					if shouldReturn {
+						return ctrlResult, err
 					}
+				} else {
+					logger.Error(err, "failed to get backup", "Backup", backup.BackupName)
+					return ctrl.Result{}, err
 				}
 			}
-
-			// Delete backups that don't exist remotely but are found locally
-			localBackups := &medusav1alpha1.MedusaBackupList{}
-			if err = r.List(ctx, localBackups, client.InNamespace(task.Namespace)); err != nil {
-				logger.Error(err, "failed to list backups")
-				return ctrl.Result{}, err
-			}
-			for _, backup := range localBackups.Items {
-				if !backupExistsRemotely(remoteBackups, backup.ObjectMeta.Name) {
-					logger.Info("Deleting Cassandra Backup", "Backup", backup.ObjectMeta.Name)
-					if err := r.Delete(ctx, &backup); err != nil {
-						logger.Error(err, "failed to delete backup", "MedusaBackup", backup.ObjectMeta.Name)
-						return ctrl.Result{}, err
-					} else {
-						logger.Info("Deleted Cassandra Backup", "Backup", backup.ObjectMeta.Name)
-					}
-				}
-			}
-
-			// Update task status at the end of the reconcile
-			logger.Info("finished task operations", "MedusaTask", fmt.Sprint(task))
-			finishPatch := client.MergeFrom(task.DeepCopy())
-			task.Status.FinishTime = metav1.Now()
-			taskResult := medusav1alpha1.TaskResult{PodName: pod.Name}
-			task.Status.Finished = append(task.Status.Finished, taskResult)
-			if err := r.Status().Patch(ctx, task, finishPatch); err != nil {
-				logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{}, nil
 		}
+
+		// Delete backups that don't exist remotely but are found locally
+		localBackups := &medusav1alpha1.MedusaBackupList{}
+		if err = r.List(ctx, localBackups, client.InNamespace(task.Namespace)); err != nil {
+			logger.Error(err, "failed to list backups")
+			return ctrl.Result{}, err
+		}
+		for _, backup := range localBackups.Items {
+			if !backupExistsRemotely(remoteBackups, backup.ObjectMeta.Name) {
+				logger.Info("Deleting Cassandra Backup", "Backup", backup.ObjectMeta.Name)
+				if err := r.Delete(ctx, &backup); err != nil {
+					logger.Error(err, "failed to delete backup", "MedusaBackup", backup.ObjectMeta.Name)
+					return ctrl.Result{}, err
+				} else {
+					logger.Info("Deleted Cassandra Backup", "Backup", backup.ObjectMeta.Name)
+				}
+			}
+		}
+
+		// Update task status at the end of the reconcile
+		logger.Info("finished task operations", "MedusaTask", fmt.Sprint(task))
+		task.Status.FinishTime = metav1.Now()
+		taskResult := medusav1alpha1.TaskResult{PodName: medusa.MedusaServiceName(cassdc.Spec.ClusterName)}
+		task.Status.Finished = append(task.Status.Finished, taskResult)
+		finishPatch := client.MergeFrom(task.DeepCopy())
+		if err := r.Status().Patch(ctx, task, finishPatch); err != nil {
+			logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
@@ -400,13 +397,17 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 	}
 }
 
-func getBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
-	addr := fmt.Sprintf("%s:%d", pod.Status.PodIP, shared.BackupSidecarPort)
+func getBackups(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter, clientFactory medusa.ClientFactory, logger logr.Logger) ([]*medusa.BackupSummary, error) {
+	addr := fmt.Sprintf("%s.%s.svc.cluster.local:%d", medusa.MedusaServiceName(cassdc.Spec.ClusterName), cassdc.Namespace, shared.BackupSidecarPort)
 	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+		logger.Error(err, "Failed to create medusa client")
 		return nil, err
 	} else {
 		defer medusaClient.Close()
-		return medusaClient.GetBackups(ctx)
+		logger.Info("Listing backups from Medusa", "MedusaAddress", addr)
+		backups, err := medusaClient.GetBackups(ctx)
+		logger.Info("Found backups", "Backups", len(backups))
+		return backups, err
 	}
 }
 

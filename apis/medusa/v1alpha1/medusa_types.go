@@ -149,4 +149,12 @@ type MedusaClusterTemplate struct {
 	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
 	// +optional
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
+
+	// Define the readiness probe to use for the Medusa containers.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// Define the readiness probe to use for the Medusa containers.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 }

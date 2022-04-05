@@ -11,6 +11,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -98,6 +99,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+		checkMedusaStandalonePodExists(t, ctx, namespace, dcKey, f, kc)
 	}
 
 	// Create a backup in each DC and verify their completion
@@ -119,7 +121,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
-	// Get the Cassandra pod
+	// Get the Cassandra Datacenter
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc1)
 	// check medusa containers exist
@@ -133,6 +135,19 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 	require.True(foundConfig, fmt.Sprintf("%s doesn't have server-config-init container", dc1.Name))
 	_, found = cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "medusa")
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
+}
+
+func checkMedusaStandalonePodExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	t.Log("Checking that the Medusa standalone pod has been created")
+	require := require.New(t)
+	// Get the medusa standalone pod and check that it is running
+	require.Eventually(func() bool {
+		pod := &corev1.Pod{}
+		podKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-medusa-standalone", kc.Name)}}
+		err := f.Get(ctx, podKey, pod)
+		require.NoError(err, "Error getting the medusa standalone pod")
+		return pod.Status.Phase == corev1.PodRunning
+	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone pod is not running")
 }
 
 func createBackup(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
