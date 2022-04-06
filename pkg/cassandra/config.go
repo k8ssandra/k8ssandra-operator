@@ -3,6 +3,7 @@ package cassandra
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 
 const (
 	SystemReplicationDcNames = "-Dcassandra.system_distributed_replication_dc_names"
-	SystemReplicationFactor  = "-Dcassandra.system_distributed_replication_per_dc"
+	SystemReplicationFactor  = "-Dcassandra.system_distributed_replication"
 	allowAlterRf             = "-Dcassandra.allow_alter_rf_during_range_movement=true"
 )
 
@@ -367,12 +368,24 @@ func filterConfigForVersion(cassandraVersion string, cassandraYamlIR *CassYamlIR
 
 // ApplySystemReplication adds system properties to configure replication of system
 // keyspaces.
-func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplication) {
-	dcNames := SystemReplicationDcNames + "=" + strings.Join(replication.Datacenters, ",")
-	replicationFactor := SystemReplicationFactor + "=" + strconv.Itoa(replication.ReplicationFactor)
+func ApplySystemReplication(dcConfig *DatacenterConfig, replication map[string]int) {
+	replicationFactors := make([]string, 0, len(replication))
+	dcs := make([]string, 0, len(replication))
+
+	// Sort to make verification in tests easier.
+	for k := range replication {
+		dcs = append(dcs, k)
+	}
+	sort.Strings(dcs)
+
+	for _, dc := range dcs {
+		replicationFactors = append(replicationFactors, fmt.Sprintf("%s:%d", dc, replication[dc]))
+	}
+	replicationFactor := SystemReplicationFactor + "=" + strings.Join(replicationFactors, ",")
+
 	// prepend instead of append, so that user-specified options take precedence
 	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{dcNames, replicationFactor},
+		[]string{replicationFactor},
 		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
 	)
 }

@@ -264,7 +264,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	reaper3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, kc.Name+"-dc3-reaper")
 
 	t.Log("add dc3")
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters = append(
 		kc.Spec.Cassandra.Datacenters,
 		api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: f.K8sContext(2), Size: 3},
@@ -321,7 +321,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	t.Log("stop dc3")
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err)
-	patch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch = client.MergeFromWithOptions(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[2].Stopped = true
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch kc")
@@ -364,10 +364,11 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	t.Log("start dc3")
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err)
-	patch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch = client.MergeFromWithOptions(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[2].Stopped = false
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch kc")
+
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
 		return assert.False(t, dc3.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc3 to be started")
