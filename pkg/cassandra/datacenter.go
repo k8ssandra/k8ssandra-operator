@@ -27,17 +27,10 @@ var DefaultJmxInitImage = images.Image{
 
 // SystemReplication represents the replication factor of the system_auth, system_traces,
 // and system_distributed keyspaces. This is applied to each datacenter. The replication
-// should be configured per DC, but that is currently not supported. See
-// https://github.com/k8ssandra/management-api-for-apache-cassandra/issues/124 and
-// https://github.com/k8ssandra/k8ssandra-operator/issues/91 for details.
-// Note that when we can configure the replication per DC, this can be changed to a
-// map[string]int.
-type SystemReplication struct {
-	Datacenters       []string `json:"datacenters"`
-	ReplicationFactor int      `json:"replicationFactor"`
-}
+// is configured per DC.
+type SystemReplication map[string]int
 
-// Replication provides a mapping of DCs to a mapping of keyspaces and their
+//// Replication provides a mapping of DCs to a mapping of keyspaces and their
 // replica counts. NetworkTopologyStrategy is assumed for all keyspaces.
 type Replication struct {
 	datacenters map[string]keyspacesReplication

@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	SystemReplicationDcNames = "-Dcassandra.system_distributed_replication_dc_names"
-	SystemReplicationFactor  = "-Dcassandra.system_distributed_replication"
-	allowAlterRf             = "-Dcassandra.allow_alter_rf_during_range_movement=true"
+	SystemReplicationFactorStrategy = "-Dcassandra.system_distributed_replication"
+	allowAlterRf                    = "-Dcassandra.allow_alter_rf_during_range_movement=true"
 )
 
 // config is an internal type that is intended to be marshaled into JSON that is a valid
@@ -368,7 +367,7 @@ func filterConfigForVersion(cassandraVersion string, cassandraYamlIR *CassYamlIR
 
 // ApplySystemReplication adds system properties to configure replication of system
 // keyspaces.
-func ApplySystemReplication(dcConfig *DatacenterConfig, replication map[string]int) {
+func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplication) {
 	replicationFactors := make([]string, 0, len(replication))
 	dcs := make([]string, 0, len(replication))
 
@@ -381,11 +380,11 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication map[string]i
 	for _, dc := range dcs {
 		replicationFactors = append(replicationFactors, fmt.Sprintf("%s:%d", dc, replication[dc]))
 	}
-	replicationFactor := SystemReplicationFactor + "=" + strings.Join(replicationFactors, ",")
+	replicationStrategy := SystemReplicationFactorStrategy + "=" + strings.Join(replicationFactors, ",")
 
 	// prepend instead of append, so that user-specified options take precedence
 	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{replicationFactor},
+		[]string{replicationStrategy},
 		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
 	)
 }

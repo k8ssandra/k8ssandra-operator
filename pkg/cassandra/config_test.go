@@ -23,18 +23,14 @@ func TestApplySystemReplication(t *testing.T) {
 
 	tests := []test{
 		{
-			name:     "single-dc with no jvm options",
-			dcConfig: &DatacenterConfig{},
-			replication: SystemReplication{
-				Datacenters:       []string{"dc1"},
-				ReplicationFactor: 3,
-			},
+			name:        "single-dc with no jvm options",
+			dcConfig:    &DatacenterConfig{},
+			replication: SystemReplication{"dc1": 3},
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
 					JvmOptions: api.JvmOptions{
 						AdditionalOptions: []string{
-							SystemReplicationDcNames + "=dc1",
-							SystemReplicationFactor + "=3",
+							SystemReplicationFactorStrategy + "=dc1:3",
 						},
 					},
 				},
@@ -49,17 +45,13 @@ func TestApplySystemReplication(t *testing.T) {
 					},
 				},
 			},
-			replication: SystemReplication{
-				Datacenters:       []string{"dc1"},
-				ReplicationFactor: 3,
-			},
+			replication: SystemReplication{"dc1": 3},
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
 					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 						AdditionalOptions: []string{
-							SystemReplicationDcNames + "=dc1",
-							SystemReplicationFactor + "=3",
+							SystemReplicationFactorStrategy + "=dc1:3",
 						},
 					},
 				},
@@ -69,15 +61,15 @@ func TestApplySystemReplication(t *testing.T) {
 			name:     "multi-dc with no jvm options",
 			dcConfig: &DatacenterConfig{},
 			replication: SystemReplication{
-				Datacenters:       []string{"dc1", "dc2", "dc3"},
-				ReplicationFactor: 3,
+				"dc1": 3,
+				"dc2": 3,
+				"dc3": 1,
 			},
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
 					JvmOptions: api.JvmOptions{
 						AdditionalOptions: []string{
-							SystemReplicationDcNames + "=dc1,dc2,dc3",
-							SystemReplicationFactor + "=3",
+							SystemReplicationFactorStrategy + "=dc1:3,dc2:3,dc3:1",
 						},
 					},
 				},
@@ -93,16 +85,16 @@ func TestApplySystemReplication(t *testing.T) {
 				},
 			},
 			replication: SystemReplication{
-				Datacenters:       []string{"dc1", "dc2", "dc3"},
-				ReplicationFactor: 3,
+				"dc1": 3,
+				"dc2": 2,
+				"dc3": 1,
 			},
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
 					JvmOptions: api.JvmOptions{
 						HeapSize: parseResource("1024Mi"),
 						AdditionalOptions: []string{
-							SystemReplicationDcNames + "=dc1,dc2,dc3",
-							SystemReplicationFactor + "=3",
+							SystemReplicationFactorStrategy + "=dc1:3,dc2:2,dc3:1",
 						},
 					},
 				},
@@ -112,8 +104,8 @@ func TestApplySystemReplication(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			//ApplySystemReplication(tc.dcConfig, tc.replication)
-			//require.Equal(t, tc.want, tc.dcConfig)
+			ApplySystemReplication(tc.dcConfig, tc.replication)
+			require.Equal(t, tc.want, tc.dcConfig)
 		})
 	}
 }
@@ -202,8 +194,7 @@ func TestCreateJsonConfig(t *testing.T) {
 					},
 					JvmOptions: api.JvmOptions{
 						AdditionalOptions: []string{
-							SystemReplicationDcNames + "=dc1,dc2,dc3",
-							SystemReplicationFactor + "=dc1:3,dc2:3,dc3:3",
+							SystemReplicationFactorStrategy + "=dc1:3,dc2:3,dc3:3",
 						},
 					},
 				},

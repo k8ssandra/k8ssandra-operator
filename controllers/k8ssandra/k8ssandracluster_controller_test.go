@@ -732,7 +732,7 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 	for _, dc := range dcNames {
 		replicationFactors = append(replicationFactors, fmt.Sprintf("%s:%d", dc, systemRF))
 	}
-	rfOpt := cassandra.SystemReplicationFactor + "=" + strings.Join(replicationFactors, ",")
+	rfOpt := cassandra.SystemReplicationFactorStrategy + "=" + strings.Join(replicationFactors, ",")
 	*config = cassandra.ApplyAuthSettings(*config, true)
 	config.JvmOptions.AdditionalOptions = append(
 		[]string{rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},

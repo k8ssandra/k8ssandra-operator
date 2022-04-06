@@ -110,7 +110,7 @@ func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.Mana
 func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	logger logr.Logger) (map[string]int, error) {
+	logger logr.Logger) (cassandra.SystemReplication, error) {
 
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
 		replication := make(map[string]int)
@@ -122,7 +122,6 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	}
 
 	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
-	//replication := cassandra.ComputeInitialSystemReplication(kc)
 	bytes, err := json.Marshal(replication)
 
 	if err != nil {
