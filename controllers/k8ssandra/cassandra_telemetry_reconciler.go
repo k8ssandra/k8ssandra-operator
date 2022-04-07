@@ -24,7 +24,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	remoteClient client.Client,
 ) result.ReconcileResult {
 	logger.Info("reconciling telemetry")
-	mergedSpec := kc.Spec.Cassandra.Telemetry.Merge(dcTemplate.Telemetry)
+	mergedSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry.Merge(dcTemplate.DatacenterOptions.Telemetry)
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,

@@ -67,10 +67,14 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override ServerVersion",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				ServerVersion: "4.0.0",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.0",
+				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				ServerVersion: "4.0.1",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.1",
+				},
 			},
 			want: &DatacenterConfig{
 				ServerVersion: semver.MustParse("4.0.1"),
@@ -79,10 +83,14 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override ServerImage",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				ServerImage: "k8ssandra/cass-operator:test",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerImage: "k8ssandra/cass-operator:test",
+				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				ServerImage: "k8ssandra/cass-operator:dev",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerImage: "k8ssandra/cass-operator:dev",
+				},
 			},
 			want: &DatacenterConfig{
 				ServerImage: "k8ssandra/cass-operator:dev",
@@ -91,18 +99,22 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override Resources",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Resources: &corev1.ResourceRequirements{
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1000m"),
-						corev1.ResourceMemory: resource.MustParse("1024Mi"),
+				DatacenterOptions: api.DatacenterOptions{
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("1024Mi"),
+						},
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				Resources: &corev1.ResourceRequirements{
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1500m"),
-						corev1.ResourceMemory: resource.MustParse("2048Mi"),
+				DatacenterOptions: api.DatacenterOptions{
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1500m"),
+							corev1.ResourceMemory: resource.MustParse("2048Mi"),
+						},
 					},
 				},
 			},
@@ -118,24 +130,28 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override StorageConfig",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &storageClass,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("2Ti"),
+				DatacenterOptions: api.DatacenterOptions{
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &storageClass,
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceStorage: resource.MustParse("2Ti"),
+								},
 							},
 						},
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &storageClass,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("4Ti"),
+				DatacenterOptions: api.DatacenterOptions{
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &storageClass,
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceStorage: resource.MustParse("4Ti"),
+								},
 							},
 						},
 					},
@@ -157,13 +173,17 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override Networking",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Networking: &cassdcapi.NetworkingConfig{
-					HostNetwork: false,
+				DatacenterOptions: api.DatacenterOptions{
+					Networking: &cassdcapi.NetworkingConfig{
+						HostNetwork: false,
+					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				Networking: &cassdcapi.NetworkingConfig{
-					HostNetwork: true,
+				DatacenterOptions: api.DatacenterOptions{
+					Networking: &cassdcapi.NetworkingConfig{
+						HostNetwork: true,
+					},
 				},
 			},
 			want: &DatacenterConfig{
@@ -175,19 +195,23 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override CassandraConfig",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ConcurrentReads: pointer.Int(8),
+				DatacenterOptions: api.DatacenterOptions{
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							ConcurrentReads: pointer.Int(8),
+						},
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ConcurrentWrites: pointer.Int(8),
-					},
-					JvmOptions: api.JvmOptions{
-						MaxHeapSize: parseQuantity("1024Mi"),
+				DatacenterOptions: api.DatacenterOptions{
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							ConcurrentWrites: pointer.Int(8),
+						},
+						JvmOptions: api.JvmOptions{
+							MaxHeapSize: parseQuantity("1024Mi"),
+						},
 					},
 				},
 			},
@@ -205,22 +229,26 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override racks",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				Racks: []cassdcapi.Rack{
-					{
-						Name: "rack1",
+				DatacenterOptions: api.DatacenterOptions{
+					Racks: []cassdcapi.Rack{
+						{
+							Name: "rack1",
+						},
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				Racks: []cassdcapi.Rack{
-					{
-						Name: "rack1",
-					},
-					{
-						Name: "rack2",
-					},
-					{
-						Name: "rack3",
+				DatacenterOptions: api.DatacenterOptions{
+					Racks: []cassdcapi.Rack{
+						{
+							Name: "rack1",
+						},
+						{
+							Name: "rack2",
+						},
+						{
+							Name: "rack3",
+						},
 					},
 				},
 			},
@@ -252,8 +280,10 @@ func TestCoalesce(t *testing.T) {
 						"env": "dev",
 					},
 				},
-				Size:        3,
-				MgmtAPIHeap: &mgmtAPIHeap,
+				Size: 3,
+				DatacenterOptions: api.DatacenterOptions{
+					MgmtAPIHeap: &mgmtAPIHeap,
+				},
 			},
 			want: &DatacenterConfig{
 				Cluster: "k8ssandra",
@@ -274,7 +304,9 @@ func TestCoalesce(t *testing.T) {
 			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
-				MgmtAPIHeap:        &mgmtAPIHeap,
+				DatacenterOptions: api.DatacenterOptions{
+					MgmtAPIHeap: &mgmtAPIHeap,
+				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -303,10 +335,14 @@ func TestCoalesce(t *testing.T) {
 		{
 			name: "Override JMX init container",
 			clusterTemplate: &api.CassandraClusterTemplate{
-				JmxInitContainerImage: &images.Image{Name: "cluster-image"},
+				DatacenterOptions: api.DatacenterOptions{
+					JmxInitContainerImage: &images.Image{Name: "cluster-image"},
+				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
-				JmxInitContainerImage: &images.Image{Name: "dc-image"},
+				DatacenterOptions: api.DatacenterOptions{
+					JmxInitContainerImage: &images.Image{Name: "dc-image"},
+				},
 			},
 			want: &DatacenterConfig{
 				JmxInitContainerImage: &images.Image{Name: "dc-image"},

@@ -65,7 +65,7 @@ func (r *K8ssandraCluster) ValidateCreate() error {
 }
 
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
-	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
+	hasClusterStorageConfig := r.Spec.Cassandra.DatacenterOptions.StorageConfig != nil
 	// Verify given k8s-contexts are correct
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		_, err := clientCache.GetRemoteClient(dc.K8sContext)
@@ -75,12 +75,12 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 		}
 
 		// StorageConfig must be set at DC or Cluster level
-		if dc.StorageConfig == nil && !hasClusterStorageConfig {
+		if dc.DatacenterOptions.StorageConfig == nil && !hasClusterStorageConfig {
 			return ErrNoStorageConfig
 		}
 		// From cass-operator, if AllowMultipleWorkersPerNode is set, Resources must be defined or cass-operator will reject this Datacenter
-		if dc.SoftPodAntiAffinity != nil && *dc.SoftPodAntiAffinity {
-			if dc.Resources == nil {
+		if dc.DatacenterOptions.SoftPodAntiAffinity != nil && *dc.DatacenterOptions.SoftPodAntiAffinity {
+			if dc.DatacenterOptions.Resources == nil {
 				return ErrNoResourcesSet
 			}
 		}
@@ -111,8 +111,8 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 		}
 	}
 
-	oldCassConfig := oldCluster.Spec.Cassandra.CassandraConfig
-	newCassConfig := r.Spec.Cassandra.CassandraConfig
+	oldCassConfig := oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	// If num_tokens was set previously, do not allow modifying the value or leaving it out
 	if oldCassConfig != nil {
 		if oldCassConfig.CassandraYaml.NumTokens != nil {

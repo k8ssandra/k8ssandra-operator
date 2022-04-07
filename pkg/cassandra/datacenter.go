@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -274,72 +275,72 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
 
-	if len(dcTemplate.ServerVersion) > 0 {
-		dcConfig.ServerVersion = semver.MustParse(dcTemplate.ServerVersion)
-	} else if len(clusterTemplate.ServerVersion) > 0 {
-		dcConfig.ServerVersion = semver.MustParse(clusterTemplate.ServerVersion)
+	if len(dcTemplate.DatacenterOptions.ServerVersion) > 0 {
+		dcConfig.ServerVersion = semver.MustParse(dcTemplate.DatacenterOptions.ServerVersion)
+	} else if len(clusterTemplate.DatacenterOptions.ServerVersion) > 0 {
+		dcConfig.ServerVersion = semver.MustParse(clusterTemplate.DatacenterOptions.ServerVersion)
 	}
 
-	if len(dcTemplate.ServerImage) == 0 {
-		dcConfig.ServerImage = clusterTemplate.ServerImage
+	if len(dcTemplate.DatacenterOptions.ServerImage) == 0 {
+		dcConfig.ServerImage = clusterTemplate.DatacenterOptions.ServerImage
 	} else {
-		dcConfig.ServerImage = dcTemplate.ServerImage
+		dcConfig.ServerImage = dcTemplate.DatacenterOptions.ServerImage
 	}
 
-	if dcTemplate.JmxInitContainerImage != nil {
-		dcConfig.JmxInitContainerImage = dcTemplate.JmxInitContainerImage
+	if dcTemplate.DatacenterOptions.JmxInitContainerImage != nil {
+		dcConfig.JmxInitContainerImage = dcTemplate.DatacenterOptions.JmxInitContainerImage
 	} else {
-		dcConfig.JmxInitContainerImage = clusterTemplate.JmxInitContainerImage
+		dcConfig.JmxInitContainerImage = clusterTemplate.DatacenterOptions.JmxInitContainerImage
 	}
 
-	if len(dcTemplate.Racks) == 0 {
-		dcConfig.Racks = clusterTemplate.Racks
+	if len(dcTemplate.DatacenterOptions.Racks) == 0 {
+		dcConfig.Racks = clusterTemplate.DatacenterOptions.Racks
 	} else {
-		dcConfig.Racks = dcTemplate.Racks
+		dcConfig.Racks = dcTemplate.DatacenterOptions.Racks
 	}
 
-	if dcTemplate.Resources == nil {
-		dcConfig.Resources = clusterTemplate.Resources
+	if dcTemplate.DatacenterOptions.Resources == nil {
+		dcConfig.Resources = clusterTemplate.DatacenterOptions.Resources
 	} else {
-		dcConfig.Resources = dcTemplate.Resources
+		dcConfig.Resources = dcTemplate.DatacenterOptions.Resources
 	}
 
 	// TODO Add validation check to ensure StorageConfig is set at the cluster or DC level
-	if dcTemplate.StorageConfig == nil {
-		dcConfig.StorageConfig = clusterTemplate.StorageConfig
+	if dcTemplate.DatacenterOptions.StorageConfig == nil {
+		dcConfig.StorageConfig = clusterTemplate.DatacenterOptions.StorageConfig
 	} else {
-		dcConfig.StorageConfig = dcTemplate.StorageConfig
+		dcConfig.StorageConfig = dcTemplate.DatacenterOptions.StorageConfig
 	}
 
-	if dcTemplate.Networking == nil {
-		dcConfig.Networking = clusterTemplate.Networking
+	if dcTemplate.DatacenterOptions.Networking == nil {
+		dcConfig.Networking = clusterTemplate.DatacenterOptions.Networking
 	} else {
-		dcConfig.Networking = dcTemplate.Networking
+		dcConfig.Networking = dcTemplate.DatacenterOptions.Networking
 	}
 
 	// TODO Do we want merge vs override?
-	if dcTemplate.CassandraConfig != nil {
-		dcConfig.CassandraConfig = *dcTemplate.CassandraConfig
-	} else if clusterTemplate.CassandraConfig != nil {
-		dcConfig.CassandraConfig = *clusterTemplate.CassandraConfig
+	if dcTemplate.DatacenterOptions.CassandraConfig != nil {
+		dcConfig.CassandraConfig = *dcTemplate.DatacenterOptions.CassandraConfig
+	} else if clusterTemplate.DatacenterOptions.CassandraConfig != nil {
+		dcConfig.CassandraConfig = *clusterTemplate.DatacenterOptions.CassandraConfig
 	}
 
-	if dcTemplate.MgmtAPIHeap == nil {
-		dcConfig.MgmtAPIHeap = clusterTemplate.MgmtAPIHeap
+	if dcTemplate.DatacenterOptions.MgmtAPIHeap == nil {
+		dcConfig.MgmtAPIHeap = clusterTemplate.DatacenterOptions.MgmtAPIHeap
 	} else {
-		dcConfig.MgmtAPIHeap = dcTemplate.MgmtAPIHeap
+		dcConfig.MgmtAPIHeap = dcTemplate.DatacenterOptions.MgmtAPIHeap
 	}
 
-	if dcTemplate.SoftPodAntiAffinity == nil {
-		dcConfig.SoftPodAntiAffinity = clusterTemplate.SoftPodAntiAffinity
+	if dcTemplate.DatacenterOptions.SoftPodAntiAffinity == nil {
+		dcConfig.SoftPodAntiAffinity = clusterTemplate.DatacenterOptions.SoftPodAntiAffinity
 	} else {
-		dcConfig.SoftPodAntiAffinity = dcTemplate.SoftPodAntiAffinity
+		dcConfig.SoftPodAntiAffinity = dcTemplate.DatacenterOptions.SoftPodAntiAffinity
 	}
 
-	if len(dcTemplate.Tolerations) == 0 {
-		dcConfig.Tolerations = clusterTemplate.Tolerations
+	if len(dcTemplate.DatacenterOptions.Tolerations) == 0 {
+		dcConfig.Tolerations = clusterTemplate.DatacenterOptions.Tolerations
 	} else {
-		dcConfig.Tolerations = dcTemplate.Tolerations
+		dcConfig.Tolerations = dcTemplate.DatacenterOptions.Tolerations
 	}
 
 	// Client/Server Encryption stores are only defined at the cluster level

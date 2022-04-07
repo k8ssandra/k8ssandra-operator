@@ -59,12 +59,14 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          3,
-						ServerVersion: "4.0.1",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "4.0.1",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -116,10 +118,12 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: "4.0.1",
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &defaultStorageClass,
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.1",
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -713,12 +717,14 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 			Name:      dcKey.Name,
 			Namespace: dcKey.Namespace,
 		},
-		K8sContext:    dcKey.K8sContext,
-		Size:          3,
-		ServerVersion: "4.0.1",
-		StorageConfig: &cassdcapi.StorageConfig{
-			CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &defaultStorageClass,
+		K8sContext: dcKey.K8sContext,
+		Size:       3,
+		DatacenterOptions: api.DatacenterOptions{
+			ServerVersion: "4.0.1",
+			StorageConfig: &cassdcapi.StorageConfig{
+				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+					StorageClassName: &defaultStorageClass,
+				},
 			},
 		},
 	})

@@ -3183,6 +3183,8 @@ spec:
                               type: object
                           type: object
                         racks:
+                          description: Racks is a list of named racks. Note that racks
+                            are used to create node affinity. //
                           items:
                             description: Rack ...
                             properties:
@@ -3233,6 +3235,10 @@ spec:
                               type: object
                           type: object
                         serverImage:
+                          description: ServerImage is the image for the cassandra
+                            container. Note that this should be a management-api image.
+                            If left empty the operator will choose a default image
+                            based on ServerVersion.
                           type: string
                         serverVersion:
                           description: ServerVersion is the Cassandra version.
@@ -7489,9 +7495,9 @@ spec:
                     type: object
                   telemetry:
                     description: Telemetry defines the desired state for telemetry
-                      resources in this K8ssandraCluster. If telemetry configurations
-                      are defined, telemetry resources will be deployed to integrate
-                      with a user-provided monitoring solution (at present, only support
+                      resources in this datacenter. If telemetry configurations are
+                      defined, telemetry resources will be deployed to integrate with
+                      a user-provided monitoring solution (at present, only support
                       for Prometheus is available).
                     properties:
                       prometheus:

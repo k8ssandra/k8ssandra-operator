@@ -126,12 +126,14 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[1],
-						Size:          1,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       1,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -244,7 +246,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].Telemetry = &telemetryapi.TelemetrySpec{
+	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 			Enabled: true,
 		},
@@ -279,7 +281,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	assert.NotNil(t, sm.Spec.Endpoints)
 	// Ensure that removing the telemetry spec does delete the ServiceMonitor
 	kcPatch = client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].Telemetry = nil
+	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = nil
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
@@ -317,19 +319,22 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
-				ServerVersion:      serverVersion,
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &defaultStorageClass,
+				DatacenterOptions: api.DatacenterOptions{
+
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
 					},
-				},
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ConcurrentReads:  pointer.Int(8),
-						ConcurrentWrites: pointer.Int(16),
-					},
-					JvmOptions: api.JvmOptions{
-						MaxHeapSize: parseQuantity("1024Mi"),
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							ConcurrentReads:  pointer.Int(8),
+							ConcurrentWrites: pointer.Int(16),
+						},
+						JvmOptions: api.JvmOptions{
+							MaxHeapSize: parseQuantity("1024Mi"),
+						},
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -377,15 +382,15 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc1")
 
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc1.Spec.ServerVersion)
+	assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -403,15 +408,15 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc2")
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc2.Spec.ServerVersion)
+	assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -440,37 +445,41 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: serverVersion,
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          dc1Size,
-						ServerVersion: serverVersion,
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseQuantity("500Gi"),
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: serverVersion,
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceStorage: *parseQuantity("500Gi"),
+										},
 									},
 								},
 							},
-						},
-						Networking: &cassdcapi.NetworkingConfig{
-							NodePort: &cassdcapi.NodePortConfig{
-								Native: 9142,
+							Networking: &cassdcapi.NetworkingConfig{
+								NodePort: &cassdcapi.NodePortConfig{
+									Native: 9142,
+								},
 							},
-						},
-						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: api.CassandraYaml{
-								ConcurrentReads:  pointer.Int(4),
-								ConcurrentWrites: pointer.Int(4),
-							},
-							JvmOptions: api.JvmOptions{
-								MaxHeapSize: parseQuantity("1024Mi"),
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: api.CassandraYaml{
+									ConcurrentReads:  pointer.Int(4),
+									ConcurrentWrites: pointer.Int(4),
+								},
+								JvmOptions: api.JvmOptions{
+									MaxHeapSize: parseQuantity("1024Mi"),
+								},
 							},
 						},
 					},
@@ -480,28 +489,30 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 						},
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       dc2Size,
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseQuantity("2Ti"),
+						DatacenterOptions: api.DatacenterOptions{
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceStorage: *parseQuantity("2Ti"),
+										},
 									},
 								},
 							},
-						},
-						Networking: &cassdcapi.NetworkingConfig{
-							NodePort: &cassdcapi.NodePortConfig{
-								Native: 9242,
+							Networking: &cassdcapi.NetworkingConfig{
+								NodePort: &cassdcapi.NodePortConfig{
+									Native: 9242,
+								},
 							},
-						},
-						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: api.CassandraYaml{
-								ConcurrentReads:  pointer.Int(4),
-								ConcurrentWrites: pointer.Int(12),
-							},
-							JvmOptions: api.JvmOptions{
-								MaxHeapSize: parseQuantity("1024Mi"),
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: api.CassandraYaml{
+									ConcurrentReads:  pointer.Int(4),
+									ConcurrentWrites: pointer.Int(12),
+								},
+								JvmOptions: api.JvmOptions{
+									MaxHeapSize: parseQuantity("1024Mi"),
+								},
 							},
 						},
 					},
@@ -532,14 +543,14 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[0].Networking, dc1.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.Datacenters[0].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -558,14 +569,14 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -595,27 +606,29 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: serverVersion,
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &defaultStorageClass,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: *parseQuantity("500Gi"),
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceStorage: *parseQuantity("500Gi"),
+								},
 							},
 						},
 					},
-				},
-				Networking: &cassdcapi.NetworkingConfig{
-					HostNetwork: true,
-				},
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ConcurrentReads:  pointer.Int(4),
-						ConcurrentWrites: pointer.Int(4),
+					Networking: &cassdcapi.NetworkingConfig{
+						HostNetwork: true,
 					},
-					JvmOptions: api.JvmOptions{
-						MaxHeapSize: parseQuantity("1024Mi"),
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							ConcurrentReads:  pointer.Int(4),
+							ConcurrentWrites: pointer.Int(4),
+						},
+						JvmOptions: api.JvmOptions{
+							MaxHeapSize: parseQuantity("1024Mi"),
+						},
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -623,9 +636,11 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          dc1Size,
-						ServerVersion: serverVersion,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: serverVersion,
+						},
 					},
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -633,26 +648,28 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						},
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       dc2Size,
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseQuantity("2Ti"),
+						DatacenterOptions: api.DatacenterOptions{
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceStorage: *parseQuantity("2Ti"),
+										},
 									},
 								},
 							},
-						},
-						Networking: &cassdcapi.NetworkingConfig{
-							HostNetwork: false,
-						},
-						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: api.CassandraYaml{
-								ConcurrentReads:  pointer.Int(4),
-								ConcurrentWrites: pointer.Int(12),
+							Networking: &cassdcapi.NetworkingConfig{
+								HostNetwork: false,
 							},
-							JvmOptions: api.JvmOptions{
-								MaxHeapSize: parseQuantity("1024Mi"),
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: api.CassandraYaml{
+									ConcurrentReads:  pointer.Int(4),
+									ConcurrentWrites: pointer.Int(12),
+								},
+								JvmOptions: api.JvmOptions{
+									MaxHeapSize: parseQuantity("1024Mi"),
+								},
 							},
 						},
 					},
@@ -683,14 +700,14 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Networking, dc1.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	actualConfig, err := gabs.ParseJSON(dc1.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc1 config %s", dc1.Spec.Config))
 
-	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err := parseCassandraConfig(kc.Spec.Cassandra.DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -709,14 +726,14 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
-	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking, dc2.Spec.Networking)
+	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
 
-	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].CassandraConfig, serverVersion, 3, "dc1", "dc2")
+	expectedConfig, err = parseCassandraConfig(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.CassandraConfig, serverVersion, 3, "dc1", "dc2")
 	require.NoError(err, "failed to parse CassandraConfig")
 	assert.Equal(expectedConfig, actualConfig)
 
@@ -770,12 +787,14 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -783,12 +802,14 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    f.DataPlaneContexts[1],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -1001,12 +1022,14 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 						Stargate: &stargateapi.StargateDatacenterTemplate{
@@ -1019,12 +1042,14 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    f.DataPlaneContexts[1],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 						Stargate: &stargateapi.StargateDatacenterTemplate{
@@ -1256,9 +1281,11 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						NumTokens: pointer.Int(16),
+				DatacenterOptions: api.DatacenterOptions{
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							NumTokens: pointer.Int(16),
+						},
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -1266,12 +1293,14 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          1,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       1,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -1325,10 +1354,10 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to patch datacenter status")
 
 	// Update the datacenter with a different num_tokens value and check that it failed
-	initialNumTokens := *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens
+	initialNumTokens := kc.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens
 	kcKey := framework.ClusterKey{NamespacedName: utils.GetKey(kc), K8sContext: f.ControlPlaneContext}
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = pointer.Int(256)
+	kc.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = pointer.Int(256)
 	err = f.Patch(ctx, kc, kcPatch, kcKey)
 	require.NoError(err, "got error patching num_tokens")
 
@@ -1341,9 +1370,9 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
 	dcConfigYaml, _ := dcConfig["cassandra-yaml"].(map[string]interface{})
 	t.Logf("Initial num_tokens value: %d", initialNumTokens)
-	t.Logf("Spec num_tokens value: %d", *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens)
+	t.Logf("Spec num_tokens value: %d", kc.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens)
 	t.Logf("dcConfigYaml num tokens: %v", dcConfigYaml["num_tokens"].(float64))
-	require.NotEqual(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", *kc.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens), "num_tokens should not be updated")
+	require.NotEqual(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", kc.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens), "num_tokens should not be updated")
 	require.Equal(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", initialNumTokens), "num_tokens should not be updated")
 
 	// Test cluster deletion
@@ -1424,10 +1453,12 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: serverVersion,
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &defaultStorageClass,
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -1437,13 +1468,15 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 						},
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       dc1Size,
-						CassandraConfig: &api.CassandraConfig{
-							CassandraYaml: api.CassandraYaml{
-								ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-									Enabled: true,
-								},
-								ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-									InternodeEncryption: "all",
+						DatacenterOptions: api.DatacenterOptions{
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: api.CassandraYaml{
+									ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
+										Enabled: true,
+									},
+									ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
+										InternodeEncryption: "all",
+									},
 								},
 							},
 						},
@@ -1648,19 +1681,21 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: serverVersion,
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						StorageClassName: &defaultStorageClass,
-					},
-				},
-				CassandraConfig: &api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-							Enabled: true,
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
 						},
-						ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-							InternodeEncryption: "all",
+					},
+					CassandraConfig: &api.CassandraConfig{
+						CassandraYaml: api.CassandraYaml{
+							ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
+								Enabled: true,
+							},
+							ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
+								InternodeEncryption: "all",
+							},
 						},
 					},
 				},

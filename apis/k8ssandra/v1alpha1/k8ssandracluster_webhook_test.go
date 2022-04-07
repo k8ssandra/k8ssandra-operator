@@ -176,16 +176,16 @@ func testStorageConfigValidation(t *testing.T) {
 	createNamespace(require, "storage-namespace")
 	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
 
-	cluster.Spec.Cassandra.StorageConfig = nil
+	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
 	err := k8sClient.Create(ctx, cluster)
 	require.Error(err)
 
-	cluster.Spec.Cassandra.StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Create(ctx, cluster)
 	require.NoError(err)
 
-	cluster.Spec.Cassandra.StorageConfig = nil
-	cluster.Spec.Cassandra.Datacenters[0].StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
+	cluster.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
 	require.NoError(err)
 
@@ -197,7 +197,7 @@ func testStorageConfigValidation(t *testing.T) {
 	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
 
-	cluster.Spec.Cassandra.Datacenters[1].StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
 	require.NoError(err)
 }
@@ -208,12 +208,12 @@ func testNumTokens(t *testing.T) {
 	cluster := createMinimalClusterObj("numtokens-test", "numtokens-namespace")
 
 	// Create without token definition
-	cluster.Spec.Cassandra.CassandraConfig = &CassandraConfig{}
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
 	require.NoError(err)
 
 	tokens := int(256)
-	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = &tokens
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &tokens
 	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
 
@@ -226,11 +226,11 @@ func testNumTokens(t *testing.T) {
 	require.NoError(err)
 
 	newTokens := int(16)
-	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = &newTokens
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &newTokens
 	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
 
-	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml.NumTokens = nil
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = nil
 	err = k8sClient.Update(ctx, cluster)
 	require.Error(err)
 }
@@ -253,7 +253,9 @@ func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
 		},
 		Spec: K8ssandraClusterSpec{
 			Cassandra: &CassandraClusterTemplate{
-				StorageConfig: &v1beta1.StorageConfig{},
+				DatacenterOptions: DatacenterOptions{
+					StorageConfig: &v1beta1.StorageConfig{},
+				},
 				Datacenters: []CassandraDatacenterTemplate{
 					{
 						K8sContext: "envtest",

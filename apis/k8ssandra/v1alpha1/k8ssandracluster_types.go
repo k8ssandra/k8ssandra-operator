@@ -189,6 +189,7 @@ type K8ssandraClusterList struct {
 }
 
 type CassandraClusterTemplate struct {
+	DatacenterOptions `json:",inline"`
 
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
@@ -196,60 +197,9 @@ type CassandraClusterTemplate struct {
 	// +optional
 	SuperuserSecretRef corev1.LocalObjectReference `json:"superuserSecretRef,omitempty"`
 
-	// ServerImage is the image for the cassandra container. Note that this should be a
-	// management-api image. If left empty the operator will choose a default image based
-	// on ServerVersion.
-	// +optional
-	ServerImage string `json:"serverImage,omitempty"`
-
-	// ServerVersion is the Cassandra version.
-	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
-	ServerVersion string `json:"serverVersion,omitempty"`
-
-	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
-	// authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster.
-	// The default is "busybox:1.34.1".
-	// +optional
-	// +kubebuilder:default={name:"busybox",tag:"1.34.1"}
-	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
-
-	// Resources is the cpu and memory resources for the cassandra container.
-	// +optional
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
-	// the various jvm*.options files.
-	// +optional
-	CassandraConfig *CassandraConfig `json:"config,omitempty"`
-
-	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
-	// includes everything under /var/lib/cassandra, namely the commit log and data
-	// directories.
-	// +optional
-	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
-
-	// Networking enables host networking and configures a NodePort ports.
-	// +optional
-	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
-
-	// Racks is a list of named racks. Note that racks are used to create node affinity. //
-	// +optional
-	Racks []cassdcapi.Rack `json:"racks,omitempty"`
-
 	// Datacenters a list of the DCs in the cluster.
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
-
-	// Telemetry defines the desired state for telemetry resources in this K8ssandraCluster.
-	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
-	// a user-provided monitoring solution (at present, only support for Prometheus is available).
-	// +optional
-	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
-
-	// MgmtAPIHeap defines the amount of memory devoted to the management
-	// api heap.
-	// +optional
-	MgmtAPIHeap *resource.Quantity `json:"mgmtAPIHeap,omitempty"`
 
 	// AdditionalSeeds specifies Cassandra node IPs for an existing datacenter. This is
 	// primarily intended for migrations from an existing Cassandra cluster that is not
@@ -259,15 +209,6 @@ type CassandraClusterTemplate struct {
 	// can resolve hostnames for the remote Cassandra cluster, then you can specify hostnames
 	// here; otherwise, use IP addresses.
 	AdditionalSeeds []string `json:"additionalSeeds,omitempty"`
-
-	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
-	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
-	// the number of nodes required.
-	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
-
-	// Tolerations applied to every Cassandra pod.
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// Internode encryption stores which are used by Cassandra and Stargate.
 	// +optional
@@ -285,7 +226,7 @@ type CassandraDatacenterTemplate struct {
 
 	K8sContext string `json:"k8sContext,omitempty"`
 
-	ServerImage string `json:"serverImage,omitempty"`
+	DatacenterOptions `json:",inline"`
 
 	// Size is the number Cassandra pods to deploy in this datacenter.
 	// This number does not include Stargate instances.
@@ -300,10 +241,46 @@ type CassandraDatacenterTemplate struct {
 	// +kubebuilder:default=false
 	Stopped bool `json:"stopped,omitempty"`
 
+	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+	// deploying Stargate in this datacenter.
+	// +optional
+	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
+}
+
+// DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
+type DatacenterOptions struct {
 	// ServerVersion is the Cassandra version.
 	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
-	// +optional
 	ServerVersion string `json:"serverVersion,omitempty"`
+
+	// ServerImage is the image for the cassandra container. Note that this should be a
+	// management-api image. If left empty the operator will choose a default image based
+	// on ServerVersion.
+	// +optional
+	ServerImage string `json:"serverImage,omitempty"`
+
+	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
+	// the various jvm*.options files.
+	// +optional
+	CassandraConfig *CassandraConfig `json:"config,omitempty"`
+
+	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
+	// includes everything under /var/lib/cassandra, namely the commit log and data
+	// directories.
+	// +optional
+	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
+
+	// Networking enables host networking and configures a NodePort ports.
+	// +optional
+	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
+
+	// Resources is the cpu and memory resources for the cassandra container.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Racks is a list of named racks. Note that racks are used to create node affinity. //
+	// +optional
+	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
 	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
 	// authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster.
@@ -312,31 +289,14 @@ type CassandraDatacenterTemplate struct {
 	// +kubebuilder:default={name:"busybox",tag:"1.34.1"}
 	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
 
-	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
-	// jvm-options for 3.11.x or jvm-server-options for 4.x.
-	CassandraConfig *CassandraConfig `json:"config,omitempty"`
+	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
+	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
+	// the number of nodes required.
+	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
 
-	// Resources is the cpu and memory resources for the cassandra container.
+	// Tolerations applied to every Cassandra pod.
 	// +optional
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// +optional
-	Racks []cassdcapi.Rack `json:"racks,omitempty"`
-
-	// Networking enables host networking and configures a NodePort ports.
-	// +optional
-	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
-
-	// StorageConfig is the persistent storage requirements for each Cassandra pod. This
-	// includes everything under /var/lib/cassandra, namely the commit log and data
-	// directories.
-	// +optional
-	StorageConfig *cassdcapi.StorageConfig `json:"storageConfig,omitempty"`
-
-	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
-	// deploying Stargate in this datacenter.
-	// +optional
-	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
 	// MgmtAPIHeap defines the amount of memory devoted to the management
 	// api heap.
@@ -348,15 +308,6 @@ type CassandraDatacenterTemplate struct {
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
-
-	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
-	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise
-	// the number of nodes required.
-	SoftPodAntiAffinity *bool `json:"softPodAntiAffinity,omitempty"`
-
-	// Tolerations applied to every Cassandra pod.
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
