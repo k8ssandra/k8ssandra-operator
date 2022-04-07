@@ -288,7 +288,7 @@ func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 		setTestNamespaceNames(opts)
 
 		err = beforeTest(t, f, opts)
-		//defer afterTest(t, f, opts)
+		defer afterTest(t, f, opts)
 
 		if err == nil {
 			opts.testFunc(t, ctx, opts.sutNamespace, f)
