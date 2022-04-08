@@ -6,6 +6,7 @@ resources:
 - bases/stargate.k8ssandra.io_stargates.yaml
 - bases/config.k8ssandra.io_clientconfigs.yaml
 - bases/replication.k8ssandra.io_replicatedsecrets.yaml
+- bases/replication.k8ssandra.io_replicatedconfigmaps.yaml
 - bases/reaper.k8ssandra.io_reapers.yaml
 - bases/medusa.k8ssandra.io_cassandrabackups.yaml
 - bases/medusa.k8ssandra.io_cassandrarestores.yaml

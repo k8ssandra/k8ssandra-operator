@@ -62,7 +62,7 @@ func copyConfigMapFromClusterToCluster(t *testing.T, ctx context.Context, f *fra
 
 	generatedConfigMaps := generateConfigMaps(namespace)
 	for i, s := range generatedConfigMaps {
-		s.Name = fmt.Sprintf("broken-configMap-%d", i)
+		s.Name = fmt.Sprintf("broken-configmap-%d", i)
 		err := f.Client.Create(ctx, s)
 		require.NoError(err, "failed to create configMap to main cluster")
 	}
@@ -185,8 +185,8 @@ func verifyConfigMapsMatch(t *testing.T, ctx context.Context, localClient client
 	for _, remoteCluster := range remoteClusters {
 		testClient := testEnv.Clients[remoteCluster]
 
-		targetSecretList := &corev1.SecretList{}
-		err := testClient.List(ctx, targetSecretList, client.InNamespace(namespace))
+		configMapList := &corev1.ConfigMapList{}
+		err := testClient.List(ctx, configMapList, client.InNamespace(namespace))
 		if err != nil {
 			return false
 		}
@@ -195,7 +195,7 @@ func verifyConfigMapsMatch(t *testing.T, ctx context.Context, localClient client
 			if _, exists := secrets[s.Name]; exists {
 				// Find the corresponding item from targetSecretList - or fail if it's not there
 				found := false
-				for _, ts := range targetSecretList.Items {
+				for _, ts := range configMapList.Items {
 					if s.Name == ts.Name {
 						found = true
 						if s.GetAnnotations()[coreapi.ResourceHashAnnotation] != ts.GetAnnotations()[coreapi.ResourceHashAnnotation] {

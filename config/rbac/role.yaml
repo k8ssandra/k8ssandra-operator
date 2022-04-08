@@ -73,7 +73,7 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - ConfigMaps
+  - configMaps
   verbs:
   - create
   - delete
