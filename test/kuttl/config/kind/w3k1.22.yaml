@@ -4,10 +4,10 @@ networking:
   apiServerPort: 45451
 nodes:
 - role: control-plane
-  image: kindest/node:v1.21.10
+  image: kindest/node:v1.22.7
 - role: worker
-  image: kindest/node:v1.21.10
+  image: kindest/node:v1.22.7
 - role: worker
-  image: kindest/node:v1.21.10
+  image: kindest/node:v1.22.7
 - role: worker
-  image: kindest/node:v1.21.10
+  image: kindest/node:v1.22.7

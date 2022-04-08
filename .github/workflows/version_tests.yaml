@@ -1,4 +1,4 @@
-name: kuttl tests
+name: kuttl multi-version tests
 
 on:
   push:
@@ -58,7 +58,10 @@ jobs:
     name: Run kuttl tests
     strategy:
       matrix:
-        k8s_version: ["1.21"]
+        k8s_version: 
+        - "1.21"
+        - "1.22"
+        - "1.23"
         serverVersion: 
         - 3.11.12
         - 4.0.3
@@ -113,4 +116,5 @@ jobs:
         # image tag of the operator.
         
         make install-kuttl
-        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --test ${{ matrix.kuttl-test }}
+        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --test ${{ matrix.kuttl-test }} --kind-config=./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+ 
