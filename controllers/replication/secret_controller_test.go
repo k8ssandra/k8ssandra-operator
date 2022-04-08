@@ -3,6 +3,9 @@ package replication
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -10,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
-	"time"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -298,16 +299,18 @@ func generateReplicatedSecret(k8sContext, namespace string) *api.ReplicatedSecre
 			Name:      "fetch-secrets",
 		},
 		Spec: api.ReplicatedSecretSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"secret-controller":                    "test",
-					coreapi.K8ssandraClusterNamespaceLabel: namespace,
-					coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
+			ReplicatedResourceSpec: &api.ReplicatedResourceSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"secret-controller":                    "test",
+						coreapi.K8ssandraClusterNamespaceLabel: namespace,
+						coreapi.K8ssandraClusterNameLabel:      "k8sssandra",
+					},
 				},
-			},
-			ReplicationTargets: []api.ReplicationTarget{
-				{
-					K8sContextName: k8sContext,
+				ReplicationTargets: []api.ReplicationTarget{
+					{
+						K8sContextName: k8sContext,
+					},
 				},
 			},
 		},
@@ -459,16 +462,16 @@ func TestRequiresUpdate(t *testing.T) {
 	orig.GetAnnotations()[coreapi.ResourceHashAnnotation] = utils.DeepHashString(orig.Data)
 
 	// Secrets don't match
-	assert.True(requiresUpdate(orig, dest))
+	assert.True(objectRequiresUpdate(orig, dest))
 
 	syncSecrets(orig, dest)
 
-	assert.False(requiresUpdate(orig, dest))
+	assert.False(objectRequiresUpdate(orig, dest))
 
 	// Modify target data without fixing the hash annotation, this should cause update requirement
 	dest.Data["secondKey"] = []byte("thisValWillBeGone")
-	assert.True(requiresUpdate(orig, dest))
+	assert.True(objectRequiresUpdate(orig, dest))
 
 	syncSecrets(orig, dest)
-	assert.False(requiresUpdate(orig, dest))
+	assert.False(objectRequiresUpdate(orig, dest))
 }

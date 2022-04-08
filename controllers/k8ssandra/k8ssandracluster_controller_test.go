@@ -930,10 +930,12 @@ func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Fram
 			Name:      kcKey.Name,
 		},
 		Spec: replicationapi.ReplicatedSecretSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.ManagedByLabels(kcKey),
+			ReplicatedResourceSpec: &replicationapi.ReplicatedResourceSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: labels.ManagedByLabels(kcKey),
+				},
+				ReplicationTargets: []replicationapi.ReplicationTarget{},
 			},
-			ReplicationTargets: []replicationapi.ReplicationTarget{},
 		},
 		Status: replicationapi.ReplicatedSecretStatus{
 			Conditions: []replicationapi.ReplicationCondition{
