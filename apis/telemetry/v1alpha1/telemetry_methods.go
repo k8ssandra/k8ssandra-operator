@@ -36,11 +36,17 @@ func (a *PrometheusTelemetrySpec) Merge(b *PrometheusTelemetrySpec) *PrometheusT
 	}
 	if a.CommonLabels != nil {
 		for k, v := range a.CommonLabels {
+			if out.CommonLabels == nil {
+				out.CommonLabels = make(map[string]string)
+			}
 			out.CommonLabels[k] = v
 		}
 	}
 	if b.CommonLabels != nil {
 		for k, v := range b.CommonLabels {
+			if out.CommonLabels == nil {
+				out.CommonLabels = make(map[string]string)
+			}
 			out.CommonLabels[k] = v
 		}
 	}

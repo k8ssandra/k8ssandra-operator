@@ -1,4 +1,4 @@
-package telemetry
+package validation
 
 import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -11,7 +11,7 @@ func Test_SpecIsValid_Valid(t *testing.T) {
 	spec := telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 		Enabled: false,
 	}}
-	isValid, err := SpecIsValid(&spec, false)
+	isValid, err := TelemetrySpecIsValid(&spec, false)
 	if err != nil {
 		assert.Fail(t, "couldn't determine if spec was valid or not", err)
 	}
@@ -23,7 +23,7 @@ func Test_SpecIsValid_NotValid(t *testing.T) {
 	spec := telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 		Enabled: true,
 	}}
-	isValid, err := SpecIsValid(&spec, false)
+	isValid, err := TelemetrySpecIsValid(&spec, false)
 	if err != nil {
 		assert.Fail(t, "couldn't determine if spec was valid or not", err)
 	}

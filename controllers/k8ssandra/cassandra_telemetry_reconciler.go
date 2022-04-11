@@ -5,6 +5,7 @@ package k8ssandra
 import (
 	"context"
 	"errors"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/validation"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -34,11 +35,11 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
-	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
+	promInstalled, err := validation.IsPromInstalled(remoteClient, logger)
 	if err != nil {
 		return result.Error(err)
 	}
-	validConfig, err := telemetry.SpecIsValid(mergedSpec, promInstalled)
+	validConfig, err := validation.TelemetrySpecIsValid(mergedSpec, promInstalled)
 	if err != nil {
 		return result.Error(errors.New("could not determine if telemetry config is valid"))
 	}

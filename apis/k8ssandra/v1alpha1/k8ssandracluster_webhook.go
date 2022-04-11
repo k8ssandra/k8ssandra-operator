@@ -19,10 +19,13 @@ package v1alpha1
 import (
 	"fmt"
 
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	validationpkg "github.com/k8ssandra/k8ssandra-operator/pkg/validation"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -67,6 +70,7 @@ func (r *K8ssandraCluster) ValidateCreate() error {
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
 	// Verify given k8s-contexts are correct
+
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		_, err := clientCache.GetRemoteClient(dc.K8sContext)
 		if err != nil {
@@ -85,14 +89,107 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 			}
 		}
 	}
+	if err := TelemetrySpecsAreValid(r, clientCache); err != nil {
+		return err
+	}
+	return nil
+}
 
+// clientGetter is an interface here purely to enable DI. It is anything that implements `GetRemoteClient()` mechanism to get remote clients by name.
+type clientGetter interface {
+	GetRemoteClient(k8sContextName string) (client.Client, error)
+}
+
+func TelemetrySpecsAreValid(kCluster *K8ssandraCluster, cGetter clientGetter) error {
+	// Iterate through the DCs, checking Stargate and Cassandra telemetry
+	if kCluster.Spec.Cassandra.Datacenters != nil {
+		for _, dc := range kCluster.Spec.Cassandra.Datacenters {
+			//Get client and determine if prom installed.
+			dcClient, err := cGetter.GetRemoteClient(dc.K8sContext)
+			if err != nil {
+				return err
+			}
+			promInstalled, err := validationpkg.IsPromInstalled(dcClient, webhookLog)
+			if err != nil {
+				return err
+			}
+
+			cassToValidate := &telemetryapi.TelemetrySpec{}
+			if kCluster.Spec.Cassandra.Telemetry != nil {
+				cassToValidate = kCluster.Spec.Cassandra.Telemetry.Merge(dc.Telemetry)
+			} else if dc.Telemetry != nil {
+				cassToValidate = dc.Telemetry
+			}
+			if cassToValidate != nil {
+				webhookLog.Info("validating cass telemetry in webhook", "cassToValidate", cassToValidate)
+				cassIsValid, err := validationpkg.TelemetrySpecIsValid(cassToValidate, promInstalled)
+				if err != nil {
+					return err
+				}
+				if !cassIsValid {
+					webhookLog.Info("throwing an error, cass telemetry spec invalid")
+					return errors.New(fmt.Sprint("Cassandra telemetry specification was incorrect in context", dc.K8sContext))
+				}
+
+			}
+
+			sgToValidate := &telemetryapi.TelemetrySpec{}
+			if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
+				if dc.Stargate != nil {
+					sgToValidate = kCluster.Spec.Stargate.Telemetry.Merge(dc.Stargate.Telemetry)
+				} else {
+					sgToValidate = kCluster.Spec.Stargate.Telemetry
+				}
+			} else if dc.Stargate != nil && dc.Stargate.Telemetry != nil {
+				sgToValidate = dc.Stargate.Telemetry
+			}
+			if sgToValidate != nil {
+				sgIsValid, err := validationpkg.TelemetrySpecIsValid(sgToValidate, promInstalled)
+				if err != nil {
+					return err
+				}
+				if !sgIsValid {
+					return errors.New(fmt.Sprint("Stargate telemetry specification was incorrect in context", dc.K8sContext))
+				}
+			}
+		}
+	}
+	// Deal with the case that datacenters is completely undefined and the above for loop is empty.
+	if len(kCluster.Spec.Cassandra.Datacenters) == 0 {
+		localClient, err := cGetter.GetRemoteClient("")
+		if err != nil {
+			return err
+		}
+		promInstalled, err := validationpkg.IsPromInstalled(localClient, webhookLog)
+		if err != nil {
+			return err
+		}
+		if kCluster.Spec.Cassandra.Telemetry != nil {
+			cassIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Cassandra.Telemetry, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !cassIsValid {
+				return errors.New("Cassandra telemetry specification was incorrect in control plane")
+			}
+		}
+		if kCluster.Spec.Stargate != nil && kCluster.Spec.Stargate.Telemetry != nil {
+			sgIsValid, err := validationpkg.TelemetrySpecIsValid(kCluster.Spec.Stargate.Telemetry, promInstalled)
+			if err != nil {
+				return err
+			}
+			if !sgIsValid {
+				return errors.New("Stargate telemetry specification was incorrect in control plane")
+			}
+		}
+
+	}
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
-
 	if err := r.validateK8ssandraCluster(); err != nil {
 		return err
 	}

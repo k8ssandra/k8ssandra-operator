@@ -29,7 +29,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	// Test fixtures
 	r := newDummyK8ssandraClusterReconciler()
 	ctx := context.Background()
-	fakeClient := test.NewFakeClientWRestMapper()
+	fakeClient, _ := test.NewFakeClientWithProm()
 	testLogger := testlogr.NewTestLogger(t)
 	// Resources to create
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")

@@ -399,12 +399,12 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.fixture != nil {
-		if err := f.DeployFixture(opts.sutNamespace, opts.fixture); err != nil {
-			t.Logf("failed to deploy fixture")
-			return err
-		}
+			require.Eventually(t, func() bool {
+				err := f.DeployFixture(opts.sutNamespace, opts.fixture)
+				t.Logf("failed to deploy fixture")
+				return err == nil
+			}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Deploying fixture timed out")
 	}
-
 	return nil
 }
 
@@ -463,7 +463,13 @@ func applyPollingDefaults() {
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {
-	assert.NoError(t, cleanUp(t, f, opts), "after test cleanup failed")
+	assert.Eventually(t, func() bool {
+		err := cleanUp(t, f, opts)
+		return err == nil
+	},
+		polling.k8ssandraClusterStatus.timeout,
+		polling.k8ssandraClusterStatus.interval,
+	"after test cleanup failed")
 }
 
 func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
@@ -539,17 +545,21 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("delete Stargate in k8ssandracluster CRD")
-	err = f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
-	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	stargateTemplate := &stargateapi.StargateDatacenterTemplate{}
+	require.Eventually(func() bool {
+		k8ssandra = &api.K8ssandraCluster{}
+		err = f.Client.Get(ctx, kcKey, k8ssandra)
+		require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+		patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		stargateTemplate = k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
+		k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
+		err = f.Client.Patch(ctx, k8ssandra, patch)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "failed to patch K8ssandraCluster in namespace", "namespace", namespace)
 
 	t.Log("check Stargate deleted")
+	stargate = &stargateapi.Stargate{}
 	require.Eventually(func() bool {
-		stargate := &stargateapi.Stargate{}
 		err := f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
 		if err == nil || !errors.IsNotFound(err) {
 			return false
@@ -565,12 +575,19 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("re-create Stargate in k8ssandracluster resource")
-	err = f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	patch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
-	err = f.Client.Patch(ctx, k8ssandra, patch)
-	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
+
+	stargate = &stargateapi.Stargate{}
+	require.Eventually(func() bool {
+		err = f.Client.Get(ctx, kcKey, k8ssandra)
+		require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+		patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = stargateTemplate.DeepCopy()
+		err = f.Client.Patch(ctx, k8ssandra, patch)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval,
+	"failed to patch K8ssandraCluster in operatorNamespace", "namespace", namespace)
+
+
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
@@ -963,8 +980,10 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
 	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
-	err = f.Client.Update(ctx, kc)
-	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+	require.Eventually(func() bool {
+		err = f.Client.Update(ctx, kc)
+		return err == nil
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "failed to remove dc2 from K8ssandraCluster spec")
 
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
 	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1*time.Minute, 3*time.Second)
