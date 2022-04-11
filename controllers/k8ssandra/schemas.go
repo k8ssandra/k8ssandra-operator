@@ -110,18 +110,18 @@ func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.Mana
 func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
-	logger logr.Logger) (*cassandra.SystemReplication, error) {
+	logger logr.Logger) (cassandra.SystemReplication, error) {
 
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
-		replication := &cassandra.SystemReplication{}
-		if err := json.Unmarshal([]byte(val), replication); err == nil {
+		replication := make(map[string]int)
+		if err := json.Unmarshal([]byte(val), &replication); err == nil {
 			return replication, nil
 		} else {
 			return nil, err
 		}
 	}
 
-	replication := cassandra.ComputeInitialSystemReplication(kc)
+	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 	bytes, err := json.Marshal(replication)
 
 	if err != nil {
@@ -139,7 +139,7 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		return nil, err
 	}
 
-	return &replication, nil
+	return replication, nil
 }
 
 // updateReplicationOfSystemKeyspaces ensures that the replication for the system_auth,
