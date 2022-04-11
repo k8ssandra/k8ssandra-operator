@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/utils/pointer"
 
-	"strconv"
 	"strings"
 
 	"github.com/Jeffail/gabs"
@@ -726,12 +726,16 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 }
 
 func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, systemRF int, dcNames ...string) (*gabs.Container, error) {
+	sort.Strings(dcNames)
 	config = config.DeepCopy()
-	dcNamesOpt := cassandra.SystemReplicationDcNames + "=" + strings.Join(dcNames, ",")
-	rfOpt := cassandra.SystemReplicationFactor + "=" + strconv.Itoa(systemRF)
+	replicationFactors := make([]string, 0)
+	for _, dc := range dcNames {
+		replicationFactors = append(replicationFactors, fmt.Sprintf("%s:%d", dc, systemRF))
+	}
+	rfOpt := cassandra.SystemReplicationFactorStrategy + "=" + strings.Join(replicationFactors, ",")
 	*config = cassandra.ApplyAuthSettings(*config, true)
 	config.JvmOptions.AdditionalOptions = append(
-		[]string{dcNamesOpt, rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},
+		[]string{rfOpt, "-Dcom.sun.management.jmxremote.authenticate=true"},
 		config.JvmOptions.AdditionalOptions...,
 	)
 	template := cassandra.DatacenterConfig{
@@ -1748,7 +1752,7 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) func() bool {
 	return func() bool {
 		key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-		expectedReplication := cassandra.ComputeInitialSystemReplication(kc)
+		expectedReplication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 		kc = &api.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, key, kc); err != nil {
 			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)
@@ -1760,13 +1764,13 @@ func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx 
 			return false
 		}
 
-		actualReplication := &cassandra.SystemReplication{}
-		if err := json.Unmarshal([]byte(val), actualReplication); err != nil {
+		actualReplication := make(map[string]int)
+		if err := json.Unmarshal([]byte(val), &actualReplication); err != nil {
 			t.Logf("Failed to unmarshal system replication annotation: %v", err)
 			return false
 		}
 
-		return reflect.DeepEqual(expectedReplication, *actualReplication)
+		return reflect.DeepEqual(expectedReplication, actualReplication)
 	}
 }
 

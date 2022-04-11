@@ -116,6 +116,10 @@ func TestOperator(t *testing.T) {
 		testFunc: createMultiDatacenterCluster,
 		fixture:  framework.NewTestFixture("multi-dc"),
 	}))
+	t.Run("CreateMixedMultiDataCenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterClusterDifferentTopologies,
+		fixture:  framework.NewTestFixture("multi-dc-mixed"),
+	}))
 	t.Run("AddDcToCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: addDcToCluster,
 		fixture:  framework.NewTestFixture("add-dc"),
@@ -519,24 +523,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-
-	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, kcKey, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
-		return cassandraDatacenterReady(kdcStatus.Cassandra)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -612,24 +599,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 
 	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-
-	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, kcKey, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
-		return cassandraDatacenterReady(kdcStatus.Cassandra)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -661,24 +631,7 @@ func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Con
 
 	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-
-	t.Log("check k8ssandra cluster status updated for CassandraDatacenter")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, kcKey, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
-		return cassandraDatacenterReady(kdcStatus.Cassandra)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
 	reaperKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
@@ -718,52 +671,17 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
-	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
-
-	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
 	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
-
-	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		if !cassandraDatacenterReady(cassandraStatus) {
-			return false
-		}
-
-		cassandraStatus = getCassandraDatacenterStatus(k8ssandra, dc2Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, k8ssandra.Name)
@@ -781,6 +699,47 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+}
+
+// createMultiDatacenterClusterDifferentTopologies creates a K8ssandraCluster with two CassandraDatacenters of
+// different sizes.
+func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	kc := &api.K8ssandraCluster{}
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
+
+	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	checkDatacenterReady(t, ctx, dc2Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, kc.Name)
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	pod := "test-dc1-default-sts-0"
+	count := 3
+	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+
+	t.Log("check nodes in dc2 see nodes in dc1")
+	pod = "test-dc2-default-sts-0"
+	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+
+	replication := map[string]int{"dc1": 2, "dc2": 1}
+	checkKeyspaceReplication(t, f, ctx, f.K8sContext(0), namespace, kc.Name, "test-dc1-default-sts-0",
+		"system_auth", replication)
 }
 
 func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -1036,52 +995,17 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
-	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
-
-	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
 	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
-
-	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		if !cassandraDatacenterReady(cassandraStatus) {
-			return false
-		}
-
-		cassandraStatus = getCassandraDatacenterStatus(k8ssandra, dc2Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -1178,52 +1102,18 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
-	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
-
-	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
 	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
-
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 	t.Log("check k8ssandra cluster status")
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
-
-		cassandraStatus := getCassandraDatacenterStatus(k8ssandra, dc1Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		if !cassandraDatacenterReady(cassandraStatus) {
-			return false
-		}
-
-		cassandraStatus = getCassandraDatacenterStatus(k8ssandra, dc2Key.Name)
-		if cassandraStatus == nil {
-			return false
-		}
-		return cassandraDatacenterReady(cassandraStatus)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	stargateKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -1470,6 +1360,33 @@ func checkKeyspaceReplication(
 		}
 		return true
 	}, 1*time.Minute, 3*time.Second)
+}
+
+// assertCassandraDatacenterK8cStatusReady polls the K8ssandraCluster object, checking its status to
+// verify the CassandraDatacenter specified by dcName is ready.
+func assertCassandraDatacenterK8cStatusReady(
+	ctx context.Context,
+	t *testing.T,
+	f *framework.E2eFramework,
+	kcKey client.ObjectKey,
+	dcNames ...string,
+) {
+	t.Logf("check K8ssandraCluster status for CassandraDatacenters %v ready", dcNames)
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		err := f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			return false
+		}
+
+		for _, dcName := range dcNames {
+			dcStatus := getCassandraDatacenterStatus(kc, dcName)
+			if dcStatus == nil || !cassandraDatacenterReady(dcStatus) {
+				return false
+			}
+		}
+		return true
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 }
 
 func configureZeroLog() {

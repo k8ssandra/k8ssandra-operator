@@ -47,27 +47,6 @@ func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.Cassandr
 	}
 }
 
-func ComputeInitialSystemReplication(kc *api.K8ssandraCluster) SystemReplication {
-	rf := 3.0
-
-	datacenters := GetDatacentersForSystemReplication(kc)
-
-	for _, dc := range datacenters {
-		rf = math.Min(rf, float64(dc.Size))
-	}
-
-	dcNames := make([]string, 0, len(datacenters))
-	for _, dc := range datacenters {
-		dcNames = append(dcNames, dc.Meta.Name)
-	}
-
-	for _, dcName := range kc.Spec.ExternalDatacenters {
-		dcNames = append(dcNames, dcName)
-	}
-
-	return SystemReplication{Datacenters: dcNames, ReplicationFactor: int(rf)}
-}
-
 // ComputeReplication computes the desired replication for each dc, taking into account the desired maximum replication
 // per dc.
 func ComputeReplication(maxReplicationPerDc int, datacenters ...*cassdcapi.CassandraDatacenter) map[string]int {

@@ -459,8 +459,7 @@ func GetDatacenterConfig() DatacenterConfig {
 			JvmOptions: api.JvmOptions{
 				HeapSize: parseResource("1024Mi"),
 				AdditionalOptions: []string{
-					SystemReplicationDcNames + "=dc1",
-					SystemReplicationFactor + "=3",
+					SystemReplicationFactorStrategy + "=dc1:3",
 				},
 			},
 		},
