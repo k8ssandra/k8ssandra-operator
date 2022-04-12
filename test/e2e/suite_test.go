@@ -79,7 +79,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("CreateMixedMultiDataCenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterClusterDifferentTopologies,
-		fixture:  framework.NewTestFixture("multi-dc-mixed"),
+		fixture:  "multi-dc-mixed",
 	}))
 	t.Run("AddDcToCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: addDcToCluster,
@@ -692,11 +692,14 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	k8sCtx0 := "kind-k8ssandra-0"
+	k8sCtx1 := "kind-k8ssandra-1"
+
+	dc1Key := framework.ClusterKey{K8sContext: k8sCtx0, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc2Key := framework.ClusterKey{K8sContext: k8sCtx1, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
@@ -707,18 +710,18 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := "test-dc1-default-sts-0"
 	count := 3
-	checkNodeToolStatus(t, f, f.K8sContext(0), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, k8sCtx0, namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = "test-dc2-default-sts-0"
-	checkNodeToolStatus(t, f, f.K8sContext(1), namespace, pod, count, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, k8sCtx1, namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	replication := map[string]int{"dc1": 2, "dc2": 1}
-	checkKeyspaceReplication(t, f, ctx, f.K8sContext(0), namespace, kc.Name, "test-dc1-default-sts-0",
+	checkKeyspaceReplication(t, f, ctx, k8sCtx0, namespace, kc.Name, "test-dc1-default-sts-0",
 		"system_auth", replication)
 }
 
@@ -797,7 +800,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		}
 
 		return true
-	}, 30 * time.Second, 1 * time.Second, "timed out waiting to add DC to K8ssandraCluster")
+	}, 30*time.Second, 1*time.Second, "timed out waiting to add DC to K8ssandraCluster")
 
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
