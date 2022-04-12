@@ -19,15 +19,16 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Refactor config-builder JSON marshaling
 * [ENHANCEMENT] [#507](https://github.com/k8ssandra/k8ssandra-operator/issues/507) Shared Cassandra cluster and datacenter fields are defined in a single struct
 * [BUGFIX] [#447](https://github.com/k8ssandra/k8ssandra-operator/issues/447) Reconciliation doesn't finish when adding DC with more than 1 node
-* [BUGFIX] [$503](https://github.com/k8ssandra/k8ssandra-operator/issues/503) Cannot 
-  create Cassandra 4 multi-DC cluster when DCs have different sizes
 * [BUGFIX] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Java garbage collection properties cannot be configured correctly
-* [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run 
-  e2e tests against arbitrary context names
+* [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run e2e tests against arbitrary context names
 * [TESTING] [#462](https://github.com/k8ssandra/k8ssandra-operator/issues/462) ⁃ Use yq to parse fixture files
 * [TESTING] [#517](https://github.com/k8ssandra/k8ssandra-operator/issues/517) ⁃ Create make targets to prepare a cluster for e2e tests
 * [TESTING] [#514](https://github.com/k8ssandra/k8ssandra-operator/issues/514) ⁃ Consider cert-manager a prerequisite for e2e tests
 * [TESTING] [#515](https://github.com/k8ssandra/k8ssandra-operator/issues/515) ⁃ Consider ingress controller a prerequisite for e2e tests
+
+## v1.0.2 2022-04-14
+* [CHANGE] [#520](https://github.com/k8ssandra/k8ssandra-operator/issues/520) Upgrade to cass-operator v1.10.3
+* [BUGFIX] [#503](https://github.com/k8ssandra/k8ssandra-operator/issues/503) Cannot create Cassandra 4 multi-DC cluster when DCs have different sizes
 
 ## v1.0.1 2022-03-07
 
