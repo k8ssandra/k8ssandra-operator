@@ -22,6 +22,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run 
   e2e tests against arbitrary context names
 * [TESTING] [#462](https://github.com/k8ssandra/k8ssandra-operator/issues/462) ⁃ Use yq to parse fixture files
+* [TESTING] [#517](https://github.com/k8ssandra/k8ssandra-operator/issues/517) ⁃ Create make targets to prepare a cluster for e2e tests
 
 ## v1.0.1 2022-03-07
 
