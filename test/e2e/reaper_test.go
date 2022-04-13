@@ -77,17 +77,8 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
-	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
-	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
 	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: uiSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: uiSecretKey})
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -163,17 +154,8 @@ func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespac
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
-	cqlSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-cql-secret"}
-	jmxSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-jmx-secret"}
 	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: cqlSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: jmxSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: uiSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: uiSecretKey})
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}

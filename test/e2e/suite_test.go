@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
@@ -1313,11 +1312,6 @@ func checkNodeToolStatus(
 	)
 }
 
-func checkSecretExists(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey client.ObjectKey, secretKey framework.ClusterKey) {
-	secret := getSecret(t, f, ctx, secretKey)
-	require.True(t, labels.IsManagedBy(secret, kcKey), "secret %s/%s is not managed by %s", secretKey.Namespace, secretKey.Name, kcKey.Name)
-}
-
 // FIXME there is some overlap with E2eFramework.RetrieveDatabaseCredentials()
 func retrieveCredentials(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) (string, string) {
 	secret := getSecret(t, f, ctx, secretKey)
@@ -1337,20 +1331,6 @@ func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, sec
 		secretKey,
 	)
 	return secret
-}
-
-func checkSecretDoesNotExist(t *testing.T, f *framework.E2eFramework, ctx context.Context, secretKey framework.ClusterKey) {
-	secret := &corev1.Secret{}
-	require.Never(
-		t,
-		func() bool {
-			return f.Get(ctx, secretKey, secret) == nil
-		},
-		15*time.Second,
-		time.Second,
-		"secret %s exists",
-		secretKey,
-	)
 }
 
 func checkKeyspaceExists(

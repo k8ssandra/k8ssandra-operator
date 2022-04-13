@@ -12,7 +12,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
@@ -36,13 +35,9 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate"}}
 
-	superuserSecretKey := types.NamespacedName{Namespace: namespace, Name: secret.DefaultSuperuserSecretName("cluster1")}
-	reaperCqlSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUserSecretName("cluster1")}
-	reaperJmxSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultJmxUserSecretName("cluster1")}
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
 	// cluster has auth turned off initially
-	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, false)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
@@ -61,46 +56,8 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
-	checkSecrets(t, f, ctx, kcKey, superuserSecretKey, reaperCqlSecretKey, reaperJmxSecretKey, reaperUiSecretKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
 	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
-}
-
-func checkSecrets(
-	t *testing.T,
-	f *framework.E2eFramework,
-	ctx context.Context,
-	kcKey types.NamespacedName,
-	superuserSecretKey types.NamespacedName,
-	reaperCqlSecretKey types.NamespacedName,
-	reaperJmxSecretKey types.NamespacedName,
-	reaperUiSecretKey types.NamespacedName,
-	expectReaperSecretsCreated bool,
-) {
-	t.Log("check that superuser secret exists in both contexts")
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: superuserSecretKey})
-	checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: superuserSecretKey})
-	if expectReaperSecretsCreated {
-		t.Log("check that reaper CQL secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperCqlSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperCqlSecretKey})
-		t.Log("check that reaper JMX secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperJmxSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperJmxSecretKey})
-		t.Log("check that reaper UI secret exists in both contexts")
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperUiSecretKey})
-		checkSecretExists(t, f, ctx, kcKey, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperUiSecretKey})
-	} else {
-		t.Log("check that reaper CQL secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperCqlSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperCqlSecretKey})
-		t.Log("check that reaper JMX secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperJmxSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperJmxSecretKey})
-		t.Log("check that reaper UI secret wasn't created in neither context")
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperUiSecretKey})
-		checkSecretDoesNotExist(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: reaperUiSecretKey})
-	}
 }
 
 func waitForAllComponentsReady(
