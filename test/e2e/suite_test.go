@@ -367,16 +367,6 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		}
 	}
 
-	if err := f.DeployCertManager(); err != nil {
-		t.Log("failed to deploy cert-manager")
-		return err
-	}
-
-	if err := f.WaitForCertManagerToBeReady("cert-manager", polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
-		t.Log("failed waiting for cert-manager to be ready")
-		return err
-	}
-
 	deploymentConfig := framework.OperatorDeploymentConfig{
 		Namespace:     opts.operatorNamespace,
 		ClusterScoped: opts.clusterScoped,

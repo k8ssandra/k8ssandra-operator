@@ -97,10 +97,21 @@ jobs:
     - name: Load Docker images
       run: |
         docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
-    - name: install kustomize
+    - name: Install kustomize
       run: |
         make kustomize
-    - name: Run kuttl-test
+    - name: Install kuttl
+      run: |
+        make install-kuttl
+    - name: Create kind cluster
+      run: |
+        echo create cluster
+        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+        echo cert-manager
+        make cert-manager
+        echo kind-load-images
+        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
+    - name: Run kuttl test
       run: |
         # We are running tests against k8s 1.21
         # Additional versions must be added in kind config files under ./test/config/kind
@@ -110,8 +121,7 @@ jobs:
         # to the existing behavior with kuttl tests while supporting the ability to use a release
         # image tag of the operator.
         
-        make install-kuttl
-        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
-        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
         ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
+    - name: Delete kind cluster
+      run: |
         kind delete cluster --name k8ssandra-0
