@@ -264,7 +264,7 @@ func (f *Framework) PatchK8ssandraCluster(ctx context.Context, key client.Object
 	if err != nil {
 		return err
 	}
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFrom(kc.DeepCopy())
 	updateFn(kc)
 	return f.Client.Patch(ctx, kc, patch)
 }
