@@ -135,7 +135,7 @@ else
 endif
 
 PHONY: e2e-test
-e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test.
+e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
 	go test -v -timeout 3600s ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
@@ -143,13 +143,6 @@ else
 	@echo Running e2e tests
 	go test -v -timeout 3600s ./test/e2e/... -args $(TEST_ARGS)
 endif
-
-# The e2e-setup-single and e2e-setup-multi targets load the operator image but do not
-# build the image. This is partly because these targets are used in GHA workflows and the
-# operator image is built as a separate step there.
-e2e-setup-single: docker-build create-kind-cluster kind-load-image ##Setup a kind cluster for e2e tests. This loads the operator image but does not build it.
-
-e2e-setup-multi: docker-build create-kind-multicluster kind-load-image-multi ## Setup kind clusters for e2e tests. This loads the operator image but does not build it.
 
 ##@ Build
 
@@ -165,21 +158,22 @@ docker-build:
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-kind-load-image:
-	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
+kind-single-e2e-test: single-create single-prepare e2e-test
 
-kind-single-e2e-test: single-up e2e-test
+kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
-kind-multi-e2e-test: multi-up e2e-test
+single-create: cleanup create-kind-cluster cert-manager
 
-single-up: cleanup build manifests kustomize docker-build create-kind-cluster kind-load-image cert-manager
+single-prepare: build manifests docker-build kind-load-image
+
+single-up: single-create single-prepare kustomize
+	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	make NUM_CLUSTERS=1 create-clientconfig
-	kubectl config use-context kind-k8ssandra-0
 	kubectl -n $(NS) delete pod -l control-plane=k8ssandra-operator
 	kubectl -n $(NS) rollout status deployment k8ssandra-operator
 
-single-reload: build manifests kustomize docker-build kind-load-image cert-manager
+single-reload: single-prepare kustomize
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 	kubectl delete pod -l control-plane=k8ssandra-operator -n k8ssandra-operator
@@ -189,7 +183,11 @@ ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
-multi-up: cleanup build manifests kustomize docker-build create-kind-multicluster kind-load-image-multi cert-manager-multi
+multi-create: cleanup create-kind-multicluster cert-manager-multi
+
+multi-prepare: build manifests docker-build kind-load-image-multi
+
+multi-up: multi-create multi-prepare kustomize
 ## install the control plane
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
@@ -207,7 +205,7 @@ multi-up: cleanup build manifests kustomize docker-build create-kind-multicluste
 	kubectl -n $(NS) delete pod -l name=cass-operator
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 
-multi-reload: build manifests kustomize docker-build kind-load-image-multi cert-manager-multi
+multi-reload: multi-prepare kustomize
 # Reload the operator on the control-plane
 	kubectl config use-context kind-k8ssandra-0
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
@@ -244,6 +242,9 @@ create-kind-cluster:
 create-kind-multicluster:
 	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
+kind-load-image:
+	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
+
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
 		kind load docker-image --name k8ssandra-$$i ${IMG}; \
@@ -261,7 +262,7 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl apply --server-side --force-conflicts -f -
 
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
+undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl delete -f -
 
 cert-manager: ## Install cert-manager to the cluster
