@@ -4,6 +4,7 @@ package test
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -91,6 +92,37 @@ func NewStargate(name string, namespace string) stargateapi.Stargate {
 					},
 					Size: 1,
 				},
+			},
+		},
+	}
+}
+
+func NewMedusaBackup(namespace string, backupName string, specBackupName string, dc string) *medusaapi.CassandraBackup {
+	return &medusaapi.CassandraBackup{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      backupName,
+		},
+		Spec: medusaapi.CassandraBackupSpec{
+			Name:                specBackupName,
+			CassandraDatacenter: dc,
+		},
+	}
+}
+
+func NewMedusaRestore(namespace string, localRestoreName string, remoteBackupName string, dc string, clusterName string) *medusaapi.CassandraRestore {
+	return &medusaapi.CassandraRestore{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      localRestoreName,
+		},
+		Spec: medusaapi.CassandraRestoreSpec{
+			Backup:   remoteBackupName,
+			Shutdown: true,
+			InPlace:  true,
+			CassandraDatacenter: medusaapi.CassandraDatacenterConfig{
+				Name:        dc,
+				ClusterName: clusterName,
 			},
 		},
 	}
