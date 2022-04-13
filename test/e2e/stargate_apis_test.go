@@ -73,7 +73,7 @@ func testDocumentApi(t *testing.T, restClient *resty.Client, k8sContext, token s
 func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sContext, token, tableName, keyspaceName string, replication map[string]int) {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	require.Eventually(t, func() bool {
 		keyspaceUrl := fmt.Sprintf("http://%s/v2/schemas/keyspaces", stargateRestHostAndPort)
 		keyspaceJson := fmt.Sprintf(`{"name":"%v","datacenters":%v}`, keyspaceName, formatReplicationForRestApi(replication))
@@ -123,7 +123,7 @@ func createKeyspaceAndTableRest(t *testing.T, restClient *resty.Client, k8sConte
 }
 
 func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContext, token string, nbRows int, tableName, keyspaceName string) {
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	tableUrl := fmt.Sprintf("http://%s/v2/keyspaces/%s/%s", stargateRestHostAndPort, keyspaceName, tableName)
 	for i := 0; i < nbRows; i++ {
 		rowJson := fmt.Sprintf(`{"pk":"0","cc":"%v","v":"%v"}`, i, i)
@@ -138,7 +138,7 @@ func insertRowsRest(t *testing.T, restClient *resty.Client, k8sContext, token st
 }
 
 func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContext, token string, nbRows int, tableName, keyspaceName string) {
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	tableUrl := fmt.Sprintf(
 		"http://%s/v2/keyspaces/%s/%s?",
 		stargateRestHostAndPort,
@@ -162,7 +162,7 @@ func checkRowCountRest(t *testing.T, restClient *resty.Client, k8sContext, token
 func createDocumentNamespace(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace string, replication map[string]int) string {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	require.Eventually(t, func() bool {
 		url := fmt.Sprintf("http://%s/v2/schemas/namespaces", stargateRestHostAndPort)
 		documentNamespaceJson := fmt.Sprintf(`{"name":"%s","datacenters":%v}`, documentNamespace, formatReplicationForRestApi(replication))
@@ -190,7 +190,7 @@ const (
 )
 
 func writeDocument(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace, documentId string) {
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	url := fmt.Sprintf("http://%s/v2/namespaces/%s/collections/movies/%s", stargateRestHostAndPort, documentNamespace, documentId)
 	awesomeMovieDocument := map[string]string{"Director": awesomeMovieDirector, "Name": awesomeMovieName}
 	response, err := restClient.NewRequest().
@@ -206,7 +206,7 @@ func writeDocument(t *testing.T, restClient *resty.Client, k8sContext, token, do
 }
 
 func readDocument(t *testing.T, restClient *resty.Client, k8sContext, token, documentNamespace, documentId string) {
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	url := fmt.Sprintf("http://%s/v2/namespaces/%s/collections/movies/%s", stargateRestHostAndPort, documentNamespace, documentId)
 	response, err := restClient.NewRequest().
 		SetHeader("Content-Type", "application/json").
@@ -229,7 +229,7 @@ func readDocument(t *testing.T, restClient *resty.Client, k8sContext, token, doc
 
 func authenticate(t *testing.T, restClient *resty.Client, k8sContext, username, password string) string {
 	var result map[string]interface{}
-	stargateRestHostAndPort := ingresses[k8sContext]["stargate_rest"]
+	stargateRestHostAndPort := ingressConfigs[k8sContext].StargateRest
 	require.Eventually(t, func() bool {
 		url := fmt.Sprintf("http://%s/v1/auth", stargateRestHostAndPort)
 		body := map[string]string{"username": username, "password": password}
@@ -252,12 +252,12 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContext, username, 
 }
 
 func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContext, username, password string) *client.CqlClientConnection {
-	contactPoint := ingresses[k8sContext]["stargate_cql"]
+	contactPoint := ingressConfigs[k8sContext].StargateCql
 	var credentials *client.AuthCredentials
 	if username != "" {
 		credentials = &client.AuthCredentials{Username: username, Password: password}
 	}
-	cqlClient := client.NewCqlClient(contactPoint, credentials)
+	cqlClient := client.NewCqlClient(string(contactPoint), credentials)
 	cqlClient.ConnectTimeout = 30 * time.Second
 	cqlClient.ReadTimeout = 1 * time.Minute
 

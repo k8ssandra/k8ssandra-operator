@@ -1,4 +1,10 @@
 # https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+
+# This Helm values file is suitable for local Kind clusters only. The Traefik service is of type
+# NodePort, since Kind doesn't support LoadBalancer service types. For this reason, the Kind cluster
+# must be created with additional configuration for Traefik to be able to handle incoming traffic,
+# see script setup-kind-multicluster.sh.
+
 ports:
   # Note on ports:
   #
@@ -32,11 +38,13 @@ ports:
     expose: true
     port: 30090
     nodePort: 30090
-  web-http:
+  web:
     expose: true
     port: 30080
     nodePort: 30080
-  stargate-native:
+  websecure:
+    expose: false
+  cql:
     expose: true
     port: 30942
     nodePort: 30942

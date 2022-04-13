@@ -326,7 +326,7 @@ func testRemoveReaperFromK8ssandraCluster(
 
 func connectReaperApi(t *testing.T, ctx context.Context, k8sContext, clusterName, username, password string) reaperclient.Client {
 	t.Logf("Testing Reaper API in context %v...", k8sContext)
-	var reaperURL, _ = url.Parse(fmt.Sprintf("http://%s", ingresses[k8sContext]["reaper_rest"]))
+	var reaperURL, _ = url.Parse(fmt.Sprintf("http://%s", ingressConfigs[k8sContext].ReaperRest))
 	var reaperClient = reaperclient.NewClient(reaperURL)
 	if username != "" {
 		t.Logf("Logging into Reaper API in context %v...", k8sContext)

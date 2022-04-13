@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
+	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -21,52 +19,38 @@ import (
 	"time"
 )
 
-func (f *E2eFramework) DeployTraefik(t *testing.T, namespace string, ingresses map[string]map[string]string) error {
-	if _, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "add", "traefik", "https://helm.traefik.io/traefik"); err != nil {
-		return err
-	} else if _, err = helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "update"); err != nil {
-		return err
-	}
-	valuesFile := filepath.Join("..", "testdata", "ingress", "traefik.values.yaml")
-	for _, k8sContext := range f.DataPlaneContexts {
-		// Delete potential leftovers that could make the release installation fail
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik", true)
-		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik", true)
-		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace)}
-		out, err := helm.RunHelmCommandAndGetOutputE(t, options, "install", "traefik", "traefik/traefik", "--version", "v10.3.2", "-f", valuesFile)
-		if err != nil {
-			return err
-		}
-		assert.Contains(t, out, "NAME: traefik")
-		assert.Contains(t, out, "STATUS: deployed")
-	}
-	f.ingresses = ingresses
-	return nil
+type HostAndPort string
+
+func (s HostAndPort) Host() string {
+	host, _, _ := net.SplitHostPort(string(s))
+	return host
 }
 
-func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
-	for _, k8sContext := range f.DataPlaneContexts {
-		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace), Logger: logger.Discard}
-		if _, err := helm.RunHelmCommandAndGetOutputE(t, options, "uninstall", "traefik"); err != nil {
-			return err
-		}
-	}
-	return nil
+func (s HostAndPort) Port() string {
+	_, port, _ := net.SplitHostPort(string(s))
+	return port
+}
+
+type IngressConfig struct {
+	StargateRest HostAndPort `json:"stargate_rest"`
+	StargateCql  HostAndPort `json:"stargate_cql"`
+	ReaperRest   HostAndPort `json:"reaper_rest"`
 }
 
 func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName, username, password string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "stargate", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
-	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName)
+	ingressConfig, found := f.ingressConfigs[k8sContext]
+	require.True(t, found, "no ingress config found for context %s", k8sContext)
+	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName, ingressConfig.StargateRest.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	stargateHttp := fmt.Sprintf("http://%v/v1/auth", f.ingresses[k8sContext]["stargate_rest"])
-	stargateCql := f.ingresses[k8sContext]["stargate_cql"]
+	stargateHttp := fmt.Sprintf("http://%v/v1/auth", ingressConfig.StargateRest)
 	assert.Eventually(t, func() bool {
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
@@ -84,28 +68,30 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespa
 		if username != "" {
 			credentials = &client.AuthCredentials{Username: username, Password: password}
 		}
-		cqlClient := client.NewCqlClient(stargateCql, credentials)
+		cqlClient := client.NewCqlClient(string(ingressConfig.StargateCql), credentials)
 		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
 		if err != nil {
 			return false
 		}
 		_ = connection.Close()
 		return true
-	}, timeout, interval, "Address is unreachable: %s", stargateCql)
+	}, timeout, interval, "Address is unreachable: %s", ingressConfig.StargateCql)
 }
 
 func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext, namespace, reaperServiceName string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "reaper", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
-	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName)
+	ingressConfig, found := f.ingressConfigs[k8sContext]
+	require.True(t, found, "no ingress config found for context %s", k8sContext)
+	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName, ingressConfig.ReaperRest.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	reaperHttp := fmt.Sprintf("http://%s", f.ingresses[k8sContext]["reaper_rest"])
+	reaperHttp := fmt.Sprintf("http://%s", ingressConfig.ReaperRest)
 	require.Eventually(t, func() bool {
 		reaperURL, _ := url.Parse(reaperHttp)
 		reaperClient := reaperclient.NewClient(reaperURL)
@@ -125,9 +111,10 @@ func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace 
 type ingressKustomization struct {
 	Namespace   string
 	ServiceName string
+	Host        string
 }
 
-func generateStargateIngressKustomization(k8sContext, namespace, serviceName string) error {
+func generateStargateIngressKustomization(k8sContext, namespace, serviceName, host string) error {
 	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -160,6 +147,15 @@ patchesJson6902:
       name: .*
     patch: |-
       - op: replace
+        path: /spec/routes/0/match
+        value: "Host(` + "`{{ .Host }}`" + `) && PathPrefix(` + "`/v1/auth`" + `)"
+      - op: replace
+        path: /spec/routes/1/match
+        value: "Host(` + "`{{ .Host }}`" + `) && (PathPrefix(` + "`/graphql-schema`" + `) || PathPrefix(` + "`/graphql/`" + `) || PathPrefix(` + "`/playground`" + `))"
+      - op: replace
+        path: /spec/routes/2/match
+        value: "Host(` + "`{{ .Host }}`" + `) && PathPrefix(` + "`/v2/`" + `)"
+      - op: replace
         path: /spec/routes/0/services/0/name
         value: "{{ .ServiceName }}"
       - op: replace
@@ -178,11 +174,11 @@ patchesJson6902:
         path: /spec/routes/0/services/0/name
         value: "{{ .ServiceName }}"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName}
-	return generateKustomizationFile("ingress/"+k8sContext, k, tmpl)
+	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
+	return generateKustomizationFile("ingress/stargate/"+k8sContext, k, tmpl)
 }
 
-func generateReaperIngressKustomization(k8sContext, namespace, serviceName string) error {
+func generateReaperIngressKustomization(k8sContext, namespace, serviceName, host string) error {
 	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -206,9 +202,12 @@ patchesJson6902:
       name: .*
     patch: |-
       - op: replace
+        path: /spec/routes/0/match
+        value: "Host(` + "`{{ .Host }}`" + `)"
+      - op: replace
         path: /spec/routes/0/services/0/name
         value: "{{ .ServiceName }}"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName}
-	return generateKustomizationFile("ingress/"+k8sContext, k, tmpl)
+	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
+	return generateKustomizationFile("ingress/reaper/"+k8sContext, k, tmpl)
 }
