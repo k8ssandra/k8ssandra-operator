@@ -21,14 +21,14 @@ import (
 	"time"
 )
 
-func (f *E2eFramework) DeployTraefik(t *testing.T, namespace string) error {
+func (f *E2eFramework) DeployTraefik(t *testing.T, namespace string, ingresses map[string]map[string]string) error {
 	if _, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "add", "traefik", "https://helm.traefik.io/traefik"); err != nil {
 		return err
 	} else if _, err = helm.RunHelmCommandAndGetOutputE(t, &helm.Options{Logger: logger.Discard}, "repo", "update"); err != nil {
 		return err
 	}
 	valuesFile := filepath.Join("..", "testdata", "ingress", "traefik.values.yaml")
-	for k8sContext := range f.remoteClients {
+	for _, k8sContext := range f.DataPlaneContexts {
 		// Delete potential leftovers that could make the release installation fail
 		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRoleBinding", "traefik", true)
 		_ = kubectl.DeleteByName(kubectl.Options{Context: k8sContext}, "ClusterRole", "traefik", true)
@@ -40,11 +40,12 @@ func (f *E2eFramework) DeployTraefik(t *testing.T, namespace string) error {
 		assert.Contains(t, out, "NAME: traefik")
 		assert.Contains(t, out, "STATUS: deployed")
 	}
+	f.ingresses = ingresses
 	return nil
 }
 
 func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
-	for k8sContext := range f.remoteClients {
+	for _, k8sContext := range f.DataPlaneContexts {
 		options := &helm.Options{KubectlOptions: k8s.NewKubectlOptions(k8sContext, "", namespace), Logger: logger.Discard}
 		if _, err := helm.RunHelmCommandAndGetOutputE(t, options, "uninstall", "traefik"); err != nil {
 			return err
@@ -53,8 +54,7 @@ func (f *E2eFramework) UndeployTraefik(t *testing.T, namespace string) error {
 	return nil
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContextIdx int, namespace, stargateServiceName, username, password string) {
-	k8sContext := f.K8sContext(k8sContextIdx)
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName, username, password string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
@@ -65,8 +65,8 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContextIdx int, 
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	stargateHttp := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
-	stargateCql := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
+	stargateHttp := fmt.Sprintf("http://%v/v1/auth", f.ingresses[k8sContext]["stargate_rest"])
+	stargateCql := f.ingresses[k8sContext]["stargate_cql"]
 	assert.Eventually(t, func() bool {
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
@@ -86,13 +86,15 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContextIdx int, 
 		}
 		cqlClient := client.NewCqlClient(stargateCql, credentials)
 		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
-		defer connection.Close()
-		return err == nil
+		if err != nil {
+			return false
+		}
+		_ = connection.Close()
+		return true
 	}, timeout, interval, "Address is unreachable: %s", stargateCql)
 }
 
-func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContextIdx int, namespace, reaperServiceName string) {
-	k8sContext := f.K8sContext(k8sContextIdx)
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext, namespace, reaperServiceName string) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
@@ -103,7 +105,7 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, 
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	reaperHttp := fmt.Sprintf("http://reaper.127.0.0.1.nip.io:3%v080", k8sContextIdx)
+	reaperHttp := fmt.Sprintf("http://%s", f.ingresses[k8sContext]["reaper_rest"])
 	require.Eventually(t, func() bool {
 		reaperURL, _ := url.Parse(reaperHttp)
 		reaperClient := reaperclient.NewClient(reaperURL)
@@ -112,8 +114,8 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, 
 	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
 }
 
-func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContextIdx int, namespace string) {
-	options := kubectl.Options{Context: f.K8sContext(k8sContextIdx), Namespace: namespace}
+func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {
+	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	err := kubectl.DeleteAllOf(options, "IngressRoute")
 	assert.NoError(t, err)
 	err = kubectl.DeleteAllOf(options, "IngressRouteTCP")

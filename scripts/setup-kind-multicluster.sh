@@ -31,6 +31,7 @@ Options:
   --kind-node-version <version>  The image version of the kind nodes.
                                  Defaults to "$default_kind_node_version".
   --kind-worker-nodes <nodes>    The number of worker nodes to deploy.
+                                 Can be a single number or a comma-separated list of numbers, one per cluster.
                                  Defaults to 3.
   --output-file <path>           The location of the file where the generated kubeconfig will be written to.
                                  Defaults to "./build/kind-kubeconfig". Existing content will be overwritten.
@@ -95,7 +96,7 @@ nodes:
   - containerPort: 30090
     hostPort: 3${cluster_id}090
     protocol: TCP
-$(for ((i=1; i<=$num_workers; i++)); do
+$(for ((i=1; i<=num_workers; i++)); do
 cat << EOF2
 - role: worker
   kubeadmConfigPatches:
@@ -128,7 +129,13 @@ function create_clusters() {
   for ((i=0; i<num_clusters; i++))
   do
     echo "Creating cluster $((i+1)) out of $num_clusters"
-    create_cluster $i "$cluster_prefix$i" $kind_worker_nodes $kind_node_version
+    if [[ "$kind_worker_nodes" == *,* ]]; then
+      IFS=',' read -r -a nodes_array <<< "$kind_worker_nodes"
+      nodes="${nodes_array[i]}"
+    else
+      nodes=$kind_worker_nodes
+    fi
+    create_cluster "$i" "$cluster_prefix$i" "$nodes" "$kind_node_version"
   done
   echo
 }

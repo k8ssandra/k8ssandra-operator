@@ -70,7 +70,7 @@ jobs:
       CGO_ENABLED: 0
       KUBECONFIG_FILE: "./build/kind-kubeconfig"
       CONTROL_PLANE: kind-k8ssandra-0
-      DATA_PLANES: ""
+      DATA_PLANES: kind-k8ssandra-0
     steps:
       - name: Free diskspace by removing unused packages
         run: |

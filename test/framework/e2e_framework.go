@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -39,6 +38,7 @@ import (
 
 type E2eFramework struct {
 	*Framework
+	ingresses map[string]map[string]string
 }
 
 var (
@@ -61,6 +61,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlan
 		return nil, fmt.Errorf("control plane context %s does not exist", controlPlane)
 	} else {
 		remoteClients[controlPlane] = remoteClient
+		t.Logf("Using control plane: %v", controlPlane)
 	}
 
 	var validDataPlanes []string
@@ -74,8 +75,10 @@ func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlan
 			validDataPlanes = append(validDataPlanes, name)
 		}
 	}
-
-	t.Logf("Using contexts: %v", reflect.ValueOf(remoteClients).MapKeys())
+	if len(validDataPlanes) == 0 {
+		return nil, errors.New("no valid data planes found")
+	}
+	t.Logf("Using data planes: %v", validDataPlanes)
 
 	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
 
@@ -242,30 +245,28 @@ func generateKustomizationFile(name string, data interface{}, tmpl string) error
 	return parsed.Execute(file, data)
 }
 
-func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...string) error {
+func (f *E2eFramework) kustomizeAndApply(dir, namespace string, context string) error {
 	kdir, err := filepath.Abs(dir)
 	if err != nil {
 		f.logger.Error(err, "failed to get full path", "dir", dir)
 		return err
 	}
 
-	if len(contexts) == 0 {
-		return errors.New("no contexts provided")
+	if len(context) == 0 {
+		return errors.New("no context provided")
 	}
 
-	for _, ctx := range contexts {
-		f.logger.Info("kustomize build | kubectl apply", "Dir", dir, "Namespace", namespace, "Context", ctx)
+	f.logger.Info("kustomize build | kubectl apply", "Dir", dir, "Namespace", namespace, "Context", context)
 
-		buf, err := kustomize.BuildDir(kdir)
-		if err != nil {
-			f.logger.Error(err, "kustomize build failed", "dir", kdir)
-			return err
-		}
+	buf, err := kustomize.BuildDir(kdir)
+	if err != nil {
+		f.logger.Error(err, "kustomize build failed", "dir", kdir)
+		return err
+	}
 
-		options := kubectl.Options{Context: ctx, ServerSide: true, Namespace: namespace}
-		if err := kubectl.Apply(options, buf); err != nil {
-			return err
-		}
+	options := kubectl.Options{Context: context, ServerSide: true, Namespace: namespace}
+	if err := kubectl.Apply(options, buf); err != nil {
+		return err
 	}
 
 	return nil
@@ -274,7 +275,7 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, contexts ...stri
 func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
 
-	for _, k8sContext := range f.AllK8sContexts() {
+	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Create Cassandra ConfigMap", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
@@ -289,7 +290,7 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	for _, storeType := range []encryption.StoreType{encryption.StoreTypeServer, encryption.StoreTypeClient} {
 		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))
 
-		for _, k8sContext := range f.AllK8sContexts() {
+		for _, k8sContext := range f.DataPlaneContexts {
 			options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 			f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
 			if err := kubectl.Apply(options, path); err != nil {
@@ -333,13 +334,20 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 		}
 	}
 
+	f.logger.Info("Deploying operator in control plane", "Namespace", config.Namespace, "Context", f.ControlPlaneContext)
 	err := f.kustomizeAndApply(controlPlane, config.Namespace, f.ControlPlaneContext)
 	if err != nil {
 		return err
 	}
 
-	if len(f.DataPlaneContexts) > 0 {
-		return f.kustomizeAndApply(dataPlane, config.Namespace, f.DataPlaneContexts...)
+	for _, dataPlaneContext := range f.DataPlaneContexts {
+		if dataPlaneContext != f.ControlPlaneContext {
+			f.logger.Info("Deploying operator in data plane", "Namespace", config.Namespace, "Context", dataPlaneContext)
+			err = f.kustomizeAndApply(dataPlane, config.Namespace, dataPlaneContext)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -348,7 +356,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 func (f *E2eFramework) DeployCertManager() error {
 	dir := "https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml"
 
-	for _, ctx := range f.AllK8sContexts() {
+	for ctx := range f.remoteClients {
 		options := kubectl.Options{Context: ctx}
 		f.logger.Info("Deploy cert-manager", "Context", ctx)
 		if err := kubectl.Apply(options, dir); err != nil {
@@ -360,7 +368,7 @@ func (f *E2eFramework) DeployCertManager() error {
 }
 
 func (f *E2eFramework) DeployK8sClientConfigs(namespace, srcKubeconfig, destKubeconfig, destContext string) error {
-	for srcContext := range f.remoteClients {
+	for _, srcContext := range f.DataPlaneContexts {
 		f.logger.Info("Creating ClientConfig", "src-context", srcContext)
 		cmd := exec.Command(
 			filepath.Join("..", "..", "scripts", "create-clientconfig.sh"),
@@ -373,9 +381,9 @@ func (f *E2eFramework) DeployK8sClientConfigs(namespace, srcKubeconfig, destKube
 		fmt.Println(cmd)
 
 		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
 
 		if err != nil {
+			fmt.Println(string(output))
 			return err
 		}
 	}
@@ -417,24 +425,26 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 }
 
 func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
-	// TODO Add multi-cluster support.
-	// By default this should wait for all clusters including the control plane cluster.
-
-	return kubectl.WaitForCondition("established", "--timeout=60s", "--all", "crd")
+	for k8sContext := range f.remoteClients {
+		err := kubectl.WaitForCondition(kubectl.Options{Context: k8sContext}, "established", "--timeout=60s", "--all", "crd")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // WaitForK8ssandraOperatorToBeReady blocks until the k8ssandra-operator deployment is
-// ready in the control plane cluster.
+// ready in the control plane and all data planes.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
-	key := ClusterKey{
-		K8sContext:     f.ControlPlaneContext,
-		NamespacedName: types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"},
-	}
+	key := NewClusterKey("", namespace, "k8ssandra-operator")
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
+// WaitForCertManagerToBeReady blocks until the cert-manager deployment is ready in the control
+// plane and all data-planes.
 func (f *E2eFramework) WaitForCertManagerToBeReady(namespace string, timeout, interval time.Duration) error {
-	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cert-manager"}}
+	key := NewClusterKey("", namespace, "cert-manager")
 	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
 		return nil
 	}
@@ -452,10 +462,10 @@ func (f *E2eFramework) WaitForCertManagerToBeReady(namespace string, timeout, in
 	return nil
 }
 
-// WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in all
-// clusters.
+// WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in the control
+// plane and all data-planes.
 func (f *E2eFramework) WaitForCassOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
-	key := ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cass-operator-controller-manager"}}
+	key := NewClusterKey("", namespace, "cass-operator-controller-manager")
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
 }
 
@@ -601,7 +611,7 @@ func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interv
 }
 
 func (f *E2eFramework) DeleteK8ssandraOperatorPods(namespace string, timeout, interval time.Duration) error {
-	f.logger.Info("deleting all k8ssandra-operator pods", "Namespace", namespace)
+	f.logger.Info("Deleting all k8ssandra-operator pods in control plane", "Context", f.ControlPlaneContext, "Namespace", namespace)
 	if err := f.Client.DeleteAllOf(context.TODO(), &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{"control-plane": "k8ssandra-operator"}); err != nil {
 		return err
 	}

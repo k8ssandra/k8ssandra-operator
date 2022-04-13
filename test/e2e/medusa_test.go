@@ -21,29 +21,29 @@ const (
 )
 
 func createSingleMedusa(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, clusterName)
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "Error getting the K8ssandraCluster")
-	dcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	createBackup(t, ctx, namespace, f, dcKey)
 	verifyBackupFinished(t, ctx, f, dcKey, backupKey)
-	restoreBackup(t, ctx, namespace, f, dcKey, kcKey)
+	restoreBackup(t, ctx, namespace, f, dcKey)
 	verifyRestoreFinished(t, ctx, f, dcKey, backupKey)
 }
 
 func createMultiMedusa(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
+	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, clusterName)
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "Error getting the K8ssandraCluster")
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
-	dc1Key := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	dc2Key := framework.ClusterKey{K8sContext: f.K8sContext(1), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
 	// Check that both DCs are ready and have Medusa containers
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
@@ -61,7 +61,7 @@ func createMultiMedusa(t *testing.T, ctx context.Context, namespace string, f *f
 
 	// Restore the backup in each DC and verify it finished correctly
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		restoreBackup(t, ctx, namespace, f, dcKey, kcKey)
+		restoreBackup(t, ctx, namespace, f, dcKey)
 	}
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreFinished(t, ctx, f, dcKey, backupKey)
@@ -121,7 +121,7 @@ func verifyBackupFinished(t *testing.T, ctx context.Context, f *framework.E2eFra
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "backup didn't finish within timeout")
 }
 
-func restoreBackup(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey, kcKey framework.ClusterKey) {
+func restoreBackup(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
 	require := require.New(t)
 	t.Log("restoring CassandraBackup")
 	restore := &medusa.CassandraRestore{

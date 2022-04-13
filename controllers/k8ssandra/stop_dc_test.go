@@ -39,7 +39,7 @@ func stopDcTest(f *framework.Framework, ctx context.Context, test stopDcTestFunc
 		managementApiFactory.UseDefaultAdapter()
 		kc := stopDcTestSetup(t, f, ctx, namespace)
 		test(t, f, ctx, kc)
-		err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc))
+		err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval)
 		require.NoError(t, err, "failed to delete K8ssandraCluster")
 	}
 }
@@ -58,8 +58,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
-					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, K8sContext: f.K8sContext(0), Size: 3},
-					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: f.K8sContext(1), Size: 3},
+					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, K8sContext: f.DataPlaneContexts[0], Size: 3},
+					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: f.DataPlaneContexts[1], Size: 3},
 				},
 			},
 			Stargate: &stargateapi.StargateClusterTemplate{Size: 3},
@@ -75,8 +75,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
-	dc1Key := framework.NewClusterKey(f.K8sContext(0), namespace, "dc1")
-	dc2Key := framework.NewClusterKey(f.K8sContext(1), namespace, "dc2")
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
+	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "dc2")
 
 	t.Log("check that dc1 was created")
 	require.Eventually(t, f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -102,10 +102,10 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 		return assert.NoError(t, err) && assert.Equal(t, corev1.ConditionTrue, kc.Status.GetConditionStatus(api.CassandraInitialized))
 	}, timeout, interval, "timed out waiting for CassandraInitialized condition check")
 
-	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
-	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
+	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
 
 	t.Log("check that stargate sg1 was created")
 	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
@@ -168,20 +168,20 @@ func stopDcManagementApiReset(replication map[string]int) {
 func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) {
 
 	kcKey := utils.GetKey(kc)
-	dc1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, "dc1")
-	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
-	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
+	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
 
 	replication := map[string]int{"dc1": 3, "dc2": 3}
 	stopDcManagementApiReset(replication)
 
 	t.Log("stop dc1")
-	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].Stopped = true
-	err := f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
+	err := f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
+		kc.Spec.Cassandra.Datacenters[0].Stopped = true
+	})
+	require.NoError(t, err, "failed to stop dc1")
 	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
 		return assert.True(t, dc1.Spec.Stopped)
@@ -211,10 +211,10 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
 	t.Log("start dc1")
-	patch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].Stopped = false
-	err = f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
+		kc.Spec.Cassandra.Datacenters[0].Stopped = false
+	})
+	require.NoError(t, err, "failed to start dc1")
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
 		return assert.False(t, dc1.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc1 to be started")
@@ -254,23 +254,26 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) {
 
 	kcKey := utils.GetKey(kc)
-	dc1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, "dc1")
-	dc3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, "dc3")
-	sg1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-stargate")
-	sg3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, kc.Name+"-dc3-stargate")
-	reaper1Key := framework.NewClusterKey(f.K8sContext(0), kc.Namespace, kc.Name+"-dc1-reaper")
-	reaper2Key := framework.NewClusterKey(f.K8sContext(1), kc.Namespace, kc.Name+"-dc2-reaper")
-	reaper3Key := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, kc.Name+"-dc3-reaper")
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
+	dc3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3")
+	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	sg3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-stargate")
+	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
+	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
+	reaper3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-reaper")
 
 	t.Log("add dc3")
-	patch := client.MergeFromWithOptions(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters = append(
-		kc.Spec.Cassandra.Datacenters,
-		api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: f.K8sContext(2), Size: 3},
-	)
-	err := f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
+	err := f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
+		kc.Spec.Cassandra.Datacenters = append(
+			kc.Spec.Cassandra.Datacenters,
+			api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: f.DataPlaneContexts[2], Size: 3},
+		)
+	})
+	require.NoError(t, err, "failed to add dc3")
+
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(t, err, "failed to get k8ssandra cluster")
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
@@ -281,7 +284,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 
 	t.Log("check that dc3 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
-	rebuildTaskKey := framework.NewClusterKey(f.K8sContext(2), kc.Namespace, "dc3-rebuild")
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
 	t.Log("check that stargate sg3 was created")
@@ -319,13 +322,10 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	stopDcManagementApiReset(replication)
 
 	t.Log("stop dc3")
-	err = f.Client.Get(ctx, kcKey, kc)
-	require.NoError(t, err)
-	patch = client.MergeFromWithOptions(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[2].Stopped = true
-	err = f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
-
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
+		kc.Spec.Cassandra.Datacenters[2].Stopped = true
+	})
+	require.NoError(t, err, "failed to stop dc3")
 	withDc3 := f.NewWithDatacenter(ctx, dc3Key)
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
 		return assert.True(t, dc3.Spec.Stopped)
@@ -362,16 +362,13 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	f.AssertObjectDoesNotExist(ctx, t, reaper3Key, &reaperapi.Reaper{}, timeout, interval)
 
 	t.Log("start dc3")
-	err = f.Client.Get(ctx, kcKey, kc)
-	require.NoError(t, err)
-	patch = client.MergeFromWithOptions(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[2].Stopped = false
-	err = f.Client.Patch(ctx, kc, patch)
-	require.NoError(t, err, "failed to patch kc")
-
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
+		kc.Spec.Cassandra.Datacenters[2].Stopped = false
+	})
+	require.NoError(t, err, "failed to start dc3")
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
 		return assert.False(t, dc3.Spec.Stopped)
-	}), timeout, interval, "timeout waiting for dc3 to be started")
+	}), timeout, interval, "timeout waiting for dc3 to be stopped")
 	err = f.SetDatacenterStatusReady(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status ready")
 

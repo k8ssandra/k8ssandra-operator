@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (f *E2eFramework) RetrieveSuperuserSecret(ctx context.Context, namespace, clusterName string) (*corev1.Secret, error) {
+func (f *E2eFramework) RetrieveSuperuserSecret(ctx context.Context, k8sContext, namespace, clusterName string) (*corev1.Secret, error) {
 	var superUserSecret *corev1.Secret
 	superUserSecret = &corev1.Secret{}
 	superUserSecretKey := ClusterKey{
@@ -16,14 +16,14 @@ func (f *E2eFramework) RetrieveSuperuserSecret(ctx context.Context, namespace, c
 			Namespace: namespace,
 			Name:      secret.DefaultSuperuserSecretName(clusterName),
 		},
-		K8sContext: f.ControlPlaneContext,
+		K8sContext: k8sContext,
 	}
 	err := f.Get(ctx, superUserSecretKey, superUserSecret)
 	return superUserSecret, err
 }
 
-func (f *E2eFramework) RetrieveDatabaseCredentials(ctx context.Context, namespace, clusterName string) (string, string, error) {
-	superUserSecret, err := f.RetrieveSuperuserSecret(ctx, namespace, clusterName)
+func (f *E2eFramework) RetrieveDatabaseCredentials(ctx context.Context, k8sContext, namespace, clusterName string) (string, string, error) {
+	superUserSecret, err := f.RetrieveSuperuserSecret(ctx, k8sContext, namespace, clusterName)
 	var username, password string
 	if err == nil {
 		username = string(superUserSecret.Data["username"])
@@ -33,7 +33,7 @@ func (f *E2eFramework) RetrieveDatabaseCredentials(ctx context.Context, namespac
 }
 
 func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, clusterName, pod, query string) (string, error) {
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, namespace, clusterName)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, k8sContext, namespace, clusterName)
 	if err != nil {
 		return "", err
 	}

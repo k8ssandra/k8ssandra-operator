@@ -32,7 +32,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.K8sContext(0),
+						K8sContext:    f.DataPlaneContexts[0],
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -45,7 +45,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    f.K8sContext(1),
+						K8sContext:    f.DataPlaneContexts[1],
 						Size:          3,
 						ServerVersion: "3.11.10",
 						StorageConfig: &cassdcapi.StorageConfig{
@@ -72,7 +72,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc1 was created")
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.K8sContext(0)}
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
@@ -85,7 +85,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	})
 	require.NoError(err, "failed to patch datacenter status")
 
-	kcKey := framework.ClusterKey{K8sContext: f.K8sContext(0), NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -111,7 +111,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	reaper1Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(0),
+		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      kc.Name + "-" + dc1Key.Name + "-reaper"},
@@ -123,7 +123,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("reaper %s should not be created until dc1 is ready", reaper1Key))
 
 	t.Log("check that dc2 has not been created yet")
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.K8sContext(1)}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	dc2 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
@@ -141,7 +141,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	require.NoError(err, "failed to get dc2")
 
 	reaper2Key := framework.ClusterKey{
-		K8sContext: f.K8sContext(1),
+		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
 			Name:      kc.Name + "-" + dc2Key.Name + "-reaper"},
