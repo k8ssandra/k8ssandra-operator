@@ -178,21 +178,15 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	stopDcManagementApiReset(replication)
 
 	t.Log("stop dc1")
-	require.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, kcKey, kc)
-		if err != nil {
-			return false
-		}
-		patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	err := f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
 		kc.Spec.Cassandra.Datacenters[0].Stopped = true
-		err = f.Client.Patch(ctx, kc, patch)
-		return err == nil
-	}, timeout, interval, "timeout waiting for kc patch")
+	})
+	require.NoError(t, err, "failed to stop dc1")
 	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
 		return assert.True(t, dc1.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc1 to be stopped")
-	err := f.SetDatacenterStatusStopped(ctx, dc1Key)
+	err = f.SetDatacenterStatusStopped(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status stopped")
 
 	t.Log("wait for the dc conditions to be met")
@@ -217,16 +211,10 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
 	t.Log("start dc1")
-	require.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, kcKey, kc)
-		if err != nil {
-			return false
-		}
-		patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
 		kc.Spec.Cassandra.Datacenters[0].Stopped = false
-		err = f.Client.Patch(ctx, kc, patch)
-		return err == nil
-	}, timeout, interval, "timeout waiting for kc patch")
+	})
+	require.NoError(t, err, "failed to start dc1")
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
 		return assert.False(t, dc1.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc1 to be started")
@@ -276,25 +264,22 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	reaper3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-reaper")
 
 	t.Log("add dc3")
-	require.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, kcKey, kc)
-		if err != nil {
-			return false
-		}
-		patch := client.MergeFromWithOptions(kc.DeepCopy())
+	err := f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
 		kc.Spec.Cassandra.Datacenters = append(
 			kc.Spec.Cassandra.Datacenters,
 			api.CassandraDatacenterTemplate{Meta: api.EmbeddedObjectMeta{Name: "dc3"}, K8sContext: f.DataPlaneContexts[2], Size: 3},
 		)
-		err = f.Client.Patch(ctx, kc, patch)
-		return err == nil
-	}, timeout, interval, "timeout waiting for kc patch")
+	})
+	require.NoError(t, err, "failed to add dc3")
+
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(t, err, "failed to get k8ssandra cluster")
 
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("check that dc3 was created")
 	require.Eventually(t, f.DatacenterExists(ctx, dc3Key), timeout, interval, "failed to verify dc3 was created")
-	err := f.SetDatacenterStatusReady(ctx, dc3Key)
+	err = f.SetDatacenterStatusReady(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status ready")
 
 	t.Log("check that dc3 was rebuilt")
@@ -337,16 +322,10 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	stopDcManagementApiReset(replication)
 
 	t.Log("stop dc3")
-	require.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, kcKey, kc)
-		if err != nil {
-			return false
-		}
-		patch := client.MergeFromWithOptions(kc.DeepCopy())
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
 		kc.Spec.Cassandra.Datacenters[2].Stopped = true
-		err = f.Client.Patch(ctx, kc, patch)
-		return err == nil
-	}, timeout, interval, "timeout waiting for kc patch")
+	})
+	require.NoError(t, err, "failed to stop dc3")
 	withDc3 := f.NewWithDatacenter(ctx, dc3Key)
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
 		return assert.True(t, dc3.Spec.Stopped)
@@ -383,16 +362,10 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	f.AssertObjectDoesNotExist(ctx, t, reaper3Key, &reaperapi.Reaper{}, timeout, interval)
 
 	t.Log("start dc3")
-	require.Eventually(t, func() bool {
-		err := f.Client.Get(ctx, kcKey, kc)
-		if err != nil {
-			return false
-		}
-		patch := client.MergeFromWithOptions(kc.DeepCopy())
+	err = f.PatchK8ssandraCluster(ctx, kcKey, func(kc *api.K8ssandraCluster) {
 		kc.Spec.Cassandra.Datacenters[2].Stopped = false
-		err = f.Client.Patch(ctx, kc, patch)
-		return err == nil
-	}, timeout, interval, "timeout waiting for kc patch")
+	})
+	require.NoError(t, err, "failed to start dc3")
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
 		return assert.False(t, dc3.Spec.Stopped)
 	}), timeout, interval, "timeout waiting for dc3 to be stopped")

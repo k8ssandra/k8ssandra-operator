@@ -256,6 +256,19 @@ func (f *Framework) k8sContextNotFound(k8sContext string) error {
 	return fmt.Errorf("context %s not found", k8sContext)
 }
 
+// PatchK8ssandraCluster fetches the K8ssandraCluster specified by key in the control plane,
+// applies changes via updateFn, and then performs a patch operation.
+func (f *Framework) PatchK8ssandraCluster(ctx context.Context, key client.ObjectKey, updateFn func(kc *api.K8ssandraCluster)) error {
+	kc := &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, key, kc)
+	if err != nil {
+		return err
+	}
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(kc)
+	return f.Client.Patch(ctx, kc, patch)
+}
+
 // SetDatacenterStatusReady fetches the CassandraDatacenter specified by key and persists
 // a status update to make the CassandraDatacenter ready. It sets the DatacenterReady and
 // DatacenterInitialized conditions to true.
