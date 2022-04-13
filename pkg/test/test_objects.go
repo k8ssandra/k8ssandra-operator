@@ -4,6 +4,7 @@ package test
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -116,6 +117,19 @@ func NewReaper(name string, namespace string) reaperapi.Reaper {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+		},
+	}
+}
+
+func NewMedusaRestore(namespace string, localRestoreName string, remoteBackupName string, dc string, clusterName string) *medusaapi.MedusaRestoreJob {
+	return &medusaapi.MedusaRestoreJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      localRestoreName,
+		},
+		Spec: medusaapi.MedusaRestoreJobSpec{
+			Backup:              remoteBackupName,
+			CassandraDatacenter: dc,
 		},
 	}
 }
