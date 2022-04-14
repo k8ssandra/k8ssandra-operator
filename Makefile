@@ -290,7 +290,7 @@ traefik-kind:
 traefik-kind-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
 		kubectl config use-context kind-k8ssandra-$$i; \
-		make traefik;  \
+		make traefik-kind;  \
 	done
 
 traefik-uninstall:
