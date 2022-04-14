@@ -122,7 +122,7 @@ jobs:
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
       - name: Setup kind clusters
-        run: make IMG="k8ssandra/k8ssandra-operator:latest" create-kind-multicluster kind-load-image-multi
+        run: make IMG="k8ssandra/k8ssandra-operator:latest" create-kind-multicluster kind-load-image-multi cert-manager-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
           e2e_test="TestOperator/${{ matrix.e2e_test }}"

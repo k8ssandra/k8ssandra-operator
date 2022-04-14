@@ -353,20 +353,6 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 	return nil
 }
 
-func (f *E2eFramework) DeployCertManager() error {
-	dir := "https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml"
-
-	for ctx := range f.remoteClients {
-		options := kubectl.Options{Context: ctx}
-		f.logger.Info("Deploy cert-manager", "Context", ctx)
-		if err := kubectl.Apply(options, dir); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (f *E2eFramework) DeployK8sClientConfigs(namespace, srcKubeconfig, destKubeconfig, destContext string) error {
 	for _, srcContext := range f.DataPlaneContexts {
 		f.logger.Info("Creating ClientConfig", "src-context", srcContext)
@@ -439,27 +425,6 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := NewClusterKey("", namespace, "k8ssandra-operator")
 	return f.WaitForDeploymentToBeReady(key, timeout, interval)
-}
-
-// WaitForCertManagerToBeReady blocks until the cert-manager deployment is ready in the control
-// plane and all data-planes.
-func (f *E2eFramework) WaitForCertManagerToBeReady(namespace string, timeout, interval time.Duration) error {
-	key := NewClusterKey("", namespace, "cert-manager")
-	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
-		return nil
-	}
-
-	key.NamespacedName.Name = "cert-manager-cainjector"
-	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
-		return err
-	}
-
-	key.NamespacedName.Name = "cert-manager-webhook"
-	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in the control

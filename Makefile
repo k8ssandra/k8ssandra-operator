@@ -268,6 +268,8 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/cert-manager.yaml
 # Wait for cert-manager rollout to be fully done	
+	kubectl rollout status deployment cert-manager -n cert-manager
+	kubectl rollout status deployment cert-manager-cainjector -n cert-manager
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
 
 cert-manager-multi: ## Install cert-manager to the clusters
