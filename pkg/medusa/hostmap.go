@@ -3,10 +3,12 @@ package medusa
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	cassandrapkg "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"inet.af/netaddr"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -119,21 +121,7 @@ func getSourceRacksIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter,
 // getClusterRackFQDNs gets a map of racks to FQDNs from the current K8ssandraCluster k8s object. The CassDC does not exist yet, so we cannot refer to it for names.
 // We refer to the following code for how to calculate pod names: // https://github.com/k8ssandra/cass-operator/blob/master/pkg/reconciliation/construct_statefulset.go#L39
 func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (map[NodeLocation][]HostName, error) {
-	thisDC := k8ssandraapi.CassandraDatacenterTemplate{}
-	if len(Kluster.Spec.Cassandra.Datacenters) > 0 {
-		for _, i := range Kluster.Spec.Cassandra.Datacenters {
-			if i.Meta.Name == dcName {
-				thisDC = i
-			}
-		}
-	}
-	DCConfig := cassandra.Coalesce(Kluster.Name, Kluster.Spec.Cassandra, &thisDC)
-	cassDC, err := cassandra.NewDatacenter(
-		types.NamespacedName{
-			Namespace: Kluster.Namespace,
-			Name:      Kluster.Name,
-		},
-		DCConfig)
+	cassDC, err := cassDCFromKluster(Kluster, dcName)
 	if err != nil {
 		return nil, err
 	}
@@ -150,17 +138,63 @@ func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (m
 	return out, nil
 }
 
-func getPodNames(clusterName string, DCName string, rackName string, size int) []HostName {
+func getPodNames(clusterName string, DCName string, rackName string, rackSize int) []HostName {
 	out := []HostName{}
-	for i := 0; i <= size; i++ {
-		out := append(out, HostName(clusterName+"-"+DCName+"-"+rackName+"-sts"+string(i)))
+	for i := 0; i < rackSize; i++ {
+		out = append(out, HostName(clusterName+"-"+DCName+"-"+rackName+"-sts"+fmt.Sprint(i)))
 	}
 	return out
 }
 
-// GetHostMapFromRemote
-// func GetHostMapFromRemote(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
-// 	sourceRacks := getBackupRackIPs(k8sbackup, client, ctx)
-// 	destRacks := getClusterRackFQDNs(Kluster)
+func cassDCFromKluster(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (*cassdcapi.CassandraDatacenter, error) {
+	thisDC := k8ssandraapi.CassandraDatacenterTemplate{}
+	if len(Kluster.Spec.Cassandra.Datacenters) > 0 {
+		for _, i := range Kluster.Spec.Cassandra.Datacenters {
+			if i.Meta.Name == dcName {
+				thisDC = i
+			}
+		}
+	}
+	DCConfig := cassandrapkg.Coalesce(Kluster.Name, Kluster.Spec.Cassandra, &thisDC)
+	cassDC, err := cassandrapkg.NewDatacenter(
+		types.NamespacedName{
+			Namespace: Kluster.Namespace,
+			Name:      Kluster.Name,
+		},
+		DCConfig)
+	if err != nil {
+		return nil, err
+	}
+	return cassDC, nil
+}
 
-// }
+// GetHostMap gets the hostmap for a given CassandraBackup from IP sources to FQDN targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
+// TODO: check for rack imbalances which may cause subtle errors here. Also need to check that source rack sizes are the same as destination rack sizes.
+func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
+	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx)
+	if err != nil {
+		return nil, err
+	}
+	destRacks, err := getTargetRackFQDNs(Kluster, k8sbackup.Spec.CassandraDatacenter)
+	if err != nil {
+		return nil, err
+	}
+	out := HostMappingSlice{}
+	for sourceRackLocation, sourceRackNodes := range sourceRacks {
+		targetRackHosts, ok := destRacks[sourceRackLocation]
+		if !ok {
+			return nil, errors.New(fmt.Sprint("could not find matching DC/rack location in destination for source", "source location", sourceRackLocation))
+		}
+		for index, node := range sourceRackNodes {
+			out = append(
+				out,
+				HostMapping{
+					Source: node,
+					Target: targetRackHosts[index],
+				},
+			)
+		}
+	}
+	return out, nil
+
+}
