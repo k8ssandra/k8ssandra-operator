@@ -188,6 +188,9 @@ func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.Cassa
 			return nil, errors.New(fmt.Sprint("could not find matching DC/rack location in destination for source", "source location", sourceRackLocation))
 		}
 		for index, node := range sourceRackNodes {
+			if index > len(targetRackHosts) {
+				return nil, errors.New(fmt.Sprint("attempting to map a source rack into a rack which is too small", "sourceRackNodes", sourceRackNodes, "targetRackHosts", targetRackHosts))
+			}
 			out = append(
 				out,
 				HostMapping{
