@@ -105,11 +105,8 @@ jobs:
         make install-kuttl
     - name: Create kind cluster
       run: |
-        echo create cluster
         kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
-        echo cert-manager
         make cert-manager
-        echo kind-load-images
         make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
     - name: Run kuttl test
       run: |
