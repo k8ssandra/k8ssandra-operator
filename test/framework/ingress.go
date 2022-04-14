@@ -31,26 +31,18 @@ func (s HostAndPort) Port() string {
 	return port
 }
 
-type IngressConfig struct {
-	StargateRest HostAndPort `json:"stargate_rest"`
-	StargateCql  HostAndPort `json:"stargate_cql"`
-	ReaperRest   HostAndPort `json:"reaper_rest"`
-}
-
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName, username, password string) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName, username, password string, stargateRestHostAndPort, stargateCqlHostAndPort HostAndPort) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "stargate", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
-	ingressConfig, found := f.ingressConfigs[k8sContext]
-	require.True(t, found, "no ingress config found for context %s", k8sContext)
-	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName, ingressConfig.StargateRest.Host())
+	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName, stargateRestHostAndPort.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	stargateHttp := fmt.Sprintf("http://%v/v1/auth", ingressConfig.StargateRest)
+	stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
 	assert.Eventually(t, func() bool {
 		body := map[string]string{"username": username, "password": password}
 		request := resty.NewRequest().
@@ -68,30 +60,28 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespa
 		if username != "" {
 			credentials = &client.AuthCredentials{Username: username, Password: password}
 		}
-		cqlClient := client.NewCqlClient(string(ingressConfig.StargateCql), credentials)
+		cqlClient := client.NewCqlClient(string(stargateCqlHostAndPort), credentials)
 		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
 		if err != nil {
 			return false
 		}
 		_ = connection.Close()
 		return true
-	}, timeout, interval, "Address is unreachable: %s", ingressConfig.StargateCql)
+	}, timeout, interval, "Address is unreachable: %s", stargateCqlHostAndPort)
 }
 
-func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext, namespace, reaperServiceName string) {
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext, namespace, reaperServiceName string, reaperHostAndPort HostAndPort) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "reaper", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
-	ingressConfig, found := f.ingressConfigs[k8sContext]
-	require.True(t, found, "no ingress config found for context %s", k8sContext)
-	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName, ingressConfig.ReaperRest.Host())
+	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName, reaperHostAndPort.Host())
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	assert.NoError(t, err)
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	reaperHttp := fmt.Sprintf("http://%s", ingressConfig.ReaperRest)
+	reaperHttp := fmt.Sprintf("http://%s", reaperHostAndPort)
 	require.Eventually(t, func() bool {
 		reaperURL, _ := url.Parse(reaperHttp)
 		reaperClient := reaperclient.NewClient(reaperURL)

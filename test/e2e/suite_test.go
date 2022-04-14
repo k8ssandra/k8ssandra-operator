@@ -39,6 +39,12 @@ type pollingConfig struct {
 	interval time.Duration
 }
 
+type ingressConfig struct {
+	StargateRest framework.HostAndPort `json:"stargate_rest"`
+	StargateCql  framework.HostAndPort `json:"stargate_cql"`
+	ReaperRest   framework.HostAndPort `json:"reaper_rest"`
+}
+
 var (
 	polling struct {
 		nodetoolStatus          pollingConfig
@@ -115,7 +121,7 @@ var (
 	kubeconfigFile string
 	controlPlane   string
 	dataPlanes     []string
-	ingressConfigs map[string]framework.IngressConfig
+	ingressConfigs map[string]ingressConfig
 )
 
 func TestOperator(t *testing.T) {
@@ -285,7 +291,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes, ingressConfigs)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -566,7 +572,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -598,7 +604,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -645,7 +651,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	require.NoError(t, err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 3}
@@ -1071,11 +1077,11 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
@@ -1166,11 +1172,11 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password, "", "")
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}

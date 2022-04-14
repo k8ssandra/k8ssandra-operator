@@ -38,7 +38,8 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
 
 	t.Log("deploying Reaper ingress routes in", f.DataPlaneContexts[0])
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service")
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
@@ -62,7 +63,8 @@ func createSingleReaperWithEncryption(t *testing.T, ctx context.Context, namespa
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("deploying Reaper ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service")
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
@@ -121,10 +123,17 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, "test-dc2-default-sts-0", 2, 0, "-u", username, "-pw", password)
 
 	t.Log("deploying Stargate and Reaper ingress routes in all data plane clusters")
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service")
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "test-dc2-reaper-service")
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service", reaperRestHostAndPort)
+
+	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "test-dc2-reaper-service", reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
@@ -172,8 +181,10 @@ func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespac
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service")
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "test-dc2-reaper-service")
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "test-dc1-reaper-service", reaperRestHostAndPort)
+	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "test-dc2-reaper-service", reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
@@ -207,7 +218,8 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	checkReaperReady(t, f, ctx, reaperKey)
 
 	t.Log("deploying Reaper ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "reaper1-service")
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "reaper1-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {

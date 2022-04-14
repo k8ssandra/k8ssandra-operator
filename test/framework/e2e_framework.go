@@ -38,7 +38,6 @@ import (
 
 type E2eFramework struct {
 	*Framework
-	ingressConfigs map[string]IngressConfig
 }
 
 var (
@@ -46,7 +45,7 @@ var (
 	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
 )
 
-func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlanes []string, ingressConfigs map[string]IngressConfig) (*E2eFramework, error) {
+func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
 	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
@@ -70,7 +69,6 @@ func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlan
 			return nil, err
 		} else if remoteClient == nil {
 			t.Logf("ignoring invalid data plane context %v: %v", name, err)
-			delete(ingressConfigs, name)
 		} else {
 			remoteClients[name] = remoteClient
 			validDataPlanes = append(validDataPlanes, name)
@@ -83,7 +81,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlan
 
 	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
 
-	return &E2eFramework{Framework: f, ingressConfigs: ingressConfigs}, nil
+	return &E2eFramework{Framework: f}, nil
 }
 
 func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client, error) {
