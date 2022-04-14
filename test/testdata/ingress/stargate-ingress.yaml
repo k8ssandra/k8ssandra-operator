@@ -2,40 +2,40 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: test-dc1-stargate-service-http-ingress # actual namespace will be kustomized
-  namespace: default # actual namespace will be kustomized
+  name: cluster1-dc1-stargate-service-http-ingress
+  namespace: k8ssandra
 spec:
   entryPoints:
-    - web-http
+    - web
   routes:
-    - match: Host(`stargate.127.0.0.1.nip.io`) && PathPrefix(`/v1/auth`)
+    - match: Host(`stargate.example.com`) && PathPrefix(`/v1/auth`)
       kind: Rule
       services:
-        - name: test-dc1-stargate-service # actual service name will be kustomized
+        - name: cluster1-dc1-stargate-service
           port: 8081
-    - match: Host(`stargate.127.0.0.1.nip.io`) && (PathPrefix(`/graphql-schema`) || PathPrefix(`/graphql/`) || PathPrefix(`/playground`))
+    - match: Host(`stargate.example.com`) && (PathPrefix(`/graphql-schema`) || PathPrefix(`/graphql/`) || PathPrefix(`/playground`))
       kind: Rule
       services:
-        - name: test-dc1-stargate-service # actual service name will be kustomized
+        - name: cluster1-dc1-stargate-service
           port: 8080
-    - match: Host(`stargate.127.0.0.1.nip.io`) && PathPrefix(`/v2/`)
+    - match: Host(`stargate.example.com`) && PathPrefix(`/v2/`)
       kind: Rule
       services:
-        - name: test-dc1-stargate-service # actual service name will be kustomized
+        - name: cluster1-dc1-stargate-service
           port: 8082
 ---
 # https://github.com/traefik/traefik/blob/v2.5.1/docs/content/reference/dynamic-configuration/traefik.containo.us_ingressroutetcps.yaml
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRouteTCP
 metadata:
-  name: test-dc1-stargate-service-native-ingress # actual namespace will be kustomized
-  namespace: default # actual namespace will be kustomized
+  name: cluster1-dc1-stargate-service-native-ingress
+  namespace: k8ssandra
 spec:
   entryPoints:
-    - stargate-native
+    - cql
   routes:
     # no TLS enabled
-    - match: HostSNI(`*`) # can't use stargate.127.0.0.1.nip.io here because TLS is not enabled
+    - match: HostSNI(`*`) # can't use a specific hostname here because TLS is not enabled
       services:
-        - name: test-dc1-stargate-service # actual service name will be kustomized
+        - name: cluster1-dc1-stargate-service
           port: 9042

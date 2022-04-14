@@ -49,8 +49,11 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[1])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", username, password)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service")
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	pod1Name := "cluster1-dc1-default-sts-0"
@@ -79,8 +82,11 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperReady(t, f, ctx, reaper1Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", username, password)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service")
+	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name)

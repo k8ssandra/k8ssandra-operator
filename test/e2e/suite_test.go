@@ -39,6 +39,12 @@ type pollingConfig struct {
 	interval time.Duration
 }
 
+type ingressConfig struct {
+	StargateRest framework.HostAndPort `json:"stargate_rest"`
+	StargateCql  framework.HostAndPort `json:"stargate_cql"`
+	ReaperRest   framework.HostAndPort `json:"reaper_rest"`
+}
+
 var (
 	polling struct {
 		nodetoolStatus          pollingConfig
@@ -73,8 +79,8 @@ var (
 			"Must contain at least one data plane. "+
 			"If the control plane is a data plane, it must be included here too.",
 	)
-	ingressesFlag = flag.String(
-		"ingresses",
+	ingressConfigsFlag = flag.String(
+		"ingressConfigs",
 		`{
 					"kind-k8ssandra-0" : {
 						"stargate_rest" : "stargate.127.0.0.1.nip.io:30080",
@@ -92,7 +98,7 @@ var (
 						"reaper_rest"   :   "reaper.127.0.0.1.nip.io:32080"
 					}
   				}`,
-		"A JSON string containing ingress mappings for each data plane and each REST/CQL API.",
+		"A JSON string containing ingress configs for each data plane and each REST/CQL API.",
 	)
 	logKustomizeOutput = flag.Bool(
 		"logKustomizeOutput",
@@ -115,7 +121,7 @@ var (
 	kubeconfigFile string
 	controlPlane   string
 	dataPlanes     []string
-	ingresses      map[string]map[string]string
+	ingressConfigs map[string]ingressConfig
 )
 
 func TestOperator(t *testing.T) {
@@ -124,14 +130,12 @@ func TestOperator(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("CreateSingleDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleDatacenterCluster,
-		fixture:       framework.NewTestFixture("single-dc", controlPlane),
-		deployTraefik: true,
+		testFunc: createSingleDatacenterCluster,
+		fixture:  framework.NewTestFixture("single-dc", controlPlane),
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
 		fixture:                      framework.NewTestFixture("stargate", dataPlanes[0]),
-		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
@@ -154,29 +158,24 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
 		fixture:                      framework.NewTestFixture("multi-stargate", dataPlanes[0]),
-		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
 	t.Run("CheckStargateApisWithMultiDcCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      checkStargateApisWithMultiDcCluster,
-		fixture:       framework.NewTestFixture("multi-dc-stargate", controlPlane),
-		deployTraefik: true,
+		testFunc: checkStargateApisWithMultiDcCluster,
+		fixture:  framework.NewTestFixture("multi-dc-stargate", controlPlane),
 	}))
 	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleReaper,
-		fixture:       framework.NewTestFixture("single-dc-reaper", controlPlane),
-		deployTraefik: true,
+		testFunc: createSingleReaper,
+		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createMultiReaper,
-		fixture:       framework.NewTestFixture("multi-dc-reaper", controlPlane),
-		deployTraefik: true,
+		testFunc: createMultiReaper,
+		fixture:  framework.NewTestFixture("multi-dc-reaper", controlPlane),
 	}))
 	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createReaperAndDatacenter,
 		fixture:                      framework.NewTestFixture("reaper", dataPlanes[0]),
-		deployTraefik:                true,
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
@@ -192,50 +191,42 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusa,
 		fixture:                      framework.NewTestFixture("single-dc-medusa", controlPlane),
-		deployTraefik:                false,
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("CreateMultiMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusa,
 		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
-		deployTraefik:                false,
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      multiDcAuthOnOff,
-		fixture:       framework.NewTestFixture("multi-dc-auth", controlPlane),
-		deployTraefik: true,
+		testFunc: multiDcAuthOnOff,
+		fixture:  framework.NewTestFixture("multi-dc-auth", controlPlane),
 	}))
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                    controllerRestart,
 		skipK8ssandraClusterCleanup: true,
 	}))
 	t.Run("SingleDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleDatacenterClusterWithEncryption,
-		fixture:       framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
-		deployTraefik: true,
+		testFunc: createSingleDatacenterClusterWithEncryption,
+		fixture:  framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createSingleReaperWithEncryption,
-		fixture:       framework.NewTestFixture("single-dc-encryption-reaper", controlPlane),
-		deployTraefik: true,
+		testFunc: createSingleReaperWithEncryption,
+		fixture:  framework.NewTestFixture("single-dc-encryption-reaper", controlPlane),
 	}))
 	t.Run("MultiDcEncryptionWithStargate", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      checkStargateApisWithMultiDcEncryptedCluster,
-		fixture:       framework.NewTestFixture("multi-dc-encryption-stargate", controlPlane),
-		deployTraefik: true,
+		testFunc: checkStargateApisWithMultiDcEncryptedCluster,
+		fixture:  framework.NewTestFixture("multi-dc-encryption-stargate", controlPlane),
 	}))
 	t.Run("MultiDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createMultiReaperWithEncryption,
-		fixture:       framework.NewTestFixture("multi-dc-encryption-reaper", controlPlane),
-		deployTraefik: true,
+		testFunc: createMultiReaperWithEncryption,
+		fixture:  framework.NewTestFixture("multi-dc-encryption-reaper", controlPlane),
 	}))
 	t.Run("StopAndRestartDc", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      stopAndRestartDc,
-		fixture:       framework.NewTestFixture("stop-dc", controlPlane),
-		deployTraefik: true,
+		testFunc: stopAndRestartDc,
+		fixture:  framework.NewTestFixture("stop-dc", controlPlane),
 	}))
 }
 
@@ -264,9 +255,6 @@ type e2eTestOpts struct {
 
 	// clusterScoped specifies whether the operator is configured to watch all namespaces.
 	clusterScoped bool
-
-	// deployTraefik specifies whether to deploy Traefik.
-	deployTraefik bool
 
 	// operatorNamespace is the namespace in which k8ssandra-operator is deployed. When the
 	// operator is configured to only watch a single namespace, the test framework will
@@ -403,14 +391,6 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		return err
 	}
 
-	if opts.deployTraefik {
-		var errTraefik error
-		require.Eventually(t, func() bool {
-			errTraefik = f.DeployTraefik(t, opts.operatorNamespace, ingresses)
-			return errTraefik == nil
-		}, time.Minute, 10*time.Second, fmt.Sprintf("Failed to deploy Traefik: %v", errTraefik))
-	}
-
 	if opts.fixture != nil {
 		if err := f.DeployFixture(opts.sutNamespace, opts.fixture); err != nil {
 			t.Logf("failed to deploy fixture")
@@ -445,9 +425,9 @@ func processFlags(t *testing.T) {
 	if len(dataPlanes) == 0 {
 		t.Fatal("no data planes provided")
 	}
-	err = json.Unmarshal([]byte(*ingressesFlag), &ingresses)
+	err = json.Unmarshal([]byte(*ingressConfigsFlag), &ingressConfigs)
 	if err != nil {
-		t.Fatalf("invalid ingresses json: %s: %v", *ingressesFlag, err)
+		t.Fatalf("invalid ingresses json: %s: %v", *ingressConfigsFlag, err)
 	}
 }
 
@@ -512,12 +492,6 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 	if opts.doCassandraDatacenterCleanup {
 		if err := f.DeleteCassandraDatacenters(opts.sutNamespace, timeout, interval); err != nil {
 			t.Logf("failed to delete CassandraDatacenter: %v", err)
-		}
-	}
-
-	if opts.deployTraefik {
-		if err := f.UndeployTraefik(t, opts.operatorNamespace); err != nil {
-			t.Logf("failed to undeploy Traefik: %v", err)
 		}
 	}
 
@@ -598,7 +572,9 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -630,7 +606,9 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -677,7 +655,9 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	require.NoError(t, err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 3}
@@ -1103,11 +1083,15 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
@@ -1198,11 +1182,15 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password)
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password)
+	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "test-dc2-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}

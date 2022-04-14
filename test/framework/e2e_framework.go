@@ -38,7 +38,6 @@ import (
 
 type E2eFramework struct {
 	*Framework
-	ingresses map[string]map[string]string
 }
 
 var (

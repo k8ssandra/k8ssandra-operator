@@ -162,7 +162,7 @@ kind-single-e2e-test: single-create single-prepare e2e-test
 
 kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
-single-create: cleanup create-kind-cluster cert-manager
+single-create: cleanup create-kind-cluster cert-manager traefik-kind
 
 single-prepare: build manifests docker-build kind-load-image
 
@@ -183,7 +183,7 @@ ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
-multi-create: cleanup create-kind-multicluster cert-manager-multi
+multi-create: cleanup create-kind-multicluster cert-manager-multi traefik-kind-multi
 
 multi-prepare: build manifests docker-build kind-load-image-multi
 
@@ -277,6 +277,37 @@ cert-manager-multi: ## Install cert-manager to the clusters
 		kubectl config use-context kind-k8ssandra-$$i; \
 		make cert-manager;  \
 	done
+
+# Install Traefik in the current Kind cluster using Helm and a values file that is suitable for
+# running e2e tests locally with a cluster created with setup-kind-multicluster.sh. Helm must be
+# pre-installed on the system.
+traefik-kind:
+	helm repo add traefik https://helm.traefik.io/traefik
+	helm repo update
+	helm install traefik traefik/traefik --version v10.3.2 -f ./test/testdata/ingress/traefik.values.kind.yaml
+
+# Install Traefik in all local Kind clusters.
+traefik-kind-multi:
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kubectl config use-context kind-k8ssandra-$$i; \
+		make traefik-kind;  \
+	done
+
+traefik-uninstall:
+	helm uninstall traefik
+
+traefik-uninstall-kind-multi:
+	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
+		kubectl config use-context kind-k8ssandra-$$i; \
+		make traefik-uninstall;  \
+	done
+
+# Installs Helm from an installation script. Note that on macOS it's better to install Helm with homebrew.
+install-helm:
+	mkdir -p ./bin ; \
+	curl -fsSL -o ./bin/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 ; \
+	chmod 700 ./bin/get_helm.sh ; \
+	./bin/get_helm.sh
 
 create-clientconfig:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
