@@ -89,30 +89,32 @@ type backupGetter interface {
 }
 
 // getBackupRackIPs gets a map of racks to IPs from a Medusa CassandraBackup k8s object.
-func getSourceRacksIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (map[NodeLocation][]netaddr.IP, error) {
+func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (map[NodeLocation][]netaddr.IP, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
 		return nil, err
 	}
-	namedBackup, err := filterBackupsByName(k8sbackup.Spec.Name, backups)
+	namedBackup, err := filterBackupsByName(k8sRestore.Spec.Backup, backups)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[NodeLocation][]netaddr.IP)
 	for _, i := range namedBackup.Nodes {
-		location := NodeLocation{
-			Rack: i.Rack,
-			DC:   i.Datacenter,
-		}
-		IP, err := netaddr.ParseIP(i.Host)
-		if err != nil {
-			return nil, err
-		}
-		_, exists := out[location]
-		if exists {
-			out[location] = append(out[location], IP)
-		} else {
-			out[location] = []netaddr.IP{IP}
+		if i.Datacenter == k8sRestore.Spec.CassandraDatacenter.Name {
+			location := NodeLocation{
+				Rack: i.Rack,
+				DC:   i.Datacenter,
+			}
+			IP, err := netaddr.ParseIP(i.Host)
+			if err != nil {
+				return nil, err
+			}
+			_, exists := out[location]
+			if exists {
+				out[location] = append(out[location], IP)
+			} else {
+				out[location] = []netaddr.IP{IP}
+			}
 		}
 	}
 	return out, nil
@@ -170,12 +172,12 @@ func cassDCFromKluster(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (*c
 
 // GetHostMap gets the hostmap for a given CassandraBackup from IP sources to FQDN targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
 // TODO: check for rack imbalances which may cause subtle errors here. Also need to check that source rack sizes are the same as destination rack sizes.
-func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
+func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
 	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx)
 	if err != nil {
 		return nil, err
 	}
-	destRacks, err := getTargetRackFQDNs(Kluster, k8sbackup.Spec.CassandraDatacenter)
+	destRacks, err := getTargetRackFQDNs(Kluster, k8sbackup.Spec.CassandraDatacenter.Name)
 	if err != nil {
 		return nil, err
 	}
