@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"inet.af/netaddr"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type HostName string
@@ -74,7 +77,7 @@ func filterBackupsByName(name string, backups []*BackupSummary) (*BackupSummary,
 	return nil, errors.New("could not find named backup")
 }
 
-type nodeLocation struct {
+type NodeLocation struct {
 	Rack string
 	DC   string
 }
@@ -84,7 +87,7 @@ type backupGetter interface {
 }
 
 // getBackupRackIPs gets a map of racks to IPs from a Medusa CassandraBackup k8s object.
-func getBackupRackIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (map[nodeLocation][]netaddr.IP, error) {
+func getSourceRacksIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (map[NodeLocation][]netaddr.IP, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
 		return nil, err
@@ -93,9 +96,9 @@ func getBackupRackIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter, 
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[nodeLocation][]netaddr.IP)
+	out := make(map[NodeLocation][]netaddr.IP)
 	for _, i := range namedBackup.Nodes {
-		location := nodeLocation{
+		location := NodeLocation{
 			Rack: i.Rack,
 			DC:   i.Datacenter,
 		}
@@ -112,3 +115,52 @@ func getBackupRackIPs(k8sbackup medusaapi.CassandraBackup, client backupGetter, 
 	}
 	return out, nil
 }
+
+// getClusterRackFQDNs gets a map of racks to FQDNs from the current K8ssandraCluster k8s object. The CassDC does not exist yet, so we cannot refer to it for names.
+// We refer to the following code for how to calculate pod names: // https://github.com/k8ssandra/cass-operator/blob/master/pkg/reconciliation/construct_statefulset.go#L39
+func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (map[NodeLocation][]HostName, error) {
+	thisDC := k8ssandraapi.CassandraDatacenterTemplate{}
+	if len(Kluster.Spec.Cassandra.Datacenters) > 0 {
+		for _, i := range Kluster.Spec.Cassandra.Datacenters {
+			if i.Meta.Name == dcName {
+				thisDC = i
+			}
+		}
+	}
+	DCConfig := cassandra.Coalesce(Kluster.Name, Kluster.Spec.Cassandra, &thisDC)
+	cassDC, err := cassandra.NewDatacenter(
+		types.NamespacedName{
+			Namespace: Kluster.Namespace,
+			Name:      Kluster.Name,
+		},
+		DCConfig)
+	if err != nil {
+		return nil, err
+	}
+	racks := cassDC.GetRacks()
+	out := make(map[NodeLocation][]HostName)
+	for _, i := range racks {
+		location := NodeLocation{
+			DC:   cassDC.Name,
+			Rack: i.Name,
+		}
+		sizePerRack := int(cassDC.Spec.Size) / len(racks)
+		out[location] = getPodNames(Kluster.Name, cassDC.Name, i.Name, sizePerRack)
+	}
+	return out, nil
+}
+
+func getPodNames(clusterName string, DCName string, rackName string, size int) []HostName {
+	out := []HostName{}
+	for i := 0; i <= size; i++ {
+		out := append(out, HostName(clusterName+"-"+DCName+"-"+rackName+"-sts"+string(i)))
+	}
+	return out
+}
+
+// GetHostMapFromRemote
+// func GetHostMapFromRemote(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraBackup, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
+// 	sourceRacks := getBackupRackIPs(k8sbackup, client, ctx)
+// 	destRacks := getClusterRackFQDNs(Kluster)
+
+// }
