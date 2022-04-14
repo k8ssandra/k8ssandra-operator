@@ -306,8 +306,8 @@ traefik-uninstall-kind-multi:
 install-helm:
 	mkdir -p ./bin ; \
 	curl -fsSL -o ./bin/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 ; \
-    chmod 700 ./bin/get_helm.sh ; \
-    ./bin/get_helm.sh
+	chmod 700 ./bin/get_helm.sh ; \
+	./bin/get_helm.sh
 
 create-clientconfig:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
