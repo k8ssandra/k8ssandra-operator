@@ -21,17 +21,17 @@ func (client mockgRPCClient) GetBackups(ctx context.Context) ([]*BackupSummary, 
 				{
 					Host:       "192.168.1.2",
 					Datacenter: "test-dc1",
-					Rack:       "test-rack1",
+					Rack:       "default",
 				},
 				{
 					Host:       "192.168.1.3",
 					Datacenter: "test-dc1",
-					Rack:       "test-rack2",
+					Rack:       "default",
 				},
 				{
 					Host:       "192.168.1.4",
 					Datacenter: "test-dc1",
-					Rack:       "test-rack3",
+					Rack:       "default",
 				},
 				{
 					Host:       "192.168.1.5",
@@ -99,6 +99,62 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 	assert.Equal(t, expectedSourceRacks, result)
 }
 
-// func TestGetHostMap(t *testing.T) {
+func TestGetHostMap(t *testing.T) {
+	// Fixtures
+	mockgRPCClient := mockgRPCClient{}
+	ctx := context.Background()
+	kluster := pkgtest.NewK8ssandraCluster("test-cluster", "default")
+	kluster.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
+		{
+			Meta: k8ssandraapi.EmbeddedObjectMeta{
+				Name:      "test-dc1",
+				Namespace: "default",
+			},
+			Size: 3,
+		},
+	}
+	/////////////////////////////////////////////// Test with all nodes in one rack. /////////////////////////////////////////////////
+	// Using DC = "test-dc-1" here because that's the DC we defined in the fixture above which has all nodes in a single rack.
+	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc1", "test-cluster")
+	result, err := GetHostMap(kluster, *medusaBackup, mockgRPCClient, ctx)
+	assert.NoError(t, err, err)
+	expected := HostMappingSlice{
+		{
+			Source: netaddr.MustParseIP("192.168.1.2"),
+			Target: HostName("test-cluster-test-dc1-default-sts-0"),
+		},
+		{
+			Source: netaddr.MustParseIP("192.168.1.3"),
+			Target: HostName("test-cluster-test-dc1-default-sts-1"),
+		},
+		{
+			Source: netaddr.MustParseIP("192.168.1.4"),
+			Target: HostName("test-cluster-test-dc1-default-sts-2"),
+		},
+	}
+	assert.Equal(t, expected, result)
+	///////////////////////////////////////////// Test with nodes split over three racks. ////////////////////////////////////////////
+	// Define racks on DC
+	kluster.Spec.Cassandra.Racks = []cassdcapi.Rack{
+		{Name: "rack1"},
+		{Name: "rack2"},
+		{Name: "rack3"},
+	}
+	// Make DC name = "test-dc2" which is our test DC which has racks.
+	kluster.Spec.Cassandra.Datacenters[0].Meta.Name = "test-dc2"
+	expected = HostMappingSlice{
+		{
+			Source: netaddr.MustParseIP("192.168.1.5"),
+			Target: HostName("test-cluster-test-dc2-rack1-sts-0"),
+		},
+		{
+			Source: netaddr.MustParseIP("192.168.1.6"),
+			Target: HostName("test-cluster-test-dc2-rack2-sts-1"),
+		},
+		{
+			Source: netaddr.MustParseIP("192.168.1.7"),
+			Target: HostName("test-cluster-test-dc2-rack2-sts-2"),
+		},
+	}
 
-// }
+}
