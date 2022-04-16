@@ -30,4 +30,3 @@ clientconfig
 .devcontainer/
 kind-log*/
 kubeconfig
-.medusawork/
