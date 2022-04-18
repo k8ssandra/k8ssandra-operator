@@ -1,9 +1,12 @@
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"testing"
 )
 
@@ -23,11 +26,11 @@ func TestStargateStatus(t *testing.T) {
 }
 
 func TestStargateDatacenterTemplate(t *testing.T) {
-	t.Run("Coalesce", testStargateDatacenterTemplateCoalesce)
+	t.Run("Merge", testStargateDatacenterTemplateMerge)
 }
 
 func TestStargateRackTemplate(t *testing.T) {
-	t.Run("Coalesce", testStargateRackTemplateCoalesce)
+	t.Run("Merge", testStargateRackTemplateMerge)
 }
 
 func testStargateGetRackTemplate(t *testing.T) {
@@ -157,87 +160,321 @@ func testStargateSetCondition(t *testing.T) {
 	})
 }
 
-func testStargateDatacenterTemplateCoalesce(t *testing.T) {
-
-	t.Run("Nil dc with nil cluster", func(t *testing.T) {
-		var clusterTemplate *StargateClusterTemplate = nil
-		var dcTemplate *StargateDatacenterTemplate = nil
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.Nil(t, actual)
-	})
-
-	t.Run("nil dc with non nil cluster", func(t *testing.T) {
-		clusterTemplate := &StargateClusterTemplate{Size: 10}
-		var dcTemplate *StargateDatacenterTemplate = nil
-		expected := &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("Non nil dc with nil cluster", func(t *testing.T) {
-		var clusterTemplate *StargateClusterTemplate = nil
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{Size: 10},
-		}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, dcTemplate, actual)
-	})
-
-	t.Run("Non nil dc with non nil cluster", func(t *testing.T) {
-		clusterTemplate := &StargateClusterTemplate{Size: 10}
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{Size: 20},
-		}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, dcTemplate, actual)
-	})
+func testStargateDatacenterTemplateMerge(t *testing.T) {
+	tests := []struct {
+		name            string
+		dcTemplate      *StargateDatacenterTemplate
+		clusterTemplate *StargateClusterTemplate
+		want            *StargateDatacenterTemplate
+		wantErr         assert.ErrorAssertionFunc
+	}{
+		{
+			"Nil dc with nil cluster",
+			nil,
+			nil,
+			nil,
+			assert.NoError,
+		},
+		{
+			"Nil dc with non-nil cluster",
+			nil,
+			&StargateClusterTemplate{Size: 10},
+			&StargateDatacenterTemplate{StargateClusterTemplate: StargateClusterTemplate{Size: 10}},
+			assert.NoError,
+		},
+		{
+			"Non-nil dc with nil cluster",
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{Size: 10},
+			},
+			nil,
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{Size: 10},
+			},
+			assert.NoError,
+		},
+		{
+			"Non-nil dc with non-nil cluster",
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{
+					StargateTemplate: StargateTemplate{
+						ContainerImage: &images.Image{
+							Registry: "reg1",
+							Name:     "img1",
+						},
+						HeapSize:     &quantity512Mi,
+						NodeSelector: map[string]string{"k1": "v1", "k2": "v2"},
+						Tolerations:  []corev1.Toleration{{Key: "k1", Value: "v1"}},
+						Affinity: &corev1.Affinity{
+							PodAffinity: &corev1.PodAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{Key: "k1", Operator: metav1.LabelSelectorOpIn, Values: []string{"v1"}},
+											},
+										},
+										TopologyKey: "k1",
+									},
+								},
+							},
+						},
+					},
+					Size: 10,
+				},
+				Racks: []StargateRackTemplate{{
+					Name: "rack1",
+				}},
+			},
+			&StargateClusterTemplate{
+				StargateTemplate: StargateTemplate{
+					ContainerImage: &images.Image{
+						Repository: "repo2",
+						Name:       "img2",
+					},
+					ServiceAccount: pointer.String("sa2"),
+					HeapSize:       &quantity256Mi,
+					NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
+					Tolerations:    []corev1.Toleration{{Key: "k2", Value: "v2"}},
+					Affinity: &corev1.Affinity{
+						PodAffinity: &corev1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+										},
+									},
+									TopologyKey: "k2",
+								},
+							},
+						},
+						PodAntiAffinity: &corev1.PodAntiAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+										},
+									},
+									TopologyKey: "k2",
+								},
+							},
+						},
+					},
+				},
+				Size: 20,
+			},
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{
+					StargateTemplate: StargateTemplate{
+						ContainerImage: &images.Image{
+							Registry:   "reg1",
+							Repository: "repo2",
+							Name:       "img1",
+						},
+						HeapSize:       &quantity512Mi,
+						ServiceAccount: pointer.String("sa2"),
+						// map will be merged
+						NodeSelector: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
+						// slice will not be merged, slice1 will be kept intact
+						Tolerations: []corev1.Toleration{{Key: "k1", Value: "v1"}},
+						Affinity: &corev1.Affinity{
+							PodAffinity: &corev1.PodAffinity{
+								// slice will not be merged, slice1 will be kept intact
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{Key: "k1", Operator: metav1.LabelSelectorOpIn, Values: []string{"v1"}},
+											},
+										},
+										TopologyKey: "k1",
+									},
+								},
+							},
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+											},
+										},
+										TopologyKey: "k2",
+									},
+								},
+							},
+						},
+					},
+					Size: 10,
+				},
+				Racks: []StargateRackTemplate{{
+					Name: "rack1",
+				}},
+			},
+			assert.NoError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := tt.dcTemplate.Merge(tt.clusterTemplate)
+			assert.Equal(t, tt.want, actual)
+			tt.wantErr(t, err)
+		})
+	}
 }
 
-func testStargateRackTemplateCoalesce(t *testing.T) {
-
-	t.Run("Nil rack with nil dc", func(t *testing.T) {
-		var dcTemplate *StargateDatacenterTemplate = nil
-		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.Nil(t, actual)
-	})
-
-	t.Run("Nil rack with non nil dc", func(t *testing.T) {
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{
-				StargateTemplate: StargateTemplate{HeapSize: &quantity256Mi},
+func testStargateRackTemplateMerge(t *testing.T) {
+	tests := []struct {
+		name         string
+		rackTemplate *StargateRackTemplate
+		dcTemplate   *StargateDatacenterTemplate
+		want         *StargateTemplate
+		wantErr      assert.ErrorAssertionFunc
+	}{
+		{
+			"Nil rack with nil dc",
+			nil,
+			nil,
+			nil,
+			assert.NoError,
+		},
+		{
+			"Nil rack with non nil dc",
+			nil,
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{
+					StargateTemplate: StargateTemplate{HeapSize: &quantity256Mi},
+				},
 			},
-		}
-		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &dcTemplate.StargateTemplate, actual)
-	})
-
-	t.Run("Non nil rack with nil dc", func(t *testing.T) {
-		var dcTemplate *StargateDatacenterTemplate = nil
-		rackTemplate := &StargateRackTemplate{
-			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
-		}
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
-	})
-
-	t.Run("Non nil rack with non nil dc", func(t *testing.T) {
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{
-				StargateTemplate: StargateTemplate{HeapSize: &quantity256Mi},
+			&StargateTemplate{HeapSize: &quantity256Mi},
+			assert.NoError,
+		},
+		{
+			"Non nil rack with nil dc",
+			&StargateRackTemplate{
+				StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
 			},
-		}
-		rackTemplate := &StargateRackTemplate{
-			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
-		}
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
-	})
+			nil,
+			&StargateTemplate{HeapSize: &quantity512Mi},
+			assert.NoError,
+		},
+		{
+			"Non nil rack with non nil dc",
+			&StargateRackTemplate{
+				StargateTemplate: StargateTemplate{
+					ContainerImage: &images.Image{
+						Registry: "reg1",
+						Name:     "img1",
+					},
+					HeapSize:     &quantity512Mi,
+					NodeSelector: map[string]string{"k1": "v1", "k2": "v2"},
+					Tolerations:  []corev1.Toleration{{Key: "k1", Value: "v1"}},
+					Affinity: &corev1.Affinity{
+						PodAffinity: &corev1.PodAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{Key: "k1", Operator: metav1.LabelSelectorOpIn, Values: []string{"v1"}},
+										},
+									},
+									TopologyKey: "k1",
+								},
+							},
+						},
+					},
+				},
+			},
+			&StargateDatacenterTemplate{
+				StargateClusterTemplate: StargateClusterTemplate{
+					StargateTemplate: StargateTemplate{
+						ContainerImage: &images.Image{
+							Repository: "repo2",
+							Name:       "img2",
+						},
+						ServiceAccount: pointer.String("sa2"),
+						HeapSize:       &quantity256Mi,
+						NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
+						Tolerations:    []corev1.Toleration{{Key: "k2", Value: "v2"}},
+						Affinity: &corev1.Affinity{
+							PodAffinity: &corev1.PodAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+											},
+										},
+										TopologyKey: "k2",
+									},
+								},
+							},
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+											},
+										},
+										TopologyKey: "k2",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			&StargateTemplate{
+				ContainerImage: &images.Image{
+					Registry:   "reg1",
+					Repository: "repo2",
+					Name:       "img1",
+				},
+				HeapSize:       &quantity512Mi,
+				ServiceAccount: pointer.String("sa2"),
+				// map will be merged
+				NodeSelector: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
+				// slice will not be merged, slice1 will be kept intact
+				Tolerations: []corev1.Toleration{{Key: "k1", Value: "v1"}},
+				Affinity: &corev1.Affinity{
+					PodAffinity: &corev1.PodAffinity{
+						// slice will not be merged, slice1 will be kept intact
+						RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+							{
+								LabelSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{Key: "k1", Operator: metav1.LabelSelectorOpIn, Values: []string{"v1"}},
+									},
+								},
+								TopologyKey: "k1",
+							},
+						},
+					},
+					PodAntiAffinity: &corev1.PodAntiAffinity{
+						RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+							{
+								LabelSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{Key: "k2", Operator: metav1.LabelSelectorOpIn, Values: []string{"v2"}},
+									},
+								},
+								TopologyKey: "k2",
+							},
+						},
+					},
+				},
+			},
+			assert.NoError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := tt.rackTemplate.Merge(tt.dcTemplate)
+			assert.Equal(t, tt.want, actual)
+			tt.wantErr(t, err)
+		})
+	}
 }

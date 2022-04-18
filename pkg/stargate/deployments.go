@@ -62,7 +62,7 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) (map[string]appsv1.Deployment, error) {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
@@ -79,7 +79,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			break
 		}
 
-		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
+		template, err := stargate.GetRackTemplate(rack.Name).Merge(&stargate.Spec.StargateDatacenterTemplate)
+		if err != nil {
+			return nil, err
+		}
 
 		deploymentName := DeploymentName(dc, &rack)
 		image := computeImage(template, clusterVersion)
@@ -223,7 +226,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		annotations.AddHashAnnotation(&deployment)
 		deployments[deploymentName] = deployment
 	}
-	return deployments
+	return deployments, nil
 }
 
 func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
@@ -248,9 +251,9 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 
 func computeImage(template *api.StargateTemplate, clusterVersion ClusterVersion) *images.Image {
 	if clusterVersion == ClusterVersion3 {
-		return template.ContainerImage.ApplyDefaults(defaultImage3)
+		return template.ContainerImage.Merge(defaultImage3)
 	} else {
-		return template.ContainerImage.ApplyDefaults(defaultImage4)
+		return template.ContainerImage.Merge(defaultImage4)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
@@ -32,7 +31,7 @@ var DefaultJmxInitImage = images.Image{
 // is configured per DC.
 type SystemReplication map[string]int
 
-//// Replication provides a mapping of DCs to a mapping of keyspaces and their
+// Replication provides a mapping of DCs to a mapping of keyspaces and their
 // replica counts. NetworkTopologyStrategy is assumed for all keyspaces.
 type Replication struct {
 	datacenters map[string]keyspacesReplication
@@ -275,6 +274,9 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
 
+	// TODO replace below with Mergo
+	// when CassandraClusterTemplate and CassandraDatacenterTemplate
+	// will be fixed to use the same structs
 	if len(dcTemplate.DatacenterOptions.ServerVersion) > 0 {
 		dcConfig.ServerVersion = semver.MustParse(dcTemplate.DatacenterOptions.ServerVersion)
 	} else if len(clusterTemplate.DatacenterOptions.ServerVersion) > 0 {

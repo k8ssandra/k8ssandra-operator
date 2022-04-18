@@ -47,7 +47,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) {
 			// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 			UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 		}
-		image := dcConfig.JmxInitContainerImage.ApplyDefaults(DefaultJmxInitImage)
+		image := dcConfig.JmxInitContainerImage.Merge(DefaultJmxInitImage)
 		dcConfig.PodTemplateSpec.Spec.ImagePullSecrets = images.CollectPullSecrets(image)
 		UpdateInitContainer(dcConfig.PodTemplateSpec, JmxInitContainer, func(c *corev1.Container) {
 			c.Image = image.String()

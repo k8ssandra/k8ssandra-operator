@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/imdario/mergo"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -133,16 +134,19 @@ type StargateDatacenterTemplate struct {
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
 }
 
-// Coalesce compares this StargateDatacenterTemplate with the given StargateClusterTemplate and returns the first
-// non-nil StargateDatacenterTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateDatacenterTemplate) Coalesce(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
+// Merge merges the given StargateClusterTemplate with this StargateDatacenterTemplate and returns
+// the result.
+func (in *StargateDatacenterTemplate) Merge(clusterTemplate *StargateClusterTemplate) (*StargateDatacenterTemplate, error) {
 	if in == nil && clusterTemplate == nil {
-		return nil
+		return nil, nil
 	} else if in == nil {
-		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
+		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}, nil
+	} else if clusterTemplate == nil {
+		return in, nil
 	} else {
-		return in
+		dest := in.DeepCopy()
+		err := mergo.Merge(&dest.StargateClusterTemplate, clusterTemplate)
+		return dest, err
 	}
 }
 
@@ -158,16 +162,19 @@ type StargateRackTemplate struct {
 	Name string `json:"name"`
 }
 
-// Coalesce compares this StargateRackTemplate with the given StargateDatacenterTemplate and returns the first non-nil
-// StargateTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateRackTemplate) Coalesce(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
+// Merge merges the given StargateDatacenterTemplate with this StargateRackTemplate and returns the
+// result.
+func (in *StargateRackTemplate) Merge(dcTemplate *StargateDatacenterTemplate) (*StargateTemplate, error) {
 	if in == nil && dcTemplate == nil {
-		return nil
+		return nil, nil
 	} else if in == nil {
-		return &dcTemplate.StargateTemplate
+		return &dcTemplate.StargateTemplate, nil
+	} else if dcTemplate == nil {
+		return &in.StargateTemplate, nil
 	} else {
-		return &in.StargateTemplate
+		dest := in.StargateTemplate.DeepCopy()
+		err := mergo.Merge(dest, dcTemplate.StargateTemplate)
+		return dest, err
 	}
 }
 

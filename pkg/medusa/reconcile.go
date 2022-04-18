@@ -184,7 +184,7 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 // Build the image name and pull policy and add it to a medusa container definition
 func setImage(containerImage *images.Image, container *corev1.Container) {
-	image := containerImage.ApplyDefaults(defaultMedusaImage)
+	image := containerImage.Merge(defaultMedusaImage)
 	container.Image = image.String()
 	container.ImagePullPolicy = image.PullPolicy
 }

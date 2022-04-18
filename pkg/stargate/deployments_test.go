@@ -78,7 +78,8 @@ func TestNewDeployments(t *testing.T) {
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
@@ -168,7 +169,8 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	stargate := stargate.DeepCopy()
 	stargate.Spec.Size = 3
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	deployment := deployments["cluster1-dc1-rack1-stargate-deployment"]
@@ -216,8 +218,8 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	stargate := stargate.DeepCopy()
 	stargate.Spec.Size = 8
 
-	deployments := NewDeployments(stargate, dc)
-
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -299,7 +301,8 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	stargate := stargate.DeepCopy()
 	stargate.Spec.Size = 8
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -411,7 +414,8 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 		},
 	}}
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -463,7 +467,8 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, stargate.Spec.Racks[0].Affinity, deployment3.Spec.Template.Spec.Affinity)
-	assert.Equal(t, stargate.Spec.Racks[0].NodeSelector, deployment3.Spec.Template.Spec.NodeSelector)
+	// node selectors should have been merged
+	assert.Equal(t, map[string]string{"selectorKey2": "selectorValue2", "selectorKey3": "selectorValue3"}, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Racks[0].Tolerations, deployment3.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
@@ -485,7 +490,8 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 	stargate := stargate.DeepCopy()
 	stargate.Spec.Size = 2 // rack3 will get no deployment
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 2)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -506,7 +512,8 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	stargate := stargate.DeepCopy()
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
@@ -538,7 +545,8 @@ func testNewDeploymentsEncryption(t *testing.T) {
 
 	stargate := stargate.DeepCopy()
 
-	deployments := NewDeployments(stargate, dc)
+	deployments, err := NewDeployments(stargate, dc)
+	require.NoError(t, err)
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
@@ -643,7 +651,8 @@ func testImages(t *testing.T) {
 	t.Run("nil image 3", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
 		stargate.Spec.ContainerImage = nil
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
@@ -655,7 +664,8 @@ func testImages(t *testing.T) {
 		stargate.Spec.ContainerImage = nil
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
@@ -668,7 +678,8 @@ func testImages(t *testing.T) {
 			Repository: "stargateio",
 			Tag:        "v" + DefaultVersion,
 		}
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
@@ -683,7 +694,8 @@ func testImages(t *testing.T) {
 		}
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
@@ -698,7 +710,8 @@ func testImages(t *testing.T) {
 			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
 		}
 		stargate.Spec.ContainerImage = image
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-3_11:latest", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -716,7 +729,8 @@ func testImages(t *testing.T) {
 		stargate.Spec.ContainerImage = image
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
-		deployments := NewDeployments(stargate, dc)
+		deployments, err := NewDeployments(stargate, dc)
+		require.NoError(t, err)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-4_0:latest", deployment.Spec.Template.Spec.Containers[0].Image)

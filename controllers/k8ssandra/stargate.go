@@ -30,7 +30,12 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
+	stargateTemplate, err := dcTemplate.Stargate.Merge(kc.Spec.Stargate)
+	if err != nil {
+		logger.Error(err, "Failed to merge Stargate resources")
+		return result.Error(err)
+	}
+
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
 		Name:      stargate.ResourceName(actualDc),
