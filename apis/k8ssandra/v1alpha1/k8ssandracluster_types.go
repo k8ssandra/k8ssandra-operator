@@ -326,7 +326,7 @@ type DatacenterOptions struct {
 
 	// Networking enables host networking and configures a NodePort ports.
 	// +optional
-	Networking *cassdcapi.NetworkingConfig `json:"networking,omitempty"`
+	Networking *NetworkingConfig `json:"networking,omitempty"`
 
 	// Resources is the cpu and memory resources for the cassandra container.
 	// +optional
@@ -409,6 +409,27 @@ type DatacenterOptions struct {
 	// ManagementApiAuth defines the authentication settings for the management API in the Cassandra pods.
 	// +optional
 	ManagementApiAuth *cassdcapi.ManagementApiAuthConfig `json:"managementApiAuth,omitempty"`
+}
+
+// NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
+// change the HostNetwork field type from bool to *bool, which makes merging 2 values of this struct
+// more intuitive.
+type NetworkingConfig struct {
+	NodePort    *cassdcapi.NodePortConfig `json:"nodePort,omitempty"`
+	HostNetwork *bool                     `json:"hostNetwork,omitempty"`
+}
+
+func (in *NetworkingConfig) ToCassNetworkingConfig() *cassdcapi.NetworkingConfig {
+	if in == nil {
+		return nil
+	}
+	out := &cassdcapi.NetworkingConfig{
+		NodePort: in.NodePort,
+	}
+	if in.HostNetwork != nil {
+		out.HostNetwork = *in.HostNetwork
+	}
+	return out
 }
 
 type K8ssandraVolumes struct {

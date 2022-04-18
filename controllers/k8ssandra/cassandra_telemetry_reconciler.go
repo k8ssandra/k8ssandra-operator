@@ -24,7 +24,9 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	remoteClient client.Client,
 ) result.ReconcileResult {
 	logger.Info("reconciling telemetry")
-	mergedSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry.Merge(dcTemplate.DatacenterOptions.Telemetry)
+	clusterSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry
+	dcSpec := dcTemplate.DatacenterOptions.Telemetry
+	mergedSpec := dcSpec.MergeWith(clusterSpec)
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
@@ -38,7 +40,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	if err != nil {
 		return result.Error(err)
 	}
-	validConfig, err := telemetry.SpecIsValid(mergedSpec, promInstalled)
+	validConfig := telemetry.SpecIsValid(mergedSpec, promInstalled)
 	if err != nil {
 		return result.Error(errors.New("could not determine if telemetry config is valid"))
 	}
@@ -50,19 +52,18 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		return result.Continue()
 	}
 	// Determine if we want a cleanup or a resource update.
-	switch {
-	case mergedSpec == nil || mergedSpec.Prometheus == nil:
-		logger.Info("Telemetry not present for CassDC, will delete resources", "mergedSpec", mergedSpec)
-		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return result.Error(err)
-		}
-	case mergedSpec.Prometheus.Enabled:
+	if mergedSpec.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
 		desiredSM, err := cfg.NewCassServiceMonitor()
 		if err != nil {
 			return result.Error(err)
 		}
 		if err := cfg.UpdateResources(ctx, remoteClient, actualDc, &desiredSM); err != nil {
+			return result.Error(err)
+		}
+	} else {
+		logger.Info("Telemetry not enabled for CassDC, will delete resources", "mergedSpec", mergedSpec)
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
 	}

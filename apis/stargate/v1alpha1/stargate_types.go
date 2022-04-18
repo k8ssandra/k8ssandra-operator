@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -151,16 +152,20 @@ type StargateDatacenterTemplate struct {
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
 }
 
-// Coalesce compares this StargateDatacenterTemplate with the given StargateClusterTemplate and returns the first
-// non-nil StargateDatacenterTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateDatacenterTemplate) Coalesce(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
+// MergeWith merges the given StargateClusterTemplate with this StargateDatacenterTemplate and
+// returns the result.
+func (in *StargateDatacenterTemplate) MergeWith(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
 	if in == nil && clusterTemplate == nil {
 		return nil
 	} else if in == nil {
 		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
-	} else {
+	} else if clusterTemplate == nil {
 		return in
+	} else {
+		dcTemplate := in.DeepCopy()
+		mergedClusterTemplate := goalesceutils.Merge(clusterTemplate, &dcTemplate.StargateClusterTemplate)
+		dcTemplate.StargateClusterTemplate = *mergedClusterTemplate
+		return dcTemplate
 	}
 }
 
@@ -176,16 +181,18 @@ type StargateRackTemplate struct {
 	Name string `json:"name"`
 }
 
-// Coalesce compares this StargateRackTemplate with the given StargateDatacenterTemplate and returns the first non-nil
-// StargateTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateRackTemplate) Coalesce(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
+// MergeWith merges the given StargateDatacenterTemplate with this StargateRackTemplate and returns
+// the result.
+func (in *StargateRackTemplate) MergeWith(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
 	if in == nil && dcTemplate == nil {
 		return nil
 	} else if in == nil {
 		return &dcTemplate.StargateTemplate
-	} else {
+	} else if dcTemplate == nil {
 		return &in.StargateTemplate
+	} else {
+		template := in.StargateTemplate.DeepCopy()
+		return goalesceutils.Merge(&dcTemplate.StargateTemplate, template)
 	}
 }
 

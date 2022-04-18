@@ -39,7 +39,7 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	validConfig, err := telemetry.SpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
+	validConfig := telemetry.SpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
 	if err != nil {
 		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
 	}
@@ -52,19 +52,18 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	}
 	// If Stargate is attached
 	// Determine if we want a cleanup or a resource update.
-	switch {
-	case thisStargate.Spec.Telemetry == nil || thisStargate.Spec.Telemetry.Prometheus == nil:
-		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
-		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return ctrl.Result{}, err
-		}
-	case thisStargate.Spec.Telemetry.Prometheus.Enabled:
+	if thisStargate.Spec.Telemetry.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		desiredSM, err := cfg.NewStargateServiceMonitor()
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if err := cfg.UpdateResources(ctx, remoteClient, thisStargate, &desiredSM); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
 	}

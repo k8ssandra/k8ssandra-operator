@@ -28,18 +28,20 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	stargateTemplate := dcTemplate.Stargate.Coalesce(kc.Spec.Stargate)
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
 		Name:      stargate.ResourceName(actualDc),
 	}
-	actualStargate := &stargateapi.Stargate{}
 	logger = logger.WithValues("Stargate", stargateKey)
+
+	stargateTemplate := dcTemplate.Stargate.MergeWith(kc.Spec.Stargate)
 
 	if actualDc.Spec.Stopped && stargateTemplate != nil {
 		logger.Info("DC is stopped: skipping Stargate deployment")
 		stargateTemplate = nil
 	}
+
+	actualStargate := &stargateapi.Stargate{}
 
 	if stargateTemplate != nil {
 		logger.Info("Reconcile Stargate")

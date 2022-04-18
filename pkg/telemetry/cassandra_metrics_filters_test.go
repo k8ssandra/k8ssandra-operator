@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 		},
 		Mcac: &telemetry.McacTelemetrySpec{
 			MetricFilters: &[]string{
@@ -60,7 +61,7 @@ func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 		},
 	}
 

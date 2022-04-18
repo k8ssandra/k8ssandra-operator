@@ -220,7 +220,6 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	deployments := NewDeployments(stargate, dc)
-
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -466,7 +465,8 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])
 	assert.Equal(t, stargate.Spec.Racks[0].Affinity, deployment3.Spec.Template.Spec.Affinity)
-	assert.Equal(t, stargate.Spec.Racks[0].NodeSelector, deployment3.Spec.Template.Spec.NodeSelector)
+	// node selectors should have been merged
+	assert.Equal(t, map[string]string{"selectorKey2": "selectorValue2", "selectorKey3": "selectorValue3"}, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Racks[0].Tolerations, deployment3.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
