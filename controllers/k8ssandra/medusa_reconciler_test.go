@@ -91,7 +91,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	t.Log("check that the standalone Medusa deployment was created")
-	medusaDeploymentKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-standalone"}, K8sContext: f.K8sContext(0)}
+	medusaDeploymentKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-standalone"}, K8sContext: f.DataPlaneContexts[0]}
 	medusaDeployment := &appsv1.Deployment{}
 	require.Eventually(func() bool {
 		if err := f.Get(ctx, medusaDeploymentKey, medusaDeployment); err != nil {
@@ -101,7 +101,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	}, timeout, interval)
 
 	t.Log("check that the standalone Medusa service was created")
-	medusaServiceKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-service"}, K8sContext: f.K8sContext(0)}
+	medusaServiceKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-medusa-service"}, K8sContext: f.DataPlaneContexts[0]}
 	medusaService := &corev1.Service{}
 	require.Eventually(func() bool {
 		if err := f.Get(ctx, medusaServiceKey, medusaService); err != nil {
