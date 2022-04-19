@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/webhooks"
 	"os"
 	"strings"
 
@@ -172,7 +173,7 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}
-		if err = (&k8ssandraiov1alpha1.K8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache); err != nil {
+		if err = (&webhooks.ValidatedK8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "K8ssandraCluster")
 			os.Exit(1)
 		}

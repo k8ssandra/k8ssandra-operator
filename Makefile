@@ -129,9 +129,9 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 test: manifests generate fmt vet envtest ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./webhooks/... ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -coverprofile cover.out
 else
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test $(GO_FLAGS) ./webhooks/... ./apis/... ./pkg/... ./test/yq/... ./controllers/... -coverprofile cover.out
 endif
 
 PHONY: e2e-test

@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/webhooks"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -98,7 +99,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
-	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
+	err = (&webhooks.ValidatedK8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
 	if err != nil {
 		return err
 	}
@@ -253,7 +254,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		}
 	}
 
-	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
+	err = (&webhooks.ValidatedK8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
 	if err != nil {
 		return err
 	}
