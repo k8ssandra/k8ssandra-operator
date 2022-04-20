@@ -8,7 +8,6 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	pkgtest "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"inet.af/netaddr"
 )
 
 type mockgRPCClient struct{}
@@ -59,10 +58,10 @@ func TestGetSourceRacksIPs(t *testing.T) {
 	ctx := context.Background()
 	sourceRacks, err := getSourceRacksIPs(*medusaBackup, mockgRPCClient, ctx)
 	assert.NoError(t, err, err)
-	expectedSourceRacks := map[NodeLocation][]netaddr.IP{
-		{Rack: "test-rack1", DC: "test-dc2"}: {netaddr.MustParseIP("192.168.1.5")},
-		{Rack: "test-rack2", DC: "test-dc2"}: {netaddr.MustParseIP("192.168.1.6")},
-		{Rack: "test-rack3", DC: "test-dc2"}: {netaddr.MustParseIP("192.168.1.7")},
+	expectedSourceRacks := map[NodeLocation][]HostDNSOrIP{
+		{Rack: "test-rack1", DC: "test-dc2"}: {"192.168.1.5"},
+		{Rack: "test-rack2", DC: "test-dc2"}: {"192.168.1.6"},
+		{Rack: "test-rack3", DC: "test-dc2"}: {"192.168.1.7"},
 	}
 	assert.Equal(t, expectedSourceRacks, sourceRacks)
 }
@@ -120,15 +119,15 @@ func TestGetHostMap(t *testing.T) {
 	assert.NoError(t, err, err)
 	expected := HostMappingSlice{
 		{
-			Source: netaddr.MustParseIP("192.168.1.2"),
+			Source: "192.168.1.2",
 			Target: HostName("test-cluster-test-dc1-default-sts-0"),
 		},
 		{
-			Source: netaddr.MustParseIP("192.168.1.3"),
+			Source: "192.168.1.3",
 			Target: HostName("test-cluster-test-dc1-default-sts-1"),
 		},
 		{
-			Source: netaddr.MustParseIP("192.168.1.4"),
+			Source: "192.168.1.4",
 			Target: HostName("test-cluster-test-dc1-default-sts-2"),
 		},
 	}
@@ -144,17 +143,16 @@ func TestGetHostMap(t *testing.T) {
 	kluster.Spec.Cassandra.Datacenters[0].Meta.Name = "test-dc2"
 	expected = HostMappingSlice{
 		{
-			Source: netaddr.MustParseIP("192.168.1.5"),
+			Source: "192.168.1.5",
 			Target: HostName("test-cluster-test-dc2-rack1-sts-0"),
 		},
 		{
-			Source: netaddr.MustParseIP("192.168.1.6"),
+			Source: "192.168.1.6",
 			Target: HostName("test-cluster-test-dc2-rack2-sts-1"),
 		},
 		{
-			Source: netaddr.MustParseIP("192.168.1.7"),
+			Source: "192.168.1.7",
 			Target: HostName("test-cluster-test-dc2-rack2-sts-2"),
 		},
 	}
-
 }

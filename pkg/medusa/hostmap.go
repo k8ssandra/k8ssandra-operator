@@ -9,28 +9,29 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandrapkg "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"inet.af/netaddr"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 type HostName string
 
+type HostDNSOrIP string
+
 // HostMapping is a type that reflects the mapping of source IP address from the Medusa backup to the target host name obtained from looking at the k8s
 // statefulsets that comprise the Cassandra racks.
 type HostMapping struct {
-	Source netaddr.IP
+	Source HostDNSOrIP
 	Target HostName
 }
 type HostMappingSlice []HostMapping
 
 type mappable interface {
-	ToSourceTargetMap() map[netaddr.IP]HostName
-	ToTargetSourceMap() map[HostName]netaddr.IP
+	ToSourceTargetMap() map[HostDNSOrIP]HostName
+	ToTargetSourceMap() map[HostName]HostDNSOrIP
 }
 
 // Transform HostMappingSlide into a map with source IPs as keys and Target IPs as values.
-func (m HostMappingSlice) ToSourceTargetMap() map[netaddr.IP]HostName {
-	out := make(map[netaddr.IP]HostName)
+func (m HostMappingSlice) ToSourceTargetMap() map[HostDNSOrIP]HostName {
+	out := make(map[HostDNSOrIP]HostName)
 	for _, i := range m {
 		out[i.Source] = i.Target
 	}
@@ -38,8 +39,8 @@ func (m HostMappingSlice) ToSourceTargetMap() map[netaddr.IP]HostName {
 }
 
 // Transform HostMappingSlide into a map with target IPs as keys and source IPs as values.
-func (m HostMappingSlice) ToTargetSourceMap() map[HostName]netaddr.IP {
-	out := make(map[HostName]netaddr.IP)
+func (m HostMappingSlice) ToTargetSourceMap() map[HostName]HostDNSOrIP {
+	out := make(map[HostName]HostDNSOrIP)
 	for _, i := range m {
 		out[i.Target] = i.Source
 	}
@@ -47,7 +48,7 @@ func (m HostMappingSlice) ToTargetSourceMap() map[HostName]netaddr.IP {
 }
 
 // Transform map keyed by target IP with source IP values into HostMappingSlide
-func FromTargetSourceMap(m map[HostName]netaddr.IP) HostMappingSlice {
+func FromTargetSourceMap(m map[HostName]HostDNSOrIP) HostMappingSlice {
 	out := HostMappingSlice{}
 	for k, v := range m {
 		out = append(out, HostMapping{
@@ -59,7 +60,7 @@ func FromTargetSourceMap(m map[HostName]netaddr.IP) HostMappingSlice {
 }
 
 // Transform map keyed by source IP with target IP values into HostMappingSlide
-func FromSourceTargetMap(m map[netaddr.IP]HostName) HostMappingSlice {
+func FromSourceTargetMap(m map[HostDNSOrIP]HostName) HostMappingSlice {
 	out := HostMappingSlice{}
 	for k, v := range m {
 		out = append(out, HostMapping{
@@ -89,7 +90,7 @@ type backupGetter interface {
 }
 
 // getBackupRackIPs gets a map of racks to IPs from a Medusa CassandraBackup k8s object.
-func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (map[NodeLocation][]netaddr.IP, error) {
+func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (map[NodeLocation][]HostDNSOrIP, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
 		return nil, err
@@ -98,14 +99,14 @@ func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGette
 	if err != nil {
 		return nil, err
 	}
-	out := make(map[NodeLocation][]netaddr.IP)
+	out := make(map[NodeLocation][]HostDNSOrIP)
 	for _, i := range namedBackup.Nodes {
 		if i.Datacenter == k8sRestore.Spec.CassandraDatacenter.Name {
 			location := NodeLocation{
 				Rack: i.Rack,
 				DC:   i.Datacenter,
 			}
-			IP, err := netaddr.ParseIP(i.Host)
+			IP := HostDNSOrIP(i.Host)
 			if err != nil {
 				return nil, err
 			}
@@ -113,7 +114,7 @@ func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGette
 			if exists {
 				out[location] = append(out[location], IP)
 			} else {
-				out[location] = []netaddr.IP{IP}
+				out[location] = []HostDNSOrIP{IP}
 			}
 		}
 	}
