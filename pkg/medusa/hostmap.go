@@ -29,7 +29,7 @@ type mappable interface {
 	ToTargetSourceMap() map[HostName]HostDNSOrIP
 }
 
-// Transform HostMappingSlide into a map with source IPs as keys and Target IPs as values.
+// Transform HostMappingSlice into a map with source IPs as keys and Target IPs as values.
 func (m HostMappingSlice) ToSourceTargetMap() map[HostDNSOrIP]HostName {
 	out := make(map[HostDNSOrIP]HostName)
 	for _, i := range m {
@@ -38,7 +38,7 @@ func (m HostMappingSlice) ToSourceTargetMap() map[HostDNSOrIP]HostName {
 	return out
 }
 
-// Transform HostMappingSlide into a map with target IPs as keys and source IPs as values.
+// Transform HostMappingSlice into a map with target IPs as keys and source IPs as values.
 func (m HostMappingSlice) ToTargetSourceMap() map[HostName]HostDNSOrIP {
 	out := make(map[HostName]HostDNSOrIP)
 	for _, i := range m {
@@ -47,7 +47,7 @@ func (m HostMappingSlice) ToTargetSourceMap() map[HostName]HostDNSOrIP {
 	return out
 }
 
-// Transform map keyed by target IP with source IP values into HostMappingSlide
+// Transform map keyed by target IP with source IP values into HostMappingSlice
 func FromTargetSourceMap(m map[HostName]HostDNSOrIP) HostMappingSlice {
 	out := HostMappingSlice{}
 	for k, v := range m {
@@ -59,7 +59,7 @@ func FromTargetSourceMap(m map[HostName]HostDNSOrIP) HostMappingSlice {
 	return out
 }
 
-// Transform map keyed by source IP with target IP values into HostMappingSlide
+// Transform map keyed by source IP with target IP values into HostMappingSlice
 func FromSourceTargetMap(m map[HostDNSOrIP]HostName) HostMappingSlice {
 	out := HostMappingSlice{}
 	for k, v := range m {
@@ -89,7 +89,7 @@ type backupGetter interface {
 	GetBackups(ctx context.Context) ([]*BackupSummary, error)
 }
 
-// getBackupRackIPs gets a map of racks to IPs from a Medusa CassandraBackup k8s object.
+// getSourceRacksIPs gets a map of racks to IPs or hostnames from a Medusa CassandraBackup k8s object.
 func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (map[NodeLocation][]HostDNSOrIP, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
@@ -106,15 +106,15 @@ func getSourceRacksIPs(k8sRestore medusaapi.CassandraRestore, client backupGette
 				Rack: i.Rack,
 				DC:   i.Datacenter,
 			}
-			IP := HostDNSOrIP(i.Host)
+			DNSOrIP := HostDNSOrIP(i.Host)
 			if err != nil {
 				return nil, err
 			}
 			_, exists := out[location]
 			if exists {
-				out[location] = append(out[location], IP)
+				out[location] = append(out[location], DNSOrIP)
 			} else {
-				out[location] = []HostDNSOrIP{IP}
+				out[location] = []HostDNSOrIP{DNSOrIP}
 			}
 		}
 	}
@@ -144,7 +144,7 @@ func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (m
 func getPodNames(clusterName string, DCName string, rackName string, rackSize int) []HostName {
 	out := []HostName{}
 	for i := 0; i < rackSize; i++ {
-		out = append(out, HostName(clusterName+"-"+DCName+"-"+rackName+"-sts-"+fmt.Sprint(i)))
+		out = append(out, HostName(fmt.Sprintf(clusterName, "-", DCName, "-", rackName, "-sts-", fmt.Sprint(i))))
 	}
 	return out
 }
@@ -171,8 +171,7 @@ func cassDCFromKluster(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (*c
 	return cassDC, nil
 }
 
-// GetHostMap gets the hostmap for a given CassandraBackup from IP sources to FQDN targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
-// TODO: check for rack imbalances which may cause subtle errors here. Also need to check that source rack sizes are the same as destination rack sizes.
+// GetHostMap gets the hostmap for a given CassandraBackup from IP or DNS name sources to DNS named targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
 func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.CassandraRestore, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
 	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx)
 	if err != nil {
