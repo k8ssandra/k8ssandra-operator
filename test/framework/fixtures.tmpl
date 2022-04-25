@@ -124,7 +124,7 @@ patches:
 
   {{ if .Networking }}
       - op: replace
-        path: /spec/cassandra/networking/hostNetwork
+        path: /spec/networking/hostNetwork
         value: {{ $.HostNetwork }}
   {{ end }}
 

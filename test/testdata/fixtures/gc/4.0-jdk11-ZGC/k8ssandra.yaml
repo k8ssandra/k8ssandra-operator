@@ -24,7 +24,8 @@ spec:
             heap_max_size: 384Mi
             gc: ZGC
             additionalOptions:
-              - -XX:ConcGCThreads=2
+              - -XX:ConcGCThreads=1
+              - -XX:ParallelGCThreads=2 # must be >= ConcGCThreads
               # - -XX:ZUncommit
               # - -XX:ZUncommitDelay=100
               # - -XX:ZAllocationSpikeTolerance

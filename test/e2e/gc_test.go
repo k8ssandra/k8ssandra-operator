@@ -67,5 +67,5 @@ func checkLogsForCMS(t *testing.T, logs string) {
 func checkLogsForZGC(t *testing.T, logs string) {
 	assert.Contains(t, logs, "ZHeap Heap memory")
 	assert.Contains(t, logs, "-XX:+UseZGC")
-	assert.Contains(t, logs, "-XX:ConcGCThreads=2")
+	assert.Contains(t, logs, "-XX:ConcGCThreads=1")
 }
