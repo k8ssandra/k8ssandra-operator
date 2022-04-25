@@ -79,7 +79,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) (
 			break
 		}
 
-		template, err := stargate.GetRackTemplate(rack.Name).Merge(&stargate.Spec.StargateDatacenterTemplate)
+		template, err := computeTemplate(stargate, rack)
 		if err != nil {
 			return nil, err
 		}
@@ -227,6 +227,15 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) (
 		deployments[deploymentName] = deployment
 	}
 	return deployments, nil
+}
+
+func computeTemplate(stargate *api.Stargate, rack cassdcapi.Rack) (*api.StargateTemplate, error) {
+	dcTemplate := &stargate.Spec.StargateDatacenterTemplate
+	rackTemplate := stargate.GetRackTemplate(rack.Name)
+	if rackTemplate == nil {
+		return &dcTemplate.StargateTemplate, nil
+	}
+	return MergeStargateTemplates(&dcTemplate.StargateTemplate, &rackTemplate.StargateTemplate)
 }
 
 func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {

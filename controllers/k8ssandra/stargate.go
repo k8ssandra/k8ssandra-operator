@@ -2,7 +2,6 @@ package k8ssandra
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -30,7 +29,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 ) result.ReconcileResult {
 
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-	stargateTemplate, err := dcTemplate.Stargate.Merge(kc.Spec.Stargate)
+	stargateTemplate, err := computeStargateDcTemplate(kc, dcTemplate)
 	if err != nil {
 		logger.Error(err, "Failed to merge Stargate resources")
 		return result.Error(err)
@@ -113,6 +112,19 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		}
 	}
 	return result.Continue()
+}
+
+func computeStargateDcTemplate(kc *api.K8ssandraCluster, dc api.CassandraDatacenterTemplate) (*stargateapi.StargateDatacenterTemplate, error) {
+	clusterTemplate := kc.Spec.Stargate
+	dcTemplate := dc.Stargate
+	if clusterTemplate == nil {
+		return dcTemplate, nil
+	} else if dcTemplate == nil {
+		return &stargateapi.StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}, nil
+	}
+	mergedClusterTemplate, err := stargate.MergeStargateClusterTemplates(clusterTemplate, &dcTemplate.StargateClusterTemplate)
+	dcTemplate.StargateClusterTemplate = *mergedClusterTemplate
+	return dcTemplate, err
 }
 
 // TODO move to stargate package

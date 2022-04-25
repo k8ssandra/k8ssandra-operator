@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/imdario/mergo"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -134,22 +133,6 @@ type StargateDatacenterTemplate struct {
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
 }
 
-// Merge merges the given StargateClusterTemplate with this StargateDatacenterTemplate and returns
-// the result.
-func (in *StargateDatacenterTemplate) Merge(clusterTemplate *StargateClusterTemplate) (*StargateDatacenterTemplate, error) {
-	if in == nil && clusterTemplate == nil {
-		return nil, nil
-	} else if in == nil {
-		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}, nil
-	} else if clusterTemplate == nil {
-		return in, nil
-	} else {
-		dest := in.DeepCopy()
-		err := mergo.Merge(&dest.StargateClusterTemplate, clusterTemplate)
-		return dest, err
-	}
-}
-
 // StargateRackTemplate defines custom rules for Stargate pods in a given rack.
 // These rules will be merged with rules defined at datacenter level in a StargateDatacenterTemplate; rack-level rules
 // have precedence over datacenter-level ones.
@@ -160,22 +143,6 @@ type StargateRackTemplate struct {
 	// Stargate is being deployed, otherwise it will be ignored.
 	// +kubebuilder:validation:MinLength=2
 	Name string `json:"name"`
-}
-
-// Merge merges the given StargateDatacenterTemplate with this StargateRackTemplate and returns the
-// result.
-func (in *StargateRackTemplate) Merge(dcTemplate *StargateDatacenterTemplate) (*StargateTemplate, error) {
-	if in == nil && dcTemplate == nil {
-		return nil, nil
-	} else if in == nil {
-		return &dcTemplate.StargateTemplate, nil
-	} else if dcTemplate == nil {
-		return &in.StargateTemplate, nil
-	} else {
-		dest := in.StargateTemplate.DeepCopy()
-		err := mergo.Merge(dest, dcTemplate.StargateTemplate)
-		return dest, err
-	}
 }
 
 // StargateSpec defines the desired state of a Stargate resource.
