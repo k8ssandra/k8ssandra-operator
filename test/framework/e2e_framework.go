@@ -665,3 +665,14 @@ func (f *E2eFramework) GetPodIP(k8sContext, namespace, pod string) (string, erro
 	}
 	return output, nil
 }
+
+func (f *E2eFramework) GetContainerLogs(k8sContext, namespace, pod, container string) (string, error) {
+	opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+	output, err := kubectl.Logs(opts, pod, "-c", container)
+	if err != nil {
+		err = fmt.Errorf("%s (%w)", output, err)
+		f.logger.Error(err, fmt.Sprintf("failed to get logs for %s/%s: %s", pod, container, err))
+		return "", err
+	}
+	return output, nil
+}

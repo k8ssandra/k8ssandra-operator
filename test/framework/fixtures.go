@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -45,9 +46,10 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 	}
 	dcContexts := f.DataPlaneContexts[:numDcs]
 	data := &fixtureKustomization{
-		Namespace:  namespace,
-		Fixture:    fixture.Name,
-		DcContexts: dcContexts,
+		Namespace:    namespace,
+		Fixture:      fixture.Name,
+		FixtureDepth: strings.Repeat("../", 4+strings.Count(fixture.Name, "/")),
+		DcContexts:   dcContexts,
 	}
 	err = generateKustomizationFile("fixtures/"+fixture.Name, data, fixtureKustomizeTemplate)
 	if err != nil {
@@ -57,9 +59,10 @@ func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture) err
 }
 
 type fixtureKustomization struct {
-	Namespace  string
-	Fixture    string
-	DcContexts []string
+	Namespace    string
+	Fixture      string
+	FixtureDepth string
+	DcContexts   []string
 }
 
 // countK8ssandraDatacenters counts the number of dc definitions in the K8ssandraCluster resource of
@@ -89,7 +92,7 @@ const fixtureKustomizeTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: {{.Namespace}}
 resources:
-- ../../../../test/testdata/fixtures/{{ .Fixture }}
+- {{ .FixtureDepth }}test/testdata/fixtures/{{ .Fixture }}
 {{if .DcContexts}}
 patches:
   - patch: |-

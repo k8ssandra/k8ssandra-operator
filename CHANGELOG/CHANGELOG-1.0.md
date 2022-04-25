@@ -16,9 +16,11 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#310](https://github.com/k8ssandra/k8ssandra-operator/issues/310) Update to Go 1.17 and Kubernetes dependencies (incl. controller-runtime)
+* [ENHANCEMENT] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Refactor config-builder JSON marshaling
 * [BUGFIX] [#447](https://github.com/k8ssandra/k8ssandra-operator/issues/447) Reconciliation doesn't finish when adding DC with more than 1 node
 * [BUGFIX] [$503](https://github.com/k8ssandra/k8ssandra-operator/issues/503) Cannot 
   create Cassandra 4 multi-DC cluster when DCs have different sizes
+* [BUGFIX] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Java garbage collection properties cannot be configured correctly
 * [TESTING] [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112) ⁃ Run 
   e2e tests against arbitrary context names
 * [TESTING] [#462](https://github.com/k8ssandra/k8ssandra-operator/issues/462) ⁃ Use yq to parse fixture files

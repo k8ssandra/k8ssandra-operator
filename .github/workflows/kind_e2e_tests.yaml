@@ -64,6 +64,11 @@ jobs:
           - ConfigControllerRestarts
           - SingleDcEncryptionWithStargate
           - SingleDcEncryptionWithReaper
+          - GCTests/3.11-jdk8-G1
+          - GCTests/3.11-jdk8-CMS
+          - GCTests/4.0-jdk11-G1
+          - GCTests/4.0-jdk11-CMS
+          - GCTests/4.0-jdk11-ZGC
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

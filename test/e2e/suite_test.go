@@ -77,7 +77,7 @@ var (
 		"kind-k8ssandra-0,kind-k8ssandra-1",
 		"A comma-separated list of Kubernetes context names to use as data planes. "+
 			"Must contain at least one data plane. "+
-			"If the control plane is a data plane, it must be included here too.",
+			"The control plane should not be included here, unless it is also a data plane.",
 	)
 	ingressConfigsFlag = flag.String(
 		"ingressConfigs",
@@ -228,6 +228,28 @@ func TestOperator(t *testing.T) {
 		testFunc: stopAndRestartDc,
 		fixture:  framework.NewTestFixture("stop-dc", controlPlane),
 	}))
+	t.Run("GCTests", func(t *testing.T) {
+		t.Run("3.11-jdk8-G1", e2eTest(ctx, &e2eTestOpts{
+			testFunc: gcTest("G1"),
+			fixture:  framework.NewTestFixture("gc/3.11-jdk8-G1", controlPlane),
+		}))
+		t.Run("3.11-jdk8-CMS", e2eTest(ctx, &e2eTestOpts{
+			testFunc: gcTest("CMS"),
+			fixture:  framework.NewTestFixture("gc/3.11-jdk8-CMS", controlPlane),
+		}))
+		t.Run("4.0-jdk11-G1", e2eTest(ctx, &e2eTestOpts{
+			testFunc: gcTest("G1"),
+			fixture:  framework.NewTestFixture("gc/4.0-jdk11-G1", controlPlane),
+		}))
+		t.Run("4.0-jdk11-CMS", e2eTest(ctx, &e2eTestOpts{
+			testFunc: gcTest("CMS"),
+			fixture:  framework.NewTestFixture("gc/4.0-jdk11-CMS", controlPlane),
+		}))
+		t.Run("4.0-jdk11-ZGC", e2eTest(ctx, &e2eTestOpts{
+			testFunc: gcTest("ZGC"),
+			fixture:  framework.NewTestFixture("gc/4.0-jdk11-ZGC", controlPlane),
+		}))
+	})
 }
 
 func beforeSuite(t *testing.T) {
@@ -319,7 +341,7 @@ func setTestNamespaceNames(opts *e2eTestOpts) {
 		opts.operatorNamespace = "k8ssandra-operator"
 	} else {
 		if opts.fixture != nil {
-			opts.operatorNamespace = opts.fixture.Name + "-" + rand.String(6)
+			opts.operatorNamespace = framework.CleanupForKubernetes(opts.fixture.Name + "-" + rand.String(6))
 		} else {
 			opts.operatorNamespace = framework.CleanupForKubernetes(rand.String(9))
 		}
@@ -1202,7 +1224,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
 	t.Logf("check that datacenter %s in cluster %s is ready", key.Name, key.K8sContext)
 	withDatacenter := f.NewWithDatacenter(ctx, key)
-	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+	assert.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))

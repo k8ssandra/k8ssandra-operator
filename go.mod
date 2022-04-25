@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/Jeffail/gabs v1.4.0
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/aws/aws-sdk-go v1.40.37 // indirect
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

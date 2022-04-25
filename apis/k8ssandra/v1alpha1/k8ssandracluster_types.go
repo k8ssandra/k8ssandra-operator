@@ -218,7 +218,7 @@ type CassandraClusterTemplate struct {
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
-	// jvm-options for 3.11.x or jvm-server-options for 4.x.
+	// the various jvm*.options files.
 	// +optional
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 

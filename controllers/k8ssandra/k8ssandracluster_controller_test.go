@@ -21,6 +21,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 
+	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -328,7 +329,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 						ConcurrentWrites: pointer.Int(16),
 					},
 					JvmOptions: api.JvmOptions{
-						HeapSize: parseResource("1024Mi"),
+						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -453,7 +454,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseResource("500Gi"),
+										corev1.ResourceStorage: *parseQuantity("500Gi"),
 									},
 								},
 							},
@@ -469,7 +470,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 								ConcurrentWrites: pointer.Int(4),
 							},
 							JvmOptions: api.JvmOptions{
-								HeapSize: parseResource("1024Mi"),
+								MaxHeapSize: parseQuantity("1024Mi"),
 							},
 						},
 					},
@@ -484,7 +485,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 								StorageClassName: &defaultStorageClass,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseResource("2Ti"),
+										corev1.ResourceStorage: *parseQuantity("2Ti"),
 									},
 								},
 							},
@@ -500,7 +501,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 								ConcurrentWrites: pointer.Int(12),
 							},
 							JvmOptions: api.JvmOptions{
-								HeapSize: parseResource("2048Mi"),
+								MaxHeapSize: parseQuantity("1024Mi"),
 							},
 						},
 					},
@@ -600,7 +601,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						StorageClassName: &defaultStorageClass,
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: *parseResource("500Gi"),
+								corev1.ResourceStorage: *parseQuantity("500Gi"),
 							},
 						},
 					},
@@ -614,7 +615,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						ConcurrentWrites: pointer.Int(4),
 					},
 					JvmOptions: api.JvmOptions{
-						HeapSize: parseResource("1024Mi"),
+						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
@@ -637,7 +638,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 								StorageClassName: &defaultStorageClass,
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
-										corev1.ResourceStorage: *parseResource("2Ti"),
+										corev1.ResourceStorage: *parseQuantity("2Ti"),
 									},
 								},
 							},
@@ -651,7 +652,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 								ConcurrentWrites: pointer.Int(12),
 							},
 							JvmOptions: api.JvmOptions{
-								HeapSize: parseResource("2048Mi"),
+								MaxHeapSize: parseQuantity("1024Mi"),
 							},
 						},
 					},
@@ -740,7 +741,7 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 		config.JvmOptions.AdditionalOptions...,
 	)
 	template := cassandra.DatacenterConfig{
-		ServerVersion:   serverVersion,
+		ServerVersion:   semver.MustParse(serverVersion),
 		CassandraConfig: *config,
 	}
 	json, err := cassandra.CreateJsonConfig(&template)
@@ -1837,7 +1838,7 @@ func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 	return nil
 }
 
-func parseResource(quantity string) *resource.Quantity {
+func parseQuantity(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
 }

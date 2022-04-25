@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -292,7 +293,7 @@ func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacente
 	case "INCREMENTAL":
 		incremental = true
 	case "AUTO":
-		if cassandra.IsCassandra3(dc.Spec.ServerVersion) {
+		if semver.MustParse(dc.Spec.ServerVersion).Major() == 3 {
 			adaptive = true
 		} else {
 			incremental = true

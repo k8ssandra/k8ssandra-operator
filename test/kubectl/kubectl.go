@@ -253,7 +253,7 @@ func Get(opts Options, args ...string) (string, error) {
 
 	err := cmd.Run()
 
-	if logOutput {
+	if logOutput || err != nil {
 		fmt.Println(stderr.String())
 		fmt.Println(stdout.String())
 	}
@@ -279,4 +279,33 @@ func RolloutStatus(ctx context.Context, opts Options, kind, name string) error {
 		fmt.Println(string(output))
 	}
 	return err
+}
+
+func Logs(opts Options, args ...string) (string, error) {
+	cmd := exec.Command("kubectl", "logs")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+	cmd.Args = append(cmd.Args, args...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	fmt.Println(cmd)
+
+	err := cmd.Run()
+
+	if logOutput || err != nil {
+		fmt.Println(stderr.String())
+		fmt.Println(stdout.String())
+	}
+
+	if err != nil {
+		return stdout.String() + stderr.String(), err
+	}
+	return stdout.String(), nil
 }

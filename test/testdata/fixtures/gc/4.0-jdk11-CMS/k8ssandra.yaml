@@ -1,0 +1,39 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 4.0.3
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heap_initial_size: 384Mi
+            heap_max_size: 384Mi
+            gc: Custom # can't use CMS here, it only works for jdk8
+            additionalOptions:
+              # automatically set by config-builder for jdk8
+              - -XX:+UseConcMarkSweepGC
+              - -XX:+CMSParallelRemarkEnabled
+              - -XX:+UseCMSInitiatingOccupancyOnly
+              - -XX:+CMSParallelInitialMarkEnabled
+              - -XX:+CMSEdenChunksRecordAlways
+              - -XX:+CMSClassUnloadingEnabled
+              # user settings
+              - -XX:SurvivorRatio=4
+              - -XX:MaxTenuringThreshold=2
+              - -XX:CMSInitiatingOccupancyFraction=76
+              - -XX:CMSWaitDuration=11000
+    mgmtAPIHeap: 64Mi

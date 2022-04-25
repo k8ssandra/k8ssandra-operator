@@ -97,8 +97,7 @@ spec:
                     type: object
                   config:
                     description: CassandraConfig is configuration settings that are
-                      applied to cassandra.yaml and jvm-options for 3.11.x or jvm-server-options
-                      for 4.x.
+                      applied to cassandra.yaml and the various jvm*.options files.
                     properties:
                       cassandraYaml:
                         description: 'CassandraYaml defines the contents of the cassandra.yaml
@@ -258,7 +257,8 @@ spec:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
                           cdc_raw_directory:
-                            description: Exists in 3.11, 4.0, trunk
+                            description: Exists in 3.11, 4.0, trunk TODO mountable
+                              directory
                             type: string
                           cdc_total_space_in_mb:
                             description: Exists in 3.11, 4.0, trunk
@@ -301,12 +301,7 @@ spec:
                             properties:
                               subnets:
                                 items:
-                                  properties:
-                                    subnet:
-                                      type: string
-                                  required:
-                                  - subnet
-                                  type: object
+                                  type: string
                                 type: array
                             required:
                             - subnets
@@ -665,12 +660,7 @@ spec:
                             properties:
                               subnets:
                                 items:
-                                  properties:
-                                    subnet:
-                                      type: string
-                                  required:
-                                  - subnet
-                                  type: object
+                                  type: string
                                 type: array
                             required:
                             - subnets
@@ -1090,21 +1080,499 @@ spec:
                       jvmOptions:
                         properties:
                           additionalOptions:
+                            description: Additional, arbitrary JVM options (advanced).
                             items:
                               type: string
                             type: array
+                          cassandra_available_processors:
+                            description: 'Available CPU processors. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -Dcassandra.available_processors.'
+                            type: integer
+                          cassandra_disable_auth_caches_remote_configuration:
+                            description: 'Disable remote configuration via JMX of
+                              auth caches. Disabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -Dcassandra.disable_auth_caches_remote_configuration.'
+                            type: boolean
+                          cassandra_expiration_date_overflow_policy:
+                            description: 'Defines how to handle INSERT requests with
+                              TTL exceeding the maximum supported expiration date.
+                              Possible values include `REJECT`, `CAP`, `CAP_NOWARN`.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -Dcassandra.expiration_date_overflow_policy.'
+                            type: string
+                          cassandra_force_3_0_protocol_version:
+                            description: 'Disabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Corresponds
+                              to: -Dcassandra.force_3_0_protocol_version=true.'
+                            type: boolean
+                          cassandra_force_default_indexing_page_size:
+                            description: 'Disable dynamic calculation of the page
+                              size used when indexing an entire partition (during
+                              initial index build/rebuild). Disabled by default. Cass
+                              Config Builder: supported for Cassandra 3.11 in jvm.options.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -Dcassandra.force_default_indexing_page_size.'
+                            type: boolean
+                          cassandra_max_hint_ttl_seconds:
+                            description: 'Imposes an upper bound on hint lifetime
+                              below the normal min gc_grace_seconds. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -Dcassandra.maxHintTTL.'
+                            type: integer
+                          cassandra_metrics_reporter_config_file:
+                            description: 'Enable pluggable metrics reporter. Disabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Dcassandra.metricsReporterConfigFile. TODO mountable
+                              directory'
+                            type: string
+                          cassandra_ring_delay_ms:
+                            description: 'Amount of time in milliseconds that a node
+                              waits before joining the ring. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -Dcassandra.ring_delay_ms.'
+                            type: integer
+                          cassandra_triggers_directory:
+                            description: 'Default location for the trigger JARs. Disabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Dcassandra.triggers_dir. TODO mountable directory'
+                            type: string
+                          cassandra_write_survey:
+                            description: 'For testing new compaction and compression
+                              strategies. Disabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -Dcassandra.write_survey.'
+                            type: boolean
+                          debug_disable_contended_annotations:
+                            description: 'Disable honoring user code @Contended annotations.
+                              Enabled by default. Cass Config Builder: supported for
+                              Cassandra 4.0 in jvm-server.options. Corresponds to:
+                              -XX:-RestrictContended.'
+                            type: boolean
+                          debug_enable_flight_recorder:
+                            description: 'Enable Flight Recorder (Use in production
+                              is subject to Oracle licensing). Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -XX:+FlightRecorder.'
+                            type: boolean
+                          debug_listen_remote_debuggers:
+                            description: 'Listen for JVM remote debuggers on port
+                              1414. Disabled by default. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1414".'
+                            type: boolean
+                          debug_log_compilation:
+                            description: 'Make Cassandra JVM log internal method compilation
+                              (developers only). Disabled by default. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -XX:+LogCompilation.'
+                            type: boolean
+                          debug_non_safepoints:
+                            description: 'Whether the compiler should generate the
+                              necessary metadata for the parts of the code not at
+                              safe points as well. For use with Flight Recorder. Enabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -XX:+DebugNonSafepoints.'
+                            type: boolean
+                          debug_preserve_frame_pointer:
+                            description: 'Preserve Frame Pointer. Enabled by default.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -XX:+PreserveFramePointer.'
+                            type: boolean
+                          debug_unlock_commercial_features:
+                            description: 'Unlock commercial features. Disabled by
+                              default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+UnlockCommercialFeatures.'
+                            type: boolean
+                          debug_unlock_diagnostic_vm_options:
+                            description: 'Enabled by default. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+UnlockDiagnosticVMOptions.'
+                            type: boolean
+                          gc:
+                            default: G1GC
+                            description: 'The name of the garbage collector to use.
+                              Depending on the Cassandra version, not all values are
+                              supported: Cassandra 3.11 supports only G1GC and CMS;
+                              Cassandra 4.0 supports G1GC, ZGC, Shenandoah and Graal.
+                              This option will unlock the corresponding garbage collector
+                              with a default configuration; to further tune the GC
+                              settings, use the additional JVM options field. Use
+                              the special value Custom if you intend to use non-standard
+                              garbage collectors. Cass Config Builder: supported for
+                              Cassandra 3.11 in jvm.options. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm11-server.options.'
+                            enum:
+                            - G1GC
+                            - CMS
+                            - ZGC
+                            - Shenandoah
+                            - Graal
+                            - Custom
+                            type: string
+                          gc_cms_heap_size_young_generation:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Disabled by default. Can only be used when
+                              CMS garbage collector is used. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Corresponds
+                              to: -Xmn.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          gc_cms_initiating_occupancy_fraction:
+                            description: 'Defaults to 75. Can only be used when CMS
+                              garbage collector is used. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Corresponds to: -XX:CMSInitiatingOccupancyFraction.'
+                            maximum: 100
+                            minimum: 0
+                            type: integer
+                          gc_cms_max_tenuring_threshold:
+                            description: 'Defaults to 1. Can only be used when CMS
+                              garbage collector is used. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Corresponds to: -XX:MaxTenuringThreshold.'
+                            type: integer
+                          gc_cms_survivor_ratio:
+                            description: 'Defaults to 8. Can only be used when CMS
+                              garbage collector is used. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Corresponds to: -XX:SurvivorRatio.'
+                            type: integer
+                          gc_cms_wait_duration_ms:
+                            description: 'Defaults to 10000. Can only be used when
+                              CMS garbage collector is used. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Corresponds
+                              to: -XX:CMSWaitDuration.'
+                            type: integer
+                          gc_g1_conc_threads:
+                            description: 'Concurrent GC Threads. Can only be used
+                              when G1 garbage collector is used. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm11-server.options. Corresponds to: -XX:ConcGCThreads.'
+                            type: integer
+                          gc_g1_initiating_heap_occupancy_percent:
+                            description: 'Initiating Heap Occupancy Percentage. Can
+                              only be used when G1 garbage collector is used. Cass
+                              Config Builder: supported for Cassandra 3.11 in jvm.options.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm11-server.options. Corresponds to: -XX:InitiatingHeapOccupancyPercent.'
+                            maximum: 100
+                            minimum: 0
+                            type: integer
+                          gc_g1_max_gc_pause_ms:
+                            description: 'G1GC Max GC Pause in milliseconds. Defaults
+                              to 500. Can only be used when G1 garbage collector is
+                              used. Cass Config Builder: supported for Cassandra 3.11
+                              in jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm11-server.options. Corresponds to: -XX:MaxGCPauseMillis.'
+                            type: integer
+                          gc_g1_parallel_threads:
+                            description: 'Parallel GC Threads. Can only be used when
+                              G1 garbage collector is used. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm11-server.options.
+                              Corresponds to: -XX:ParallelGCThreads.'
+                            type: integer
+                          gc_g1_rset_updating_pause_time_percent:
+                            description: 'G1GC Updating Pause Time Percentage. Defaults
+                              to 5. Can only be used when G1 garbage collector is
+                              used. Cass Config Builder: supported for Cassandra 3.11
+                              in jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm11-server.options. Corresponds to: -XX:G1RSetUpdatingPauseTimePercent.'
+                            maximum: 100
+                            minimum: 0
+                            type: integer
+                          gc_print_application_stopped_time:
+                            description: 'Print GC Application Stopped Time. Disabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Corresponds to: -XX:+PrintGCApplicationStoppedTime.'
+                            type: boolean
+                          gc_print_date_stamps:
+                            description: 'Print GC Date Stamps. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:+PrintGCDateStamps.'
+                            type: boolean
+                          gc_print_details:
+                            description: 'Print GC details. Disabled by default. Cass
+                              Config Builder: supported for Cassandra 3.11 in jvm.options.
+                              Corresponds to: -XX:+PrintGCDetails.'
+                            type: boolean
+                          gc_print_flss_statistics:
+                            description: 'Print FLSS Statistics. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:PrintFLSStatistics=1.'
+                            type: boolean
+                          gc_print_heap:
+                            description: 'Print Heap at GC. Disabled by default. Cass
+                              Config Builder: supported for Cassandra 3.11 in jvm.options.
+                              Corresponds to: -XX:+PrintHeapAtGC.'
+                            type: boolean
+                          gc_print_log_file_size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Size of each log file. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:GCLogFileSize.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          gc_print_number_of_log_files:
+                            description: 'Number of GC log files. Disabled by default.
+                              Can only be used when the G1 garbage collector is used.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:NumberOfGCLogFiles.'
+                            type: integer
+                          gc_print_promotion_failure:
+                            description: 'Print promotion failure. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:+PrintPromotionFailure.'
+                            type: boolean
+                          gc_print_tenuring_distribution:
+                            description: 'Print tenuring distribution. Defaults to
+                              false. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Corresponds to: -XX:+PrintTenuringDistribution.'
+                            type: boolean
+                          gc_print_use_log_file:
+                            description: 'Whether to print GC logs to /var/log/cassandra/gc.log.
+                              Disabled by default. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Corresponds to: -Xloggc:/var/log/cassandra/gc.log.'
+                            type: boolean
+                          gc_print_use_log_file_rotation:
+                            description: 'Use GC Log File Rotation. Disabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Corresponds to: -XX:+UseGCLogFileRotation.'
+                            type: boolean
+                          heap_initial_size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Disabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -Xms.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          heap_max_size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Disabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -Xmx.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
                           heapNewGenSize:
                             anyOf:
                             - type: integer
                             - type: string
+                            description: Deprecated. Use gc_cms_heap_size_young_generation
+                              instead. Valid for CMS garbage collector only + Cassandra
+                              3.11.
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                           heapSize:
                             anyOf:
                             - type: integer
                             - type: string
+                            description: Deprecated. Use heap_initial_size and heap_max_size
+                              instead. If this field is defined, it applies to both
+                              max_heap_size and initial_heap_size.
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
+                          jdk_allow_attach_self:
+                            description: 'Allow the current VM to attach to itself.
+                              Defaults to true. Cass Config Builder: supported for
+                              Cassandra 4.0 in jvm11-server.options. Corresponds to:
+                              -Djdk.attach.allowAttachSelf=true.'
+                            type: boolean
+                          jmx_connection_type:
+                            description: 'Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Possible values
+                              for 3.11 include `local-no-auth`, `remote-no-auth`,
+                              and `remote-dse-unified-auth`. Defaults to `local-no-auth`.
+                              Possible values for 4.0 include `local-no-auth`, `remote-no-auth`.
+                              Defaults to `local-no-auth`.'
+                            type: string
+                          jmx_port:
+                            description: 'Disabled by default. Defaults to 7199. TODO
+                              Make Reaper aware of the JMX port if a non-default port
+                              is used. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options.'
+                            type: integer
+                          jmx_remote_ssl:
+                            description: 'Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Defaults to
+                              false. Valid only when JmxConnectionType is "remote-no-auth",
+                              "remote-dse-unified-auth".'
+                            type: boolean
+                          jmx_remote_ssl_opts:
+                            description: 'Remote SSL options. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.'
+                            type: string
+                          jmx_remote_ssl_require_client_auth:
+                            description: 'Require Client Authentication for remote
+                              SSL? Defaults to false. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options.'
+                            type: boolean
+                          netty_eventloop_maxpendingtasks:
+                            description: 'Defaults to 65536. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Dio.netty.eventLoop.maxPendingTasks.'
+                            type: integer
+                          netty_try_reflection_set_accessible:
+                            description: 'Netty setting `io.netty.tryReflectionSetAccessible`.
+                              Defaults to true. Cass Config Builder: supported for
+                              Cassandra 4.0 in jvm11-server.options. Corresponds to:
+                              -Dio.netty.tryReflectionSetAccessible=true.'
+                            type: boolean
+                          nio_align_direct_memory:
+                            description: 'Align direct memory allocations on page
+                              boundaries. Enabled by default. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Dsun.nio.PageAlignDirectMemory=true.'
+                            type: boolean
+                          nio_maxcachedbuffersize:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Defaults to 1048576. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Djdk.nio.maxCachedBufferSize.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          vm_always_pre_touch:
+                            description: 'Ensure all memory is faulted and zeroed
+                              on startup. Enabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -XX:+AlwaysPreTouch.'
+                            type: boolean
+                          vm_crash_on_out_of_memory_error:
+                            description: 'Disabled by default. Requires `exit_on_out_of_memory_error`
+                              to be disabled.. Cass Config Builder: supported for
+                              Cassandra 4.0 in jvm-server.options. Corresponds to:
+                              -XX:+CrashOnOutOfMemoryError.'
+                            type: boolean
+                          vm_disable_biased_locking:
+                            description: 'Disable biased locking to avoid biased lock
+                              revocation pauses. Disabled by default. Cass Config
+                              Builder: supported for Cassandra 3.11 in jvm.options.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -XX:-UseBiasedLocking.
+                              Note: the Cass Config Builder option is named use_biased_locking,
+                              but setting it to true disables biased locking.'
+                            type: boolean
+                          vm_disable_perf_shared_mem:
+                            description: 'Disable hsperfdata mmap''ed file. Enabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+PerfDisableSharedMem.'
+                            type: boolean
+                          vm_enable_assertions:
+                            description: 'Enable assertions. Enabled by default. Cass
+                              Config Builder: supported for Cassandra 3.11 in jvm.options.
+                              Cass Config Builder: supported for Cassandra 4.0 in
+                              jvm-server.options. Corresponds to: -ea.'
+                            type: boolean
+                          vm_enable_non_root_thread_priority:
+                            description: 'Enable lowering thread priority without
+                              being root on linux. See CASSANDRA-1181 for details.
+                              Enabled by default. Cass Config Builder: supported for
+                              Cassandra 3.11 in jvm.options. Corresponds to: -XX:ThreadPriorityPolicy=42.'
+                            type: boolean
+                          vm_enable_thread_priorities:
+                            description: 'Enable thread priorities. Enabled by default.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -XX:+UseThreadPriorities.'
+                            type: boolean
+                          vm_exit_on_out_of_memory_error:
+                            description: 'Disabled by default. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+ExitOnOutOfMemoryError.'
+                            type: boolean
+                          vm_guaranteed_safepoint_interval_ms:
+                            description: 'Defaults to 300000 milliseconds. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -XX:GuaranteedSafepointInterval.'
+                            type: integer
+                          vm_heap_dump_on_out_of_memory_error:
+                            description: 'Enabled by default. Cass Config Builder:
+                              supported for Cassandra 3.11 in jvm.options. Cass Config
+                              Builder: supported for Cassandra 4.0 in jvm-server.options.
+                              Corresponds to: -XX:+HeapDumpOnOutOfMemoryError.'
+                            type: boolean
+                          vm_per_thread_stack_size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'Per-thread stack size. Defaults to 256Ki.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -Xss.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          vm_prefer_ipv4:
+                            description: 'Prefer binding to IPv4 network interfaces.
+                              Enabled by default. Cass Config Builder: supported for
+                              Cassandra 3.11 in jvm.options. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Djava.net.preferIPv4Stack=true.'
+                            type: boolean
+                          vm_print_heap_histogram_on_out_of_memory_error:
+                            description: 'Disabled by default. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -Dcassandra.printHeapHistogramOnOutOfMemoryError.'
+                            type: boolean
+                          vm_resize_tlab:
+                            description: 'Allow resizing of thread-local allocation
+                              blocks. Enabled by default. Cass Config Builder: supported
+                              for Cassandra 3.11 in jvm.options. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+ResizeTLAB.'
+                            type: boolean
+                          vm_string_table_size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: 'The size of interned string table. Larger
+                              sizes are beneficial to gossip. Defaults to 1000003.
+                              Cass Config Builder: supported for Cassandra 3.11 in
+                              jvm.options. Cass Config Builder: supported for Cassandra
+                              4.0 in jvm-server.options. Corresponds to: -XX:StringTableSize.'
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          vm_use_numa:
+                            description: 'Enabled by default. Cass Config Builder:
+                              supported for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+UseNUMA.'
+                            type: boolean
+                          vm_use_tlab:
+                            description: 'Enable thread-local allocation blocks. Enabled
+                              by default. Cass Config Builder: supported for Cassandra
+                              3.11 in jvm.options. Cass Config Builder: supported
+                              for Cassandra 4.0 in jvm-server.options. Corresponds
+                              to: -XX:+UseTLAB.'
+                            type: boolean
                         type: object
                     type: object
                   datacenters:
@@ -1274,7 +1742,8 @@ spec:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
                                 cdc_raw_directory:
-                                  description: Exists in 3.11, 4.0, trunk
+                                  description: Exists in 3.11, 4.0, trunk TODO mountable
+                                    directory
                                   type: string
                                 cdc_total_space_in_mb:
                                   description: Exists in 3.11, 4.0, trunk
@@ -1317,12 +1786,7 @@ spec:
                                   properties:
                                     subnets:
                                       items:
-                                        properties:
-                                          subnet:
-                                            type: string
-                                        required:
-                                        - subnet
-                                        type: object
+                                        type: string
                                       type: array
                                   required:
                                   - subnets
@@ -1681,12 +2145,7 @@ spec:
                                   properties:
                                     subnets:
                                       items:
-                                        properties:
-                                          subnet:
-                                            type: string
-                                        required:
-                                        - subnet
-                                        type: object
+                                        type: string
                                       type: array
                                   required:
                                   - subnets
@@ -2106,21 +2565,528 @@ spec:
                             jvmOptions:
                               properties:
                                 additionalOptions:
+                                  description: Additional, arbitrary JVM options (advanced).
                                   items:
                                     type: string
                                   type: array
+                                cassandra_available_processors:
+                                  description: 'Available CPU processors. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.available_processors.'
+                                  type: integer
+                                cassandra_disable_auth_caches_remote_configuration:
+                                  description: 'Disable remote configuration via JMX
+                                    of auth caches. Disabled by default. Cass Config
+                                    Builder: supported for Cassandra 3.11 in jvm.options.
+                                    Cass Config Builder: supported for Cassandra 4.0
+                                    in jvm-server.options. Corresponds to: -Dcassandra.disable_auth_caches_remote_configuration.'
+                                  type: boolean
+                                cassandra_expiration_date_overflow_policy:
+                                  description: 'Defines how to handle INSERT requests
+                                    with TTL exceeding the maximum supported expiration
+                                    date. Possible values include `REJECT`, `CAP`,
+                                    `CAP_NOWARN`. Cass Config Builder: supported for
+                                    Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -Dcassandra.expiration_date_overflow_policy.'
+                                  type: string
+                                cassandra_force_3_0_protocol_version:
+                                  description: 'Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -Dcassandra.force_3_0_protocol_version=true.'
+                                  type: boolean
+                                cassandra_force_default_indexing_page_size:
+                                  description: 'Disable dynamic calculation of the
+                                    page size used when indexing an entire partition
+                                    (during initial index build/rebuild). Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.force_default_indexing_page_size.'
+                                  type: boolean
+                                cassandra_max_hint_ttl_seconds:
+                                  description: 'Imposes an upper bound on hint lifetime
+                                    below the normal min gc_grace_seconds. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -Dcassandra.maxHintTTL.'
+                                  type: integer
+                                cassandra_metrics_reporter_config_file:
+                                  description: 'Enable pluggable metrics reporter.
+                                    Disabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.metricsReporterConfigFile.
+                                    TODO mountable directory'
+                                  type: string
+                                cassandra_ring_delay_ms:
+                                  description: 'Amount of time in milliseconds that
+                                    a node waits before joining the ring. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.ring_delay_ms.'
+                                  type: integer
+                                cassandra_triggers_directory:
+                                  description: 'Default location for the trigger JARs.
+                                    Disabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.triggers_dir. TODO
+                                    mountable directory'
+                                  type: string
+                                cassandra_write_survey:
+                                  description: 'For testing new compaction and compression
+                                    strategies. Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -Dcassandra.write_survey.'
+                                  type: boolean
+                                debug_disable_contended_annotations:
+                                  description: 'Disable honoring user code @Contended
+                                    annotations. Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:-RestrictContended.'
+                                  type: boolean
+                                debug_enable_flight_recorder:
+                                  description: 'Enable Flight Recorder (Use in production
+                                    is subject to Oracle licensing). Disabled by default.
+                                    Cass Config Builder: supported for Cassandra 3.11
+                                    in jvm.options. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -XX:+FlightRecorder.'
+                                  type: boolean
+                                debug_listen_remote_debuggers:
+                                  description: 'Listen for JVM remote debuggers on
+                                    port 1414. Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1414".'
+                                  type: boolean
+                                debug_log_compilation:
+                                  description: 'Make Cassandra JVM log internal method
+                                    compilation (developers only). Disabled by default.
+                                    Cass Config Builder: supported for Cassandra 4.0
+                                    in jvm-server.options. Corresponds to: -XX:+LogCompilation.'
+                                  type: boolean
+                                debug_non_safepoints:
+                                  description: 'Whether the compiler should generate
+                                    the necessary metadata for the parts of the code
+                                    not at safe points as well. For use with Flight
+                                    Recorder. Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+DebugNonSafepoints.'
+                                  type: boolean
+                                debug_preserve_frame_pointer:
+                                  description: 'Preserve Frame Pointer. Enabled by
+                                    default. Cass Config Builder: supported for Cassandra
+                                    4.0 in jvm-server.options. Corresponds to: -XX:+PreserveFramePointer.'
+                                  type: boolean
+                                debug_unlock_commercial_features:
+                                  description: 'Unlock commercial features. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+UnlockCommercialFeatures.'
+                                  type: boolean
+                                debug_unlock_diagnostic_vm_options:
+                                  description: 'Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+UnlockDiagnosticVMOptions.'
+                                  type: boolean
+                                gc:
+                                  default: G1GC
+                                  description: 'The name of the garbage collector
+                                    to use. Depending on the Cassandra version, not
+                                    all values are supported: Cassandra 3.11 supports
+                                    only G1GC and CMS; Cassandra 4.0 supports G1GC,
+                                    ZGC, Shenandoah and Graal. This option will unlock
+                                    the corresponding garbage collector with a default
+                                    configuration; to further tune the GC settings,
+                                    use the additional JVM options field. Use the
+                                    special value Custom if you intend to use non-standard
+                                    garbage collectors. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm11-server.options.'
+                                  enum:
+                                  - G1GC
+                                  - CMS
+                                  - ZGC
+                                  - Shenandoah
+                                  - Graal
+                                  - Custom
+                                  type: string
+                                gc_cms_heap_size_young_generation:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Disabled by default. Can only be used
+                                    when CMS garbage collector is used. Cass Config
+                                    Builder: supported for Cassandra 3.11 in jvm.options.
+                                    Corresponds to: -Xmn.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                gc_cms_initiating_occupancy_fraction:
+                                  description: 'Defaults to 75. Can only be used when
+                                    CMS garbage collector is used. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:CMSInitiatingOccupancyFraction.'
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                gc_cms_max_tenuring_threshold:
+                                  description: 'Defaults to 1. Can only be used when
+                                    CMS garbage collector is used. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:MaxTenuringThreshold.'
+                                  type: integer
+                                gc_cms_survivor_ratio:
+                                  description: 'Defaults to 8. Can only be used when
+                                    CMS garbage collector is used. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:SurvivorRatio.'
+                                  type: integer
+                                gc_cms_wait_duration_ms:
+                                  description: 'Defaults to 10000. Can only be used
+                                    when CMS garbage collector is used. Cass Config
+                                    Builder: supported for Cassandra 3.11 in jvm.options.
+                                    Corresponds to: -XX:CMSWaitDuration.'
+                                  type: integer
+                                gc_g1_conc_threads:
+                                  description: 'Concurrent GC Threads. Can only be
+                                    used when G1 garbage collector is used. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm11-server.options.
+                                    Corresponds to: -XX:ConcGCThreads.'
+                                  type: integer
+                                gc_g1_initiating_heap_occupancy_percent:
+                                  description: 'Initiating Heap Occupancy Percentage.
+                                    Can only be used when G1 garbage collector is
+                                    used. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm11-server.options. Corresponds
+                                    to: -XX:InitiatingHeapOccupancyPercent.'
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                gc_g1_max_gc_pause_ms:
+                                  description: 'G1GC Max GC Pause in milliseconds.
+                                    Defaults to 500. Can only be used when G1 garbage
+                                    collector is used. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm11-server.options.
+                                    Corresponds to: -XX:MaxGCPauseMillis.'
+                                  type: integer
+                                gc_g1_parallel_threads:
+                                  description: 'Parallel GC Threads. Can only be used
+                                    when G1 garbage collector is used. Cass Config
+                                    Builder: supported for Cassandra 3.11 in jvm.options.
+                                    Cass Config Builder: supported for Cassandra 4.0
+                                    in jvm11-server.options. Corresponds to: -XX:ParallelGCThreads.'
+                                  type: integer
+                                gc_g1_rset_updating_pause_time_percent:
+                                  description: 'G1GC Updating Pause Time Percentage.
+                                    Defaults to 5. Can only be used when G1 garbage
+                                    collector is used. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm11-server.options.
+                                    Corresponds to: -XX:G1RSetUpdatingPauseTimePercent.'
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                gc_print_application_stopped_time:
+                                  description: 'Print GC Application Stopped Time.
+                                    Disabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:+PrintGCApplicationStoppedTime.'
+                                  type: boolean
+                                gc_print_date_stamps:
+                                  description: 'Print GC Date Stamps. Disabled by
+                                    default. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Corresponds to: -XX:+PrintGCDateStamps.'
+                                  type: boolean
+                                gc_print_details:
+                                  description: 'Print GC details. Disabled by default.
+                                    Cass Config Builder: supported for Cassandra 3.11
+                                    in jvm.options. Corresponds to: -XX:+PrintGCDetails.'
+                                  type: boolean
+                                gc_print_flss_statistics:
+                                  description: 'Print FLSS Statistics. Disabled by
+                                    default. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Corresponds to: -XX:PrintFLSStatistics=1.'
+                                  type: boolean
+                                gc_print_heap:
+                                  description: 'Print Heap at GC. Disabled by default.
+                                    Cass Config Builder: supported for Cassandra 3.11
+                                    in jvm.options. Corresponds to: -XX:+PrintHeapAtGC.'
+                                  type: boolean
+                                gc_print_log_file_size:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Size of each log file. Disabled by
+                                    default. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Corresponds to: -XX:GCLogFileSize.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                gc_print_number_of_log_files:
+                                  description: 'Number of GC log files. Disabled by
+                                    default. Can only be used when the G1 garbage
+                                    collector is used. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:NumberOfGCLogFiles.'
+                                  type: integer
+                                gc_print_promotion_failure:
+                                  description: 'Print promotion failure. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Corresponds to:
+                                    -XX:+PrintPromotionFailure.'
+                                  type: boolean
+                                gc_print_tenuring_distribution:
+                                  description: 'Print tenuring distribution. Defaults
+                                    to false. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Corresponds to: -XX:+PrintTenuringDistribution.'
+                                  type: boolean
+                                gc_print_use_log_file:
+                                  description: 'Whether to print GC logs to /var/log/cassandra/gc.log.
+                                    Disabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -Xloggc:/var/log/cassandra/gc.log.'
+                                  type: boolean
+                                gc_print_use_log_file_rotation:
+                                  description: 'Use GC Log File Rotation. Disabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Corresponds to:
+                                    -XX:+UseGCLogFileRotation.'
+                                  type: boolean
+                                heap_initial_size:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -Xms.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                heap_max_size:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -Xmx.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
                                 heapNewGenSize:
                                   anyOf:
                                   - type: integer
                                   - type: string
+                                  description: Deprecated. Use gc_cms_heap_size_young_generation
+                                    instead. Valid for CMS garbage collector only
+                                    + Cassandra 3.11.
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 heapSize:
                                   anyOf:
                                   - type: integer
                                   - type: string
+                                  description: Deprecated. Use heap_initial_size and
+                                    heap_max_size instead. If this field is defined,
+                                    it applies to both max_heap_size and initial_heap_size.
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
+                                jdk_allow_attach_self:
+                                  description: 'Allow the current VM to attach to
+                                    itself. Defaults to true. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm11-server.options.
+                                    Corresponds to: -Djdk.attach.allowAttachSelf=true.'
+                                  type: boolean
+                                jmx_connection_type:
+                                  description: 'Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Possible values for 3.11 include `local-no-auth`,
+                                    `remote-no-auth`, and `remote-dse-unified-auth`.
+                                    Defaults to `local-no-auth`. Possible values for
+                                    4.0 include `local-no-auth`, `remote-no-auth`.
+                                    Defaults to `local-no-auth`.'
+                                  type: string
+                                jmx_port:
+                                  description: 'Disabled by default. Defaults to 7199.
+                                    TODO Make Reaper aware of the JMX port if a non-default
+                                    port is used. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.'
+                                  type: integer
+                                jmx_remote_ssl:
+                                  description: 'Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Defaults to false. Valid only when JmxConnectionType
+                                    is "remote-no-auth", "remote-dse-unified-auth".'
+                                  type: boolean
+                                jmx_remote_ssl_opts:
+                                  description: 'Remote SSL options. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options.'
+                                  type: string
+                                jmx_remote_ssl_require_client_auth:
+                                  description: 'Require Client Authentication for
+                                    remote SSL? Defaults to false. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.'
+                                  type: boolean
+                                netty_eventloop_maxpendingtasks:
+                                  description: 'Defaults to 65536. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dio.netty.eventLoop.maxPendingTasks.'
+                                  type: integer
+                                netty_try_reflection_set_accessible:
+                                  description: 'Netty setting `io.netty.tryReflectionSetAccessible`.
+                                    Defaults to true. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm11-server.options. Corresponds
+                                    to: -Dio.netty.tryReflectionSetAccessible=true.'
+                                  type: boolean
+                                nio_align_direct_memory:
+                                  description: 'Align direct memory allocations on
+                                    page boundaries. Enabled by default. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dsun.nio.PageAlignDirectMemory=true.'
+                                  type: boolean
+                                nio_maxcachedbuffersize:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Defaults to 1048576. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Djdk.nio.maxCachedBufferSize.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                vm_always_pre_touch:
+                                  description: 'Ensure all memory is faulted and zeroed
+                                    on startup. Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -XX:+AlwaysPreTouch.'
+                                  type: boolean
+                                vm_crash_on_out_of_memory_error:
+                                  description: 'Disabled by default. Requires `exit_on_out_of_memory_error`
+                                    to be disabled.. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -XX:+CrashOnOutOfMemoryError.'
+                                  type: boolean
+                                vm_disable_biased_locking:
+                                  description: 'Disable biased locking to avoid biased
+                                    lock revocation pauses. Disabled by default. Cass
+                                    Config Builder: supported for Cassandra 3.11 in
+                                    jvm.options. Cass Config Builder: supported for
+                                    Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -XX:-UseBiasedLocking. Note: the Cass Config
+                                    Builder option is named use_biased_locking, but
+                                    setting it to true disables biased locking.'
+                                  type: boolean
+                                vm_disable_perf_shared_mem:
+                                  description: 'Disable hsperfdata mmap''ed file.
+                                    Enabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+PerfDisableSharedMem.'
+                                  type: boolean
+                                vm_enable_assertions:
+                                  description: 'Enable assertions. Enabled by default.
+                                    Cass Config Builder: supported for Cassandra 3.11
+                                    in jvm.options. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -ea.'
+                                  type: boolean
+                                vm_enable_non_root_thread_priority:
+                                  description: 'Enable lowering thread priority without
+                                    being root on linux. See CASSANDRA-1181 for details.
+                                    Enabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Corresponds
+                                    to: -XX:ThreadPriorityPolicy=42.'
+                                  type: boolean
+                                vm_enable_thread_priorities:
+                                  description: 'Enable thread priorities. Enabled
+                                    by default. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+UseThreadPriorities.'
+                                  type: boolean
+                                vm_exit_on_out_of_memory_error:
+                                  description: 'Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+ExitOnOutOfMemoryError.'
+                                  type: boolean
+                                vm_guaranteed_safepoint_interval_ms:
+                                  description: 'Defaults to 300000 milliseconds. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -XX:GuaranteedSafepointInterval.'
+                                  type: integer
+                                vm_heap_dump_on_out_of_memory_error:
+                                  description: 'Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -XX:+HeapDumpOnOutOfMemoryError.'
+                                  type: boolean
+                                vm_per_thread_stack_size:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'Per-thread stack size. Defaults to
+                                    256Ki. Cass Config Builder: supported for Cassandra
+                                    3.11 in jvm.options. Cass Config Builder: supported
+                                    for Cassandra 4.0 in jvm-server.options. Corresponds
+                                    to: -Xss.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                vm_prefer_ipv4:
+                                  description: 'Prefer binding to IPv4 network interfaces.
+                                    Enabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Djava.net.preferIPv4Stack=true.'
+                                  type: boolean
+                                vm_print_heap_histogram_on_out_of_memory_error:
+                                  description: 'Disabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -Dcassandra.printHeapHistogramOnOutOfMemoryError.'
+                                  type: boolean
+                                vm_resize_tlab:
+                                  description: 'Allow resizing of thread-local allocation
+                                    blocks. Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 3.11 in jvm.options. Cass
+                                    Config Builder: supported for Cassandra 4.0 in
+                                    jvm-server.options. Corresponds to: -XX:+ResizeTLAB.'
+                                  type: boolean
+                                vm_string_table_size:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: 'The size of interned string table.
+                                    Larger sizes are beneficial to gossip. Defaults
+                                    to 1000003. Cass Config Builder: supported for
+                                    Cassandra 3.11 in jvm.options. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:StringTableSize.'
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                vm_use_numa:
+                                  description: 'Enabled by default. Cass Config Builder:
+                                    supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+UseNUMA.'
+                                  type: boolean
+                                vm_use_tlab:
+                                  description: 'Enable thread-local allocation blocks.
+                                    Enabled by default. Cass Config Builder: supported
+                                    for Cassandra 3.11 in jvm.options. Cass Config
+                                    Builder: supported for Cassandra 4.0 in jvm-server.options.
+                                    Corresponds to: -XX:+UseTLAB.'
+                                  type: boolean
                               type: object
                           type: object
                         jmxInitContainerImage:

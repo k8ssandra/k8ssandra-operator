@@ -66,7 +66,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// unauthenticated clusters.
 		cassandra.ApplySystemReplication(dcConfig, systemReplication)
 
-		if !cassandra.IsCassandra3(dcConfig.ServerVersion) && kc.HasStargates() {
+		if dcConfig.ServerVersion.Major() != 3 && kc.HasStargates() {
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
