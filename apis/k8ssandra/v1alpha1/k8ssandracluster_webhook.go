@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
@@ -113,25 +114,28 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 
 	oldCassConfig := oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
+
 	// If num_tokens was set previously, do not allow modifying the value or leaving it out
-	if oldCassConfig != nil {
-		if oldCassConfig.CassandraYaml.NumTokens != nil {
-			// Changing num_tokens is not allowed
-			if newCassConfig == nil {
-				return ErrNumTokens
-			} else if newCassConfig.CassandraYaml.NumTokens != oldCassConfig.CassandraYaml.NumTokens {
-				return ErrNumTokens
-			}
+	if !utils.IsNil(oldCassConfig) && !utils.IsNil(oldCassConfig.CassandraYaml) &&
+		!utils.IsNil(oldCassConfig.CassandraYaml.NumTokens) {
+
+		// Changing num_tokens is not allowed
+		if utils.IsNil(newCassConfig) || utils.IsNil(newCassConfig.CassandraYaml) ||
+			utils.IsNil(newCassConfig.CassandraYaml.NumTokens) {
+			return ErrNumTokens
+		} else if *(newCassConfig.CassandraYaml.NumTokens) != *(oldCassConfig.CassandraYaml.NumTokens) {
+			return ErrNumTokens
 		}
 	}
+
 	// If num_tokens was unset previously, do not allow setting it now
-	if newCassConfig != nil {
-		if newCassConfig.CassandraYaml.NumTokens != nil {
-			if oldCassConfig == nil {
-				return ErrNumTokens
-			} else if oldCassConfig.CassandraYaml.NumTokens == nil {
-				return ErrNumTokens
-			}
+	if !utils.IsNil(newCassConfig) && !utils.IsNil(newCassConfig.CassandraYaml) &&
+		!utils.IsNil(newCassConfig.CassandraYaml.NumTokens) {
+
+		// Old num_tokens wasn't specified
+		if utils.IsNil(oldCassConfig) || utils.IsNil(oldCassConfig.CassandraYaml) ||
+			utils.IsNil(oldCassConfig.CassandraYaml.NumTokens) {
+			return ErrNumTokens
 		}
 	}
 

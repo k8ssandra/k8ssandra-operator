@@ -36,7 +36,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -45,14 +44,13 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 )
 
-var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
 func TestWebhook(t *testing.T) {
-	require := require.New(t)
+	required := require.New(t)
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	logrusLog := logrus.New()
@@ -68,33 +66,38 @@ func TestWebhook(t *testing.T) {
 	}
 
 	cfg, err := testEnv.Start()
-	require.NoError(err)
-	require.NotNil(cfg)
+	required.NoError(err)
+	required.NotNil(cfg)
 
 	defer cancel()
-	defer testEnv.Stop()
+	defer func(testEnv *envtest.Environment) {
+		err := testEnv.Stop()
+		if err != nil {
+			log.Error(err, "failure to stop test environment")
+		}
+	}(testEnv)
 
 	scheme := runtime.NewScheme()
 	err = AddToScheme(scheme)
-	require.NoError(err)
+	required.NoError(err)
 
 	err = corev1.AddToScheme(scheme)
-	require.NoError(err)
+	required.NoError(err)
 
 	err = admissionv1.AddToScheme(scheme)
-	require.NoError(err)
+	required.NoError(err)
 
 	err = AddToScheme(scheme)
-	require.NoError(err)
+	required.NoError(err)
 
 	err = reaperapi.AddToScheme(scheme)
-	require.NoError(err)
+	required.NoError(err)
 
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
-	require.NoError(err)
-	require.NotNil(k8sClient)
+	required.NoError(err)
+	required.NotNil(k8sClient)
 
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
@@ -106,29 +109,32 @@ func TestWebhook(t *testing.T) {
 		LeaderElection:     false,
 		MetricsBindAddress: "0",
 	})
-	require.NoError(err)
+	required.NoError(err)
 
 	clientCache := clientcache.New(k8sClient, k8sClient, scheme)
 	clientCache.AddClient("envtest", k8sClient)
 	err = (&K8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache)
-	require.NoError(err)
+	required.NoError(err)
 
 	//+kubebuilder:scaffold:webhook
 
 	go func() {
 		err = mgr.Start(ctx)
-		require.NoError(err)
+		required.NoError(err)
 	}()
 
 	// wait for the webhook server to get ready
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
-	require.Eventually(func() bool {
+	required.Eventually(func() bool {
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
 			return false
 		}
-		conn.Close()
+		closeErr := conn.Close()
+		if closeErr != nil {
+			log.Error(closeErr, "failed to close connection")
+		}
 		return true
 	}, 2*time.Second, 300*time.Millisecond)
 
@@ -139,22 +145,22 @@ func TestWebhook(t *testing.T) {
 }
 
 func testContextValidation(t *testing.T) {
-	require := require.New(t)
-	createNamespace(require, "create-namespace")
+	required := require.New(t)
+	createNamespace(required, "create-namespace")
 	cluster := createMinimalClusterObj("create-test", "create-namespace")
 
 	err := k8sClient.Create(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
 	// Verify incorrect K8sContext is not allowed
 	cluster.Spec.Cassandra.Datacenters[0].K8sContext = "wrong"
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 }
 
 func testReaperKeyspaceValidation(t *testing.T) {
-	require := require.New(t)
-	createNamespace(require, "update-namespace")
+	required := require.New(t)
+	createNamespace(required, "update-namespace")
 	cluster := createMinimalClusterObj("update-test", "update-namespace")
 
 	cluster.Spec.Reaper = &reaperapi.ReaperClusterTemplate{
@@ -164,30 +170,30 @@ func testReaperKeyspaceValidation(t *testing.T) {
 	}
 
 	err := k8sClient.Create(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
 	cluster.Spec.Reaper.ReaperTemplate.Keyspace = "modified"
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 }
 
 func testStorageConfigValidation(t *testing.T) {
-	require := require.New(t)
-	createNamespace(require, "storage-namespace")
+	required := require.New(t)
+	createNamespace(required, "storage-namespace")
 	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
 
 	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
 	err := k8sClient.Create(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 
 	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Create(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
 	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
 	cluster.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
 	cluster.Spec.Cassandra.Datacenters = append(cluster.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
 		K8sContext: "envtest",
@@ -195,44 +201,121 @@ func testStorageConfigValidation(t *testing.T) {
 	})
 
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 
 	cluster.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 }
 
 func testNumTokens(t *testing.T) {
-	require := require.New(t)
-	createNamespace(require, "numtokens-namespace")
+	required := require.New(t)
+
+	createNamespace(required, "numtokens-namespace")
 	cluster := createMinimalClusterObj("numtokens-test", "numtokens-namespace")
 
 	// Create without token definition
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
-	tokens := int(256)
+	tokens := 256
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &tokens
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 
 	err = k8sClient.Delete(context.TODO(), cluster)
-	require.NoError(err)
+	required.NoError(err)
 
 	// Recreate with tokens
 	cluster.ResourceVersion = ""
 	err = k8sClient.Create(ctx, cluster)
-	require.NoError(err)
+	required.NoError(err)
 
-	newTokens := int(16)
+	newTokens := 16
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &newTokens
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
 
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = nil
 	err = k8sClient.Update(ctx, cluster)
-	require.Error(err)
+	required.Error(err)
+
+	// Num_token update validations
+	tokens = 11
+	newTokens = 22
+
+	oldCluster := createClusterObjWithCassandraConfig("numtokens-test-1", "numtokens-namespace-1")
+	newCluster := createClusterObjWithCassandraConfig("numtokens-test-2", "numtokens-namespace-2")
+
+	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = nil
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &newTokens
+
+	var oldCassConfig = oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	var newCassConfig = newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+
+	// Handle new num_token value different from previously specified as nil
+	required.NotEqual(oldCassConfig.CassandraYaml.NumTokens, newCassConfig.CassandraYaml.NumTokens)
+	var errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified as nil")
+
+	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &tokens
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &newTokens
+
+	oldCassConfig = oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	newCassConfig = newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+
+	// Handle new num_token value different from previously specified as an actual value
+	required.NotEqual(oldCassConfig.CassandraYaml.NumTokens, newCassConfig.CassandraYaml.NumTokens)
+	errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified")
+
+	// Handle new num_token not specified when previously specified
+	oldCassConfig.CassandraYaml.NumTokens = &tokens
+	newCassConfig.CassandraYaml.NumTokens = nil
+
+	var errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
+
+	oldCassConfig.CassandraYaml.NumTokens = &tokens
+	newCassConfig.CassandraYaml = CassandraYaml{}
+
+	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
+
+	oldCassConfig.CassandraYaml.NumTokens = &tokens
+	newCassConfig = &CassandraConfig{}
+	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
+
+	oldCassConfig.CassandraYaml.NumTokens = &tokens
+	newCassConfig = &CassandraConfig{}
+	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
+
+	// Expected to be able to update without token change, however changes to other config values are made
+	sameNumTokens := 8675309
+	diffNumTokens := 42
+	intervalInMins := 9035768
+	enabled := true
+
+	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &sameNumTokens
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &sameNumTokens
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.CdcEnabled = &enabled
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.IndexSummaryResizeIntervalInMinutes = &intervalInMins
+
+	errorOnValidate := (*newCluster).ValidateUpdate(oldCluster)
+	required.NoError(errorOnValidate)
+
+	// Expected failure for validation with token change while changes to other config values are being made
+	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &sameNumTokens
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.NumTokens = &diffNumTokens
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.CdcEnabled = &enabled
+	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml.IndexSummaryResizeIntervalInMinutes = &intervalInMins
+
+	errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
+	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
+
 }
 
 func createNamespace(require *require.Assertions, namespace string) {
@@ -243,6 +326,32 @@ func createNamespace(require *require.Assertions, namespace string) {
 	}
 	err := k8sClient.Create(ctx, ns)
 	require.NoError(err)
+}
+
+func createClusterObjWithCassandraConfig(name, namespace string) *K8ssandraCluster {
+	return &K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: K8ssandraClusterSpec{
+			Cassandra: &CassandraClusterTemplate{
+				DatacenterOptions: DatacenterOptions{
+					CassandraConfig: &CassandraConfig{
+						CassandraYaml: CassandraYaml{NumTokens: nil},
+					},
+					StorageConfig: &v1beta1.StorageConfig{},
+				},
+
+				Datacenters: []CassandraDatacenterTemplate{
+					{
+						K8sContext: "envtest",
+						Size:       1,
+					},
+				},
+			},
+		},
+	}
 }
 
 func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
