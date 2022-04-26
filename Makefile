@@ -464,18 +464,7 @@ gke-e2e-test:
      -kubeconfigFile=$(HOME)/.kube/config \
      -controlPlane=k8ssandra-ci-us-east \
      -dataPlanes=k8ssandra-ci-us-east,k8ssandra-ci-us-north \
-     -ingressConfigs='{ \
-       \"k8ssandra-ci-us-east\":{ \
-         \"stargate_rest\":\"stargate.$(GKE_US_EAST_IP).nip.io:8080\", \
-         \"stargate_cql\" :\"stargate.$(GKE_US_EAST_IP).nip.io:9042\", \
-         \"reaper_rest\"  :  \"reaper.$(GKE_US_EAST_IP).nip.io:8080\" \
-       }, \
-       \"k8ssandra-ci-us-north\":{ \
-         \"stargate_rest\":\"stargate.$(GKE_US_NORTH_IP).nip.io:8080\", \
-         \"stargate_cql\" :\"stargate.$(GKE_US_NORTH_IP).nip.io:9042\", \
-         \"reaper_rest\"  :  \"reaper.$(GKE_US_NORTH_IP).nip.io:8080\" \
-       } \
-     }' \
+     -externalIPs=$(GKE_US_EAST_IP),$(GKE_US_NORTH_IP) \
      -zoneMappings='{ \
        \"region1-zone1\" : \"us-east1-b\", \
        \"region1-zone2\" : \"us-east1-c\", \
