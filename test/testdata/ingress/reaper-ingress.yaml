@@ -2,7 +2,7 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: test-dc1-reaper-service-http-ingress
+  name: cluster1-dc1-reaper-service-http-ingress
   namespace: k8ssandra
 spec:
   entryPoints:
@@ -11,5 +11,5 @@ spec:
     - match: Host(`reaper.example.com`)
       kind: Rule
       services:
-        - name: test-dc1-reaper-service
+        - name: cluster1-dc1-reaper-service
           port: 8080

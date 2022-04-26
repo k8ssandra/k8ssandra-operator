@@ -115,7 +115,7 @@ patches:
     group: traefik.containo.us
     version: v1alpha1
     kind: IngressRoute
-    name: test-dc1-stargate-service-http-ingress
+    name: cluster1-dc1-stargate-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
@@ -124,7 +124,7 @@ patches:
     group: traefik.containo.us
     version: v1alpha1
     kind: IngressRouteTCP
-    name: test-dc1-stargate-service-native-ingress
+    name: cluster1-dc1-stargate-service-native-ingress
   patch: |-
     - op: replace
       path: /metadata/name
@@ -179,7 +179,7 @@ patches:
     group: traefik.containo.us
     version: v1alpha1
     kind: IngressRoute
-    name: test-dc1-reaper-service-http-ingress
+    name: cluster1-dc1-reaper-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
