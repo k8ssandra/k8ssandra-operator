@@ -470,9 +470,9 @@ func processFlags(t *testing.T) {
 	if *externalIPsFlag == "" {
 		for i, name := range dataPlanes {
 			ingressConfigs[name] = ingressConfig{
-				StargateRest: framework.HostAndPort(fmt.Sprintf("stargate.120.0.0.1.nip.io:3%v080", i)),
-				StargateCql:  framework.HostAndPort(fmt.Sprintf("stargate.120.0.0.1.nip.io:3%v942", i)),
-				ReaperRest:   framework.HostAndPort(fmt.Sprintf("reaper.120.0.0.1.nip.io:3%v080", i)),
+				StargateRest: framework.HostAndPort(fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v080", i)),
+				StargateCql:  framework.HostAndPort(fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", i)),
+				ReaperRest:   framework.HostAndPort(fmt.Sprintf("reaper.127.0.0.1.nip.io:3%v080", i)),
 			}
 		}
 	} else {
