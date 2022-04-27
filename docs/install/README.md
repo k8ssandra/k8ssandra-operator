@@ -405,7 +405,7 @@ helm search repo k8ssandra-operator
 
 ```console
 NAME                               	CHART VERSION	APP VERSION	DESCRIPTION
-k8ssandra/k8ssandra-operator       	0.32.0       	1.0.0      	Kubernetes operator which handles the provision...
+k8ssandra/k8ssandra-operator       	0.32.0       	1.0.2      	Kubernetes operator which handles the provision...
 ```
 
 ### Single Cluster 
@@ -443,7 +443,7 @@ helm ls -n k8ssandra-operator
 
 ```console
 NAME              	NAMESPACE         	REVISION	UPDATED                             	STATUS  	CHART                    	APP VERSION
-k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.0
+k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.2
 ```
 
 Verify that the following CRDs are installed:
@@ -627,7 +627,7 @@ helm ls -n k8ssandra-operator
 
 ```console
 NAME              	NAMESPACE         	REVISION	UPDATED                             	STATUS  	CHART                    	APP VERSION
-k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.0
+k8ssandra-operator	k8ssandra-operator	1       	2021-09-30 16:28:08.722822 -0400 EDT	deployed	k8ssandra-operator-0.32.0	1.0.2
 ```
 
 Verify that the following CRDs are installed:
@@ -841,7 +841,7 @@ on Docker Hub for a list of available images.
 Install with kubectl:
 
 ```console
-kubectl apply -k github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane
+kustomize build github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane\?ref\=v1.0.2 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -861,21 +861,18 @@ cat <<EOF >$K8SSANDRA_OPERATOR_HOME/kustomization.yaml
 namespace: k8ssandra-operator
 
 resources:
-- github.com/k8ssandra/k8ssandra-operator/config/deployments/default?ref=main
-
-components:
-- github.com/k8ssandra/k8ssandra-operator/config/components/namespace
+- github.com/k8ssandra/k8ssandra-operator/config/deployments/default?ref=v1.0.2
 
 images:
 - name: k8ssandra/k8ssandra-operator
-  newTag: v1.0.0-alpha.1
+  newTag: v1.0.2
 EOF
 ```
 
 Now install the operator:
 
 ```console
-kubectl apply -k $K8SSANDRA_OPERATOR_HOME
+kustomize build $K8SSANDRA_OPERATOR_HOME | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -913,7 +910,7 @@ k8ssandra-operator   1/1     1            1           2m
 Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`:
 
 ```console
-kubectl -n k8ssandra-operator get deployment k8ssandra-operator-k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
+kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
 #### Deploy a K8ssandraCluster
@@ -1083,7 +1080,7 @@ kubectx kind-k8ssandra-0
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/control-plane
+kustomize build github.com/k8ssandra/config/deployments/control-plane\?ref\=v1.0.2 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
@@ -1134,7 +1131,7 @@ kubectx kind-k8ssandra-1
 Now install the operator:
 
 ```console
-kubectl apply -k github.com/k8ssandra/config/deployments/data-plane
+kustomize build github.com/k8ssandra/config/deployments/data-plane\?ref\=v1.0.2 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 This installs the operator in the `k8ssandra-operator` namespace.
