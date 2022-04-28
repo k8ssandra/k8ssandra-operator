@@ -50,9 +50,7 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			},
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
 				Telemetry: &telemetryapi.TelemetrySpec{
-					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled: true,
-					},
+					Prometheus: &telemetryapi.PrometheusTelemetrySpec{},
 				},
 			},
 		},

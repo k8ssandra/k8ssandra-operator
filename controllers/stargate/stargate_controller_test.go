@@ -117,9 +117,7 @@ func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient 
 					Size: 1,
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
-							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
-							},
+							Prometheus: &telemetryapi.PrometheusTelemetrySpec{},
 						},
 					},
 				},
@@ -573,9 +571,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 					Size: 1,
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
-							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
-							},
+							Prometheus: &telemetryapi.PrometheusTelemetrySpec{},
 						},
 					},
 				},

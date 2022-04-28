@@ -6133,9 +6133,10 @@ spec:
                                               to all serviceMonitors created.
                                             type: object
                                           enabled:
+                                            default: true
                                             description: Enable the creation of Prometheus
                                               serviceMonitors for this resource (Cassandra
-                                              or Stargate).
+                                              or Stargate). True by default.
                                             type: boolean
                                         type: object
                                     type: object
@@ -6408,9 +6409,10 @@ spec:
                                         serviceMonitors created.
                                       type: object
                                     enabled:
+                                      default: true
                                       description: Enable the creation of Prometheus
                                         serviceMonitors for this resource (Cassandra
-                                        or Stargate).
+                                        or Stargate). True by default.
                                       type: boolean
                                   type: object
                               type: object
@@ -6891,8 +6893,10 @@ spec:
                                     created.
                                   type: object
                                 enabled:
+                                  default: true
                                   description: Enable the creation of Prometheus serviceMonitors
-                                    for this resource (Cassandra or Stargate).
+                                    for this resource (Cassandra or Stargate). True
+                                    by default.
                                   type: boolean
                               type: object
                           type: object
@@ -7509,8 +7513,9 @@ spec:
                               created.
                             type: object
                           enabled:
+                            default: true
                             description: Enable the creation of Prometheus serviceMonitors
-                              for this resource (Cassandra or Stargate).
+                              for this resource (Cassandra or Stargate). True by default.
                             type: boolean
                         type: object
                     type: object
@@ -11149,8 +11154,9 @@ spec:
                               created.
                             type: object
                           enabled:
+                            default: true
                             description: Enable the creation of Prometheus serviceMonitors
-                              for this resource (Cassandra or Stargate).
+                              for this resource (Cassandra or Stargate). True by default.
                             type: boolean
                         type: object
                     type: object

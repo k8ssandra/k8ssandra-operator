@@ -34,9 +34,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	// Resources to create
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
-		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: true,
-		},
+		Prometheus: &telemetryapi.PrometheusTelemetrySpec{},
 	}
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   stargate.Namespace,
