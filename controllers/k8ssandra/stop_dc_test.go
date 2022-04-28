@@ -2,6 +2,8 @@ package k8ssandra
 
 import (
 	"context"
+	"testing"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -18,7 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 // stopDc tests scenarios that involve stopping a CassandraDatacenter.
@@ -53,9 +54,11 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
-				ServerVersion: "4.0.1",
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.1",
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
+					},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}, K8sContext: f.DataPlaneContexts[0], Size: 3},

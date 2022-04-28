@@ -31,9 +31,11 @@ func testMedusaIniFull(t *testing.T) {
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    "k8sCtx0",
-						Size:          3,
-						ServerVersion: "3.11.10",
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+						},
 					},
 				},
 			},
@@ -95,9 +97,11 @@ func testMedusaIniNoPrefix(t *testing.T) {
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    "k8sCtx0",
-						Size:          3,
-						ServerVersion: "3.11.10",
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+						},
 					},
 				},
 			},
@@ -157,9 +161,11 @@ func testMedusaIniSecured(t *testing.T) {
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    "k8sCtx0",
-						Size:          3,
-						ServerVersion: "3.11.10",
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+						},
 					},
 				},
 			},
@@ -219,9 +225,11 @@ func testMedusaIniUnsecured(t *testing.T) {
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    "k8sCtx0",
-						Size:          3,
-						ServerVersion: "3.11.10",
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+						},
 					},
 				},
 			},
@@ -281,9 +289,11 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    "k8sCtx0",
-						Size:          3,
-						ServerVersion: "3.11.10",
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+						},
 					},
 				},
 			},

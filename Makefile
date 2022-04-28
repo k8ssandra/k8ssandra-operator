@@ -40,7 +40,7 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+# Create Kubernetes objects with embeddedObjectMeta
 CRD_OPTIONS ?= "crd"
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.

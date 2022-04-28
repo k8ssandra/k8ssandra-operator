@@ -36,12 +36,14 @@ func testInPlaceRestore(t *testing.T, ctx context.Context, f *framework.Framewor
 						Meta: k8ss.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       3,
+						DatacenterOptions: k8ss.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},

@@ -24,17 +24,19 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 		},
 		Spec: k8ssandraapi.K8ssandraClusterSpec{
 			Cassandra: &k8ssandraapi.CassandraClusterTemplate{
-				ServerVersion:   "4.0.0",
-				CassandraConfig: nil,
-				StorageConfig: &cassdcapi.StorageConfig{
-					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
+				DatacenterOptions: k8ssandraapi.DatacenterOptions{
+					ServerVersion:   "4.0.0",
+					CassandraConfig: nil,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							AccessModes: []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceStorage: resource.MustParse("1Gi"),
+								},
 							},
+							StorageClassName: &storageClassName,
 						},
-						StorageClassName: &storageClassName,
 					},
 				},
 			},

@@ -32,12 +32,14 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
 						},
-						K8sContext:    f.DataPlaneContexts[0],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},
@@ -45,12 +47,14 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext:    f.DataPlaneContexts[1],
-						Size:          3,
-						ServerVersion: "3.11.10",
-						StorageConfig: &cassdcapi.StorageConfig{
-							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-								StorageClassName: &defaultStorageClass,
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
 							},
 						},
 					},

@@ -2,6 +2,8 @@ package k8ssandra
 
 import (
 	"context"
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -17,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 // createSingleDcClusterNoAuth verifies that it is possible to create an unauthenticated cluster with one DC and with
@@ -32,13 +33,15 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 			Auth: pointer.BoolPtr(false),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
-					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
-					K8sContext:    f.DataPlaneContexts[1],
-					Size:          1,
-					ServerVersion: "3.11.10",
-					StorageConfig: &cassdcapi.StorageConfig{
-						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-							StorageClassName: &defaultStorageClass,
+					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
+					K8sContext: f.DataPlaneContexts[1],
+					Size:       1,
+					DatacenterOptions: api.DatacenterOptions{
+						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
 						},
 					},
 				}},
@@ -150,13 +153,15 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 			Auth: pointer.BoolPtr(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
-					Meta:          api.EmbeddedObjectMeta{Name: "dc1"},
-					K8sContext:    f.DataPlaneContexts[1],
-					Size:          1,
-					ServerVersion: "3.11.10",
-					StorageConfig: &cassdcapi.StorageConfig{
-						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-							StorageClassName: &defaultStorageClass,
+					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
+					K8sContext: f.DataPlaneContexts[1],
+					Size:       1,
+					DatacenterOptions: api.DatacenterOptions{
+						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
 						},
 					},
 				}},
