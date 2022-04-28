@@ -227,6 +227,9 @@ func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.Cassa
 			if j > destRack.Size {
 				return nil, errors.New(fmt.Sprintf("number of nodes in source rack %s greater than number of nodes in dest rack %s", sourceRack.Location.Rack, destRack.Location.Rack))
 			}
+			if destRack.Location.DC != sourceRack.Location.DC {
+				return nil, errors.New(fmt.Sprintf("DCs do not match in source rack %s and dest rack %s", sourceRack.Location.DC, destRack.Location.DC))
+			}
 			out = append(out,
 				HostMapping{
 					Source: sourceNode,
