@@ -58,7 +58,7 @@ func TestGetSourceRacksIPs(t *testing.T) {
 	ctx := context.Background()
 	sourceRacks, err := getSourceRacksIPs(*medusaBackup, mockgRPCClient, ctx)
 	assert.NoError(t, err, err)
-	expectedSourceRacks := map[NodeLocation][]HostDNSOrIP{
+	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "test-rack1", DC: "test-dc2"}: {"192.168.1.5"},
 		{Rack: "test-rack2", DC: "test-dc2"}: {"192.168.1.6"},
 		{Rack: "test-rack3", DC: "test-dc2"}: {"192.168.1.7"},
@@ -79,8 +79,8 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 	}
 	result, err := getTargetRackFQDNs(kluster, "test-dc2")
 	assert.NoError(t, err, err)
-	expectedSourceRacks := map[NodeLocation][]HostName{
-		{Rack: "default", DC: "test-dc2"}: {HostName("test-cluster-test-dc2-default-sts-0"), HostName("test-cluster-test-dc2-default-sts-1"), HostName("test-cluster-test-dc2-default-sts-2")},
+	expectedSourceRacks := map[NodeLocation][]string{
+		{Rack: "default", DC: "test-dc2"}: {"test-cluster-test-dc2-default-sts-0", "test-cluster-test-dc2-default-sts-1", "test-cluster-test-dc2-default-sts-2"},
 	}
 	assert.Equal(t, expectedSourceRacks, result)
 	kluster.Spec.Cassandra.Racks = []cassdcapi.Rack{
@@ -88,10 +88,10 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 		{Name: "rack2"},
 		{Name: "rack3"},
 	}
-	expectedSourceRacks = map[NodeLocation][]HostName{
-		{Rack: "rack1", DC: "test-dc2"}: {HostName("test-cluster-test-dc2-rack1-sts-0")},
-		{Rack: "rack2", DC: "test-dc2"}: {HostName("test-cluster-test-dc2-rack2-sts-0")},
-		{Rack: "rack3", DC: "test-dc2"}: {HostName("test-cluster-test-dc2-rack3-sts-0")},
+	expectedSourceRacks = map[NodeLocation][]string{
+		{Rack: "rack1", DC: "test-dc2"}: {"test-cluster-test-dc2-rack1-sts-0"},
+		{Rack: "rack2", DC: "test-dc2"}: {"test-cluster-test-dc2-rack2-sts-0"},
+		{Rack: "rack3", DC: "test-dc2"}: {"test-cluster-test-dc2-rack3-sts-0"},
 	}
 	result, err = getTargetRackFQDNs(kluster, "test-dc2")
 	assert.NoError(t, err, err)
@@ -120,15 +120,15 @@ func TestGetHostMap(t *testing.T) {
 	expected := HostMappingSlice{
 		{
 			Source: "192.168.1.2",
-			Target: HostName("test-cluster-test-dc1-default-sts-0"),
+			Target: "test-cluster-test-dc1-default-sts-0",
 		},
 		{
 			Source: "192.168.1.3",
-			Target: HostName("test-cluster-test-dc1-default-sts-1"),
+			Target: "test-cluster-test-dc1-default-sts-1",
 		},
 		{
 			Source: "192.168.1.4",
-			Target: HostName("test-cluster-test-dc1-default-sts-2"),
+			Target: "test-cluster-test-dc1-default-sts-2",
 		},
 	}
 	assert.Equal(t, expected, result)
@@ -144,15 +144,15 @@ func TestGetHostMap(t *testing.T) {
 	expected = HostMappingSlice{
 		{
 			Source: "192.168.1.5",
-			Target: HostName("test-cluster-test-dc2-rack1-sts-0"),
+			Target: "test-cluster-test-dc2-rack1-sts-0",
 		},
 		{
 			Source: "192.168.1.6",
-			Target: HostName("test-cluster-test-dc2-rack2-sts-1"),
+			Target: "test-cluster-test-dc2-rack2-sts-1",
 		},
 		{
 			Source: "192.168.1.7",
-			Target: HostName("test-cluster-test-dc2-rack2-sts-2"),
+			Target: "test-cluster-test-dc2-rack2-sts-2",
 		},
 	}
 }
