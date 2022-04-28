@@ -177,7 +177,7 @@ func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (m
 func getPodNames(clusterName string, DCName string, rackName string, rackSize int) []string {
 	out := []string{}
 	for i := 0; i < rackSize; i++ {
-		out = append(out, fmt.Sprintf(clusterName, "-", DCName, "-", rackName, "-sts-", fmt.Sprint(i)))
+		out = append(out, fmt.Sprintf("%s-%s-%s-sts-%s", clusterName, DCName, rackName, fmt.Sprint(i)))
 	}
 	return out
 }
