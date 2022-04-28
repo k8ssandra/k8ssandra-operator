@@ -2,7 +2,7 @@ package images
 
 import (
 	"fmt"
-	"github.com/imdario/mergo"
+	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -64,11 +64,10 @@ func (in Image) String() string {
 // Other components are computed as follows: if the image specifies a (non-empty) component, that component is returned;
 // otherwise, the component from the default image is returned.
 func (in *Image) Merge(i Image) *Image {
-	merged := in.DeepCopy()
-	if merged == nil {
-		merged = &Image{}
-	}
-	_ = mergo.Merge(merged, i)
+	coalesced, _ := goalesce.Coalesce(&i, in)
+	merged := coalesced.(*Image)
+	// FIXME revisit default values for Image struct
+	// https://github.com/k8ssandra/k8ssandra-operator/issues/532
 	if merged.Registry == "" {
 		merged.Registry = DefaultRegistry
 	}

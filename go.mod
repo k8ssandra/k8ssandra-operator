@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/adutra/goalesce v0.0.0-20220428102636-36693f82512b
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/datastax/go-cassandra-native-protocol v0.0.0-20210829124742-a80a54434112
