@@ -9,16 +9,16 @@ import (
 
 var resourceQuantityType = reflect.TypeOf(resource.Quantity{})
 
-func MergeStargateTemplates(src, dest *api.StargateTemplate) (*api.StargateTemplate, error) {
-	coalesced, err := goalesce.Coalesce(src, dest, goalesce.WithTrileans(), goalesce.WithAtomicType(resourceQuantityType))
+func MergeStargateTemplates(cluster, dc *api.StargateTemplate) (*api.StargateTemplate, error) {
+	coalesced, err := goalesce.Coalesce(cluster.DeepCopy(), dc.DeepCopy(), goalesce.WithTrileans(), goalesce.WithAtomicType(resourceQuantityType))
 	if err != nil {
 		return nil, err
 	}
 	return coalesced.(*api.StargateTemplate), nil
 }
 
-func MergeStargateClusterTemplates(src, dest *api.StargateClusterTemplate) (*api.StargateClusterTemplate, error) {
-	coalesced, err := goalesce.Coalesce(src, dest, goalesce.WithTrileans(), goalesce.WithAtomicType(resourceQuantityType))
+func MergeStargateClusterTemplates(cluster, dc *api.StargateClusterTemplate) (*api.StargateClusterTemplate, error) {
+	coalesced, err := goalesce.Coalesce(cluster.DeepCopy(), dc.DeepCopy(), goalesce.WithTrileans(), goalesce.WithAtomicType(resourceQuantityType))
 	if err != nil {
 		return nil, err
 	}
