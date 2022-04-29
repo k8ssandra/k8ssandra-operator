@@ -63,8 +63,8 @@ func (in Image) String() string {
 // the image tag is "latest", Always is returned; otherwise, the default pull policy is returned.
 // Other components are computed as follows: if the image specifies a (non-empty) component, that component is returned;
 // otherwise, the component from the default image is returned.
-func (in *Image) Merge(i Image) *Image {
-	coalesced, _ := goalesce.Coalesce(&i, in)
+func Merge(i1, i2 *Image) *Image {
+	coalesced, _ := goalesce.Coalesce(i1.DeepCopy(), i2.DeepCopy())
 	merged := coalesced.(*Image)
 	// FIXME revisit default values for Image struct
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/532

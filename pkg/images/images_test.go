@@ -81,17 +81,17 @@ func TestImageMerge(t *testing.T) {
 	tests := []struct {
 		name     string
 		image    *Image
-		defaults Image
+		defaults *Image
 		expected *Image
 	}{
-		{"nil", nil, defaultImage, &coalescedImage1},
-		{"empty", &emptyImage, defaultImage, &coalescedImage1},
-		{"non-empty", &customImage, defaultImage, &coalescedImage2},
-		{"latest", &latestImage, defaultImage, &coalescedImage3},
+		{"nil", nil, &defaultImage, &coalescedImage1},
+		{"empty", &emptyImage, &defaultImage, &coalescedImage1},
+		{"non-empty", &customImage, &defaultImage, &coalescedImage2},
+		{"latest", &latestImage, &defaultImage, &coalescedImage3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := tt.image.Merge(tt.defaults)
+			actual := Merge(tt.defaults, tt.image)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

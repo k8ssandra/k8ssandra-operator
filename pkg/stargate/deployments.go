@@ -260,9 +260,9 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 
 func computeImage(template *api.StargateTemplate, clusterVersion ClusterVersion) *images.Image {
 	if clusterVersion == ClusterVersion3 {
-		return template.ContainerImage.Merge(defaultImage3)
+		return images.Merge(&defaultImage3, template.ContainerImage)
 	} else {
-		return template.ContainerImage.Merge(defaultImage4)
+		return images.Merge(&defaultImage4, template.ContainerImage)
 	}
 }
 

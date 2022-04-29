@@ -170,8 +170,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
-	initImage := reaper.Spec.InitContainerImage.Merge(defaultImage)
-	mainImage := reaper.Spec.ContainerImage.Merge(defaultImage)
+	initImage := images.Merge(&defaultImage, reaper.Spec.InitContainerImage)
+	mainImage := images.Merge(&defaultImage, reaper.Spec.ContainerImage)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
