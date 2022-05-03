@@ -240,3 +240,16 @@ func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.Cassa
 	}
 	return out, nil
 }
+
+func (s HostMappingSlice) IsInPlace() (bool, error) {
+	inPlace := true
+	for _, i := range s {
+		if i.Source == "" || i.Target == "" {
+			return false, errors.New("source or target was undefined")
+		}
+		if i.Source != i.Target {
+			inPlace = false
+		}
+	}
+	return inPlace, nil
+}
