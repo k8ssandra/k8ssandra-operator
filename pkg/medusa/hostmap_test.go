@@ -148,11 +148,31 @@ func TestGetHostMap(t *testing.T) {
 		},
 		{
 			Source: "192.168.1.6",
-			Target: "test-cluster-test-dc2-rack2-sts-1",
+			Target: "test-cluster-test-dc2-rack2-sts-0",
 		},
 		{
 			Source: "192.168.1.7",
-			Target: "test-cluster-test-dc2-rack2-sts-2",
+			Target: "test-cluster-test-dc2-rack3-sts-0",
 		},
 	}
+	result, err = GetHostMap(kluster, *medusaBackup, mockgRPCClient, ctx)
+	assert.NoError(t, err, err)
+	assert.Equal(t, expected, result)
+}
+
+func Test_HostMappingSlice_IsInPlace(t *testing.T) {
+	s := HostMappingSlice{
+		{Source: "1", Target: "1"},
+		{Source: "2", Target: "2"},
+		{Source: "3", Target: "3"},
+		{Source: "4", Target: "4"},
+	}
+	res, err := s.IsInPlace()
+	assert.NoError(t, err, err)
+	assert.Equal(t, true, res)
+	s = HostMappingSlice{
+		{Source: "1", Target: ""},
+	}
+	res, err = s.IsInPlace()
+	assert.Error(t, err, err)
 }
