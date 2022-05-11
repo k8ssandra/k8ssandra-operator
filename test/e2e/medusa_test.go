@@ -37,10 +37,12 @@ func createSingleMedusa(t *testing.T, ctx context.Context, namespace string, f *
 }
 
 func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
-	require.NoError(t, err, "Error getting the K8ssandraCluster")
+	require.NoError(err, "Error getting the K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
@@ -79,16 +81,15 @@ func createMultiMedusa(t *testing.T, ctx context.Context, namespace string, f *f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		restoreBackup(t, ctx, namespace, f, dcKey)
 	}
-	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		verifyRestoreFinished(t, ctx, f, dcKey, backupKey)
-	}
 }
 
 func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
-	require.NoError(t, err, "Error getting the K8ssandraCluster")
+	require.NoError(err, "Error getting the K8ssandraCluster")
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -113,6 +114,9 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	}
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
+	}
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		verifyRestoreFinished(t, ctx, f, dcKey, backupKey)
 	}
 }
 
@@ -175,16 +179,20 @@ func verifyBackupFinished(t *testing.T, ctx context.Context, f *framework.E2eFra
 	require := require.New(t)
 	t.Log("verify the backup finished")
 	backupClusterKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: backupKey}
+
 	require.Eventually(func() bool {
-		updated := &medusa.CassandraBackup{}
-		err := f.Get(ctx, backupClusterKey, updated)
+		updated, err := getBackup(f, ctx, backupClusterKey)
 		require.NoError(err, "failed to get CassandraBackup")
 
 		t.Logf("backup finish time: %v", updated.Status.FinishTime)
 		t.Logf("backup finished: %v", updated.Status.Finished)
 		t.Logf("backup in progress: %v", updated.Status.InProgress)
+		t.Logf("backup failed: %v", updated.Status.Failed)
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.InProgress) == 0
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "backup didn't finish within timeout")
+	updated, err := getBackup(f, ctx, backupClusterKey)
+	require.NoError(err, "failed to get CassandraBackup")
+	require.Empty(updated.Status.Failed, "backup failed")
 }
 
 func verifyBackupJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {
@@ -266,14 +274,31 @@ func verifyRestoreFinished(t *testing.T, ctx context.Context, f *framework.E2eFr
 
 	t.Log("verify the restore finished")
 	require.Eventually(func() bool {
-		restore := &medusa.CassandraRestore{}
-		err := f.Get(ctx, restoreClusterKey, restore)
-		if err != nil {
-			return false
-		}
-
+		restore, err := getRestore(f, ctx, restoreClusterKey)
+		require.NoError(err, "failed to get CassandraRestore")
 		return !restore.Status.FinishTime.IsZero()
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
+	restore, err := getRestore(f, ctx, restoreClusterKey)
+	require.NoError(err, "failed to get CassandraRestore")
+	require.Empty(restore.Status.Failed, "restore failed")
+}
+
+func getBackup(f *framework.E2eFramework, ctx context.Context, restoreClusterKey framework.ClusterKey) (*medusa.CassandraBackup, error) {
+	restore := &medusa.CassandraBackup{}
+	err := f.Get(ctx, restoreClusterKey, restore)
+	if err != nil {
+		return nil, err
+	}
+	return restore, nil
+}
+
+func getRestore(f *framework.E2eFramework, ctx context.Context, restoreClusterKey framework.ClusterKey) (*medusa.CassandraRestore, error) {
+	restore := &medusa.CassandraRestore{}
+	err := f.Get(ctx, restoreClusterKey, restore)
+	if err != nil {
+		return nil, err
+	}
+	return restore, nil
 }
 
 func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {

@@ -47,7 +47,7 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 		}
 
 		// Check that certificates are provided if client encryption is enabled
-		if dcConfig.CassandraConfig.CassandraYaml.ClientEncryptionOptions.Enabled {
+		if cassandra.ClientEncryptionEnabled(dcConfig) {
 			if medusaSpec.CertificatesSecretRef.Name == "" {
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}

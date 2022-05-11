@@ -293,6 +293,17 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 		}
 	}
 
+	// Create client certificates secret
+	path := filepath.Join("..", "testdata", "fixtures", "client-certificates-secret.yaml")
+
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

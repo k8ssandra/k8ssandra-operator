@@ -42,7 +42,6 @@ Replace the `<keystore password>` and `<truststore password>` above with the act
 
 The above procedure can be repeated to generate encryption stores for client to node encryption, changing the secret name appropriately.
 
-
 ## Creating a cluster with internode encryption
 
 In order to create a K8ssandra cluster with encryption, first create a namespace and the encryption stores secrets previously generated in it.
@@ -150,3 +149,55 @@ spec:
   reaper:
     deploymentMode: SINGLE
 ```
+
+## Medusa encryption
+
+In order to allow Medusa to connect to a cluster that has client to node encryption turned on with two way validation, create a client certificate for Medusa, named `client_cert.conf` for example:
+
+```
+[ req ]
+distinguished_name     = req_distinguished_name
+prompt                 = no
+output_password        = mypass
+default_bits           = 2048
+
+[ req_distinguished_name ]
+C                      = FR
+O                      = DataStax
+OU                     = SSLTestCluster
+CN                     = client
+```
+
+Now generate a private key for it:
+
+```
+openssl req -newkey rsa:2048 -nodes -keyout client.key -out client.csr -config client_cert.conf
+```
+
+Sign it with the root CA generated during the encryption stores creation:
+
+```
+openssl x509 -req -CA cassandra-node_ca_20220120_134900.cert -CAkey cassandra-node_ca_20220120_134900.key -passin pass:MyPassWord123! \           
+    -in client.csr -out client.crt_signed -days 10000 -CAcreateserial
+```
+
+Save the root CA as `rootca.crt`, and create a secret using the following command:
+
+```
+kubectl create secret generic client-certificates --from-file=rootca.crt --from-file=client.crt_signed --from-file=client.key
+```
+
+Reference this secret in your Medusa spec:
+
+```
+...
+...
+medusa:
+    storageProperties:
+      ...
+      ...
+    certificatesSecretRef:
+      name: client-certificates
+...
+```
+

@@ -13,10 +13,18 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
-  reaper:
-    autoScheduling:
-      enabled: false
-    heapSize: 256Mi
+  medusa:
+    storageProperties:
+      storageProvider: local
+      bucketName: k8ssandra-medusa
+      prefix: test
+      podStorage:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        size: 100Mi
+    certificatesSecretRef:
+      name: client-certificates
   cassandra:
     serverVersion: 3.11.11
     datacenters:

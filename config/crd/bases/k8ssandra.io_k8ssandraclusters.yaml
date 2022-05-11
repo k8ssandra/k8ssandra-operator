@@ -7585,6 +7585,18 @@ spec:
                           TODO: Add other useful fields. apiVersion, kind, uid?'
                         type: string
                     type: object
+                  certificatesSecretRef:
+                    description: 'Certificates for Medusa if client encryption is
+                      enabled in Cassandra. The secret must be in the same namespace
+                      as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed"
+                      and "client.key". See https://docs.datastax.com/en/developer/python-driver/3.20/security/
+                      for more information on the required files.'
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
                   containerImage:
                     description: MedusaContainerImage is the image characteristics
                       to use for Medusa containers. Leave nil to use a default image.
