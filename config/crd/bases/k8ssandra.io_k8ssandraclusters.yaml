@@ -1581,8 +1581,8 @@ spec:
                       properties:
                         config:
                           description: CassandraConfig is configuration settings that
-                            are applied to cassandra.yaml and jvm-options for 3.11.x
-                            or jvm-server-options for 4.x.
+                            are applied to cassandra.yaml and the various jvm*.options
+                            files.
                           properties:
                             cassandraYaml:
                               description: 'CassandraYaml defines the contents of
