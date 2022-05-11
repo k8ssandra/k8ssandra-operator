@@ -96,7 +96,7 @@ nodes:
   - containerPort: 30090
     hostPort: 3${cluster_id}090
     protocol: TCP
-$(for ((i=1; i<=num_workers; i++)); do
+$(for ((i=0; i<num_workers; i++)); do
 cat << EOF2
 - role: worker
   kubeadmConfigPatches:
@@ -104,7 +104,7 @@ cat << EOF2
       kind: JoinConfiguration
       nodeRegistration:
         kubeletExtraArgs:
-          node-labels: "topology.kubernetes.io/zone=region$((${cluster_id}+1))-zone$i"
+          node-labels: "topology.kubernetes.io/zone=region$((${cluster_id}+1))-zone$(( (${i} % 3) +1))"
 EOF2
 done)
 EOF
