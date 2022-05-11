@@ -68,7 +68,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlan
 		if remoteClient, err := newRemoteClient(config, name); err != nil {
 			return nil, err
 		} else if remoteClient == nil {
-			t.Logf("ignoring invalid data plane context %v: %v", name, err)
+			t.Logf("ignoring invalid data plane context %v", name)
 		} else {
 			remoteClients[name] = remoteClient
 			validDataPlanes = append(validDataPlanes, name)

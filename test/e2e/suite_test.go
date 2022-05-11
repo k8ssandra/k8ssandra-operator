@@ -480,6 +480,7 @@ func processFlags(t *testing.T) {
 		if len(dataPlanes) != len(ips) {
 			t.Fatal("external IPs provided do not match the number of data planes")
 		}
+		t.Logf("external IPs: %v", ips)
 		for i, name := range dataPlanes {
 			ip := ips[i]
 			ingressConfigs[name] = ingressConfig{
