@@ -122,12 +122,6 @@ patches:
         value: {{ $.Storage }}
   {{ end }}
 
-  {{ if .Networking }}
-      - op: replace
-        path: /spec/networking/hostNetwork
-        value: {{ $.HostNetwork }}
-  {{ end }}
-
   {{if $.Zones }}
     {{ range $rackIndex, $rack := .Racks }}
       {{ if index $rack.NodeAffinityLabels "topology.kubernetes.io/zone" }}
