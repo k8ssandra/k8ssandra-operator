@@ -187,15 +187,15 @@ func testAuthenticationEnabled(
 		t.Run("Stargate", func(t *testing.T) {
 			testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
 			testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, replication)
-			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, 0)
-			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, 1)
-			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, 0)
-			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, 1)
+			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
+			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
+			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])
+			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[1])
 			restClient := resty.New()
-			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, 0)
-			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, 1)
-			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, 0)
-			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, 1)
+			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[0])
+			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[1])
+			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[0])
+			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[1])
 		})
 		t.Run("Reaper", func(t *testing.T) {
 			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperUiSecretKey})
@@ -233,9 +233,9 @@ func checkRemoteJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFrame
 	}
 }
 
-func checkStargateCqlConnectionFailsWithNoCredentials(t *testing.T, ctx context.Context, k8sContextIdx int) {
-	contactPoint := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
-	cqlClient := cqlclient.NewCqlClient(contactPoint, nil)
+func checkStargateCqlConnectionFailsWithNoCredentials(t *testing.T, ctx context.Context, k8sContext string) {
+	contactPoint := ingressConfigs[k8sContext].StargateCql
+	cqlClient := cqlclient.NewCqlClient(string(contactPoint), nil)
 	cqlClient.ConnectTimeout = 30 * time.Second
 	cqlClient.ReadTimeout = 3 * time.Minute
 	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
@@ -244,9 +244,9 @@ func checkStargateCqlConnectionFailsWithNoCredentials(t *testing.T, ctx context.
 	}
 }
 
-func checkStargateCqlConnectionFailsWithWrongCredentials(t *testing.T, ctx context.Context, k8sContextIdx int) {
-	contactPoint := fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", k8sContextIdx)
-	cqlClient := cqlclient.NewCqlClient(contactPoint, &cqlclient.AuthCredentials{Username: "nonexistent", Password: "irrelevant"})
+func checkStargateCqlConnectionFailsWithWrongCredentials(t *testing.T, ctx context.Context, k8sContext string) {
+	contactPoint := ingressConfigs[k8sContext].StargateCql
+	cqlClient := cqlclient.NewCqlClient(string(contactPoint), &cqlclient.AuthCredentials{Username: "nonexistent", Password: "irrelevant"})
 	cqlClient.ConnectTimeout = 30 * time.Second
 	cqlClient.ReadTimeout = 3 * time.Minute
 	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
@@ -255,15 +255,15 @@ func checkStargateCqlConnectionFailsWithWrongCredentials(t *testing.T, ctx conte
 	}
 }
 
-func checkStargateTokenAuthFailsWithNoCredentials(t *testing.T, restClient *resty.Client, k8sContextIdx int) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
+func checkStargateTokenAuthFailsWithNoCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
+	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
 	response, err := restClient.NewRequest().Post(url)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, response.StatusCode(), "Expected auth request to return 400")
 }
 
-func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *resty.Client, k8sContextIdx int) {
-	url := fmt.Sprintf("http://stargate.127.0.0.1.nip.io:3%v080/v1/auth", k8sContextIdx)
+func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
+	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
 	body := map[string]string{"username": "nonexistent", "password": "irrelevant"}
 	response, err := restClient.NewRequest().SetHeader("Content-Type", "application/json").SetBody(body).Post(url)
 	assert.NoError(t, err)

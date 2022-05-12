@@ -25,6 +25,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [TESTING] [#517](https://github.com/k8ssandra/k8ssandra-operator/issues/517) ⁃ Create make targets to prepare a cluster for e2e tests
 * [TESTING] [#514](https://github.com/k8ssandra/k8ssandra-operator/issues/514) ⁃ Consider cert-manager a prerequisite for e2e tests
 * [TESTING] [#515](https://github.com/k8ssandra/k8ssandra-operator/issues/515) ⁃ Consider ingress controller a prerequisite for e2e tests
+* [TESTING] [#463](https://github.com/k8ssandra/k8ssandra-operator/issues/463) ⁃ Make fixtures cloud-ready
 
 ## v1.0.2 2022-04-14
 * [CHANGE] [#520](https://github.com/k8ssandra/k8ssandra-operator/issues/520) Upgrade to cass-operator v1.10.3

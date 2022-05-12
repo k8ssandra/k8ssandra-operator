@@ -54,13 +54,6 @@ spec:
         resources:
           requests:
             storage: 5Gi
-    racks:
-      - name: rack1
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack1
-      - name: rack2
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack2
     config:
       cassandraYaml:
         auto_snapshot: false
@@ -90,10 +83,24 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 2
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone2
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 2
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone2
     serverEncryptionStores:
       keystoreSecretRef:
         name: server-encryption-stores

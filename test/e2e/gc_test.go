@@ -23,7 +23,7 @@ func gcTest(gcName string) e2eTestFunc {
 		checkDatacenterReady(t, ctx, dc1Key, f)
 
 		logs, err := f.GetContainerLogs(f.DataPlaneContexts[0], namespace, "test-dc1-default-sts-0", "server-system-logger")
-		assert.Contains(t, logs, gcName)
+		require.Containsf(t, logs, gcName, "Could not find %s in logs", gcName)
 
 		switch gcName {
 		case "G1":
@@ -67,5 +67,5 @@ func checkLogsForCMS(t *testing.T, logs string) {
 func checkLogsForZGC(t *testing.T, logs string) {
 	assert.Contains(t, logs, "ZHeap Heap memory")
 	assert.Contains(t, logs, "-XX:+UseZGC")
-	assert.Contains(t, logs, "-XX:ConcGCThreads=2")
+	assert.Contains(t, logs, "-XX:ConcGCThreads=1")
 }

@@ -1,0 +1,178 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: {{.Namespace}}
+resources:
+- {{ .FixtureDepth }}test/testdata/fixtures/{{ .Fixture }}
+
+patches:
+{{ if .K8ssandraCluster }}
+{{ with .K8ssandraCluster }}
+  - target:
+      kind: K8ssandraCluster
+    patch: |-
+
+      - op: replace
+        path: /spec/auth
+        value: {{ if .Auth }}{{ .Auth }}{{ else }}true{{ end }}
+
+  {{ if and $.Storage .Cassandra.StorageConfig }}
+      - op: replace
+        path: /spec/cassandra/storageConfig/cassandraDataVolumeClaimSpec/storageClassName
+        value: {{ $.Storage }}
+  {{ end }}
+
+  {{ if .Cassandra.Networking }}
+      - op: replace
+        path: /spec/cassandra/networking/hostNetwork
+        value: {{ $.HostNetwork }}
+  {{ end }}
+
+  {{if $.Zones }}
+    {{ range $rackIndex, $rack := .Cassandra.Racks }}
+      {{ if index $rack.NodeAffinityLabels "topology.kubernetes.io/zone" }}
+      - op: replace
+        path: /spec/cassandra/racks/{{ $rackIndex }}/nodeAffinityLabels/topology.kubernetes.io~1zone
+        value: {{ index $.Zones (index $rack.NodeAffinityLabels "topology.kubernetes.io/zone") }}
+      {{ end }}
+    {{ end }}
+    {{ if .Stargate }}
+        {{ if .Stargate.Affinity }}
+          {{ range $termIndex, $term := .Stargate.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms }}
+            {{ range $exprIndex, $expr := $term.MatchExpressions }}
+              {{ if eq $expr.Key "topology.kubernetes.io/zone" }}
+                {{ range $valueIndex, $value := $expr.Values }}
+      - op: replace
+        path: /spec/stargate/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/{{ $termIndex }}/matchExpressions/{{ $exprIndex }}/values/{{ $valueIndex }}
+        value: {{ index $.Zones $value }}
+                {{ end }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+    {{ end }}
+  {{ end }}
+
+  {{ range $dcIndex, $dc := .Cassandra.Datacenters }}
+    {{ if $dc.K8sContext }}
+      - op: replace
+        path: /spec/cassandra/datacenters/{{ $dcIndex }}/k8sContext
+        value: {{ index $.Contexts $dc.K8sContext }}
+    {{ end }}
+    {{ if and $.Storage $dc.StorageConfig }}
+      - op: replace
+        path: /spec/cassandra/datacenters/{{ $dcIndex }}/storageConfig/cassandraDataVolumeClaimSpec/storageClassName
+        value: {{ $.Storage }}
+    {{ end }}
+    {{if $.Zones }}
+      {{ range $rackIndex, $rack := $dc.Racks }}
+        {{ if index $rack.NodeAffinityLabels "topology.kubernetes.io/zone" }}
+      - op: replace
+        path: /spec/cassandra/datacenters/{{ $dcIndex }}/racks/{{ $rackIndex }}/nodeAffinityLabels/topology.kubernetes.io~1zone
+        value: {{ index $.Zones (index $rack.NodeAffinityLabels "topology.kubernetes.io/zone") }}
+        {{ end }}
+      {{ end }}
+      {{ if $dc.Stargate }}
+        {{ if $dc.Stargate.Affinity }}
+          {{ range $termIndex, $term := $dc.Stargate.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms }}
+            {{ range $exprIndex, $expr := $term.MatchExpressions }}
+              {{ if eq $expr.Key "topology.kubernetes.io/zone" }}
+                {{ range $valueIndex, $value := $expr.Values }}
+      - op: replace
+        path: /spec/cassandra/datacenters/{{ $dcIndex }}/stargate/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/{{ $termIndex }}/matchExpressions/{{ $exprIndex }}/values/{{ $valueIndex }}
+        value: {{ index $.Zones $value }}
+                {{ end }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+        {{ range $rackIndex, $rack := $dc.Stargate.Racks }}
+          {{ if $rack.Affinity }}
+            {{ range $termIndex, $term := $rack.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms }}
+              {{ range $exprIndex, $expr := $term.MatchExpressions }}
+                {{ if eq $expr.Key "topology.kubernetes.io/zone" }}
+                  {{ range $valueIndex, $value := $expr.Values }}
+      - op: replace
+        path: /spec/cassandra/datacenters/{{ $dcIndex }}/stargate/racks/{{ $rackIndex }}/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/{{ $termIndex }}/matchExpressions/{{ $exprIndex }}/values/{{ $valueIndex }}
+        value: {{ index $.Zones $value }}
+                  {{ end }}
+                {{ end }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+{{ end }}
+
+{{ if .CassandraDatacenter }}
+{{ with .CassandraDatacenter }}
+  - target:
+      kind: CassandraDatacenter
+    patch: |-
+
+      - op: replace
+        path: /spec/size
+        value: {{ .Size }}
+
+  {{ if and $.Storage .StorageConfig }}
+      - op: replace
+        path: /spec/storageConfig/cassandraDataVolumeClaimSpec/storageClassName
+        value: {{ $.Storage }}
+  {{ end }}
+
+  {{if $.Zones }}
+    {{ range $rackIndex, $rack := .Racks }}
+      {{ if index $rack.NodeAffinityLabels "topology.kubernetes.io/zone" }}
+      - op: replace
+        path: /spec/racks/{{ $rackIndex }}/nodeAffinityLabels/topology.kubernetes.io~1zone
+        value: {{ index $.Zones (index $rack.NodeAffinityLabels "topology.kubernetes.io/zone") }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+{{ end }}
+
+{{ if .Stargate }}
+{{ with .Stargate }}
+  - target:
+      kind: Stargate
+    patch: |-
+
+      - op: replace
+        path: /spec/size
+        value: {{ .Size }}
+
+  {{if $.Zones }}
+    {{ if .Affinity }}
+      {{ range $termIndex, $term := .Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms }}
+        {{ range $exprIndex, $expr := $term.MatchExpressions }}
+          {{ if eq $expr.Key "topology.kubernetes.io/zone" }}
+            {{ range $valueIndex, $value := $expr.Values }}
+      - op: replace
+        path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/{{ $termIndex }}/matchExpressions/{{ $exprIndex }}/values/{{ $valueIndex }}
+        value: {{ index $.Zones $value }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+    {{ range $rackIndex, $rack := .Racks }}
+      {{ if $rack.Affinity }}
+        {{ range $termIndex, $term := $rack.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms }}
+          {{ range $exprIndex, $expr := $term.MatchExpressions }}
+            {{ if eq $expr.Key "topology.kubernetes.io/zone" }}
+              {{ range $valueIndex, $value := $expr.Values }}
+      - op: replace
+        path: /spec/racks/{{ $rackIndex }}/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/{{ $termIndex }}/matchExpressions/{{ $exprIndex }}/values/{{ $valueIndex }}
+        value: {{ index $.Zones $value }}
+              {{ end }}
+            {{ end }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+{{ end }}
+{{ end }}
