@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] []() Update to cass-operator v1.11.0
 * [CHANGE] [#310](https://github.com/k8ssandra/k8ssandra-operator/issues/310) Update to Go 1.17 and Kubernetes dependencies (incl. controller-runtime)
 * [ENHANCEMENT] [#465](https://github.com/k8ssandra/k8ssandra-operator/issues/465) ⁃ Refactor config-builder JSON marshaling
 * [ENHANCEMENT] [#507](https://github.com/k8ssandra/k8ssandra-operator/issues/507) Shared Cassandra cluster and datacenter fields are defined in a single struct
