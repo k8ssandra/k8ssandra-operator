@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	DefaultMedusaImageRepository = "adejanovski"
+	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.13.1-dev"
+	DefaultMedusaVersion         = "0.13.1"
 )
 
 var (
