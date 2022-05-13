@@ -18,19 +18,12 @@ package v1alpha1
 
 import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// An enum of the possible modes for medusa backups
-type BackupType string
-
-const (
-	FullBackup         BackupType = "full"
-	DifferentialBackup BackupType = "differential"
-)
 
 // CassandraBackupSpec defines the desired state of CassandraBackup
 type CassandraBackupSpec struct {
@@ -44,7 +37,7 @@ type CassandraBackupSpec struct {
 	// The type of the backup: "full" or "differential"
 	// +kubebuilder:validation:Enum=differential;full;
 	// +kubebuilder:default:=differential
-	Type BackupType `json:"backupType,omitempty"`
+	Type shared.BackupType `json:"backupType,omitempty"`
 }
 
 type CassandraDatacenterTemplateSpec struct {
@@ -72,6 +65,7 @@ type CassandraBackupStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:deprecatedversion:warning="medusa.k8ssandra.com/v1alpha1 CassandraBackup/CassandraRestore are deprecated, use medusa.k8ssandra.com/v1alpha1 MedusaBackupJob/MedusaRestoreJob instead."
 
 // CassandraBackup is the Schema for the cassandrabackups API
 type CassandraBackup struct {

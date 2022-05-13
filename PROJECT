@@ -73,4 +73,40 @@ resources:
   kind: CassandraRestore
   path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: MedusaTask
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: MedusaBackup
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: MedusaBackupJob
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: medusa
+  kind: MedusaRestoreJob
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
+  version: v1alpha1
 version: "3"

@@ -55,6 +55,7 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	configctrl "github.com/k8ssandra/k8ssandra-operator/controllers/config"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
+	medusacontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
@@ -223,6 +224,40 @@ func main() {
 		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CassandraRestore")
+		os.Exit(1)
+	}
+	if err = (&medusacontrollers.MedusaTaskReconciler{
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		ClientFactory:    &medusa.DefaultFactory{},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaTask")
+		os.Exit(1)
+	}
+	if err = (&medusacontrollers.MedusaBackupReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackup")
+		os.Exit(1)
+	}
+	if err = (&medusacontrollers.MedusaBackupJobReconciler{
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		ClientFactory:    &medusa.DefaultFactory{},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupJob")
+		os.Exit(1)
+	}
+	if err = (&medusacontrollers.MedusaRestoreJobReconciler{
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		ClientFactory:    &medusa.DefaultFactory{},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaRestoreJob")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +13,8 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
@@ -466,7 +467,8 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 			f.storeOutput(outputDir, namespace, "pods", "out", output)
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
-			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets", "ReplicatedSecret", "ClientConfig", "CassandraTask", "CassandraBackup", "CassandraRestore"} {
+			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
+				"ReplicatedSecret", "ClientConfig", "CassandraTask", "CassandraBackup", "CassandraRestore", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
 				}

@@ -1,0 +1,24 @@
+# permissions for end users to edit MedusaTasks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: MedusaTask-editor-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - MedusaTasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - MedusaTasks/status
+  verbs:
+  - get

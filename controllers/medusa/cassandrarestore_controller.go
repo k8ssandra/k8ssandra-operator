@@ -217,26 +217,6 @@ func stopDatacenter(req *medusa.RestoreRequest) bool {
 	return false
 }
 
-func buildNewCassandraDatacenter(restore *medusaapi.CassandraRestore, backup *medusaapi.CassandraBackup) (*cassdcapi.CassandraDatacenter, error) {
-	newCassdc := &cassdcapi.CassandraDatacenter{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: backup.Namespace,
-			Name:      restore.Spec.CassandraDatacenter.Name,
-		},
-		Spec: backup.Status.CassdcTemplateSpec.Spec,
-	}
-
-	if err := setBackupNameInRestoreContainer(backup.Spec.Name, newCassdc); err != nil {
-		return nil, err
-	}
-
-	if err := setRestoreKeyInRestoreContainer(restore.Status.RestoreKey, newCassdc); err != nil {
-		return nil, err
-	}
-
-	return newCassdc, nil
-}
-
 func setBackupNameInRestoreContainer(backupName string, cassdc *cassdcapi.CassandraDatacenter) error {
 	index, err := getRestoreInitContainerIndex(cassdc)
 	if err != nil {

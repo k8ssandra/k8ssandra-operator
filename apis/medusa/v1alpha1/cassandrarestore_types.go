@@ -67,6 +67,7 @@ type CassandraRestoreStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:deprecatedversion:warning="medusa.k8ssandra.com/v1alpha1 CassandraBackup/CassandraRestore are deprecated, use medusa.k8ssandra.com/v1alpha1 MedusaBackupJob/MedusaRestoreJob instead."
 
 // CassandraRestore is the Schema for the cassandrarestores API
 type CassandraRestore struct {

@@ -20,7 +20,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.11.3"
+	DefaultMedusaVersion         = "0.13.1"
 )
 
 var (
@@ -35,8 +35,10 @@ var (
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
 	medusaIniTemplate := `
     [cassandra]
+    use_sudo = false
 
     [storage]
+    use_sudo_for_restore = false
     storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
     {{- if eq .Spec.Medusa.StorageProperties.StorageProvider "local" }}
     bucket_name = {{ .Name }}
@@ -164,6 +166,9 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
 	medusaContainer.Env = medusaEnvVars(medusaSpec, dcConfig, logger, "GRPC")
+	medusaContainer.Ports = []corev1.ContainerPort{
+		{ContainerPort: 50051, Name: "grpc"},
+	}
 
 	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, dcConfig, logger)
 
