@@ -1,0 +1,85 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: cluster1
+spec:
+  cassandra:
+    serverVersion: "4.0.1"
+    networking:
+      hostNetwork: false
+    config:
+      jvmOptions:
+        heapSize: 512Mi
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 3
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone2
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region1-zone3
+        stargate:
+          size: 1
+          heapSize: 512Mi
+          allowStargateOnDataNodes: true
+          cassandraConfigMapRef:
+            name: cassandra-config
+          racks:
+            - name: rack1
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                      - matchExpressions:
+                          - key: topology.kubernetes.io/zone
+                            operator: In
+                            values:
+                              - region1-zone1
+      - metadata:
+          name: dc2
+        k8sContext: kind-k8ssandra-1
+        size: 3
+        racks:
+          - name: rack1
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone1
+          - name: rack2
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone2
+          - name: rack3
+            nodeAffinityLabels:
+              "topology.kubernetes.io/zone": region2-zone3
+        stargate:
+          size: 1
+          heapSize: 512Mi
+          allowStargateOnDataNodes: true
+          cassandraConfigMapRef:
+            name: cassandra-config
+          racks:
+            - name: rack1
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                      - matchExpressions:
+                          - key: topology.kubernetes.io/zone
+                            operator: In
+                            values:
+                              - region2-zone1
+  reaper:
+    heapSize: 256Mi

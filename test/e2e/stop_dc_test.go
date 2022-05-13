@@ -52,9 +52,8 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
-	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
+	f.WaitForStargateIngresses(t, username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.WaitForReaperIngresses(t, ctx, reaperRestHostAndPort)
 
 	pod1Name := "cluster1-dc1-default-sts-0"
 	pod2Name := "cluster1-dc2-default-sts-0"
@@ -85,9 +84,8 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
-	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	f.WaitForStargateIngresses(t, username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.WaitForReaperIngresses(t, ctx, reaperRestHostAndPort)
 
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name)
 

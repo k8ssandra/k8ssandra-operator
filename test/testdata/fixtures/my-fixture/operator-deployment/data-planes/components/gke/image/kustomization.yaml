@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+images:
+    - name: k8ssandra/k8ssandra-operator
+      newName: us-docker.pkg.dev/community-ecosystem/k8ssandra/k8ssandra-operator

@@ -2,7 +2,7 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: cluster1-dc1-stargate-service-http-ingress
+  name: stargate-service-http-ingress
   namespace: k8ssandra
 spec:
   entryPoints:
@@ -23,19 +23,3 @@ spec:
       services:
         - name: cluster1-dc1-stargate-service
           port: 8082
----
-# https://github.com/traefik/traefik/blob/v2.5.1/docs/content/reference/dynamic-configuration/traefik.containo.us_ingressroutetcps.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRouteTCP
-metadata:
-  name: cluster1-dc1-stargate-service-native-ingress
-  namespace: k8ssandra
-spec:
-  entryPoints:
-    - cql
-  routes:
-    # no TLS enabled
-    - match: HostSNI(`*`) # can't use a specific hostname here because TLS is not enabled
-      services:
-        - name: cluster1-dc1-stargate-service
-          port: 9042

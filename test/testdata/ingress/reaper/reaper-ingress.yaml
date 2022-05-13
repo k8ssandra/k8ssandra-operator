@@ -2,7 +2,7 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: cluster1-dc1-reaper-service-http-ingress
+  name: reaper-service-http-ingress
   namespace: k8ssandra
 spec:
   entryPoints:

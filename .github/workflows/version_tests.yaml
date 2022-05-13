@@ -1,18 +1,18 @@
 name: kuttl multi-version tests
 
 on:
-  push:
-    branches:
-      - main
-      - 'release/**'
-    paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
+#  push:
+#    branches:
+#      - main
+#      - 'release/**'
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'CHANGELOG/**'
+#  pull_request:
+#    branches: [ main ]
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'CHANGELOG/**'
 
 jobs:
   build_image:

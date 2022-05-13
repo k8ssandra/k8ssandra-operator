@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+    - target:
+        kind: K8ssandraCluster
+      patch: |
+        - op: replace
+          path: /spec/cassandra/datacenters/0/racks/0/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack1" }
+        - op: replace
+          path: /spec/cassandra/datacenters/0/racks/1/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack2" }
+        - op: replace
+          path: /spec/cassandra/datacenters/0/racks/2/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack3" }
+
+        - op: replace
+          path: /spec/cassandra/datacenters/1/racks/0/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack1" }
+        - op: replace
+          path: /spec/cassandra/datacenters/1/racks/1/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack2" }
+        - op: replace
+          path: /spec/cassandra/datacenters/1/racks/2/nodeAffinityLabels
+          value: { "k8ssandra.io/rack" : "rack3" }
+          
+        - op: replace
+          path: /spec/cassandra/datacenters/0/stargate/racks/0/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0
+          value: { "key" : "k8ssandra.io/rack", "operator" : "In", "values" : ["rack1"] }
+        - op: replace
+          path: /spec/cassandra/datacenters/1/stargate/racks/0/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/0/matchExpressions/0
+          value: { "key" : "k8ssandra.io/rack", "operator" : "In", "values" : ["rack1"] }

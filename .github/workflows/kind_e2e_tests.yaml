@@ -1,18 +1,18 @@
 # This workflow is for tests that require a single cluster.
 name: Run e2e tests
 on:
-  push:
-    branches:
-      - main
-      - 'release/**'
-    paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
+#  push:
+#    branches:
+#      - main
+#      - 'release/**'
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'CHANGELOG/**'
+#  pull_request:
+#    branches: [ main ]
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'CHANGELOG/**'
 jobs:
   build_image:
     name: Build Image

@@ -20,39 +20,39 @@ nodes:
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack1"
+            node-labels: "topology.kubernetes.io/zone=region1-zone1"
   - role: worker
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack1"
+            node-labels: "topology.kubernetes.io/zone=region1-zone1"
   - role: worker
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack2"
+            node-labels: "topology.kubernetes.io/zone=region1-zone2"
   - role: worker
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack2"
+            node-labels: "topology.kubernetes.io/zone=region1-zone2"
   - role: worker
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack3"
+            node-labels: "topology.kubernetes.io/zone=region1-zone3"
   - role: worker
     kubeadmConfigPatches:
       - |
         kind: JoinConfiguration
         nodeRegistration:
           kubeletExtraArgs:
-            node-labels: "topology.kubernetes.io/zone=rack3"
+            node-labels: "topology.kubernetes.io/zone=region1-zone3"

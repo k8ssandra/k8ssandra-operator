@@ -12,13 +12,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
 
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
@@ -99,145 +96,6 @@ func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client
 	}
 }
 
-func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
-	controlPlaneDir := "control-plane"
-	dataPlaneDir := "data-plane"
-
-	controlPlaneTmpl := `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- ../../../../config/deployments/control-plane
-
-images:
-  - name: k8ssandra/k8ssandra-operator
-    newName: {{ .ImageName }}
-    newTag: {{ .ImageTag }}
-
-patches:
-- target:
-    kind: Namespace
-    labelSelector: "control-plane=k8ssandra-operator"
-  options:
-    allowNameChange: true
-  patch: |
-    - op: replace
-      path: /metadata/name
-      value: {{ .Namespace }}
-replacements:
-- source: 
-    kind: Namespace
-    name: {{ .Namespace }}
-    fieldPath: metadata.name
-  targets:
-  - select:
-      namespace: cass-operator
-    fieldPaths:
-      - metadata.namespace
-  - select:
-      namespace: k8ssandra-operator
-    fieldPaths:
-      - metadata.namespace
-  - select:
-      kind: ClusterRoleBinding
-    fieldPaths:
-      - subjects.0.namespace
-  - select:
-      name: cass-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
-  - select:
-      name: k8ssandra-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
-`
-
-	dataPlaneTmpl := `
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-resources:
-- ../../../../config/deployments/data-plane
-
-images:
-  - name: k8ssandra/k8ssandra-operator
-    newName: {{ .ImageName }}
-    newTag: {{ .ImageTag }}
-
-patches:
-- target:
-    kind: Namespace
-    labelSelector: "control-plane=k8ssandra-operator"
-  options:
-    allowNameChange: true
-  patch: |
-    - op: replace
-      path: /metadata/name
-      value: {{ .Namespace }}
-replacements:
-- source: 
-    kind: Namespace
-    name: {{ .Namespace }}
-    fieldPath: metadata.name
-  targets:
-  - select:
-      namespace: cass-operator
-    fieldPaths:
-      - metadata.namespace
-  - select:
-      namespace: k8ssandra-operator
-    fieldPaths:
-      - metadata.namespace
-  - select:
-      kind: ClusterRoleBinding
-    fieldPaths:
-      - subjects.0.namespace
-  - select:
-      name: cass-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
-  - select:
-      name: k8ssandra-operator-validating-webhook-configuration
-      kind: ValidatingWebhookConfiguration
-    fieldPaths:
-      - webhooks.0.clientConfig.service.namespace
-`
-
-	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), config, controlPlaneTmpl)
-	if err != nil {
-		return err
-	}
-
-	return generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", dataPlaneDir), config, dataPlaneTmpl)
-}
-
-// generateKustomizationFile Creates the directory <project-root>/build/test-config/<name>
-// and generates a kustomization.yaml file using the template tmpl. k defines values that
-// will be substituted in the template.
-func generateKustomizationFile(name string, data interface{}, tmpl string) error {
-	dir := filepath.Join("..", "..", "build", "test-config", name)
-
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	parsed, err := template.New(name).Parse(tmpl)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(filepath.Join(dir, "kustomization.yaml"))
-	if err != nil {
-		return err
-	}
-
-	return parsed.Execute(file, data)
-}
-
 func (f *E2eFramework) kustomizeAndApply(dir, namespace string, context string) error {
 	kdir, err := filepath.Abs(dir)
 	if err != nil {
@@ -265,79 +123,44 @@ func (f *E2eFramework) kustomizeAndApply(dir, namespace string, context string) 
 	return nil
 }
 
-func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
-	path := filepath.Join("..", "testdata", "fixtures", "cassandra-config.yaml")
-
-	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Create Cassandra ConfigMap", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) error {
-	for _, storeType := range []encryption.StoreType{encryption.StoreTypeServer, encryption.StoreTypeClient} {
-		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))
-
-		for _, k8sContext := range f.DataPlaneContexts {
-			options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-			f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
-			if err := kubectl.Apply(options, path); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-type OperatorDeploymentConfig struct {
-	Namespace     string
-	ClusterScoped bool
-	ImageName     string
-	ImageTag      string
-}
-
 // DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
 // in the data plane cluster(s). Note that the control plane cluster can also be one of the
 // data plane clusters. It then deploys the operator in the data plane clusters with the
 // K8ssandraCluster controller disabled. When clusterScoped is true the operator is
 // configured to watch all namespaces and is deployed in the k8ssandra-operator namespace.
-func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) error {
+func (f *E2eFramework) DeployK8ssandraOperator(namespace, testProfile string, clusterScoped bool) error {
 	var (
 		baseDir      string
 		controlPlane string
 		dataPlane    string
 	)
 
-	if config.ClusterScoped {
+	// if the fixture provides a specific operator deployment, use it, otherwise, use the default ones
+	baseDir = filepath.Join("..", "testdata", "fixtures", namespace, "operator-deployment")
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
 		baseDir = filepath.Join("..", "..", "config", "deployments")
-		controlPlane = filepath.Join(baseDir, "control-plane", "cluster-scope")
-		dataPlane = filepath.Join(baseDir, "data-plane", "cluster-scope")
-	} else {
-		baseDir = filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
-		controlPlane = filepath.Join(baseDir, "control-plane")
-		dataPlane = filepath.Join(baseDir, "data-plane")
-
-		if err := generateK8ssandraOperatorKustomization(config); err != nil {
-			return err
+		if clusterScoped {
+			controlPlane = filepath.Join(baseDir, "control-plane", "cluster-scope")
+			dataPlane = filepath.Join(baseDir, "data-plane", "cluster-scope")
+		} else {
+			controlPlane = filepath.Join(baseDir, "control-plane")
+			dataPlane = filepath.Join(baseDir, "data-plane")
 		}
+	} else {
+		controlPlane = filepath.Join(baseDir, "control-plane", "overlays", testProfile)
+		dataPlane = filepath.Join(baseDir, "data-planes", "overlays", testProfile)
 	}
 
-	f.logger.Info("Deploying operator in control plane", "Namespace", config.Namespace, "Context", f.ControlPlaneContext)
-	err := f.kustomizeAndApply(controlPlane, config.Namespace, f.ControlPlaneContext)
+	f.logger.Info("Deploying operator in control plane", "Namespace", namespace, "Context", f.ControlPlaneContext)
+	err := f.kustomizeAndApply(controlPlane, namespace, f.ControlPlaneContext)
 	if err != nil {
 		return err
 	}
 
 	for _, dataPlaneContext := range f.DataPlaneContexts {
 		if dataPlaneContext != f.ControlPlaneContext {
-			f.logger.Info("Deploying operator in data plane", "Namespace", config.Namespace, "Context", dataPlaneContext)
-			err = f.kustomizeAndApply(dataPlane, config.Namespace, dataPlaneContext)
+			f.logger.Info("Deploying operator in data plane", "Namespace", namespace, "Context", dataPlaneContext)
+			err = f.kustomizeAndApply(dataPlane, namespace, dataPlaneContext)
 			if err != nil {
 				return err
 			}
