@@ -103,8 +103,40 @@ func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client
 func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
 	controlPlaneDir := "control-plane"
 	dataPlaneDir := "data-plane"
+	controlPlaneTmpl := ""
+	dataPlaneTmpl := ""
 
-	controlPlaneTmpl := `
+	if config.ClusterScoped {
+		controlPlaneDir = "control-plane-cluster-scope"
+		dataPlaneDir = "data-plane-cluster-scope"
+
+		controlPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+images:
+  - name: k8ssandra/k8ssandra-operator
+    newName: {{ .ImageName }}
+    newTag: {{ .ImageTag }}
+
+resources:
+-  ../../../../config/deployments/control-plane/cluster-scope
+`
+
+		dataPlaneTmpl = `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+images:
+  - name: k8ssandra/k8ssandra-operator
+    newName: {{ .ImageName }}
+    newTag: {{ .ImageTag }}
+
+resources:
+-  ../../../../config/deployments/data-plane/cluster-scope
+`
+	} else {
+		controlPlaneTmpl = `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -156,7 +188,7 @@ replacements:
       - webhooks.0.clientConfig.service.namespace
 `
 
-	dataPlaneTmpl := `
+		dataPlaneTmpl = `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -207,6 +239,7 @@ replacements:
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
 `
+	}
 
 	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), config, controlPlaneTmpl)
 	if err != nil {
@@ -316,17 +349,17 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 	)
 
 	if config.ClusterScoped {
-		baseDir = filepath.Join("..", "..", "config", "deployments")
-		controlPlane = filepath.Join(baseDir, "control-plane", "cluster-scope")
-		dataPlane = filepath.Join(baseDir, "data-plane", "cluster-scope")
+		baseDir = filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
+		controlPlane = filepath.Join(baseDir, "control-plane-cluster-scope")
+		dataPlane = filepath.Join(baseDir, "data-plane-cluster-scope")
 	} else {
 		baseDir = filepath.Join("..", "..", "build", "test-config", "k8ssandra-operator")
 		controlPlane = filepath.Join(baseDir, "control-plane")
 		dataPlane = filepath.Join(baseDir, "data-plane")
+	}
 
-		if err := generateK8ssandraOperatorKustomization(config); err != nil {
-			return err
-		}
+	if err := generateK8ssandraOperatorKustomization(config); err != nil {
+		return err
 	}
 
 	f.logger.Info("Deploying operator in control plane", "Namespace", config.Namespace, "Context", f.ControlPlaneContext)
