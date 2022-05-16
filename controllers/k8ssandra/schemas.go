@@ -21,6 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type SystemReplicationOldFormat struct {
+	Datacenters       []string `json:"datacenters"`
+	ReplicationFactor int      `json:"replicationFactor"`
+}
+
 func (r *K8ssandraClusterReconciler) checkSchemas(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -112,24 +117,27 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	kc *api.K8ssandraCluster,
 	logger logr.Logger) (cassandra.SystemReplication, error) {
 
+	replication := make(map[string]int)
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
-		replication := make(map[string]int)
 		if err := json.Unmarshal([]byte(val), &replication); err == nil {
 			return replication, nil
 		} else {
 			// We could have an annotation in the old format. Try to parse it and convert it to the new format by pursuing the execution.
-			replicationOldFormat := make(map[string]interface{})
-			if err2 := json.Unmarshal([]byte(val), &replication); err2 == nil {
-				// Check that we have the old v1.0 format, if not return an error.
-				if replicationOldFormat["datacenters"] == nil || replicationOldFormat["replicationFactor"] == nil {
-					logger.Error(err, "could not parse the inital-system-replication annotation of the K8ssandraCluster object")
-					return nil, err
+			var replicationOldFormat SystemReplicationOldFormat
+			if err2 := json.Unmarshal([]byte(val), &replicationOldFormat); err2 == nil {
+				replication = make(map[string]int)
+				for _, dc := range replicationOldFormat.Datacenters {
+					replication[dc] = replicationOldFormat.ReplicationFactor
 				}
+			} else {
+				logger.Error(err, "could not parse the inital-system-replication annotation of the K8ssandraCluster object")
+				return nil, err
 			}
 		}
+	} else {
+		replication = cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 	}
 
-	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 	bytes, err := json.Marshal(replication)
 
 	if err != nil {
@@ -142,6 +150,7 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		kc.Annotations = make(map[string]string)
 	}
 	kc.Annotations[api.InitialSystemReplicationAnnotation] = string(bytes)
+	logger.Info("New initial system replication", "SystemReplication", string(bytes))
 	if err = r.Patch(ctx, kc, patch); err != nil {
 		logger.Error(err, "Failed to apply "+api.InitialSystemReplicationAnnotation+" patch")
 		return nil, err

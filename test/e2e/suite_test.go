@@ -286,7 +286,7 @@ func TestOperator(t *testing.T) {
 			fixture:  framework.NewTestFixture("gc/4.0-jdk11-ZGC", controlPlane),
 		}))
 	})
-	t.Run("UpgradeTest", e2eTest(ctx, &e2eTestOpts{
+	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
 		testFunc:       createSingleDatacenterClusterWithUpgrade,
 		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
 		initialVersion: pointer.String("v1.0.0"),
@@ -484,12 +484,6 @@ func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramewor
 
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
-		return err
-	}
-
-	// Force a restart of the operator to load the latest image
-	if err := f.DeleteK8ssandraOperatorPods(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
-		t.Logf("failed to restart k8ssandra-operator")
 		return err
 	}
 

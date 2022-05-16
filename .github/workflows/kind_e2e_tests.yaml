@@ -72,7 +72,7 @@ jobs:
           - GCTests/4.0-jdk11-G1
           - GCTests/4.0-jdk11-CMS
           - GCTests/4.0-jdk11-ZGC
-          - UpgradeTest
+          - UpgradeOperatorImage
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
