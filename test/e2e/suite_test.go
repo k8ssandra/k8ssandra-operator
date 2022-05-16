@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -285,6 +286,11 @@ func TestOperator(t *testing.T) {
 			fixture:  framework.NewTestFixture("gc/4.0-jdk11-ZGC", controlPlane),
 		}))
 	})
+	t.Run("UpgradeTest", e2eTest(ctx, &e2eTestOpts{
+		testFunc:       createSingleDatacenterClusterWithUpgrade,
+		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
+		initialVersion: pointer.String("v1.0.0"),
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -341,6 +347,10 @@ type e2eTestOpts struct {
 	// doCassandraDatacenterCleanup is a flag that lets the framework know it should perform
 	// deletions of CassandraDatacenters that are not part of a K8ssandraCluster.
 	doCassandraDatacenterCleanup bool
+
+	// initialVersion is used to set the initial version of the operator when performing
+	// an upgrade test.
+	initialVersion *string
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -418,6 +428,11 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		ImageName:     *imageName,
 		ImageTag:      *imageTag,
 	}
+
+	if opts.initialVersion != nil {
+		deploymentConfig.ImageTag = *opts.initialVersion
+	}
+
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
 		t.Logf("failed to deploy k8ssandra-operator")
 		return err
@@ -455,6 +470,42 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 			return err
 		}
 	}
+
+	return nil
+}
+
+func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace string) error {
+	deploymentConfig := framework.OperatorDeploymentConfig{
+		Namespace:     namespace,
+		ClusterScoped: false,
+		ImageName:     *imageName,
+		ImageTag:      *imageTag,
+	}
+
+	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
+		t.Logf("failed to deploy k8ssandra-operator")
+		return err
+	}
+
+	// Force a restart of the operator to load the latest image
+	if err := f.DeleteK8ssandraOperatorPods(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+		t.Logf("failed to restart k8ssandra-operator")
+		return err
+	}
+
+	if err := f.WaitForK8ssandraOperatorToBeReady(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+		t.Log("failed waiting for k8ssandra-operator to be ready")
+		return err
+	}
+
+	if err := f.WaitForCassOperatorToBeReady(namespace, polling.operatorDeploymentReady.timeout, polling.operatorDeploymentReady.interval); err != nil {
+		t.Log("failed waiting for cass-operator to be ready")
+		return err
+	}
+
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterUpdating(t, ctx, dcKey, f)
+	checkDatacenterReady(t, ctx, dcKey, f)
 
 	return nil
 }
@@ -649,6 +700,45 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err = f.Client.Patch(ctx, k8ssandra, patch)
 	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "test-dc1-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+
+	replication := map[string]int{"dc1": 1}
+	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
+}
+
+// createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter
+// and one Stargate node that are deployed in the local cluster, using an older version of K8ssandraOperator.
+// Then it performs an upgrade to the latest version and checks that the cluster is ready and functional.
+func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-dc1-stargate"}}
+	checkStargateReady(t, f, ctx, stargateKey)
+
+	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	// Perform the upgrade
+	err = upgradeToLatest(t, ctx, f, namespace)
+	require.NoError(err, "failed to upgrade to latest version")
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)

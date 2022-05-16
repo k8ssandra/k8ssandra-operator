@@ -117,7 +117,15 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		if err := json.Unmarshal([]byte(val), &replication); err == nil {
 			return replication, nil
 		} else {
-			return nil, err
+			// We could have an annotation in the old format. Try to parse it and convert it to the new format by pursuing the execution.
+			replicationOldFormat := make(map[string]interface{})
+			if err2 := json.Unmarshal([]byte(val), &replication); err2 == nil {
+				// Check that we have the old v1.0 format, if not return an error.
+				if replicationOldFormat["datacenters"] == nil || replicationOldFormat["replicationFactor"] == nil {
+					logger.Error(err, "could not parse the inital-system-replication annotation of the K8ssandraCluster object")
+					return nil, err
+				}
+			}
 		}
 	}
 

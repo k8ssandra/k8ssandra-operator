@@ -8,7 +8,9 @@ on:
       - 'docs/**'
       - 'CHANGELOG/**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - 'release/**'
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'
