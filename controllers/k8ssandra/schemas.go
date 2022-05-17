@@ -21,6 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// an annotation is used to store the initial replication factor for system keyspaces.
+// its schema evolved in v1.1 but we need to be able to parse the old format for upgrades.
 type SystemReplicationOldFormat struct {
 	Datacenters       []string `json:"datacenters"`
 	ReplicationFactor int      `json:"replicationFactor"`
