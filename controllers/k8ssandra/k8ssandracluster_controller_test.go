@@ -107,6 +107,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
+	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -1876,4 +1877,105 @@ func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 func parseQuantity(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
+}
+
+// convertSystemReplicationAnnotation creates a K8ssandraCluster object with the system replication annotation set in the old format
+func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+			Annotations: map[string]string{
+				api.InitialSystemReplicationAnnotation: `{"datacenters":["dc1"], "replicationFactor":3}`,
+			},
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       1,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	lastTransitionTime := metav1.Now()
+
+	t.Log("update datacenter status to scaling up")
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterScalingUp,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: lastTransitionTime,
+		})
+	})
+	require.NoError(err, "failed to patch datacenter status")
+
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) == 0 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dcKey.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dcKey)
+			return false
+		}
+
+		initialSystemRfAnnotation, found := kc.Annotations[api.InitialSystemReplicationAnnotation]
+		if !found {
+			t.Logf("annotation %s not found", api.InitialSystemReplicationAnnotation)
+			return false
+		}
+
+		if initialSystemRfAnnotation != "{\"dc1\":3}" {
+			t.Logf("annotation %s has wrong value: %s", api.InitialSystemReplicationAnnotation, initialSystemRfAnnotation)
+			return false
+		}
+
+		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		return condition != nil
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	// Test cluster deletion
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
