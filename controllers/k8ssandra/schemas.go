@@ -21,6 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// an annotation is used to store the initial replication factor for system keyspaces.
+// its schema evolved in v1.1 but we need to be able to parse the old format for upgrades.
+type SystemReplicationOldFormat struct {
+	Datacenters       []string `json:"datacenters"`
+	ReplicationFactor int      `json:"replicationFactor"`
+}
+
 func (r *K8ssandraClusterReconciler) checkSchemas(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -112,16 +119,27 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	kc *api.K8ssandraCluster,
 	logger logr.Logger) (cassandra.SystemReplication, error) {
 
+	replication := make(map[string]int)
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
-		replication := make(map[string]int)
 		if err := json.Unmarshal([]byte(val), &replication); err == nil {
 			return replication, nil
 		} else {
-			return nil, err
+			// We could have an annotation in the old format. Try to parse it and convert it to the new format by pursuing the execution.
+			var replicationOldFormat SystemReplicationOldFormat
+			if err2 := json.Unmarshal([]byte(val), &replicationOldFormat); err2 == nil {
+				replication = make(map[string]int)
+				for _, dc := range replicationOldFormat.Datacenters {
+					replication[dc] = replicationOldFormat.ReplicationFactor
+				}
+			} else {
+				logger.Error(err, "could not parse the initial-system-replication annotation of the K8ssandraCluster object")
+				return nil, err
+			}
 		}
+	} else {
+		replication = cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 	}
 
-	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
 	bytes, err := json.Marshal(replication)
 
 	if err != nil {
@@ -134,6 +152,7 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 		kc.Annotations = make(map[string]string)
 	}
 	kc.Annotations[api.InitialSystemReplicationAnnotation] = string(bytes)
+	logger.Info("New initial system replication", "SystemReplication", string(bytes))
 	if err = r.Patch(ctx, kc, patch); err != nil {
 		logger.Error(err, "Failed to apply "+api.InitialSystemReplicationAnnotation+" patch")
 		return nil, err
