@@ -132,7 +132,7 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 					replication[dc] = replicationOldFormat.ReplicationFactor
 				}
 			} else {
-				logger.Error(err, "could not parse the inital-system-replication annotation of the K8ssandraCluster object")
+				logger.Error(err, "could not parse the initial-system-replication annotation of the K8ssandraCluster object")
 				return nil, err
 			}
 		}
