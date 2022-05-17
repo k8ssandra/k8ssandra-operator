@@ -14,6 +14,8 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## unreleased
+
+## v1.1.1 2022-05-17
 * [BUGFIX] [#550](https://github.com/k8ssandra/k8ssandra-operator/issues/550) Fix system schema replication annotation parsing failure after 1.1.0 upgrade
 
 ## v1.1.0 2022-05-13
