@@ -42,13 +42,6 @@ spec:
         resources:
           requests:
             storage: 5Gi
-    racks:
-      - name: rack1
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack1
-      - name: rack2
-        nodeAffinityLabels:
-          "topology.kubernetes.io/zone": rack2
     config:
       cassandraYaml:
         auto_snapshot: false

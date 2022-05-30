@@ -115,9 +115,6 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 	}
-	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		verifyRestoreFinished(t, ctx, f, dcKey, backupKey)
-	}
 }
 
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
