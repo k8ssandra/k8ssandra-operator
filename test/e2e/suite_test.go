@@ -219,7 +219,7 @@ func TestOperator(t *testing.T) {
 		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("CreateMultiMedusaOld", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createSingleMedusaJob,
+		testFunc:                     createMultiMedusa,
 		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
