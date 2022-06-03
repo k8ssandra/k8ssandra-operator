@@ -1,0 +1,29 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: cluster1
+spec:
+  cassandra:
+    serverVersion: 3.11.11
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        stargate:
+          size: 1
+          heapSize: 384Mi
+          auth:
+            apiAuthMethod: JWT
+            providerUrl: http://keycloak-stargate-service:8080/realms/stargate/protocol/openid-connect/certs
+          cassandraConfigMapRef:
+            name: cassandra-config
+    mgmtAPIHeap: 64Mi

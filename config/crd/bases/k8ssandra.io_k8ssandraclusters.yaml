@@ -4270,6 +4270,45 @@ spec:
                                 if this property is set to true, because of port conflicts
                                 on the same IP address.'
                               type: boolean
+                            auth:
+                              description: Authentication options.
+                              properties:
+                                apiAuthMethod:
+                                  default: Table
+                                  description: 'The method to use for authenticating
+                                    requests to the Stargate APIs. Stargate currently
+                                    has two authentication / authorization methods:
+                                    - Table: table-based; - JWT: JSON web token (JWT)-based.
+                                    The methods are mutually exclusive. The default
+                                    method is Table.'
+                                  enum:
+                                  - Table
+                                  - JWT
+                                  type: string
+                                enabled:
+                                  description: Whether to enable authentication for
+                                    Stargate. The default is true; it is highly recommended
+                                    to always leave authentication turned on, not
+                                    only on Stargate nodes, but also on data nodes
+                                    as well.
+                                  type: boolean
+                                providerUrl:
+                                  description: Required when using JWT authentication
+                                    method, ignored otherwise.
+                                  type: string
+                                tokenTtlSeconds:
+                                  description: The time-to-live in seconds of an API
+                                    authentication token. Valid only for the Table
+                                    authentication method. By default, the token persists
+                                    for 30 minutes with a sliding window. Each use
+                                    of the token to authenticate resets the 30-minute
+                                    window. A token created and used after 29 minutes
+                                    will authenticate a request, but if 31 minutes
+                                    passes before use, the token will no longer exist.
+                                    Default is 1800 seconds (30 minutes).
+                                  minimum: 1
+                                  type: integer
+                              type: object
                             cassandraConfigMapRef:
                               description: CassandraConfigMapRef is a reference to
                                 a ConfigMap that holds Cassandra configuration. The
@@ -5660,6 +5699,46 @@ spec:
                                       if this property is set to true, because of
                                       port conflicts on the same IP address.'
                                     type: boolean
+                                  auth:
+                                    description: Authentication options.
+                                    properties:
+                                      apiAuthMethod:
+                                        default: Table
+                                        description: 'The method to use for authenticating
+                                          requests to the Stargate APIs. Stargate
+                                          currently has two authentication / authorization
+                                          methods: - Table: table-based; - JWT: JSON
+                                          web token (JWT)-based. The methods are mutually
+                                          exclusive. The default method is Table.'
+                                        enum:
+                                        - Table
+                                        - JWT
+                                        type: string
+                                      enabled:
+                                        description: Whether to enable authentication
+                                          for Stargate. The default is true; it is
+                                          highly recommended to always leave authentication
+                                          turned on, not only on Stargate nodes, but
+                                          also on data nodes as well.
+                                        type: boolean
+                                      providerUrl:
+                                        description: Required when using JWT authentication
+                                          method, ignored otherwise.
+                                        type: string
+                                      tokenTtlSeconds:
+                                        description: The time-to-live in seconds of
+                                          an API authentication token. Valid only
+                                          for the Table authentication method. By
+                                          default, the token persists for 30 minutes
+                                          with a sliding window. Each use of the token
+                                          to authenticate resets the 30-minute window.
+                                          A token created and used after 29 minutes
+                                          will authenticate a request, but if 31 minutes
+                                          passes before use, the token will no longer
+                                          exist. Default is 1800 seconds (30 minutes).
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   cassandraConfigMapRef:
                                     description: CassandraConfigMapRef is a reference
                                       to a ConfigMap that holds Cassandra configuration.
@@ -10810,6 +10889,42 @@ spec:
                       nodes won''t be allowed to sit on data nodes even if this property
                       is set to true, because of port conflicts on the same IP address.'
                     type: boolean
+                  auth:
+                    description: Authentication options.
+                    properties:
+                      apiAuthMethod:
+                        default: Table
+                        description: 'The method to use for authenticating requests
+                          to the Stargate APIs. Stargate currently has two authentication
+                          / authorization methods: - Table: table-based; - JWT: JSON
+                          web token (JWT)-based. The methods are mutually exclusive.
+                          The default method is Table.'
+                        enum:
+                        - Table
+                        - JWT
+                        type: string
+                      enabled:
+                        description: Whether to enable authentication for Stargate.
+                          The default is true; it is highly recommended to always
+                          leave authentication turned on, not only on Stargate nodes,
+                          but also on data nodes as well.
+                        type: boolean
+                      providerUrl:
+                        description: Required when using JWT authentication method,
+                          ignored otherwise.
+                        type: string
+                      tokenTtlSeconds:
+                        description: The time-to-live in seconds of an API authentication
+                          token. Valid only for the Table authentication method. By
+                          default, the token persists for 30 minutes with a sliding
+                          window. Each use of the token to authenticate resets the
+                          30-minute window. A token created and used after 29 minutes
+                          will authenticate a request, but if 31 minutes passes before
+                          use, the token will no longer exist. Default is 1800 seconds
+                          (30 minutes).
+                        minimum: 1
+                        type: integer
+                    type: object
                   cassandraConfigMapRef:
                     description: CassandraConfigMapRef is a reference to a ConfigMap
                       that holds Cassandra configuration. The map should have a key

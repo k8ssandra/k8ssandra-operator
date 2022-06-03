@@ -45,14 +45,18 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", "", "", stargateRestHostAndPort, stargateCqlHostAndPort)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, "", "")
+	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", "", "", stargateRestHostAndPort, stargateCqlHostAndPort)
-	f.DeployReaperIngresses(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", stargateRestHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, "", "")
+	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)

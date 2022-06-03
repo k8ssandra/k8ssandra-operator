@@ -1,6 +1,7 @@
 package stargate
 
 import (
+	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
 
@@ -75,6 +76,7 @@ func TestNewDeployments(t *testing.T) {
 	t.Run("CassandraConfigMap", testNewDeploymentsCassandraConfigMap)
 	t.Run("Custom images", testImages)
 	t.Run("Encryption", testNewDeploymentsEncryption)
+	t.Run("Authentication", testNewDeploymentsAuthentication)
 }
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
@@ -637,6 +639,50 @@ func testNewDeploymentsEncryption(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expectedTruststoreVolume, *volume, "server truststore volume does not match expected value")
+}
+
+func testNewDeploymentsAuthentication(t *testing.T) {
+	t.Run("disabled", func(t *testing.T) {
+		sg := stargate.DeepCopy()
+		sg.Spec.Auth = api.AuthOptions{Enabled: pointer.Bool(false)}
+		deployments := NewDeployments(sg, dc)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
+		assert.NotContains(t, javaOpts.Value, "-Dstargate.auth_id")
+	})
+	t.Run("table-based", func(t *testing.T) {
+		sg := stargate.DeepCopy()
+		sg.Spec.Auth = api.AuthOptions{
+			Enabled:         pointer.Bool(true),
+			ApiAuthMethod:   "Table",
+			TokenTtlSeconds: 123,
+		}
+		deployments := NewDeployments(sg, dc)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
+		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_id=AuthTableBasedService")
+		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_tokenttl=123")
+	})
+	t.Run("JWT-based", func(t *testing.T) {
+		sg := stargate.DeepCopy()
+		sg.Spec.Auth = api.AuthOptions{
+			Enabled:        pointer.Bool(true),
+			ApiAuthMethod:  "JWT",
+			JwtProviderUrl: "https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token",
+		}
+		deployments := NewDeployments(sg, dc)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
+		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_id=AuthJwtService")
+		assert.Contains(t, javaOpts.Value, "-Dstargate.auth.jwt_provider_url=https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token")
+	})
+
 }
 
 func testImages(t *testing.T) {

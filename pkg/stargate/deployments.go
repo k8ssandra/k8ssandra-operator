@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
@@ -96,7 +97,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		tolerations := computeTolerations(template, dc)
 		affinity := computeAffinity(template, dc, &rack)
 
-		deployment := appsv1.Deployment{
+		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        deploymentName,
 				Namespace:   stargate.Namespace,
@@ -207,21 +208,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			deployment.Spec.Template.Labels[coreapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 		}
 
-		if stargate.Spec.IsAuthEnabled() {
-			// Stargate reacts to the sole presence of this variable, regardless of its contents.
-			// When this variable is absent, Stargate will use AllowAllAuthenticator.
-			// When this variable is present, Stargate will by default use PasswordAuthenticator, unless overridden
-			// by the stargate.authenticator_class_name system property (see below, computeJvmOptions).
-			// Note that any other authenticator than PasswordAuthenticator will cause the REST APIs to be unusable,
-			// however the CQL API will still be usable.
-			deployment.Spec.Template.Spec.Containers[0].Env = append(
-				deployment.Spec.Template.Spec.Containers[0].Env,
-				corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
-			)
-		}
+		configureAuth(stargate, deployment)
 
-		annotations.AddHashAnnotation(&deployment)
-		deployments[deploymentName] = deployment
+		annotations.AddHashAnnotation(deployment)
+		deployments[deploymentName] = *deployment
 	}
 	return deployments
 }
@@ -433,6 +423,50 @@ func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraData
 	return &corev1.Affinity{
 		NodeAffinity:    computeNodeAffinity(dc, rack.Name),
 		PodAntiAffinity: computePodAntiAffinity(allowStargateOnDataNodes, dc, rack.Name),
+	}
+}
+
+func configureAuth(stargate *api.Stargate, deployment *appsv1.Deployment) {
+	if stargate.Spec.Auth.IsEnabled() {
+		// Stargate reacts to the sole presence of this variable, regardless of its contents.
+		// Setting this env var triggers the --enable-auth flag in the Stargate container, which in
+		// turn triggers the setting of the -Dstargate.enable_auth=true system property.
+		// As a consequence:
+		// When this variable is absent, Stargate will use AllowAllAuthenticator.
+		// When this variable is present, Stargate will by default use PasswordAuthenticator, unless
+		// overridden by the stargate.authenticator_class_name system property (currently not
+		// exposed in the Stargate spec). Note that any other authenticator than
+		// PasswordAuthenticator will cause the REST APIs to be unusable, however the CQL API will
+		// still be usable.
+		// See https://github.com/stargate/stargate/issues/792 for more.
+		deployment.Spec.Template.Spec.Containers[0].Env = append(
+			deployment.Spec.Template.Spec.Containers[0].Env,
+			corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
+		)
+		switch stargate.Spec.Auth.ApiAuthMethod {
+		case "Table", "":
+			for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+				if env.Name == "JAVA_OPTS" {
+					env.Value += " -Dstargate.auth_id=AuthTableBasedService"
+					if stargate.Spec.Auth.TokenTtlSeconds > 0 {
+						env.Value += " -Dstargate.auth_tokenttl="
+						env.Value += strconv.Itoa(stargate.Spec.Auth.TokenTtlSeconds)
+					}
+					deployment.Spec.Template.Spec.Containers[0].Env[i] = env
+					break
+				}
+			}
+		case "JWT":
+			for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+				if env.Name == "JAVA_OPTS" {
+					env.Value += " -Dstargate.auth_id=AuthJwtService"
+					env.Value += " -Dstargate.auth.jwt_provider_url="
+					env.Value += stargate.Spec.Auth.JwtProviderUrl
+					deployment.Spec.Template.Spec.Containers[0].Env[i] = env
+					break
+				}
+			}
+		}
 	}
 }
 

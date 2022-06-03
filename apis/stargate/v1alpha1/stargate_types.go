@@ -108,6 +108,10 @@ type StargateTemplate struct {
 	// (unless overriden by DC specific settings)
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
+
+	// Authentication options.
+	// +optional
+	Auth AuthOptions `json:"auth,omitempty"`
 }
 
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.
@@ -180,20 +184,11 @@ type StargateSpec struct {
 	// +kubebuilder:validation:Required
 	DatacenterRef corev1.LocalObjectReference `json:"datacenterRef"`
 
-	// Whether to enable authentication for Stargate. The default is true; it is highly recommended to always leave
-	// authentication turned on, not only on Stargate nodes, but also on data nodes as well. Note that Stargate REST
-	// APIs are currently only accessible if authentication is enabled, and if the authenticator in use in the whole
-	// cluster is PasswordAuthenticator. The usage of any other authenticator will cause the REST API to become
-	// inaccessible, see https://github.com/stargate/stargate/issues/792 for more. Stargate CQL API however remains
-	// accessible even if authentication is disabled in the cluster, or when a custom authenticator is being used.
-	// +optional
-	// +kubebuilder:default=true
-	Auth *bool `json:"auth,omitempty"`
-
 	CassandraEncryption *CassandraEncryption `json:"cassandraEncryption,omitempty"`
 }
 
-// Still it is required to pass the encryption stores secrets to the Stargate pods, so that they can be mounted as volumes.
+// CassandraEncryption groups together encryption stores that are passed to the Stargate pods, so
+// that they can be mounted as volumes.
 type CassandraEncryption struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// +optional
@@ -204,8 +199,41 @@ type CassandraEncryption struct {
 	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 }
 
-func (in StargateSpec) IsAuthEnabled() bool {
-	return in.Auth == nil || *in.Auth
+type AuthOptions struct {
+
+	// Whether to enable authentication for Stargate. The default is true; it is highly recommended
+	// to always leave authentication turned on, not only on Stargate nodes, but also on data nodes
+	// as well.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
+	// The method to use for authenticating requests to the Stargate APIs. Stargate currently has
+	// two authentication / authorization methods:
+	// - Table: table-based;
+	// - JWT: JSON web token (JWT)-based.
+	// The methods are mutually exclusive. The default method is Table.
+	// +optional
+	// +kubebuilder:validation:Enum=Table;JWT
+	// +kubebuilder:default=Table
+	ApiAuthMethod string `json:"apiAuthMethod,omitempty"`
+
+	// The time-to-live in seconds of an API authentication token. Valid only for the Table
+	// authentication method. By default, the token persists for 30 minutes with a sliding window.
+	// Each use of the token to authenticate resets the 30-minute window. A token created and used
+	// after 29 minutes will authenticate a request, but if 31 minutes passes before use, the token
+	// will no longer exist.
+	// Default is 1800 seconds (30 minutes).
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	TokenTtlSeconds int `json:"tokenTtlSeconds,omitempty"`
+
+	// Required when using JWT authentication method, ignored otherwise.
+	// +optional
+	JwtProviderUrl string `json:"providerUrl,omitempty"`
+}
+
+func (in AuthOptions) IsEnabled() bool {
+	return in.Enabled == nil || *in.Enabled
 }
 
 // StargateProgress is a word summarizing the state of a Stargate resource.

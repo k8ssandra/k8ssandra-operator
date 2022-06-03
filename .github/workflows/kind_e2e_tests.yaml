@@ -83,6 +83,7 @@ jobs:
           - GCTests/4.0-jdk11-CMS
           - GCTests/4.0-jdk11-ZGC
           - UpgradeOperatorImage
+          - StargateJwt
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

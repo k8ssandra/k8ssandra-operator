@@ -124,7 +124,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	t.Log("check that authentication is disabled in Stargate CRD")
 	require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-		return !sg.Spec.IsAuthEnabled()
+		return !sg.Spec.Auth.IsEnabled()
 	}), timeout, interval)
 
 	t.Log("check that authentication is disabled in Reaper CRD")
@@ -253,7 +253,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 
 	t.Log("check that authentication is enabled in Stargate CRD")
 	require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-		return sg.Spec.IsAuthEnabled()
+		return sg.Spec.Auth.IsEnabled()
 	}), timeout, interval)
 
 	t.Log("check that authentication is enabled in Reaper CRD")
