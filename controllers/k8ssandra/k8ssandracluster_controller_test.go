@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
@@ -1439,8 +1441,21 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 		},
 	}
 
+	// Create the client keystore and truststore secrets
+	clientCertificates := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-certificates",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"rootca.crt": []byte("Root CA content"),
+			"client.crt": []byte("Client certificate content"),
+			"client.key": []byte("Client key content"),
+		},
+	}
+
 	// Loop over the secrets and create them
-	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
+	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, clientCertificates} {
 		secretKey := utils.GetKey(secret)
 		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
 		f.Create(ctx, secretClusterKey0, secret)
@@ -1503,6 +1518,22 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 					TruststoreSecretRef: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
 					},
+				},
+			},
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				ContainerImage: &images.Image{
+					Repository: medusaImageRepo,
+				},
+				StorageProperties: medusaapi.Storage{
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: cassandraUserSecret,
+					},
+				},
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: cassandraUserSecret,
+				},
+				CertificatesSecretRef: corev1.LocalObjectReference{
+					Name: "client-certificates",
 				},
 			},
 		},

@@ -36,6 +36,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
 	medusaIniTemplate := `
     [cassandra]
     use_sudo = false
+    {{- if .Spec.Medusa.CertificatesSecretRef.Name }}
+    certfile = /etc/certificates/rootca.crt
+    usercert = /etc/certificates/client.crt_signed
+    userkey = /etc/certificates/client.key
+    {{- end}}
 
     [storage]
     use_sudo_for_restore = false
@@ -77,12 +82,12 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     {{- if .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
     transfer_max_bandwidth = {{ .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
     {{- end }}
-	{{- if .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
+    {{- if .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
     concurrent_transfers = {{ .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
-	{{- end }}
-	{{- if .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
+    {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
     multi_part_upload_threshold = {{ .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
-	{{- end }}
+    {{- end }}
 
     [grpc]
     enabled = 1
@@ -207,6 +212,14 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassand
 			Name:      "podinfo",
 			MountPath: "/etc/podinfo",
 		},
+	}
+
+	// Mount client encryption certificates if the secret ref is provided.
+	if medusaSpec.CertificatesSecretRef.Name != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "certificates",
+			MountPath: "/etc/certificates",
+		})
 	}
 
 	if medusaSpec.StorageProperties.StorageProvider == "local" {
@@ -341,4 +354,19 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 	}
 
 	cassandra.AddOrUpdateVolume(dcConfig, podInfoVolume, podInfoVolumeIndex, found)
+
+	// Encryption client certificates
+	if medusaSpec.CertificatesSecretRef.Name != "" {
+		encryptionClientVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "certificates")
+		encryptionClientVolume := &corev1.Volume{
+			Name: "certificates",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: medusaSpec.CertificatesSecretRef.Name,
+				},
+			},
+		}
+
+		cassandra.AddOrUpdateVolume(dcConfig, encryptionClientVolume, encryptionClientVolumeIndex, found)
+	}
 }

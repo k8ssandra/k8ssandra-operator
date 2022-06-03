@@ -143,4 +143,10 @@ type MedusaClusterTemplate struct {
 
 	// Provides all storage backend related properties for backups.
 	StorageProperties Storage `json:"storageProperties,omitempty"`
+
+	// Certificates for Medusa if client encryption is enabled in Cassandra.
+	// The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".
+	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
+	// +optional
+	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
 }
