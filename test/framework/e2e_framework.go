@@ -298,7 +298,7 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 
 	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
+		f.logger.Info("Create client certificates secrets", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}
