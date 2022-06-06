@@ -76,6 +76,9 @@ spec:
                   Overrides any easier methods of defining the schedule
                 minLength: 1
                 type: string
+              disabled:
+                description: Disabled if set ensures this job is not scheduling anything
+                type: boolean
             required:
             - backupSpec
             - cronSchedule

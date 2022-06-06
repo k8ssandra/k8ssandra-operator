@@ -26,7 +26,8 @@ type MedusaBackupScheduleSpec struct {
 	// +kubebuilder:validation:MinLength=1
 	CronSchedule string `json:"cronSchedule"`
 
-	// TODO Suspend / Disabled etc parameter?
+	// Disabled if set ensures this job is not scheduling anything
+	Disabled bool `json:"disabled,omitempty"`
 
 	// BackupSpec defines the CassandraBackup to be created for this job
 	BackupSpec MedusaBackupJobSpec `json:"backupSpec"`

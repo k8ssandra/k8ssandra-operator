@@ -83,7 +83,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	if nextExecution.Before(now) {
 		nextExecution = sched.Next(now)
 		previousExecution = now
-		createBackup = true
+		createBackup = true && !backupSchedule.Spec.Disabled
 	}
 
 	// Update the status if there are modifications
@@ -99,6 +99,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	if createBackup {
+		// TODO Verify here no previous jobs is still executing?
 		logger.V(1).Info("Scheduled time has been reached, creating a backup job", "MedusaBackupSchedule", req.NamespacedName)
 		generatedName := fmt.Sprintf("%s-%d", backupSchedule.Name, now.Unix())
 		backupJob := &medusav1alpha1.MedusaBackupJob{

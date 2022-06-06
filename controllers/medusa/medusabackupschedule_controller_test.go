@@ -123,6 +123,27 @@ func TestScheduler(t *testing.T) {
 	err = fakeClient.Get(context.TODO(), nsName, backupScheduleLive)
 	require.NoError(err)
 	require.Equal(previousExecutionTime, backupScheduleLive.Status.LastExecution)
+
+	// Set to disabled and verify that the backups aren't scheduled anymore - but the status is updated
+	backupScheduleLive.Spec.Disabled = true
+	err = fakeClient.Update(context.TODO(), backupScheduleLive)
+	require.NoError(err)
+
+	fClock.currentTime = fClock.currentTime.Add(1 * time.Minute)
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
+	require.NoError(err)
+	require.True(res.RequeueAfter > 0)
+
+	backupRequests = medusav1alpha1.MedusaBackupJobList{}
+	err = fakeClient.List(context.TODO(), &backupRequests)
+	require.NoError(err)
+	require.Equal(2, len(backupRequests.Items)) // No new items were created
+
+	backupScheduleLive = &medusav1alpha1.MedusaBackupSchedule{}
+	err = fakeClient.Get(context.TODO(), nsName, backupScheduleLive)
+	require.NoError(err)
+	require.True(previousExecutionTime.Before(&backupScheduleLive.Status.LastExecution)) // Status time is still updated
 }
 
 func TestSchedulerParseError(t *testing.T) {
