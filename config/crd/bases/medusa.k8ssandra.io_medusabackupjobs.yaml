@@ -44,6 +44,7 @@ spec:
                 type: string
               cassandraDatacenter:
                 description: The name of the CassandraDatacenter to back up
+                minLength: 1
                 type: string
             required:
             - cassandraDatacenter

@@ -23,6 +23,7 @@ import (
 // MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
 type MedusaBackupScheduleSpec struct {
 	// CronSchedule is a cronjob format schedule for backups. Overrides any easier methods of defining the schedule
+	// +kubebuilder:validation:MinLength=1
 	CronSchedule string `json:"cronSchedule"`
 
 	// TODO Suspend / Disabled etc parameter?

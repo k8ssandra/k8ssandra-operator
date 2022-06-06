@@ -66,6 +66,7 @@ spec:
                     type: string
                   cassandraDatacenter:
                     description: The name of the CassandraDatacenter to back up
+                    minLength: 1
                     type: string
                 required:
                 - cassandraDatacenter
@@ -73,6 +74,7 @@ spec:
               cronSchedule:
                 description: CronSchedule is a cronjob format schedule for backups.
                   Overrides any easier methods of defining the schedule
+                minLength: 1
                 type: string
             required:
             - backupSpec

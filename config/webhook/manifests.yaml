@@ -11,6 +11,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-medusa-k8ssandra-io-v1alpha1-medusabackupschedule
+  failurePolicy: Fail
+  name: vmedusabackupschedule.kb.io
+  rules:
+  - apiGroups:
+    - medusa.k8ssandra.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - medusabackupschedules
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-k8ssandra-io-v1alpha1-k8ssandracluster
   failurePolicy: Fail
   name: vk8ssandracluster.kb.io

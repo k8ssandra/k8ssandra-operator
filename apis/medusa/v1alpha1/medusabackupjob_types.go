@@ -27,6 +27,7 @@ import (
 // MedusaBackupJobSpec defines the desired state of MedusaBackupJob
 type MedusaBackupJobSpec struct {
 	// The name of the CassandraDatacenter to back up
+	// +kubebuilder:validation:MinLength=1
 	CassandraDatacenter string `json:"cassandraDatacenter"`
 
 	// The type of the backup: "full" or "differential"
