@@ -107,6 +107,7 @@ resources:
   domain: k8ssandra.io
   group: medusa
   kind: MedusaRestoreJob
+  path: github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1

@@ -32,7 +32,7 @@ var ctx context.Context
 var cancel context.CancelFunc
 
 func TestMedusaWebhooks(t *testing.T) {
-	required := require.New(t)
+	require := require.New(t)
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	logrusLog := logrus.New()
@@ -48,8 +48,8 @@ func TestMedusaWebhooks(t *testing.T) {
 	}
 
 	cfg, err := testEnv.Start()
-	required.NoError(err)
-	required.NotNil(cfg)
+	require.NoError(err)
+	require.NotNil(cfg)
 
 	defer cancel()
 	defer func(testEnv *envtest.Environment) {
@@ -61,19 +61,19 @@ func TestMedusaWebhooks(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	err = AddToScheme(scheme)
-	required.NoError(err)
+	require.NoError(err)
 
 	err = corev1.AddToScheme(scheme)
-	required.NoError(err)
+	require.NoError(err)
 
 	err = admissionv1beta1.AddToScheme(scheme)
-	required.NoError(err)
+	require.NoError(err)
 
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
-	required.NoError(err)
-	required.NotNil(k8sClient)
+	require.NoError(err)
+	require.NotNil(k8sClient)
 
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
@@ -85,22 +85,22 @@ func TestMedusaWebhooks(t *testing.T) {
 		LeaderElection:     false,
 		MetricsBindAddress: "0",
 	})
-	required.NoError(err)
+	require.NoError(err)
 
 	err = (&MedusaBackupSchedule{}).SetupWebhookWithManager(mgr)
-	required.NoError(err)
+	require.NoError(err)
 
 	//+kubebuilder:scaffold:webhook
 
 	go func() {
 		err = mgr.Start(ctx)
-		required.NoError(err)
+		require.NoError(err)
 	}()
 
 	// wait for the webhook server to get ready
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
-	required.Eventually(func() bool {
+	require.Eventually(func() bool {
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
 			return false
