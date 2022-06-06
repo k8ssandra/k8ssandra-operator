@@ -35,8 +35,7 @@ func TestScheduler(t *testing.T) {
 		},
 		Spec: medusav1alpha1.MedusaBackupScheduleSpec{
 			CronSchedule: "* * * * *",
-			BackupSpec: medusav1alpha1.CassandraBackupSpec{
-				Name:                "test-backup",
+			BackupSpec: medusav1alpha1.MedusaBackupJobSpec{
 				CassandraDatacenter: "dc1",
 				Type:                "differential",
 			},
@@ -73,7 +72,7 @@ func TestScheduler(t *testing.T) {
 	require.True(res.RequeueAfter > 0)
 
 	// We should have a backup now..
-	backupRequests := medusav1alpha1.CassandraBackupList{}
+	backupRequests := medusav1alpha1.MedusaBackupJobList{}
 	err = fakeClient.List(context.TODO(), &backupRequests)
 	require.NoError(err)
 	require.Equal(1, len(backupRequests.Items))
@@ -81,7 +80,6 @@ func TestScheduler(t *testing.T) {
 	// Ensure the backup object is created correctly
 	backup := backupRequests.Items[0]
 	require.Equal(backupSchedule.Spec.BackupSpec.CassandraDatacenter, backup.Spec.CassandraDatacenter)
-	require.Equal(backupSchedule.Spec.BackupSpec.Name, backup.Spec.Name)
 	require.Equal(backupSchedule.Spec.BackupSpec.Type, backup.Spec.Type)
 
 	// Verify the Status of the BackupSchedule is modified and the object is requeued
@@ -99,7 +97,7 @@ func TestScheduler(t *testing.T) {
 	require.NoError(err)
 	require.True(res.RequeueAfter > 0)
 
-	backupRequests = medusav1alpha1.CassandraBackupList{}
+	backupRequests = medusav1alpha1.MedusaBackupJobList{}
 	err = fakeClient.List(context.TODO(), &backupRequests)
 	require.NoError(err)
 	require.Equal(2, len(backupRequests.Items))
@@ -116,7 +114,7 @@ func TestScheduler(t *testing.T) {
 	require.NoError(err)
 	require.True(res.RequeueAfter > 0)
 
-	backupRequests = medusav1alpha1.CassandraBackupList{}
+	backupRequests = medusav1alpha1.MedusaBackupJobList{}
 	err = fakeClient.List(context.TODO(), &backupRequests)
 	require.NoError(err)
 	require.Equal(2, len(backupRequests.Items))
@@ -138,8 +136,7 @@ func TestSchedulerParseError(t *testing.T) {
 		},
 		Spec: medusav1alpha1.MedusaBackupScheduleSpec{
 			CronSchedule: "* * *",
-			BackupSpec: medusav1alpha1.CassandraBackupSpec{
-				Name:                "test-backup",
+			BackupSpec: medusav1alpha1.MedusaBackupJobSpec{
 				CassandraDatacenter: "dc1",
 				Type:                "differential",
 			},

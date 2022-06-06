@@ -101,7 +101,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	if createBackup {
 		logger.V(1).Info("Scheduled time has been reached, creating a backup job", "MedusaBackupSchedule", req.NamespacedName)
 		generatedName := fmt.Sprintf("%s-%d", backupSchedule.Name, now.Unix())
-		backupJob := &medusav1alpha1.CassandraBackup{
+		backupJob := &medusav1alpha1.MedusaBackupJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generatedName,
 				Namespace: backupSchedule.Namespace,

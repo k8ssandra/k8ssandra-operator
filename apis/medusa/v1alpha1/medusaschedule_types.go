@@ -28,7 +28,7 @@ type MedusaBackupScheduleSpec struct {
 	// TODO Suspend / Disabled etc parameter?
 
 	// BackupSpec defines the CassandraBackup to be created for this job
-	BackupSpec CassandraBackupSpec `json:"backupSpec"`
+	BackupSpec MedusaBackupJobSpec `json:"backupSpec"`
 }
 
 // MedusaBackupScheduleStatus defines the observed state of MedusaBackupSchedule
