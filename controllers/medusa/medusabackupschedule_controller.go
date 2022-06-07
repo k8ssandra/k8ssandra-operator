@@ -24,8 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cron "github.com/robfig/cron/v3"
@@ -136,6 +138,6 @@ func getPreviousExecutionTime(ctx context.Context, backupSchedule *medusav1alpha
 // SetupWithManager sets up the controller with the Manager.
 func (r *MedusaBackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusav1alpha1.MedusaBackupSchedule{}).
+		For(&medusav1alpha1.MedusaBackupSchedule{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
