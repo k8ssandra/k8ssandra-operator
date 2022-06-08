@@ -154,6 +154,11 @@ replacements:
       kind: ValidatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
+  - select:
+      name: k8ssandra-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.1.clientConfig.service.namespace
 `
 
 	dataPlaneTmpl := `
@@ -206,6 +211,11 @@ replacements:
       kind: ValidatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
+  - select:
+      name: k8ssandra-operator-validating-webhook-configuration
+      kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.1.clientConfig.service.namespace
 `
 
 	err := generateKustomizationFile(fmt.Sprintf("k8ssandra-operator/%s", controlPlaneDir), config, controlPlaneTmpl)
