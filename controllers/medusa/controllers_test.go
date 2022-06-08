@@ -379,32 +379,6 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 	return testEnv
 }
 
-/*
-func setupSchedulerTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {
-	testEnv = &testutils.MultiClusterTestEnv{}
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		return []string{}, nil
-	}
-
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
-
-	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&MedusaBackupScheduleReconciler{
-			Client: mgr.GetClient(),
-			Scheme: scheme.Scheme,
-		}).SetupWithManager(mgr)
-		return err
-	})
-	if err != nil {
-		t.Fatalf("failed to start test environment: %s", err)
-	}
-	return testEnv
-}
-*/
-
 type fakeSeedsResolver struct {
 	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
 }
