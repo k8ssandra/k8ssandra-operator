@@ -32,8 +32,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -215,6 +217,6 @@ func backupFinished(backup *medusaapi.CassandraBackup) bool {
 
 func (r *CassandraBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusaapi.CassandraBackup{}).
+		For(&medusaapi.CassandraBackup{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }

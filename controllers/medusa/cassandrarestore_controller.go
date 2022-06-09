@@ -29,8 +29,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/google/uuid"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -300,6 +302,6 @@ func getRestoreInitContainerFromStatefulSet(statefulset *appsv1.StatefulSet) *co
 
 func (r *CassandraRestoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusaapi.CassandraRestore{}).
+		For(&medusaapi.CassandraRestore{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }

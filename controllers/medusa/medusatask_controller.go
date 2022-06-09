@@ -27,9 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
@@ -304,10 +306,10 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 
 			// Update task status at the end of the reconcile
 			logger.Info("finished task operations", "MedusaTask", fmt.Sprint(task))
+			finishPatch := client.MergeFrom(task.DeepCopy())
 			task.Status.FinishTime = metav1.Now()
 			taskResult := medusav1alpha1.TaskResult{PodName: pod.Name}
 			task.Status.Finished = append(task.Status.Finished, taskResult)
-			finishPatch := client.MergeFrom(task.DeepCopy())
 			if err := r.Status().Patch(ctx, task, finishPatch); err != nil {
 				logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
 				return ctrl.Result{}, err
@@ -424,6 +426,6 @@ func taskFinished(task *medusav1alpha1.MedusaTask) bool {
 // SetupWithManager sets up the controller with the Manager.
 func (r *MedusaTaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusav1alpha1.MedusaTask{}).
+		For(&medusav1alpha1.MedusaTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
