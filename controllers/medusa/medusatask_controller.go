@@ -305,7 +305,7 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 		// Update task status at the end of the reconcile
 		logger.Info("finished task operations", "MedusaTask", fmt.Sprint(task))
 		task.Status.FinishTime = metav1.Now()
-		taskResult := medusav1alpha1.TaskResult{PodName: medusa.MedusaServiceName(cassdc.Spec.ClusterName)}
+		taskResult := medusav1alpha1.TaskResult{PodName: medusa.MedusaServiceName(cassdc.Spec.ClusterName, cassdc.GetName())}
 		task.Status.Finished = append(task.Status.Finished, taskResult)
 		finishPatch := client.MergeFrom(task.DeepCopy())
 		if err := r.Status().Patch(ctx, task, finishPatch); err != nil {
@@ -398,7 +398,7 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 }
 
 func getBackups(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter, clientFactory medusa.ClientFactory, logger logr.Logger) ([]*medusa.BackupSummary, error) {
-	addr := fmt.Sprintf("%s.%s.svc.cluster.local:%d", medusa.MedusaServiceName(cassdc.Spec.ClusterName), cassdc.Namespace, shared.BackupSidecarPort)
+	addr := fmt.Sprintf("%s.%s.svc.cluster.local:%d", medusa.MedusaServiceName(cassdc.Spec.ClusterName, cassdc.GetName()), cassdc.Namespace, shared.BackupSidecarPort)
 	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		logger.Error(err, "Failed to create medusa client")
 		return nil, err

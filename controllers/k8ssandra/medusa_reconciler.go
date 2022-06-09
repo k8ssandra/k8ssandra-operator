@@ -31,7 +31,7 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 	if err != nil {
 		return result.Error(err)
 	}
-	namespace := dcTemplate.Meta.Namespace
+	namespace := dcConfig.Meta.Namespace
 	if namespace == "" {
 		namespace = kc.Namespace
 	}
@@ -66,17 +66,27 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 		// Add the containers definitions in the podTemplateSpec
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, logger)
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaMainContainer, logger)
-		// Create required volumes for Medusa
-		additionalVolumes := medusa.UpdateMedusaVolumes(dcConfig.PodTemplateSpec, medusaSpec, dcConfig.Cluster, logger)
+
+		// Create required volumes for the Medusa containers
+		volumes, additionalVolumes := medusa.GenerateMedusaVolumes(dcConfig.PodTemplateSpec, medusaSpec, dcConfig.Cluster, logger)
+		for _, volume := range volumes {
+			cassandra.AddOrUpdateVolume(dcConfig.PodTemplateSpec, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
 		for _, volume := range additionalVolumes {
 			cassandra.AddOrUpdateAdditionalVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
 		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.Name))
+
 		// Create the Medusa standalone pod
-		medusaStandalone := medusa.StandaloneMedusaDeployment(medusaMainContainer, kc.Name, namespace, logger)
-		medusa.UpdateMedusaVolumes(&medusaStandalone.Spec.Template, medusaSpec, dcConfig.Cluster, logger)
+		medusaStandalone := medusa.StandaloneMedusaDeployment(medusaMainContainer, kc.Name, dcConfig.Meta.Name, namespace, logger)
+		// Add the volumes previously computed to the Medusa standalone pod
+		for _, volume := range volumes {
+			cassandra.AddOrUpdateVolume(&medusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
 		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
-		r.reconcileMedusaStandalone(ctx, kc, remoteClient, medusaStandalone, medusaService, logger)
+		if res := r.reconcileMedusaStandalone(ctx, kc, remoteClient, medusaStandalone, medusaService, logger); res.Completed() {
+			return res
+		}
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
@@ -174,33 +184,29 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaStandalone(
 
 		logger := logger.WithValues("MedusaDeployment", deploymentKey)
 
+		if err := controllerutil.SetControllerReference(kc, desiredDeployment, r.Scheme); err != nil {
+			logger.Error(err, "failed to set controller reference", "K8ssandraCluster", utils.GetKey(kc))
+			return result.Error(err)
+		}
 		// Compute a hash which will allow to compare desired and actual deployments
 		annotations.AddHashAnnotation(desiredDeployment)
 
 		actualDeployment := &appsv1.Deployment{}
 		if err := remoteClient.Get(ctx, deploymentKey, actualDeployment); err != nil {
 			if errors.IsNotFound(err) {
+				logger.Info("Creating Medusa standalone deployment")
 				if err := remoteClient.Create(ctx, desiredDeployment); err != nil {
 					logger.Error(err, "Failed to create Medusa deployment")
 					return result.Error(err)
 				}
+				return result.RequeueSoon(r.DefaultDelay)
+			} else {
+				logger.Error(err, "Failed to get Medusa deployment")
+				return result.Error(err)
 			}
 		}
 
 		actualDeployment = actualDeployment.DeepCopy()
-
-		if actualDeployment.OwnerReferences == nil {
-			if err := controllerutil.SetControllerReference(kc, actualDeployment, r.Scheme); err != nil {
-				logger.Error(err, "failed to set controller reference", "CassandraDatacenter", utils.GetKey(kc))
-				return result.Error(err)
-			}
-			if err := r.Update(ctx, actualDeployment); err != nil {
-				return result.Error(err)
-			} else {
-				logger.Info("updated task with owner reference", "CassandraDatacenter", utils.GetKey(kc))
-				return result.RequeueSoon(r.DefaultDelay)
-			}
-		}
 
 		if !annotations.CompareHashAnnotations(actualDeployment, desiredDeployment) {
 			logger.Info("Updating Medusa deployment on namespace " + actualDeployment.ObjectMeta.Namespace)
