@@ -235,13 +235,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaTask")
 		os.Exit(1)
 	}
-	if err = (&medusacontrollers.MedusaBackupReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackup")
-		os.Exit(1)
-	}
 	if err = (&medusacontrollers.MedusaBackupJobReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
