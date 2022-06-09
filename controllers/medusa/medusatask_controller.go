@@ -306,10 +306,10 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 
 			// Update task status at the end of the reconcile
 			logger.Info("finished task operations", "MedusaTask", fmt.Sprint(task))
+			finishPatch := client.MergeFrom(task.DeepCopy())
 			task.Status.FinishTime = metav1.Now()
 			taskResult := medusav1alpha1.TaskResult{PodName: pod.Name}
 			task.Status.Finished = append(task.Status.Finished, taskResult)
-			finishPatch := client.MergeFrom(task.DeepCopy())
 			if err := r.Status().Patch(ctx, task, finishPatch); err != nil {
 				logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
 				return ctrl.Result{}, err
