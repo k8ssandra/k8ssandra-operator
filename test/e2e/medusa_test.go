@@ -12,7 +12,7 @@ import (
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -100,7 +100,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, dcKey, f)
-		checkMedusaStandalonePodExists(t, ctx, dcKey, f, kc)
+		checkMedusaStandaloneDeploymentExists(t, ctx, dcKey, f, kc)
 	}
 
 	// Create a backup in each DC and verify their completion
@@ -138,16 +138,16 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, dcKey framewo
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
 }
 
-func checkMedusaStandalonePodExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkMedusaStandaloneDeploymentExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	t.Log("Checking that the Medusa standalone pod has been created")
 	require := require.New(t)
 	// Get the medusa standalone pod and check that it is running
 	require.Eventually(func() bool {
-		pod := &corev1.Pod{}
-		podKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandalonePodName(kc.Name, dcKey.Name)}}
-		err := f.Get(ctx, podKey, pod)
+		deployment := &appsv1.Deployment{}
+		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandalonePodName(kc.Name, dcKey.Name)}}
+		err := f.Get(ctx, deploymentKey, deployment)
 		require.NoError(err, "Error getting the medusa standalone pod")
-		return pod.Status.Phase == corev1.PodRunning
+		return deployment.Status.ReadyReplicas == 1
 	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone pod is not running")
 }
 
