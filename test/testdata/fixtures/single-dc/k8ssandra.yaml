@@ -5,6 +5,7 @@ metadata:
 spec:
   cassandra:
     serverVersion: 3.11.11
+    clusterName: "Weird Cluster Name"
     datacenters:
       - metadata:
           name: dc1

@@ -217,6 +217,11 @@ type CassandraClusterTemplate struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// +optional
 	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
+
+	// Override the Cassandra cluster name. If unspecified, the cluster name will be the same as the K8ssandraCluster
+	// CRD name.
+	// +optional
+	ClusterName string `json:"clusterName,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
