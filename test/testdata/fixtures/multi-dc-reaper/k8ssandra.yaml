@@ -14,7 +14,7 @@ metadata:
   name: reaper-ui-secret
 data:
   # username: reaper-ui
-  username: cmVhcGVyLWpteA==
+  username: cmVhcGVyLXVpCg==
   # password: R3ap3r
   password: UjNhcDNy
 ---
