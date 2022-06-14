@@ -23,6 +23,7 @@ spec:
       - metadata:
           name: dc1
         size: 2
+        k8sContext: kind-k8ssandra-0
       - metadata:
           name: dc2
         size: 2

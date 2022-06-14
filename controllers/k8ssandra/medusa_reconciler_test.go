@@ -11,6 +11,7 @@ import (
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -120,39 +121,39 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
-	t.Log("check that the standalone Medusa deployment was created")
-	medusaDeploymentKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
-	medusaDeployment := &appsv1.Deployment{}
+	t.Log("check that the standalone Medusa deployment was created in dc1")
+	medusaDeploymentKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
+	medusaDeployment1 := &appsv1.Deployment{}
 	require.Eventually(func() bool {
-		if err := f.Get(ctx, medusaDeploymentKey, medusaDeployment); err != nil {
+		if err := f.Get(ctx, medusaDeploymentKey1, medusaDeployment1); err != nil {
 			return false
 		}
 		return true
 	}, timeout, interval)
 
-	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.FailureThreshold), medusaDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold)
-	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.InitialDelaySeconds), medusaDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds)
-	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.PeriodSeconds), medusaDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds)
-	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.SuccessThreshold), medusaDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.SuccessThreshold)
-	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.TimeoutSeconds), medusaDeployment.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.FailureThreshold), medusaDeployment1.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.InitialDelaySeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.PeriodSeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.SuccessThreshold), medusaDeployment1.Spec.Template.Spec.Containers[0].ReadinessProbe.SuccessThreshold)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.TimeoutSeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds)
 
-	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.FailureThreshold), medusaDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold)
-	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.InitialDelaySeconds), medusaDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds)
-	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.PeriodSeconds), medusaDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds)
-	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.SuccessThreshold), medusaDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold)
-	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.TimeoutSeconds), medusaDeployment.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.FailureThreshold), medusaDeployment1.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.InitialDelaySeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.PeriodSeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.SuccessThreshold), medusaDeployment1.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.TimeoutSeconds), medusaDeployment1.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds)
 
-	require.Equal(kc.Spec.Medusa.Resources.Limits.Cpu().String(), medusaDeployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
-	require.Equal(kc.Spec.Medusa.Resources.Limits.Memory().String(), medusaDeployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
-	require.Equal(kc.Spec.Medusa.Resources.Requests.Cpu().String(), medusaDeployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
-	require.Equal(kc.Spec.Medusa.Resources.Requests.Memory().String(), medusaDeployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String())
-	require.True(f.ContainerHasEnvVar(medusaDeployment.Spec.Template.Spec.Containers[0], "MEDUSA_RESOLVE_IP_ADDRESSES", "False"))
+	require.Equal(kc.Spec.Medusa.Resources.Limits.Cpu().String(), medusaDeployment1.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+	require.Equal(kc.Spec.Medusa.Resources.Limits.Memory().String(), medusaDeployment1.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
+	require.Equal(kc.Spec.Medusa.Resources.Requests.Cpu().String(), medusaDeployment1.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+	require.Equal(kc.Spec.Medusa.Resources.Requests.Memory().String(), medusaDeployment1.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String())
+	require.True(f.ContainerHasEnvVar(medusaDeployment1.Spec.Template.Spec.Containers[0], "MEDUSA_RESOLVE_IP_ADDRESSES", "False"))
 
 	t.Log("check that the standalone Medusa service was created")
-	medusaServiceKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaServiceName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
-	medusaService := &corev1.Service{}
+	medusaServiceKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaServiceName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
+	medusaService1 := &corev1.Service{}
 	require.Eventually(func() bool {
-		if err := f.Get(ctx, medusaServiceKey, medusaService); err != nil {
+		if err := f.Get(ctx, medusaServiceKey1, medusaService1); err != nil {
 			return false
 		}
 		return true
@@ -218,6 +219,44 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
+	t.Log("check that the standalone Medusa deployment was created in dc1")
+	medusaDeploymentKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
+	medusaDeployment2 := &appsv1.Deployment{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaDeploymentKey2, medusaDeployment2); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.FailureThreshold), medusaDeployment2.Spec.Template.Spec.Containers[0].ReadinessProbe.FailureThreshold)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.InitialDelaySeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].ReadinessProbe.InitialDelaySeconds)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.PeriodSeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].ReadinessProbe.PeriodSeconds)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.SuccessThreshold), medusaDeployment2.Spec.Template.Spec.Containers[0].ReadinessProbe.SuccessThreshold)
+	require.Equal(int32(kc.Spec.Medusa.ReadinessProbeSettings.TimeoutSeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].ReadinessProbe.TimeoutSeconds)
+
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.FailureThreshold), medusaDeployment2.Spec.Template.Spec.Containers[0].LivenessProbe.FailureThreshold)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.InitialDelaySeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].LivenessProbe.InitialDelaySeconds)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.PeriodSeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].LivenessProbe.PeriodSeconds)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.SuccessThreshold), medusaDeployment2.Spec.Template.Spec.Containers[0].LivenessProbe.SuccessThreshold)
+	require.Equal(int32(kc.Spec.Medusa.LivenessProbeSettings.TimeoutSeconds), medusaDeployment2.Spec.Template.Spec.Containers[0].LivenessProbe.TimeoutSeconds)
+
+	require.Equal(kc.Spec.Medusa.Resources.Limits.Cpu().String(), medusaDeployment2.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+	require.Equal(kc.Spec.Medusa.Resources.Limits.Memory().String(), medusaDeployment2.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
+	require.Equal(kc.Spec.Medusa.Resources.Requests.Cpu().String(), medusaDeployment2.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+	require.Equal(kc.Spec.Medusa.Resources.Requests.Memory().String(), medusaDeployment2.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String())
+	require.True(f.ContainerHasEnvVar(medusaDeployment2.Spec.Template.Spec.Containers[0], "MEDUSA_RESOLVE_IP_ADDRESSES", "False"))
+
+	t.Log("check that the standalone Medusa service was created")
+	medusaServiceKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaServiceName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
+	medusaService2 := &corev1.Service{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaServiceKey2, medusaService2); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+
 	t.Log("check that remote seeds are set on dc2")
 	dc2 = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
@@ -274,6 +313,12 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, medusaDeploymentKey1, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, medusaDeploymentKey2, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
 // Check that all the Medusa related objects have been created and are in the expected state.
