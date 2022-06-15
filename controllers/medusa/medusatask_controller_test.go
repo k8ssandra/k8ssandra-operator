@@ -174,7 +174,7 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 			return false
 		}
 
-		return !updated.Status.FinishTime.IsZero()
+		return true
 	}, timeout, interval)
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
