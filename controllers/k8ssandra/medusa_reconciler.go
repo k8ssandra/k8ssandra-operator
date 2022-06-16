@@ -58,9 +58,9 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
-		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, logger)
-		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, logger)
-		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, logger)
+		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Name, logger)
+		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Name, logger)
+		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.Name, logger)
 		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.Name))
 	} else {
 		logger.Info("Medusa is not enabled")

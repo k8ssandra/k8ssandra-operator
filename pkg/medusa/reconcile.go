@@ -133,7 +133,7 @@ func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, clusterName 
 	return medusaSpec.CassandraUserSecretRef.Name
 }
 
-func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName string, logger logr.Logger) {
 	restoreContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
 	restoreContainer := &corev1.Container{Name: "medusa-restore"}
 	if found {
@@ -143,8 +143,8 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
-	restoreContainer.Env = medusaEnvVars(medusaSpec, dcConfig, logger, "RESTORE")
-	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, dcConfig, logger)
+	restoreContainer.Env = medusaEnvVars(medusaSpec, clusterName, logger, "RESTORE")
+	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, clusterName, logger)
 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
@@ -160,7 +160,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 }
 
-func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName string, logger logr.Logger) {
 	medusaContainerIndex, found := cassandra.FindContainer(dcConfig.PodTemplateSpec, "medusa")
 	medusaContainer := &corev1.Container{Name: "medusa"}
 	if found {
@@ -170,12 +170,12 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
-	medusaContainer.Env = medusaEnvVars(medusaSpec, dcConfig, logger, "GRPC")
+	medusaContainer.Env = medusaEnvVars(medusaSpec, clusterName, logger, "GRPC")
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{ContainerPort: 50051, Name: "grpc"},
 	}
 
-	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, dcConfig, logger)
+	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, clusterName, logger)
 
 	if !found {
 		logger.Info("Couldn't find medusa container")
@@ -194,7 +194,7 @@ func setImage(containerImage *images.Image, container *corev1.Container) {
 	container.ImagePullPolicy = image.PullPolicy
 }
 
-func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger) []corev1.VolumeMount {
+func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, clusterName string, logger logr.Logger) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
@@ -205,7 +205,7 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassand
 			MountPath: "/var/lib/cassandra",
 		},
 		{ // Medusa config volume
-			Name:      fmt.Sprintf("%s-medusa", dcConfig.Cluster),
+			Name:      fmt.Sprintf("%s-medusa", clusterName),
 			MountPath: "/etc/medusa",
 		},
 		{ // Pod info volume
@@ -240,7 +240,7 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassand
 	return volumeMounts
 }
 
-func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.DatacenterConfig, logger logr.Logger, mode string) []corev1.EnvVar {
+func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, clusterName string, logger logr.Logger, mode string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "MEDUSA_MODE",
@@ -250,7 +250,7 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.Da
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: CassandraUserSecretName(medusaSpec, dcConfig.Cluster),
+						Name: CassandraUserSecretName(medusaSpec, clusterName),
 					},
 					Key: "username",
 				},
@@ -260,7 +260,7 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.Da
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: CassandraUserSecretName(medusaSpec, dcConfig.Cluster),
+						Name: CassandraUserSecretName(medusaSpec, clusterName),
 					},
 					Key: "password",
 				},
@@ -270,15 +270,15 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, dcConfig *cassandra.Da
 }
 
 // Create or update volumes for medusa
-func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, logger logr.Logger) {
+func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName string, logger logr.Logger) {
 	// Medusa config volume, containing medusa.ini
-	configVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", dcConfig.Cluster))
+	configVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", clusterName))
 	configVolume := &corev1.Volume{
-		Name: fmt.Sprintf("%s-medusa", dcConfig.Cluster),
+		Name: fmt.Sprintf("%s-medusa", clusterName),
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: fmt.Sprintf("%s-medusa", dcConfig.Cluster),
+					Name: fmt.Sprintf("%s-medusa", clusterName),
 				},
 			},
 		},

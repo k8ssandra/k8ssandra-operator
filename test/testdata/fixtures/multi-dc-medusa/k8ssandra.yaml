@@ -4,6 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
+    clusterName: "E2E Test Cluster"
     serverVersion: "4.0.0"
     serverImage: k8ssandra/cass-management-api:4.0.0
     storageConfig:
