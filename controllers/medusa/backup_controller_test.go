@@ -171,7 +171,7 @@ func createAndVerifyBackup(
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				cassdcapi.ClusterLabel: dc.Spec.ClusterName,
+				cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
 			},
 			Ports: []corev1.ServicePort{
 				{
@@ -363,7 +363,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 						Namespace: dc.Namespace,
 						Name:      podName,
 						Labels: map[string]string{
-							cassdcapi.ClusterLabel:    dc.Spec.ClusterName,
+							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
 							cassdcapi.DatacenterLabel: dc.Name,
 						},
 					},

@@ -174,7 +174,7 @@ func (r *CassandraRestoreReconciler) podTemplateSpecUpdateComplete(ctx context.C
 	// StatefulSets are scaled back up.
 
 	statefulsetList := &appsv1.StatefulSetList{}
-	labels := client.MatchingLabels{cassdcapi.ClusterLabel: req.Datacenter.Spec.ClusterName, cassdcapi.DatacenterLabel: req.Datacenter.Name}
+	labels := client.MatchingLabels{cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(req.Datacenter.Spec.ClusterName), cassdcapi.DatacenterLabel: req.Datacenter.Name}
 
 	if err := r.List(ctx, statefulsetList, labels); err != nil {
 		req.Log.Error(err, "Failed to get StatefulSets")

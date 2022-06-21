@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -16,7 +17,7 @@ import (
 
 // findSeeds queries for pods labeled as seeds. It does this for each DC, across all
 // clusters.
-func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) ([]corev1.Pod, error) {
+func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ssandraCluster, clusterName string, logger logr.Logger) ([]corev1.Pod, error) {
 	pods := make([]corev1.Pod, 0)
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
@@ -33,7 +34,7 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 
 		list := &corev1.PodList{}
 		selector := map[string]string{
-			cassdcapi.ClusterLabel:    kc.Name,
+			cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(clusterName),
 			cassdcapi.DatacenterLabel: dcTemplate.Meta.Name,
 			cassdcapi.SeedNodeLabel:   "true",
 		}

@@ -5,16 +5,13 @@ import (
 )
 
 func ResourceName(dc *cassdcapi.CassandraDatacenter) string {
-	// FIXME sanitize name
-	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate"
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-stargate")
 }
 
 func ServiceName(dc *cassdcapi.CassandraDatacenter) string {
-	// FIXME sanitize name
-	return dc.Spec.ClusterName + "-" + dc.Name + "-stargate-service"
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-stargate-service")
 }
 
 func DeploymentName(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) string {
-	// FIXME sanitize name
-	return dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate-deployment"
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate-deployment")
 }

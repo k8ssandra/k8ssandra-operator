@@ -45,7 +45,7 @@ func (r *restReaperManager) Connect(ctx context.Context, reaper *api.Reaper, use
 }
 
 func (r *restReaperManager) AddClusterToReaper(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) error {
-	return r.reaperClient.AddCluster(ctx, cassdc.Spec.ClusterName, cassdc.GetSeedServiceName())
+	return r.reaperClient.AddCluster(ctx, cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName), cassdc.GetSeedServiceName())
 }
 
 func (r *restReaperManager) VerifyClusterIsConfigured(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) (bool, error) {
@@ -53,5 +53,5 @@ func (r *restReaperManager) VerifyClusterIsConfigured(ctx context.Context, cassd
 	if err != nil {
 		return false, err
 	}
-	return utils.SliceContains(clusters, cassdc.Name), nil
+	return utils.SliceContains(clusters, cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName)), nil
 }

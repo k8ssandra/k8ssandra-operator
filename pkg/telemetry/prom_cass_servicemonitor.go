@@ -340,7 +340,7 @@ func (cfg PrometheusResourcer) NewCassServiceMonitor() (promapi.ServiceMonitor, 
 					//"cassandra.datastax.com/prom-metrics": "true",
 				},
 				MatchExpressions: []metav1.LabelSelectorRequirement{
-					{Key: cassdcapi.ClusterLabel, Operator: "In", Values: []string{clusterName}},
+					{Key: cassdcapi.ClusterLabel, Operator: "In", Values: []string{cassdcapi.CleanLabelValue(clusterName)}},
 					{Key: cassdcapi.DatacenterLabel, Operator: "In", Values: []string{cfg.MonitoringTargetName}},
 				},
 			},

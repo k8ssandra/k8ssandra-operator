@@ -150,7 +150,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 				},
 				Spec: corev1.ServiceSpec{
 					Selector: map[string]string{
-						cassdcapi.ClusterLabel: dc.Spec.ClusterName,
+						cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
 					},
 					Ports: []corev1.ServicePort{
 						{
