@@ -26,9 +26,9 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-reaper"}}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
@@ -57,9 +57,9 @@ func createSingleReaperWithEncryption(t *testing.T, ctx context.Context, namespa
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-reaper"}}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
@@ -170,11 +170,12 @@ func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespac
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
-	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dc1Key) + "-reaper"}}
-	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dc2Key) + "-reaper"}}
 
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dc1Key) + "-reaper"}}
+	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dc2Key) + "-reaper"}}
 
 	checkReaperReady(t, f, ctx, reaper1Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
