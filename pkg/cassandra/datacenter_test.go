@@ -573,6 +573,20 @@ func TestNewDatacenter_Fail_NoServerVersion(t *testing.T) {
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 
+func TestCDC(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.CDC = &cassdcapi.CDCConfiguration{
+		Enabled:          true,
+		PulsarServiceUrl: pointer.String("pulsar://test-url"),
+	}
+	cassDC, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, cassDC.Spec.CDC, template.CDC)
+}
+
 func TestDatacentersReplication(t *testing.T) {
 	assert := assert.New(t)
 
