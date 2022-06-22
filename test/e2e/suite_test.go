@@ -727,12 +727,28 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
-
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	// Save the Stargate deployment resource hash to verify if it was modified by the upgrade.
+	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
+	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-default-stargate-deployment"}}
+	initialStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
+	initialStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
+	require.Len(initialStargatePodNames, 1, "expected 1 Stargate pod in namespace %s", namespace)
 
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace)
 	require.NoError(err, "failed to upgrade to latest version")
+
+	newStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
+	if initialStargateResourceHash != newStargateResourceHash {
+		// Stargate deployment was modified after the upgrade, we need to wait for the new pod to be ready
+		t.Log("Stargate deployment updated, waiting for new pod to be ready")
+		require.Eventually(func() bool {
+			newStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
+			return !utils.SliceContains(newStargatePodNames, initialStargatePodNames[0])
+		}, polling.stargateReady.timeout, polling.stargateReady.interval)
+	}
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)

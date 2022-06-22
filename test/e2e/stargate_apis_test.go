@@ -14,10 +14,16 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/frame"
 	"github.com/datastax/go-cassandra-native-protocol/message"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/rand"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func testStargateApis(t *testing.T, ctx context.Context, k8sContext, username, password string, replication map[string]int) {
@@ -360,4 +366,34 @@ func formatReplicationForCql(replication map[string]int) string {
 		s += fmt.Sprintf(`'%v':%v`, dcName, strconv.Itoa(dcRf))
 	}
 	return s
+}
+
+func GetStargateResourceHash(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey) string {
+	stargateDeployment := &appsv1.Deployment{}
+	err := f.Get(ctx, stargateKey, stargateDeployment)
+	require.NoError(t, err, "Failed to get Stargate deployment")
+	return stargateDeployment.ObjectMeta.Annotations[api.ResourceHashAnnotation]
+}
+
+func GetStargatePodNames(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey) []string {
+	stargateDeployment := &appsv1.Deployment{}
+	err := f.Get(ctx, stargateKey, stargateDeployment)
+	require.NoError(t, err, "Failed to get Stargate deployment")
+	return getPodNamesFromDeployment(t, f, ctx, stargateKey, stargateDeployment)
+}
+
+func getPodNamesFromDeployment(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey, deployment *appsv1.Deployment) []string {
+	podNames := []string{}
+	selector := labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels)
+	listOptions := ctrlclient.ListOptions{
+		Namespace:     stargateKey.Namespace,
+		LabelSelector: selector,
+	}
+	podList := &corev1.PodList{}
+	err := f.List(ctx, stargateKey, podList, &listOptions)
+	require.NoError(t, err, "Failed to list pods")
+	for _, pod := range podList.Items {
+		podNames = append(podNames, pod.Name)
+	}
+	return podNames
 }
