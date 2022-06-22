@@ -67,6 +67,62 @@ spec:
                     items:
                       type: string
                     type: array
+                  cdc:
+                    description: CDC defines the desired state for CDC integrations.
+                      It can be used to feed mutation events from Cassandra into an
+                      Apache Pulsar cluster, from where they can be expored to external
+                      systems.
+                    properties:
+                      cdcConcurrentProcessors:
+                        type: integer
+                      cdcPollIntervalM:
+                        type: integer
+                      cdcWorkingDir:
+                        type: string
+                      enabled:
+                        type: boolean
+                      errorCommitLogReprocessEnabled:
+                        type: boolean
+                      pulsarAuthParams:
+                        type: string
+                      pulsarAuthPluginClassName:
+                        type: string
+                      pulsarBatchDelayInMs:
+                        type: integer
+                      pulsarKeyBasedBatcher:
+                        type: boolean
+                      pulsarMaxPendingMessages:
+                        type: integer
+                      pulsarMaxPendingMessagesAcrossPartitions:
+                        type: integer
+                      pulsarServiceUrl:
+                        type: string
+                      sslAllowInsecureConnection:
+                        type: string
+                      sslCipherSuites:
+                        type: string
+                      sslEnabledProtocols:
+                        type: string
+                      sslHostnameVerificationEnable:
+                        type: string
+                      sslKeystorePassword:
+                        type: string
+                      sslKeystorePath:
+                        type: string
+                      sslProvider:
+                        type: string
+                      sslTruststorePassword:
+                        type: string
+                      sslTruststorePath:
+                        type: string
+                      sslTruststoreType:
+                        type: string
+                      topicPrefix:
+                        type: string
+                    required:
+                    - enabled
+                    - pulsarServiceUrl
+                    type: object
                   clientEncryptionStores:
                     description: Client encryption stores which are used by Cassandra
                       and Reaper.
@@ -2834,6 +2890,62 @@ spec:
                     description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
+                        cdc:
+                          description: CDC defines the desired state for CDC integrations.
+                            It can be used to feed mutation events from Cassandra
+                            into an Apache Pulsar cluster, from where they can be
+                            expored to external systems.
+                          properties:
+                            cdcConcurrentProcessors:
+                              type: integer
+                            cdcPollIntervalM:
+                              type: integer
+                            cdcWorkingDir:
+                              type: string
+                            enabled:
+                              type: boolean
+                            errorCommitLogReprocessEnabled:
+                              type: boolean
+                            pulsarAuthParams:
+                              type: string
+                            pulsarAuthPluginClassName:
+                              type: string
+                            pulsarBatchDelayInMs:
+                              type: integer
+                            pulsarKeyBasedBatcher:
+                              type: boolean
+                            pulsarMaxPendingMessages:
+                              type: integer
+                            pulsarMaxPendingMessagesAcrossPartitions:
+                              type: integer
+                            pulsarServiceUrl:
+                              type: string
+                            sslAllowInsecureConnection:
+                              type: string
+                            sslCipherSuites:
+                              type: string
+                            sslEnabledProtocols:
+                              type: string
+                            sslHostnameVerificationEnable:
+                              type: string
+                            sslKeystorePassword:
+                              type: string
+                            sslKeystorePath:
+                              type: string
+                            sslProvider:
+                              type: string
+                            sslTruststorePassword:
+                              type: string
+                            sslTruststorePath:
+                              type: string
+                            sslTruststoreType:
+                              type: string
+                            topicPrefix:
+                              type: string
+                          required:
+                          - enabled
+                          - pulsarServiceUrl
+                          type: object
                         config:
                           description: CassandraConfig is configuration settings that
                             are applied to cassandra.yaml and the various jvm*.options
@@ -5686,8 +5798,8 @@ spec:
                                 Such volumes are automatically mounted by cass-operator
                                 into the cassandra containers.
                               items:
-                                description: AdditionalVolumes StorageConfig defines
-                                  additional storage configurations
+                                description: StorageConfig defines additional storage
+                                  configurations
                                 properties:
                                   mountPath:
                                     description: Mount path into cassandra container
@@ -12443,8 +12555,8 @@ spec:
                           properties:
                             additionalVolumes:
                               items:
-                                description: AdditionalVolumes StorageConfig defines
-                                  additional storage configurations
+                                description: StorageConfig defines additional storage
+                                  configurations
                                 properties:
                                   mountPath:
                                     description: Mount path into cassandra container
@@ -12934,8 +13046,7 @@ spec:
                           volumes are automatically mounted by cass-operator into
                           the cassandra containers.
                         items:
-                          description: AdditionalVolumes StorageConfig defines additional
-                            storage configurations
+                          description: StorageConfig defines additional storage configurations
                           properties:
                             mountPath:
                               description: Mount path into cassandra container
@@ -16167,8 +16278,7 @@ spec:
                     properties:
                       additionalVolumes:
                         items:
-                          description: AdditionalVolumes StorageConfig defines additional
-                            storage configurations
+                          description: StorageConfig defines additional storage configurations
                           properties:
                             mountPath:
                               description: Mount path into cassandra container
