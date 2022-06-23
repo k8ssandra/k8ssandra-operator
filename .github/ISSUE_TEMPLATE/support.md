@@ -2,7 +2,7 @@
 name: Support
 about: 'If you have questions about the K8ssandra Operator. '
 title: ''
-labels: ''
+labels: question
 assignees: ''
 
 ---
