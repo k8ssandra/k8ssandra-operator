@@ -95,7 +95,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 		backupSchedule.Status.NextSchedule = metav1.NewTime(nextExecution)
 		backupSchedule.Status.LastExecution = metav1.NewTime(previousExecution)
 
-		if err := r.Client.Status().Update(ctx, backupSchedule, backupSchedule); err != nil {
+		if err := r.Client.Status().Update(ctx, backupSchedule); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
