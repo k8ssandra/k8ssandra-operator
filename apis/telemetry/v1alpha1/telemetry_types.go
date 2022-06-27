@@ -11,4 +11,7 @@ type PrometheusTelemetrySpec struct {
 	// CommonLabels are applied to all serviceMonitors created.
 	// +optional
 	CommonLabels map[string]string `json:"commonLabels,omitempty"`
+
+	// +optional
+	McacMetricFilters []string `json:"mcacMetricFilters,omitempty"`
 }

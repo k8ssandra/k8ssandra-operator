@@ -102,6 +102,27 @@ cassandra:
             enabled: true
 ```
 
+### Filtering metrics
+
+Cassandra provides a lot of metrics which can create some overload, especially when there are many tables in a cluster. [Filtering rules for MCAC](https://github.com/datastax/metric-collector-for-apache-cassandra/blob/master/config/metric-collector.yaml#L9-L72) can be defined in the telemetry spec:
+
+```
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    telemetry: 
+      prometheus:
+        enabled: true
+        mcacMetricFilters:
+          - "deny:org.apache.cassandra.metrics.Table"
+          - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+```
+
+When no filter is explicitly defined in the spec, default K8ssandra v1.x filters will be applied.
+
 ## Using Prometheus
 
 Prometheus will generally be running in the `monitoring` namespace. To connect to the Prometheus GUI for an initial inspection of what metrics it is scraping, you can run the following `kubectl` command to forward a port.

@@ -2519,6 +2519,10 @@ spec:
                               description: Enable the creation of Prometheus serviceMonitors
                                 for this resource (Cassandra or Stargate).
                               type: boolean
+                            mcacMetricFilters:
+                              items:
+                                type: string
+                              type: array
                           type: object
                       type: object
                     tolerations:
@@ -2768,6 +2772,10 @@ spec:
                         description: Enable the creation of Prometheus serviceMonitors
                           for this resource (Cassandra or Stargate).
                         type: boolean
+                      mcacMetricFilters:
+                        items:
+                          type: string
+                        type: array
                     type: object
                 type: object
               tolerations:

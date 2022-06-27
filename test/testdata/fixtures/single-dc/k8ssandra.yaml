@@ -6,6 +6,9 @@ spec:
   cassandra:
     serverVersion: 3.11.11
     clusterName: "Weird Cluster Name"
+    telemetry:
+      prometheus:
+        enabled: false
     datacenters:
       - metadata:
           name: dc1
