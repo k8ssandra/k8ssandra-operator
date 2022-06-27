@@ -15,4 +15,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [FEATURE] [#483](https://github.com/k8ssandra/k8ssandra-operator/issues/483) Deploy as standalone Medusa deployment for the operator to communicate with the storage backend
 * [ENHANCEMENT] [#354](https://github.com/k8ssandra/k8ssandra-operator/issues/354) Add encryption support to Medusa

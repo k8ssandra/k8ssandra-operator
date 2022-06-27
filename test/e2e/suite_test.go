@@ -53,6 +53,7 @@ var (
 		datacenterReady         pollingConfig
 		operatorDeploymentReady pollingConfig
 		k8ssandraClusterStatus  pollingConfig
+		medusaReady             pollingConfig
 		stargateReady           pollingConfig
 		reaperReady             pollingConfig
 		medusaBackupDone        pollingConfig
@@ -571,6 +572,9 @@ func applyPollingDefaults() {
 
 	polling.k8ssandraClusterStatus.timeout = 1 * time.Minute
 	polling.k8ssandraClusterStatus.interval = 3 * time.Second
+
+	polling.medusaReady.timeout = 5 * time.Minute
+	polling.medusaReady.interval = 5 * time.Second
 
 	polling.stargateReady.timeout = 5 * time.Minute
 	polling.stargateReady.interval = 5 * time.Second

@@ -3,6 +3,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -20,7 +21,7 @@ type DefaultFactory struct {
 }
 
 func (f *DefaultFactory) NewClient(address string) (Client, error) {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)))
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)), grpc.WithTimeout(5*time.Second))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC connection to %s: %s", address, err)

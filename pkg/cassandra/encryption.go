@@ -52,7 +52,7 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType encryption.St
 	for _, volume := range []*corev1.Volume{keystoreVolume, truststoreVolume} {
 		if volume != nil {
 			indexKey, foundKey := FindVolume(template.PodTemplateSpec, volume.Name)
-			AddOrUpdateVolume(template, volume, indexKey, foundKey)
+			AddOrUpdateVolume(template.PodTemplateSpec, volume, indexKey, foundKey)
 		}
 	}
 

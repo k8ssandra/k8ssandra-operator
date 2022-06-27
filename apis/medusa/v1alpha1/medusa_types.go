@@ -149,4 +149,43 @@ type MedusaClusterTemplate struct {
 	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
 	// +optional
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
+
+	// Define the readiness probe settings to use for the Medusa containers.
+	// +optional
+	ReadinessProbeSettings *ProbeSettings `json:"readinessProbeSettings,omitempty"`
+
+	// Define the liveness probe settings to use for the Medusa containers.
+	// +optional
+	LivenessProbeSettings *ProbeSettings `json:"livenessProbeSettings,omitempty"`
+
+	// Define resource limits for the Medusa containers.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
+type ProbeSettings struct {
+	// The initial delay for the probe after the container has started.
+	// +kubebuilder:default=10
+	// +optional
+	InitialDelaySeconds int `json:"initialDelaySeconds,omitempty"`
+
+	// The period after which the probe will be invoked.
+	// +kubebuilder:default=10
+	// +optional
+	PeriodSeconds int `json:"periodSeconds,omitempty"`
+
+	// The number of failed probes after which the container will be considered unhealthy.
+	// +kubebuilder:default=10
+	// +optional
+	FailureThreshold int `json:"failureThreshold,omitempty"`
+
+	// The number of successful probes after which the container will be considered healthy.
+	// +kubebuilder:default=1
+	// +optional
+	SuccessThreshold int `json:"successThreshold,omitempty"`
+
+	// The number of seconds after which the probe will be considered failed.
+	// +kubebuilder:default=1
+	// +optional
+	TimeoutSeconds int `json:"timeoutSeconds,omitempty"`
 }

@@ -419,13 +419,13 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 	return nil
 }
 
-func AddOrUpdateVolume(dcConfig *DatacenterConfig, volume *corev1.Volume, volumeIndex int, found bool) {
+func AddOrUpdateVolume(podTemplateSpec *corev1.PodTemplateSpec, volume *corev1.Volume, volumeIndex int, found bool) {
 	if !found {
 		// volume doesn't exist, we need to add it
-		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, *volume)
+		podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, *volume)
 	} else {
 		// Overwrite existing volume
-		dcConfig.PodTemplateSpec.Spec.Volumes[volumeIndex] = *volume
+		podTemplateSpec.Spec.Volumes[volumeIndex] = *volume
 	}
 }
 
