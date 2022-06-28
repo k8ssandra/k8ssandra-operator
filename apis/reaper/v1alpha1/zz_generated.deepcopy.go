@@ -22,6 +22,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
@@ -273,6 +274,11 @@ func (in *ReaperTemplate) DeepCopyInto(out *ReaperTemplate) {
 	if in.InitContainerResources != nil {
 		in, out := &in.InitContainerResources, &out.InitContainerResources
 		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(telemetryv1alpha1.TelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}
 }

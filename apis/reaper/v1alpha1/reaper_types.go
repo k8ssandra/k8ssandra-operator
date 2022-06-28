@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
@@ -124,6 +125,11 @@ type ReaperTemplate struct {
 	// Init Container resources.
 	// +optional
 	InitContainerResources *corev1.ResourceRequirements `json:"initContainerResources,omitempty"`
+
+	// Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster
+	// (unless overriden by DC specific settings)
+	// +optional
+	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.
