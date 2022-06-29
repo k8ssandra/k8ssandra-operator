@@ -193,7 +193,11 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Compute the desired deployments
-	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc)
+	desiredDeployments, err := stargateutil.NewDeployments(stargate, actualDc)
+	if err != nil {
+		logger.Error(err, "Failed to create Stargate Deployments", "Stargate", req.NamespacedName)
+		return ctrl.Result{}, err
+	}
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {
@@ -286,7 +290,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	_, err := r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
+	_, err = r.reconcileStargateTelemetry(ctx, stargate, logger, r.Client)
 	if err != nil {
 		logger.Error(err, "reconcileStargateTelemetry failed")
 		return ctrl.Result{}, err

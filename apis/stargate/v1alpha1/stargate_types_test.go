@@ -8,7 +8,6 @@ import (
 )
 
 var (
-	quantity256Mi = resource.MustParse("256Mi")
 	quantity512Mi = resource.MustParse("512Mi")
 )
 
@@ -20,14 +19,6 @@ func TestStargateStatus(t *testing.T) {
 	t.Run("IsReady", testStargateIsReady)
 	t.Run("GetConditionStatus", testStargateGetConditionStatus)
 	t.Run("SetCondition", testStargateSetCondition)
-}
-
-func TestStargateDatacenterTemplate(t *testing.T) {
-	t.Run("Coalesce", testStargateDatacenterTemplateCoalesce)
-}
-
-func TestStargateRackTemplate(t *testing.T) {
-	t.Run("Coalesce", testStargateRackTemplateCoalesce)
 }
 
 func testStargateGetRackTemplate(t *testing.T) {
@@ -154,90 +145,5 @@ func testStargateSetCondition(t *testing.T) {
 		assert.Len(t, stargate.Conditions, 2)
 		assert.Contains(t, stargate.Conditions, ready)
 		assert.Contains(t, stargate.Conditions, other)
-	})
-}
-
-func testStargateDatacenterTemplateCoalesce(t *testing.T) {
-
-	t.Run("Nil dc with nil cluster", func(t *testing.T) {
-		var clusterTemplate *StargateClusterTemplate = nil
-		var dcTemplate *StargateDatacenterTemplate = nil
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.Nil(t, actual)
-	})
-
-	t.Run("nil dc with non nil cluster", func(t *testing.T) {
-		clusterTemplate := &StargateClusterTemplate{Size: 10}
-		var dcTemplate *StargateDatacenterTemplate = nil
-		expected := &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("Non nil dc with nil cluster", func(t *testing.T) {
-		var clusterTemplate *StargateClusterTemplate = nil
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{Size: 10},
-		}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, dcTemplate, actual)
-	})
-
-	t.Run("Non nil dc with non nil cluster", func(t *testing.T) {
-		clusterTemplate := &StargateClusterTemplate{Size: 10}
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{Size: 20},
-		}
-		actual := dcTemplate.Coalesce(clusterTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, dcTemplate, actual)
-	})
-}
-
-func testStargateRackTemplateCoalesce(t *testing.T) {
-
-	t.Run("Nil rack with nil dc", func(t *testing.T) {
-		var dcTemplate *StargateDatacenterTemplate = nil
-		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.Nil(t, actual)
-	})
-
-	t.Run("Nil rack with non nil dc", func(t *testing.T) {
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{
-				StargateTemplate: StargateTemplate{HeapSize: &quantity256Mi},
-			},
-		}
-		var rackTemplate *StargateRackTemplate = nil
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &dcTemplate.StargateTemplate, actual)
-	})
-
-	t.Run("Non nil rack with nil dc", func(t *testing.T) {
-		var dcTemplate *StargateDatacenterTemplate = nil
-		rackTemplate := &StargateRackTemplate{
-			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
-		}
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
-	})
-
-	t.Run("Non nil rack with non nil dc", func(t *testing.T) {
-		dcTemplate := &StargateDatacenterTemplate{
-			StargateClusterTemplate: StargateClusterTemplate{
-				StargateTemplate: StargateTemplate{HeapSize: &quantity256Mi},
-			},
-		}
-		rackTemplate := &StargateRackTemplate{
-			StargateTemplate: StargateTemplate{HeapSize: &quantity512Mi},
-		}
-		actual := rackTemplate.Coalesce(dcTemplate)
-		assert.NotNil(t, actual)
-		assert.Equal(t, &rackTemplate.StargateTemplate, actual)
 	})
 }

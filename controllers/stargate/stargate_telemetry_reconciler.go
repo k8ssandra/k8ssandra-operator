@@ -58,7 +58,7 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return ctrl.Result{}, err
 		}
-	case thisStargate.Spec.Telemetry.Prometheus.Enabled:
+	case thisStargate.Spec.Telemetry.Prometheus.IsEnabled():
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		desiredSM, err := cfg.NewStargateServiceMonitor()
 		if err != nil {

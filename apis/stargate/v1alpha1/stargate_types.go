@@ -133,19 +133,6 @@ type StargateDatacenterTemplate struct {
 	Racks []StargateRackTemplate `json:"racks,omitempty"`
 }
 
-// Coalesce compares this StargateDatacenterTemplate with the given StargateClusterTemplate and returns the first
-// non-nil StargateDatacenterTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateDatacenterTemplate) Coalesce(clusterTemplate *StargateClusterTemplate) *StargateDatacenterTemplate {
-	if in == nil && clusterTemplate == nil {
-		return nil
-	} else if in == nil {
-		return &StargateDatacenterTemplate{StargateClusterTemplate: *clusterTemplate}
-	} else {
-		return in
-	}
-}
-
 // StargateRackTemplate defines custom rules for Stargate pods in a given rack.
 // These rules will be merged with rules defined at datacenter level in a StargateDatacenterTemplate; rack-level rules
 // have precedence over datacenter-level ones.
@@ -156,19 +143,6 @@ type StargateRackTemplate struct {
 	// Stargate is being deployed, otherwise it will be ignored.
 	// +kubebuilder:validation:MinLength=2
 	Name string `json:"name"`
-}
-
-// Coalesce compares this StargateRackTemplate with the given StargateDatacenterTemplate and returns the first non-nil
-// StargateTemplate it finds.
-// TODO revisit the merging strategy and/or find a better name for this method
-func (in *StargateRackTemplate) Coalesce(dcTemplate *StargateDatacenterTemplate) *StargateTemplate {
-	if in == nil && dcTemplate == nil {
-		return nil
-	} else if in == nil {
-		return &dcTemplate.StargateTemplate
-	} else {
-		return &in.StargateTemplate
-	}
 }
 
 // StargateSpec defines the desired state of a Stargate resource.

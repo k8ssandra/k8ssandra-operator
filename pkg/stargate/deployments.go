@@ -62,7 +62,7 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) (map[string]appsv1.Deployment, error) {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
@@ -79,7 +79,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 			break
 		}
 
-		template := stargate.GetRackTemplate(rack.Name).Coalesce(&stargate.Spec.StargateDatacenterTemplate)
+		template, err := computeTemplate(stargate, rack)
+		if err != nil {
+			return nil, err
+		}
 
 		deploymentName := DeploymentName(dc, &rack)
 		image := computeImage(template, clusterVersion)
@@ -223,7 +226,16 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		annotations.AddHashAnnotation(&deployment)
 		deployments[deploymentName] = deployment
 	}
-	return deployments
+	return deployments, nil
+}
+
+func computeTemplate(stargate *api.Stargate, rack cassdcapi.Rack) (*api.StargateTemplate, error) {
+	dcTemplate := &stargate.Spec.StargateDatacenterTemplate
+	rackTemplate := stargate.GetRackTemplate(rack.Name)
+	if rackTemplate == nil {
+		return &dcTemplate.StargateTemplate, nil
+	}
+	return MergeStargateTemplates(&dcTemplate.StargateTemplate, &rackTemplate.StargateTemplate)
 }
 
 func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
@@ -248,9 +260,9 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 
 func computeImage(template *api.StargateTemplate, clusterVersion ClusterVersion) *images.Image {
 	if clusterVersion == ClusterVersion3 {
-		return template.ContainerImage.ApplyDefaults(defaultImage3)
+		return images.Merge(&defaultImage3, template.ContainerImage)
 	} else {
-		return template.ContainerImage.ApplyDefaults(defaultImage4)
+		return images.Merge(&defaultImage4, template.ContainerImage)
 	}
 }
 
