@@ -52,7 +52,7 @@ jobs:
           file: Dockerfile
           context: .
           push: false
-          tags: k8ssandra/k8ssandra-operator:latest,k8ssandra/k8ssandra-operator:${{ steps.vars.output.image_tag }}
+          tags: k8ssandra/k8ssandra-operator:latest,k8ssandra/k8ssandra-operator:${{ steps.parse_image_tag.outputs.image_tag }}
           platforms: linux/amd64
           outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
           cache-from: type=local,src=/tmp/.buildx-cache
