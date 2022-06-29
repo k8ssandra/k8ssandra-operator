@@ -69,20 +69,20 @@ jobs:
       matrix:
         e2e_test:
           - CreateSingleDatacenterCluster
-          - CreateStargateAndDatacenter
-          - CreateSingleReaper
-          - CreateReaperAndDatacenter
-          - CreateSingleMedusaOld
-          - CreateSingleMedusaJob
-          - ConfigControllerRestarts
-          - SingleDcEncryptionWithStargate
-          - SingleDcEncryptionWithReaper
-          - GCTests/3.11-jdk8-G1
-          - GCTests/3.11-jdk8-CMS
-          - GCTests/4.0-jdk11-G1
-          - GCTests/4.0-jdk11-CMS
-          - GCTests/4.0-jdk11-ZGC
-          - UpgradeOperatorImage
+#          - CreateStargateAndDatacenter
+#          - CreateSingleReaper
+#          - CreateReaperAndDatacenter
+#          - CreateSingleMedusaOld
+#          - CreateSingleMedusaJob
+#          - ConfigControllerRestarts
+#          - SingleDcEncryptionWithStargate
+#          - SingleDcEncryptionWithReaper
+#          - GCTests/3.11-jdk8-G1
+#          - GCTests/3.11-jdk8-CMS
+#          - GCTests/4.0-jdk11-G1
+#          - GCTests/4.0-jdk11-CMS
+#          - GCTests/4.0-jdk11-ZGC
+#          - UpgradeOperatorImage
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
