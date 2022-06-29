@@ -20,6 +20,7 @@ jobs:
   build_image:
     name: Build image
     runs-on: ubuntu-latest
+    if: ${{ false }}  # disable for now
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2

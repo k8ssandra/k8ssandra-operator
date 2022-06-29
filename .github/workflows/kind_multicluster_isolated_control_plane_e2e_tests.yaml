@@ -18,6 +18,7 @@ jobs:
   build_image:
     name: Build Image
     runs-on: ubuntu-latest
+    if: ${{ false }}  # disable for now
     steps:
       - name: Checkout code
         uses: actions/checkout@v2

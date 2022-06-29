@@ -19,6 +19,7 @@ jobs:
   build_image:
     name: Build Image
     runs-on: ubuntu-latest
+    if: ${{ false }}  # disable for now
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -56,6 +57,7 @@ jobs:
   kind_e2e_tests:
     runs-on: ubuntu-latest
     needs: build_image
+    if: ${{ false }}  # disable for now
     strategy:
       matrix:
         e2e_test:
