@@ -743,6 +743,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require.NoError(err, "failed to upgrade to latest version")
 
 	newStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
+	t.Logf("Stargate initial deployment resource hash: %s / Current hash: %s", initialStargateResourceHash, newStargateResourceHash)
 	if initialStargateResourceHash != newStargateResourceHash {
 		// Stargate deployment was modified after the upgrade, we need to wait for the new pod to be ready
 		t.Log("Stargate deployment updated, waiting for new pod to be ready")
