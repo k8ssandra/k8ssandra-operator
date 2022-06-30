@@ -22,7 +22,7 @@ func FilterYamlConfig(config map[string]interface{}) map[string]interface{} {
 	return filteredConfig
 }
 
-func CreateStargateConfigMap(namespace string, configYaml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
+func CreateStargateConfigMap(namespace, configYaml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),

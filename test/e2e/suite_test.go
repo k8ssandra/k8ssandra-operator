@@ -646,8 +646,9 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
@@ -702,7 +703,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -724,14 +725,15 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	// Save the Stargate deployment resource hash to verify if it was modified by the upgrade.
 	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
-	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-default-stargate-deployment"}}
+	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-default-stargate-deployment"}}
 	initialStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
 	initialStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
 	require.Len(initialStargatePodNames, 1, "expected 1 Stargate pod in namespace %s", namespace)
@@ -757,7 +759,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -779,8 +781,9 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
@@ -791,7 +794,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 1}
@@ -813,14 +816,15 @@ func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Con
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
 
-	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: DcPrefix(t, f, dcKey) + "-reaper"}}
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dcKey)+"-default-sts-0", "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-default-sts-0", "reaper_db")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
@@ -829,7 +833,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-
+	dcPrefix := DcPrefix(t, f, dcKey)
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "s1"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -840,7 +844,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 
 	replication := map[string]int{"dc1": 3}

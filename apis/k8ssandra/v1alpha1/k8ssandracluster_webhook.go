@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"fmt"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -34,6 +35,7 @@ var (
 	ErrReaperKeyspace  = fmt.Errorf("reaper keyspace can not be changed")
 	ErrNoStorageConfig = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
 	ErrNoResourcesSet  = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
+	ErrClusterName     = fmt.Errorf("cluster name can not be changed")
 )
 
 // log is for logging in this package.
@@ -137,6 +139,11 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 			utils.IsNil(oldCassConfig.CassandraYaml.NumTokens) {
 			return ErrNumTokens
 		}
+	}
+
+	// Verify that the cluster name override was not changed
+	if r.Spec.Cassandra.ClusterName != oldCluster.Spec.Cassandra.ClusterName {
+		return ErrClusterName
 	}
 
 	// Some of these could be extracted in the cass-operator to reusable methods, do not copy code here.
