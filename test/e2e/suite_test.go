@@ -1390,7 +1390,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
 	t.Logf("check that datacenter %s in cluster %s is ready", key.Name, key.K8sContext)
 	withDatacenter := f.NewWithDatacenter(ctx, key)
-	assert.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
