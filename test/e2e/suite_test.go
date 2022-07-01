@@ -742,7 +742,11 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	err = upgradeToLatest(t, ctx, f, namespace)
 	require.NoError(err, "failed to upgrade to latest version")
 
-	newStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
+	// Wait for the Stargate deployment resource hash to change.
+	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
+	// It's possible that this assertion will fail if the Stargate deployment resource hash is not changed.
+	newStargateResourceHash := waitForStargateUpgrade(t, f, ctx, stargateDeploymentKey, initialStargateResourceHash)
+
 	t.Logf("Stargate initial deployment resource hash: %s / Current hash: %s", initialStargateResourceHash, newStargateResourceHash)
 	if initialStargateResourceHash != newStargateResourceHash {
 		// Stargate deployment was modified after the upgrade, we need to wait for the new pod to be ready
@@ -1594,4 +1598,30 @@ func DcClusterName(
 	err := f.Get(context.Background(), dcKey, cassdc)
 	require.NoError(t, err)
 	return cassdc.Spec.ClusterName
+}
+
+func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash string) string {
+	stargateChan := make(chan string, 1)
+	go func() {
+		for {
+			stargateDeploymentResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
+			if stargateDeploymentResourceHash != initialStargateResourceHash {
+				stargateChan <- stargateDeploymentResourceHash
+				return
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+
+	stargateUpgradeTimeout := time.After(10 * time.Minute)
+	for {
+		select {
+		case newStargateResourceHash := <-stargateChan:
+			t.Logf("Stargate deployment resource hash changed to %s", newStargateResourceHash)
+			return newStargateResourceHash
+		case <-stargateUpgradeTimeout:
+			t.Log("Stargate deployment resource hash did not change")
+			return initialStargateResourceHash
+		}
+	}
 }
