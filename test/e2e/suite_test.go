@@ -1613,7 +1613,7 @@ func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context
 		}
 	}()
 
-	stargateUpgradeTimeout := time.After(10 * time.Minute)
+	stargateUpgradeTimeout := time.After(5 * time.Minute)
 	for {
 		select {
 		case newStargateResourceHash := <-stargateChan:
