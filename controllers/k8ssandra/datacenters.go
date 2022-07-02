@@ -42,12 +42,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 
-	clusterName := kc.Name
+	cassClusterName := kc.Name
 	if kc.Spec.Cassandra.ClusterName != "" {
-		clusterName = kc.Spec.Cassandra.ClusterName
+		cassClusterName = kc.Spec.Cassandra.ClusterName
 	}
 
-	seeds, err := r.findSeeds(ctx, kc, clusterName, logger)
+	seeds, err := r.findSeeds(ctx, kc, cassClusterName, logger)
 	if err != nil {
 		logger.Error(err, "Failed to find seed nodes")
 		return result.Error(err), actualDcs
@@ -64,7 +64,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
-		dcConfig := cassandra.Coalesce(clusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
@@ -120,6 +120,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		if err = remoteClient.Get(ctx, dcKey, actualDc); err == nil {
+			// Fail the reconcile if cluster name has changed
+			if actualDc.Spec.ClusterName != cassClusterName {
+				return result.Error(fmt.Errorf("CassandraDatacenter %s has cluster name %s, but expected %s. Cluster name cannot be changed in an existing cluster", dcKey, actualDc.Spec.ClusterName, cassClusterName)), actualDcs
+			}
+
 			r.setStatusForDatacenter(kc, actualDc)
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) {

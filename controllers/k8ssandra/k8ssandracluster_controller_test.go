@@ -110,6 +110,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
+	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -2009,4 +2010,81 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
+// Create a cluster with server and client encryption but client encryption stores missing.
+// Verify that dc1 never gets created.
+func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	clusterName := "cluster-with-encryption"
+	newClusterName := "cluster-with-encryption-new"
+	serverVersion := "4.0.0"
+	dc1Size := int32(3)
+
+	// Create the cluster template with encryption enabled for both server and client, but missing client encryption stores
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      clusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+					},
+				},
+				ServerEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: corev1.LocalObjectReference{
+						Name: "server-keystore-secret",
+					},
+					TruststoreSecretRef: corev1.LocalObjectReference{
+						Name: "server-truststore-secret",
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that dc1 was never created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	k8c := &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterName}, k8c)
+	require.NoError(err, "failed to get K8ssandraCluster")
+
+	// Change the cluster name
+	k8c.Spec.Cassandra.ClusterName = newClusterName
+	err = f.Client.Update(ctx, k8c)
+	require.Error(err, "failed to update K8ssandraCluster")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }

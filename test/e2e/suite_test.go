@@ -1601,7 +1601,7 @@ func DcClusterName(
 }
 
 func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash string) string {
-	stargateChan := make(chan string, 1)
+	stargateChan := make(chan string)
 	go func() {
 		for {
 			stargateDeploymentResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)

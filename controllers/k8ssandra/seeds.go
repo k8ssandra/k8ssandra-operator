@@ -17,7 +17,7 @@ import (
 
 // findSeeds queries for pods labeled as seeds. It does this for each DC, across all
 // clusters.
-func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ssandraCluster, clusterName string, logger logr.Logger) ([]corev1.Pod, error) {
+func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ssandraCluster, cassClusterName string, logger logr.Logger) ([]corev1.Pod, error) {
 	pods := make([]corev1.Pod, 0)
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
@@ -34,7 +34,7 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 
 		list := &corev1.PodList{}
 		selector := map[string]string{
-			cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(clusterName),
+			cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassClusterName),
 			cassdcapi.DatacenterLabel: dcTemplate.Meta.Name,
 			cassdcapi.SeedNodeLabel:   "true",
 		}
