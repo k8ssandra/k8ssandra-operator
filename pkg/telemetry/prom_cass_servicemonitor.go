@@ -335,9 +335,8 @@ func (cfg PrometheusResourcer) NewCassServiceMonitor() (promapi.ServiceMonitor, 
 		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					k8ssandraapi.ManagedByLabel: "cass-operator",
-					//It appears that this label is always set true by cass-operator, so I don't think filtering on it adds any value and we should look to deprecate.
-					//"cassandra.datastax.com/prom-metrics": "true",
+					k8ssandraapi.ManagedByLabel:           "cass-operator",
+					"cassandra.datastax.com/prom-metrics": "true",
 				},
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{Key: cassdcapi.ClusterLabel, Operator: "In", Values: []string{cassdcapi.CleanLabelValue(clusterName)}},
