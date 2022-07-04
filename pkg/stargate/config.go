@@ -3,6 +3,7 @@ package stargate
 import (
 	"strings"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -21,17 +22,17 @@ func FilterYamlConfig(config map[string]interface{}) map[string]interface{} {
 	return filteredConfig
 }
 
-func CreateStargateConfigMap(namespace, configYaml, clusterName, dcName string) *corev1.ConfigMap {
+func CreateStargateConfigMap(namespace, configYaml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GeneratedConfigMapName(clusterName, dcName),
+			Name:      GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
 				k8ssandra.NameLabel:                      k8ssandra.NameLabelValue,
 				k8ssandra.PartOfLabel:                    k8ssandra.PartOfLabelValue,
 				k8ssandra.ComponentLabel:                 k8ssandra.ComponentLabelValueStargate,
 				k8ssandra.CreatedByLabel:                 k8ssandra.CreatedByLabelValueK8ssandraClusterController,
-				k8ssandra.K8ssandraClusterNameLabel:      clusterName,
+				k8ssandra.K8ssandraClusterNameLabel:      dc.Labels[k8ssandra.K8ssandraClusterNameLabel],
 				k8ssandra.K8ssandraClusterNamespaceLabel: namespace,
 			},
 		},

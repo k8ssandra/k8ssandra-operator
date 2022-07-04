@@ -79,7 +79,7 @@ func computePodAntiAffinity(allowStargateOnDataNodes bool, dc *cassdcapi.Cassand
 				{
 					Key:      cassdcapi.ClusterLabel,
 					Operator: metav1.LabelSelectorOpIn,
-					Values:   []string{dc.Spec.ClusterName},
+					Values:   []string{cassdcapi.CleanLabelValue(dc.Spec.ClusterName)},
 				},
 				{
 					Key:      cassdcapi.DatacenterLabel,

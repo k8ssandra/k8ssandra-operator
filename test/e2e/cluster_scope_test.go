@@ -2,11 +2,12 @@ package e2e
 
 import (
 	"context"
+	"testing"
+
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 )
 
 func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace string, f *framework.E2eFramework) {
@@ -69,11 +70,11 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
-	pod := "test-dc1-rack1-sts-0"
+	pod := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
 	count := 6
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], dc1Namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	pod = "test-dc2-rack1-sts-0"
+	pod = DcPrefix(t, f, dc2Key) + "-rack1-sts-0"
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], dc2Namespace, pod, count, 0, "-u", username, "-pw", password)
 }

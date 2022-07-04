@@ -154,7 +154,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userConfigMapContent, req.Namespace, actualDc.ClusterName, actualDc.Name, logger); err != nil {
+	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userConfigMapContent, req.Namespace, *actualDc, logger); err != nil {
 		return ctrl.Result{}, err
 	} else {
 		if stargateConfigResult.Requeue {
@@ -399,13 +399,12 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 	ctx context.Context,
 	stargateObject *api.Stargate,
 	desiredConfig map[string]interface{},
-	userConfigMapContent,
-	namespace,
-	clusterName,
-	dcName string,
+	userConfigMapContent string,
+	namespace string,
+	dc cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 ) (ctrl.Result, error) {
-	logger.Info(fmt.Sprintf("Reconciling Stargate Cassandra yaml configMap on namespace %s for cluster %s and dc %s", namespace, clusterName, dcName))
+	logger.Info(fmt.Sprintf("Reconciling Stargate Cassandra yaml configMap on namespace %s for cluster %s and dc %s", namespace, dc.Spec.ClusterName, dc.Name))
 	var filteredCassandraConfig map[string]interface{}
 	desiredCassandraYaml, exists := desiredConfig["cassandra-yaml"]
 	if exists {
@@ -425,11 +424,11 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      stargate.GeneratedConfigMapName(clusterName, dcName),
+		Name:      stargate.GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
 	}
 
 	logger = logger.WithValues("StargateConfigMap", configMapKey)
-	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, mergedConfigMap, clusterName, dcName)
+	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, mergedConfigMap, dc)
 	// Compute a hash which will allow to compare desired and actual configMaps
 	annotations.AddHashAnnotation(desiredConfigMap)
 	actualConfigMap := &corev1.ConfigMap{}

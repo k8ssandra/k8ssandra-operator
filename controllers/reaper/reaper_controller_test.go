@@ -125,7 +125,7 @@ func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, test
 			Name:      "test-cassdc-pod1",
 			Namespace: testNamespace,
 			Labels: map[string]string{
-				cassdcapi.ClusterLabel:    cassandraClusterName,
+				cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassandraClusterName),
 				cassdcapi.DatacenterLabel: cassandraDatacenterName,
 			},
 		},
@@ -157,7 +157,7 @@ func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, test
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{{Name: "mgmt-api-http", Port: int32(8080)}},
 			Selector: map[string]string{
-				cassdcapi.ClusterLabel:    cassandraClusterName,
+				cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassandraClusterName),
 				cassdcapi.DatacenterLabel: cassandraDatacenterName,
 			},
 		},

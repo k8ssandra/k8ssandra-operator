@@ -2,12 +2,13 @@ package e2e
 
 import (
 	"context"
+	"testing"
+
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
 )
 
 func gcTest(gcName string) e2eTestFunc {
@@ -22,7 +23,7 @@ func gcTest(gcName string) e2eTestFunc {
 		dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 		checkDatacenterReady(t, ctx, dc1Key, f)
 
-		logs, err := f.GetContainerLogs(f.DataPlaneContexts[0], namespace, "test-dc1-default-sts-0", "server-system-logger")
+		logs, err := f.GetContainerLogs(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-default-sts-0", "server-system-logger")
 		require.Containsf(t, logs, gcName, "Could not find %s in logs", gcName)
 
 		switch gcName {

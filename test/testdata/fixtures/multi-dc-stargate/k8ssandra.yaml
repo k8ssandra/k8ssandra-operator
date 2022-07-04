@@ -21,6 +21,7 @@ metadata:
   name: test
 spec:
   cassandra:
+    clusterName: "E2E Test Cluster"
     serverVersion: "3.11.11"
     storageConfig:
       cassandraDataVolumeClaimSpec:

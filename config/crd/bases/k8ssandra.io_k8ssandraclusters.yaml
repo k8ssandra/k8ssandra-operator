@@ -95,6 +95,11 @@ spec:
                     - keystoreSecretRef
                     - truststoreSecretRef
                     type: object
+                  clusterName:
+                    description: Override the Cassandra cluster name. If unspecified,
+                      the cluster name will be the same as the K8ssandraCluster CRD
+                      name.
+                    type: string
                   config:
                     description: CassandraConfig is configuration settings that are
                       applied to cassandra.yaml and the various jvm*.options files.
@@ -6481,8 +6486,8 @@ spec:
                           properties:
                             additionalVolumes:
                               items:
-                                description: StorageConfig defines additional storage
-                                  configurations
+                                description: AdditionalVolumes StorageConfig defines
+                                  additional storage configurations
                                 properties:
                                   mountPath:
                                     description: Mount path into cassandra container
@@ -7116,7 +7121,8 @@ spec:
                     properties:
                       additionalVolumes:
                         items:
-                          description: StorageConfig defines additional storage configurations
+                          description: AdditionalVolumes StorageConfig defines additional
+                            storage configurations
                           properties:
                             mountPath:
                               description: Mount path into cassandra container

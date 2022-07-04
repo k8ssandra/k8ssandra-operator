@@ -501,7 +501,7 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 
 func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	configMapName := "cassandra-config"
-	generatedConfigMapName := "dc1-cassandra-config"
+	generatedConfigMapName := "cluster1-dc1-cassandra-config"
 
 	stargate := stargate.DeepCopy()
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}

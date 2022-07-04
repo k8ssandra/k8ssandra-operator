@@ -234,7 +234,7 @@ func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
 }
 
 func computeSeedServiceUrl(dc *cassdcapi.CassandraDatacenter) string {
-	return dc.Spec.ClusterName + "-seed-service." + dc.Namespace + ".svc." + clusterDomain
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName) + "-seed-service." + dc.Namespace + ".svc." + clusterDomain
 }
 
 func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
@@ -347,7 +347,7 @@ func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatac
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: GeneratedConfigMapName(dc.ClusterName, dc.Name),
+					Name: GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
 				},
 			},
 		},
@@ -437,5 +437,5 @@ func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraData
 }
 
 func GeneratedConfigMapName(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s", dcName, cassandraConfigMap)
+	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
 }

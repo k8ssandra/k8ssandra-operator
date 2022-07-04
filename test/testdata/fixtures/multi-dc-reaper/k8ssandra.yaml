@@ -33,6 +33,7 @@ spec:
       name: reaper-ui-secret # pre-existing secret with non-default name
     heapSize: 256Mi
   cassandra:
+    clusterName: "E2E Test Cluster"
     serverVersion: "4.0.1"
     datacenters:
       - metadata:
