@@ -11731,6 +11731,7 @@ spec:
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
+<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
                               type: object
                             terminationGracePeriodSeconds:
                               description: Optional duration in seconds the pod needs
@@ -11783,6 +11784,68 @@ spec:
                                 for a container, it defaults to Limits if that is
                                 explicitly specified, otherwise to an implementation-defined
                                 value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+=======
+>>>>>>> Allow injecting containers and init containers into the Cassandra pods
+                              type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                a beta field and requires enabling ProbeTerminationGracePeriod
+                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
+                                is used if unset.
+                              format: int64
+                              type: integer
+                            timeoutSeconds:
+                              description: 'Number of seconds after which the probe
+                                times out. Defaults to 1 second. Minimum value is
+                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                              format: int32
+                              type: integer
+                          type: object
+<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
+                        securityContext:
+                          description: 'SecurityContext defines the security options
+                            the container should be run with. If set, the fields of
+                            SecurityContext override the equivalent fields of PodSecurityContext.
+                            More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
+                          properties:
+=======
+                        resources:
+                          description: 'Compute Resources required by this container.
+                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Limits describes the maximum amount of
+                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: 'Requests describes the minimum amount
+                                of compute resources required. If Requests is omitted
+                                for a container, it defaults to Limits if that is
+                                explicitly specified, otherwise to an implementation-defined
+                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                           type: object
                         securityContext:
@@ -11791,6 +11854,7 @@ spec:
                             SecurityContext override the equivalent fields of PodSecurityContext.
                             More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
                           properties:
+>>>>>>> Allow injecting containers and init containers into the Cassandra pods
                             allowPrivilegeEscalation:
                               description: 'AllowPrivilegeEscalation controls whether
                                 a process can gain more privileges than its parent
@@ -11808,6 +11872,7 @@ spec:
                               properties:
                                 add:
                                   description: Added capabilities
+<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
                                   items:
                                     description: Capability represent POSIX capabilities
                                       type
@@ -11818,6 +11883,18 @@ spec:
                                   items:
                                     description: Capability represent POSIX capabilities
                                       type
+=======
+                                  items:
+                                    description: Capability represent POSIX capabilities
+                                      type
+                                    type: string
+                                  type: array
+                                drop:
+                                  description: Removed capabilities
+                                  items:
+                                    description: Capability represent POSIX capabilities
+                                      type
+>>>>>>> Allow injecting containers and init containers into the Cassandra pods
                                     type: string
                                   type: array
                               type: object
