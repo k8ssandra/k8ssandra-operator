@@ -56,6 +56,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	// Reconcile CassandraDatacenter objects only
 	for idx, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		if err := cassandra.ValidateDcTemplate(dcTemplate); err != nil {
+			logger.Error(err, fmt.Sprintf("Failed to validate template for DC %s", dcTemplate.Meta.Name))
+			return result.Error(err), actualDcs
+		}
+
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -223,6 +228,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+func validateTemplate(dcTemplate api.CassandraDatacenterTemplate) {
+	panic("unimplemented")
 }
 
 func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) {

@@ -358,6 +358,70 @@ func TestCoalesce(t *testing.T) {
 				Stopped: true,
 			},
 		},
+		{
+			name: "Additional cluster container",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					AdditionalContainers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image",
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Additional cluster container and init containers",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					AdditionalInitContainers: []corev1.Container{
+						{
+							Name:  "test-init-container",
+							Image: "test-image",
+						},
+					},
+					AdditionalContainers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image",
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{
+							{
+								Name:  "test-init-container",
+								Image: "test-image",
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

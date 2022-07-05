@@ -111,6 +111,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
 	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
+	t.Run("InjectContainers", testEnv.ControllerTest(ctx, injectContainers))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -2082,6 +2083,91 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	k8c.Spec.Cassandra.ClusterName = newClusterName
 	err = f.Client.Update(ctx, k8c)
 	require.Error(err, "failed to update K8ssandraCluster")
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
+// Create a cluster with server and client encryption but client encryption stores missing.
+// Verify that dc1 never gets created.
+func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	clusterName := "cluster-with-injection"
+	serverVersion := "4.0.0"
+	dc1Size := int32(3)
+
+	// Create the cluster template with encryption enabled for both server and client, but missing client encryption stores
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      clusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
+					},
+					AdditionalContainers: []corev1.Container{
+						{
+							Name:  "injected-container",
+							Image: "busybox",
+						},
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+						DatacenterOptions: api.DatacenterOptions{
+							AdditionalInitContainers: []corev1.Container{
+								{
+									Name:  "injected-init-container",
+									Image: "busybox",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that dc1 was never created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc1Key, dc)
+	require.NoError(err, "failed to get CassandraDatacenter dc1")
+
+	posInit, foundInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "injected-init-container")
+	require.True(foundInit, "failed to find injected-init-container")
+	require.Equal(0, posInit, "injected-init-container should be first init container")
+
+	posMain, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
+	require.True(foundMain, "failed to find injected-container")
+	require.Equal(0, posMain, "injected-container should be first container")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)

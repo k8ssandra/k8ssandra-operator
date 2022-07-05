@@ -348,7 +348,43 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
 	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
 
+	if len(dcTemplate.DatacenterOptions.AdditionalContainers) > 0 {
+		addContainersToPodTemplateSpec(dcConfig, dcTemplate.DatacenterOptions.AdditionalContainers)
+	} else if len(clusterTemplate.DatacenterOptions.AdditionalContainers) > 0 {
+		addContainersToPodTemplateSpec(dcConfig, clusterTemplate.DatacenterOptions.AdditionalContainers)
+	}
+
+	if len(dcTemplate.DatacenterOptions.AdditionalInitContainers) > 0 {
+		addInitContainersToPodTemplateSpec(dcConfig, dcTemplate.DatacenterOptions.AdditionalInitContainers)
+	} else if len(clusterTemplate.DatacenterOptions.AdditionalInitContainers) > 0 {
+		addInitContainersToPodTemplateSpec(dcConfig, clusterTemplate.DatacenterOptions.AdditionalInitContainers)
+	}
+
 	return dcConfig
+}
+
+func addContainersToPodTemplateSpec(dcConfig *DatacenterConfig, additionalContainers []corev1.Container) {
+	if dcConfig.PodTemplateSpec == nil {
+		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: additionalContainers,
+			},
+		}
+	} else {
+		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, additionalContainers...)
+	}
+}
+
+func addInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, additionalInitContainers []corev1.Container) {
+	if dcConfig.PodTemplateSpec == nil {
+		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				InitContainers: additionalInitContainers,
+			},
+		}
+	} else {
+		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, additionalInitContainers...)
+	}
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {

@@ -29,16 +29,21 @@ var (
 // If filter list is set to nil, the default filters are used, otherwise the provided filters are used.
 func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) {
 	filtersEnvVar := v1.EnvVar{}
+	if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
+		// Default filters are applied
+		filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(DefaultFilters, " ")}
+	} else {
+		// Custom filters are applied
+		filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(*telemetrySpec.Mcac.MetricFilters, " ")}
+	}
 	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
 	if containerFound {
-		if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
-			// Default filters are applied
-			filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(DefaultFilters, " ")}
-		} else {
-			// Custom filters are applied
-			filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(*telemetrySpec.Mcac.MetricFilters, " ")}
-		}
 		dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env = append(dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env,
 			filtersEnvVar)
+	} else {
+		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, v1.Container{
+			Name: "cassandra",
+			Env:  []v1.EnvVar{filtersEnvVar},
+		})
 	}
 }

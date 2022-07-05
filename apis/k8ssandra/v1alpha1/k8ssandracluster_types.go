@@ -313,6 +313,14 @@ type DatacenterOptions struct {
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
+
+	// AdditionalContainers defines additional containers to be deployed in each Cassandra pod.
+	// +optional
+	AdditionalContainers []corev1.Container `json:"additionalContainers,omitempty"`
+
+	// AdditionalInitContainers defines additional init containers to be deployed in each Cassandra pod.
+	// +optional
+	AdditionalInitContainers []corev1.Container `json:"additionalInitContainers,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

@@ -649,6 +649,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
+	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -1629,7 +1630,7 @@ func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context
 }
 
 func checkMetricsFiltersPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
-	t.Logf("check that datacenter %s in cluster %s is ready", dcKey.Name, dcKey.K8sContext)
+	t.Logf("check that metric filters are present on dc %s in cluster %s", dcKey.Name, dcKey.K8sContext)
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, cassdc)
 	if err != nil {
@@ -1642,6 +1643,28 @@ func checkMetricsFiltersPresence(t *testing.T, ctx context.Context, f *framework
 		require.NotNil(t, utils.FindEnvVar(envVariables, "METRIC_FILTERS"), "METRIC_FILTERS env variable not found in cassandra container")
 	} else {
 		return fmt.Errorf("cannot find cassandra container in pod template spec")
+	}
+	return nil
+}
+
+func checkInjectedContainersPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
+	t.Logf("check that containers were injected in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, cassdc)
+	if err != nil {
+		return err
+	}
+
+	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "busybox"); containerFound {
+		require.Equal(t, 0, containerIndex, "busybox container should be the first container in cassandra pod")
+	} else {
+		return fmt.Errorf("cannot find busybox injected container in pod template spec")
+	}
+
+	if initContainerIndex, initContainerFound := cassandra.FindInitContainer(cassdc.Spec.PodTemplateSpec, "init-busybox"); initContainerFound {
+		require.Equal(t, 0, initContainerIndex, "busybox container should be the first container in cassandra pod")
+	} else {
+		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
 	return nil
 }
