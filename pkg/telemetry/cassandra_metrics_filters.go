@@ -26,25 +26,19 @@ var (
 )
 
 // InjectCassandraTelemetryFilters adds MCAC filters to the cassandra container as an env variable.
-// If no filters are defined and telemetry was set in the CRD, the default filters are used.
+// If filter list is set to nil, the default filters are used, otherwise the provided filters are used.
 func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) {
-	if telemetrySpec == nil || telemetrySpec.Prometheus == nil {
-		return
-	}
-
-	metricsFilters := make([]string, len(telemetrySpec.Prometheus.McacMetricFilters))
+	filtersEnvVar := v1.EnvVar{}
 	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
-
-	if len(telemetrySpec.Prometheus.McacMetricFilters) > 0 {
-		// Custom filters were defined in the CRD.
-		metricsFilters = append(metricsFilters, telemetrySpec.Prometheus.McacMetricFilters...)
-	} else {
-		// No custom filters were defined in the CRD, using the defaults.
-		metricsFilters = append(metricsFilters, DefaultFilters...)
-	}
-
 	if containerFound {
+		if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
+			// Default filters are applied
+			filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(DefaultFilters, " ")}
+		} else {
+			// Custom filters are applied
+			filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(*telemetrySpec.Mcac.MetricFilters, " ")}
+		}
 		dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env = append(dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env,
-			v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Trim(strings.Join(metricsFilters, " "), " ")})
+			filtersEnvVar)
 	}
 }

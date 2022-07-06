@@ -6129,6 +6129,24 @@ spec:
                                       pods for all DCs in this cluster (unless overriden
                                       by DC specific settings)
                                     properties:
+                                      mcac:
+                                        properties:
+                                          metricFilters:
+                                            description: 'MetricFilters allows passing
+                                              filters to MCAC in order to reduce the
+                                              amount of extracted metrics. Not setting
+                                              this field will result in the default
+                                              filters being used. Setting it to an
+                                              empty list will result in all metrics
+                                              being extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                                              - "deny:org.apache.cassandra.metrics.table"
+                                              - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                                              - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                                              - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                                            items:
+                                              type: string
+                                            type: array
+                                        type: object
                                       prometheus:
                                         properties:
                                           commonLabels:
@@ -6142,10 +6160,6 @@ spec:
                                               serviceMonitors for this resource (Cassandra
                                               or Stargate).
                                             type: boolean
-                                          mcacMetricFilters:
-                                            items:
-                                              type: string
-                                            type: array
                                         type: object
                                     type: object
                                   tolerations:
@@ -6408,6 +6422,23 @@ spec:
                                 for all DCs in this cluster (unless overriden by DC
                                 specific settings)
                               properties:
+                                mcac:
+                                  properties:
+                                    metricFilters:
+                                      description: 'MetricFilters allows passing filters
+                                        to MCAC in order to reduce the amount of extracted
+                                        metrics. Not setting this field will result
+                                        in the default filters being used. Setting
+                                        it to an empty list will result in all metrics
+                                        being extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                                        - "deny:org.apache.cassandra.metrics.table"
+                                        - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                                        - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                                        - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
                                 prometheus:
                                   properties:
                                     commonLabels:
@@ -6421,10 +6452,6 @@ spec:
                                         serviceMonitors for this resource (Cassandra
                                         or Stargate).
                                       type: boolean
-                                    mcacMetricFilters:
-                                      items:
-                                        type: string
-                                      type: array
                                   type: object
                               type: object
                             tolerations:
@@ -6895,6 +6922,23 @@ spec:
                             with a user-provided monitoring solution (at present,
                             only support for Prometheus is available).
                           properties:
+                            mcac:
+                              properties:
+                                metricFilters:
+                                  description: 'MetricFilters allows passing filters
+                                    to MCAC in order to reduce the amount of extracted
+                                    metrics. Not setting this field will result in
+                                    the default filters being used. Setting it to
+                                    an empty list will result in all metrics being
+                                    extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                                    - "deny:org.apache.cassandra.metrics.table" -
+                                    "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                                    - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                                    - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
                             prometheus:
                               properties:
                                 commonLabels:
@@ -6907,10 +6951,6 @@ spec:
                                   description: Enable the creation of Prometheus serviceMonitors
                                     for this resource (Cassandra or Stargate).
                                   type: boolean
-                                mcacMetricFilters:
-                                  items:
-                                    type: string
-                                  type: array
                               type: object
                           type: object
                         tolerations:
@@ -7518,6 +7558,21 @@ spec:
                       a user-provided monitoring solution (at present, only support
                       for Prometheus is available).
                     properties:
+                      mcac:
+                        properties:
+                          metricFilters:
+                            description: 'MetricFilters allows passing filters to
+                              MCAC in order to reduce the amount of extracted metrics.
+                              Not setting this field will result in the default filters
+                              being used. Setting it to an empty list will result
+                              in all metrics being extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                              - "deny:org.apache.cassandra.metrics.table" - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                              - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                              - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       prometheus:
                         properties:
                           commonLabels:
@@ -7530,10 +7585,6 @@ spec:
                             description: Enable the creation of Prometheus serviceMonitors
                               for this resource (Cassandra or Stargate).
                             type: boolean
-                          mcacMetricFilters:
-                            items:
-                              type: string
-                            type: array
                         type: object
                     type: object
                   tolerations:
@@ -11174,6 +11225,21 @@ spec:
                       to deploy targeting the Stargate pods for all DCs in this cluster
                       (unless overriden by DC specific settings)
                     properties:
+                      mcac:
+                        properties:
+                          metricFilters:
+                            description: 'MetricFilters allows passing filters to
+                              MCAC in order to reduce the amount of extracted metrics.
+                              Not setting this field will result in the default filters
+                              being used. Setting it to an empty list will result
+                              in all metrics being extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                              - "deny:org.apache.cassandra.metrics.table" - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                              - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                              - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                            items:
+                              type: string
+                            type: array
+                        type: object
                       prometheus:
                         properties:
                           commonLabels:
@@ -11186,10 +11252,6 @@ spec:
                             description: Enable the creation of Prometheus serviceMonitors
                               for this resource (Cassandra or Stargate).
                             type: boolean
-                          mcacMetricFilters:
-                            items:
-                              type: string
-                            type: array
                         type: object
                     type: object
                   tolerations:

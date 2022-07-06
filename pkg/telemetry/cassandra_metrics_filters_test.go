@@ -28,7 +28,9 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Prometheus: &telemetry.PrometheusTelemetrySpec{
 			Enabled: true,
-			McacMetricFilters: []string{
+		},
+		Mcac: &telemetry.McacTelemetrySpec{
+			MetricFilters: &[]string{
 				"deny:org.apache.cassandra.metrics.Table",
 				"deny:org.apache.cassandra.metrics.table"},
 		},
@@ -83,14 +85,15 @@ func Test_InjectCassandraTelemetryFilters_Disabled(t *testing.T) {
 	}
 
 	// Test with a nil TelemetrySpec
-	var telemetrySpec *telemetry.TelemetrySpec
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Mcac: &telemetry.McacTelemetrySpec{
+			MetricFilters: &[]string{},
+		},
+	}
 	InjectCassandraTelemetryFilters(telemetrySpec, dcConfig)
 	cassandraEnvVariables := dcConfig.PodTemplateSpec.Spec.Containers[0].Env
-	assert.Equal(t, 0, len(cassandraEnvVariables), "Expected no env variable to be injected")
+	assert.Equal(t, 1, len(cassandraEnvVariables), "Expected 1 env variable to be injected")
+	assert.Equal(t, cassandraEnvVariables[0].Name, "METRIC_FILTERS", "Expected METRIC_FILTERS env variable to be injected")
+	assert.Equal(t, cassandraEnvVariables[0].Value, "", "Expected empty METRIC_FILTERS env variable to be injected")
 
-	// Test with a non nil TelemetrySpec but with a nil PrometheusTelemetrySpec
-	telemetrySpec = &telemetry.TelemetrySpec{}
-	InjectCassandraTelemetryFilters(telemetrySpec, dcConfig)
-	cassandraEnvVariables = dcConfig.PodTemplateSpec.Spec.Containers[0].Env
-	assert.Equal(t, 0, len(cassandraEnvVariables), "Expected no env variable to be injected")
 }
