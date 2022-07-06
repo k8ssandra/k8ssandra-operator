@@ -91,7 +91,6 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	// Update the status if there are modifications
 	if backupSchedule.Status.LastExecution.Time.Before(previousExecution) ||
 		backupSchedule.Status.NextSchedule.Time.Before(nextExecution) {
-		// schedulePatch := client.MergeFrom(backupSchedule.DeepCopy())
 		backupSchedule.Status.NextSchedule = metav1.NewTime(nextExecution)
 		backupSchedule.Status.LastExecution = metav1.NewTime(previousExecution)
 
