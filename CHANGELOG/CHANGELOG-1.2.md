@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Update to Medusa v0.13.3
 * [FEATURE] [#496](https://github.com/k8ssandra/k8ssandra-operator/issues/496) Allow overriding Cassandra cluster names
 * [ENHANCEMENT] [#584](https://github.com/k8ssandra/k8ssandra-operator/issues/584) Make Medusa use the Cassandra data PV for restore downloads
 * [ENHANCEMENT] [#354](https://github.com/k8ssandra/k8ssandra-operator/issues/354) Add encryption support to Medusa
