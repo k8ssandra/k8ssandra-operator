@@ -4,6 +4,7 @@ package v1alpha1
 
 type TelemetrySpec struct {
 	Prometheus *PrometheusTelemetrySpec `json:"prometheus,omitempty"`
+	Mcac       *McacTelemetrySpec       `json:"mcac,omitempty"`
 }
 type PrometheusTelemetrySpec struct {
 	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra or Stargate).
@@ -11,4 +12,18 @@ type PrometheusTelemetrySpec struct {
 	// CommonLabels are applied to all serviceMonitors created.
 	// +optional
 	CommonLabels map[string]string `json:"commonLabels,omitempty"`
+}
+
+type McacTelemetrySpec struct {
+	// MetricFilters allows passing filters to MCAC in order to reduce the amount of extracted metrics.
+	// Not setting this field will result in the default filters being used.
+	// Setting it to an empty list will result in all metrics being extracted.
+	// Examples:
+	// - "deny:org.apache.cassandra.metrics.Table"
+	// - "deny:org.apache.cassandra.metrics.table"
+	// - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+	// - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+	// - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"
+	// +optional
+	MetricFilters *[]string `json:"metricFilters,omitempty"`
 }

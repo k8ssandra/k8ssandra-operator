@@ -15,6 +15,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -81,6 +82,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Create Medusa related objects
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
+		}
+		// Inject MCAC metrics filters if telemetry is enabled
+		if kc.Spec.Cassandra.Telemetry != nil {
+			telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
 		}
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)

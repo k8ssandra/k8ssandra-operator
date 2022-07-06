@@ -9,6 +9,7 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -187,13 +188,13 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 			return false
 		}
 
-		envVar := findEnvVar(restoreContainer.Env, "BACKUP_NAME")
+		envVar := utils.FindEnvVar(restoreContainer.Env, "BACKUP_NAME")
 		if envVar == nil || envVar.Value != restoredBackupName {
 			t.Logf("backup name not found in restore container: %v", restoreContainer.Env)
 			return false
 		}
 
-		envVar = findEnvVar(restoreContainer.Env, "RESTORE_KEY")
+		envVar = utils.FindEnvVar(restoreContainer.Env, "RESTORE_KEY")
 		t.Logf("restore key: %v", envVar)
 		return envVar != nil
 	}), timeout, interval, "timed out waiting for CassandraDatacenter PodTemplateSpec update")

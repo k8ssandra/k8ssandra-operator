@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
@@ -647,6 +648,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
+	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -1624,4 +1626,22 @@ func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context
 			return initialStargateResourceHash
 		}
 	}
+}
+
+func checkMetricsFiltersPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
+	t.Logf("check that datacenter %s in cluster %s is ready", dcKey.Name, dcKey.K8sContext)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, cassdc)
+	if err != nil {
+		return err
+	}
+
+	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "cassandra"); containerFound {
+		envVariables := cassdc.Spec.PodTemplateSpec.Spec.Containers[containerIndex].Env
+		require.True(t, len(envVariables) > 0, "no env variables found in cassandra container")
+		require.NotNil(t, utils.FindEnvVar(envVariables, "METRIC_FILTERS"), "METRIC_FILTERS env variable not found in cassandra container")
+	} else {
+		return fmt.Errorf("cannot find cassandra container in pod template spec")
+	}
+	return nil
 }

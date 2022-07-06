@@ -9,6 +9,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -126,27 +127,27 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, "/checker/readiness", container.ReadinessProbe.ProbeHandler.HTTPGet.Path)
 	assert.Equal(t, "health", container.ReadinessProbe.ProbeHandler.HTTPGet.Port.String())
 
-	clusterVersion := findEnvVar(container, "CLUSTER_VERSION")
+	clusterVersion := utils.FindEnvVarInContainer(container, "CLUSTER_VERSION")
 	require.NotNil(t, clusterVersion, "failed to find CLUSTER_VERSION env var")
 	assert.Equal(t, "3.11", clusterVersion.Value)
 
-	clusterName := findEnvVar(container, "CLUSTER_NAME")
+	clusterName := utils.FindEnvVarInContainer(container, "CLUSTER_NAME")
 	require.NotNil(t, clusterName, "failed to find CLUSTER_NAME env var")
 	assert.Equal(t, "cluster1", clusterName.Value)
 
-	datacenterName := findEnvVar(container, "DATACENTER_NAME")
+	datacenterName := utils.FindEnvVarInContainer(container, "DATACENTER_NAME")
 	require.NotNil(t, datacenterName, "failed to find DATACENTER_NAME env var")
 	assert.Equal(t, "dc1", datacenterName.Value)
 
-	rackName := findEnvVar(container, "RACK_NAME")
+	rackName := utils.FindEnvVarInContainer(container, "RACK_NAME")
 	require.NotNil(t, rackName, "failed to find RACK_NAME env var")
 	assert.Equal(t, "default", rackName.Value)
 
-	seed := findEnvVar(container, "SEED")
+	seed := utils.FindEnvVarInContainer(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
 	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
 
-	javaOpts := findEnvVar(container, "JAVA_OPTS")
+	javaOpts := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
 	assert.Contains(t, javaOpts.Value, "-XX:+CrashOnOutOfMemoryError")
 	assert.Contains(t, javaOpts.Value, "-Xms268435456")
@@ -194,11 +195,11 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	rackName := findEnvVar(container, "RACK_NAME")
+	rackName := utils.FindEnvVarInContainer(container, "RACK_NAME")
 	require.NotNil(t, rackName, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack1", rackName.Value)
 
-	seed := findEnvVar(container, "SEED")
+	seed := utils.FindEnvVarInContainer(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
 	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
 
@@ -237,7 +238,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
 	container1 := findContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
+	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack1", rackName1.Value)
 
@@ -255,7 +256,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
 	container2 := findContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
-	rackName2 := findEnvVar(container2, "RACK_NAME")
+	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
@@ -273,7 +274,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
-	rackName3 := findEnvVar(container3, "RACK_NAME")
+	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack3", rackName3.Value)
 }
@@ -319,7 +320,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, dc.Spec.Tolerations, deployment1.Spec.Template.Spec.Tolerations)
 	container1 := findContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
+	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack1", rackName1.Value)
 
@@ -337,7 +338,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, dc.Spec.Tolerations, deployment2.Spec.Template.Spec.Tolerations)
 	container2 := findContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
-	rackName2 := findEnvVar(container2, "RACK_NAME")
+	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
@@ -355,7 +356,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, dc.Spec.Tolerations, deployment3.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
-	rackName3 := findEnvVar(container3, "RACK_NAME")
+	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack3", rackName3.Value)
 }
@@ -431,7 +432,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Equal(t, stargate.Spec.Tolerations, deployment1.Spec.Template.Spec.Tolerations)
 	container1 := findContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
-	rackName1 := findEnvVar(container1, "RACK_NAME")
+	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack1", rackName1.Value)
 
@@ -449,7 +450,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Equal(t, stargate.Spec.Tolerations, deployment2.Spec.Template.Spec.Tolerations)
 	container2 := findContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
-	rackName2 := findEnvVar(container2, "RACK_NAME")
+	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack2", rackName2.Value)
 
@@ -467,7 +468,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Equal(t, stargate.Spec.Racks[0].Tolerations, deployment3.Spec.Template.Spec.Tolerations)
 	container3 := findContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
-	rackName3 := findEnvVar(container3, "RACK_NAME")
+	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
 	assert.Equal(t, "rack3", rackName3.Value)
 }
@@ -513,7 +514,7 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	envVar := findEnvVar(container, "JAVA_OPTS")
+	envVar := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, envVar, "failed to find JAVA_OPTS env var")
 	assert.True(t, strings.Contains(envVar.Value, "-Dstargate.unsafe.cassandra_config_path="+cassandraConfigPath))
 
@@ -545,7 +546,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	/* envVar := findEnvVar(container, "JAVA_OPTS")
+	/* envVar := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, envVar, "failed to find JAVA_OPTS env var")
 	assert.True(t, strings.Contains(envVar.Value, "-Dstargate.unsafe.cassandra_config_path="+cassandraConfigPath)) */
 
@@ -730,15 +731,6 @@ func findContainer(deployment *appsv1.Deployment, name string) *corev1.Container
 	for _, c := range deployment.Spec.Template.Spec.Containers {
 		if c.Name == name {
 			return &c
-		}
-	}
-	return nil
-}
-
-func findEnvVar(container *corev1.Container, name string) *corev1.EnvVar {
-	for _, v := range container.Env {
-		if v.Name == name {
-			return &v
 		}
 	}
 	return nil
