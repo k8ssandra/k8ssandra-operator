@@ -70,7 +70,7 @@ func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 	assert.Equal(t, cassandraEnvVariables[0].Value, strings.Join(DefaultFilters, " "))
 }
 
-func Test_InjectCassandraTelemetryFilters_Disabled(t *testing.T) {
+func Test_InjectCassandraTelemetryFilters_Empty(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
 		PodTemplateSpec: &v1.PodTemplateSpec{
 			Spec: v1.PodSpec{
@@ -84,7 +84,7 @@ func Test_InjectCassandraTelemetryFilters_Disabled(t *testing.T) {
 		},
 	}
 
-	// Test with a nil TelemetrySpec
+	// Test with an empty filters slice, which should result in an empty env variable to be injected
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Mcac: &telemetry.McacTelemetrySpec{
 			MetricFilters: &[]string{},
