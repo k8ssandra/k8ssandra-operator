@@ -55,7 +55,6 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	configctrl "github.com/k8ssandra/k8ssandra-operator/controllers/config"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
-	medusacontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
@@ -208,7 +207,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO Are these really behaving correctly? Or is backup per cluster manual job?
 	if err = (&medusactrl.CassandraBackupReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
@@ -226,7 +224,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "CassandraRestore")
 		os.Exit(1)
 	}
-	if err = (&medusacontrollers.MedusaTaskReconciler{
+	if err = (&medusactrl.MedusaTaskReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
@@ -235,7 +233,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaTask")
 		os.Exit(1)
 	}
-	if err = (&medusacontrollers.MedusaBackupJobReconciler{
+	if err = (&medusactrl.MedusaBackupJobReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
@@ -244,13 +242,25 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupJob")
 		os.Exit(1)
 	}
-	if err = (&medusacontrollers.MedusaRestoreJobReconciler{
+	if err = (&medusactrl.MedusaRestoreJobReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ClientFactory:    &medusa.DefaultFactory{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaRestoreJob")
+	}
+
+	if err = (&medusactrl.MedusaBackupScheduleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Clock:  &medusactrl.RealClock{},
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupSchedule")
+		os.Exit(1)
+	}
+	if err = (&medusav1alpha1.MedusaBackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "MedusaBackupSchedule")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

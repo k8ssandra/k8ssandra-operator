@@ -1,0 +1,111 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: medusabackupschedules.medusa.k8ssandra.io
+spec:
+  group: medusa.k8ssandra.io
+  names:
+    kind: MedusaBackupSchedule
+    listKind: MedusaBackupScheduleList
+    plural: medusabackupschedules
+    singular: medusabackupschedule
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Datacenter which the task targets
+      jsonPath: .spec.backupSpec.cassandraDatacenter
+      name: Datacenter
+      type: string
+    - description: Next scheduled execution time
+      jsonPath: .status.nextSchedule
+      name: ScheduledExecution
+      type: date
+    - description: Previous execution time
+      jsonPath: .status.lastExecution
+      name: LastExecution
+      type: date
+    - description: Type of backup
+      jsonPath: .spec.backupSpec.backupType
+      name: BackupType
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: MedusaBackupSchedule is the Schema for the medusabackupschedules
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
+            properties:
+              backupSpec:
+                description: BackupSpec defines the CassandraBackup to be created
+                  for this job
+                properties:
+                  backupType:
+                    default: differential
+                    description: 'The type of the backup: "full" or "differential"'
+                    enum:
+                    - differential
+                    - full
+                    type: string
+                  cassandraDatacenter:
+                    description: The name of the CassandraDatacenter to back up
+                    minLength: 1
+                    type: string
+                required:
+                - cassandraDatacenter
+                type: object
+              cronSchedule:
+                description: CronSchedule is a cronjob format schedule for backups.
+                  Overrides any easier methods of defining the schedule
+                minLength: 1
+                type: string
+              disabled:
+                description: Disabled if set ensures this job is not scheduling anything
+                type: boolean
+            required:
+            - backupSpec
+            - cronSchedule
+            type: object
+          status:
+            description: MedusaBackupScheduleStatus defines the observed state of
+              MedusaBackupSchedule
+            properties:
+              lastExecution:
+                description: LastExecution tells when the backup was last time taken.
+                  If empty, the backup has never been taken
+                format: date-time
+                type: string
+              nextSchedule:
+                description: NextSchedule indicates when the next backup is going
+                  to be done
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

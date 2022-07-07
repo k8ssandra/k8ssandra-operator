@@ -2,9 +2,10 @@ package medusa
 
 import (
 	"context"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 	"time"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"

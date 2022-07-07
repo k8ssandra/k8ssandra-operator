@@ -30,3 +30,4 @@ clientconfig
 .devcontainer/
 kind-log*/
 kubeconfig
+vendor/

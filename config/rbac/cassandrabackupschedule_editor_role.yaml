@@ -1,0 +1,24 @@
+# permissions for end users to edit medusabackupschedules.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: medusabackupschedule-editor-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusabackupschedules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusabackupschedules/status
+  verbs:
+  - get
