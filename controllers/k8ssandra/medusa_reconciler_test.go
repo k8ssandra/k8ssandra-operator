@@ -244,5 +244,6 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 		}
 		assert.True(t, f.ContainerHasEnvVar(container, "CQL_USERNAME", ""), "Missing CQL_USERNAME env var for medusa-restore")
 		assert.True(t, f.ContainerHasEnvVar(container, "CQL_PASSWORD", ""), "Missing CQL_PASSWORD env var for medusa-restore")
+		assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_TMP_DIR", ""), "Missing MEDUSA_TMP_DIR env var for medusa-restore")
 	}
 }

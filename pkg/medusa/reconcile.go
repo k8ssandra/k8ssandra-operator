@@ -20,7 +20,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.13.1"
+	DefaultMedusaVersion         = "0.13.3"
 )
 
 var (
@@ -245,6 +245,10 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger
 		{
 			Name:  "MEDUSA_MODE",
 			Value: mode,
+		},
+		{
+			Name:  "MEDUSA_TMP_DIR",
+			Value: "/var/lib/cassandra",
 		},
 		{Name: "CQL_USERNAME",
 			ValueFrom: &corev1.EnvVarSource{
