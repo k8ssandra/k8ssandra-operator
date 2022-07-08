@@ -427,7 +427,7 @@ func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraData
 }
 
 func configureAuth(stargate *api.Stargate, deployment *appsv1.Deployment) {
-	if stargate.Spec.Auth.IsEnabled() {
+	if stargate.Spec.IsAuthEnabled() {
 		// Stargate reacts to the sole presence of this variable, regardless of its contents.
 		// Setting this env var triggers the --enable-auth flag in the Stargate container, which in
 		// turn triggers the setting of the -Dstargate.enable_auth=true system property.
@@ -443,27 +443,30 @@ func configureAuth(stargate *api.Stargate, deployment *appsv1.Deployment) {
 			deployment.Spec.Template.Spec.Containers[0].Env,
 			corev1.EnvVar{Name: "ENABLE_AUTH", Value: "true"},
 		)
-		switch stargate.Spec.Auth.ApiAuthMethod {
-		case "Table", "":
-			for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
-				if env.Name == "JAVA_OPTS" {
-					env.Value += " -Dstargate.auth_id=AuthTableBasedService"
-					if stargate.Spec.Auth.TokenTtlSeconds > 0 {
-						env.Value += " -Dstargate.auth_tokenttl="
-						env.Value += strconv.Itoa(stargate.Spec.Auth.TokenTtlSeconds)
+		authOptions := stargate.Spec.AuthOptions
+		if authOptions != nil {
+			switch authOptions.ApiAuthMethod {
+			case "Table", "":
+				for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+					if env.Name == "JAVA_OPTS" {
+						env.Value += " -Dstargate.auth_id=AuthTableBasedService"
+						if authOptions.TokenTtlSeconds > 0 {
+							env.Value += " -Dstargate.auth_tokenttl="
+							env.Value += strconv.Itoa(authOptions.TokenTtlSeconds)
+						}
+						deployment.Spec.Template.Spec.Containers[0].Env[i] = env
+						break
 					}
-					deployment.Spec.Template.Spec.Containers[0].Env[i] = env
-					break
 				}
-			}
-		case "JWT":
-			for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
-				if env.Name == "JAVA_OPTS" {
-					env.Value += " -Dstargate.auth_id=AuthJwtService"
-					env.Value += " -Dstargate.auth.jwt_provider_url="
-					env.Value += stargate.Spec.Auth.JwtProviderUrl
-					deployment.Spec.Template.Spec.Containers[0].Env[i] = env
-					break
+			case "JWT":
+				for i, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+					if env.Name == "JAVA_OPTS" {
+						env.Value += " -Dstargate.auth_id=AuthJwtService"
+						env.Value += " -Dstargate.auth.jwt_provider_url="
+						env.Value += authOptions.JwtProviderUrl
+						deployment.Spec.Template.Spec.Containers[0].Env[i] = env
+						break
+					}
 				}
 			}
 		}

@@ -111,7 +111,7 @@ type StargateTemplate struct {
 
 	// Authentication options.
 	// +optional
-	Auth AuthOptions `json:"auth,omitempty"`
+	AuthOptions *AuthOptions `json:"authOptions,omitempty"`
 }
 
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.
@@ -184,6 +184,16 @@ type StargateSpec struct {
 	// +kubebuilder:validation:Required
 	DatacenterRef corev1.LocalObjectReference `json:"datacenterRef"`
 
+	// Whether to enable authentication for Stargate. The default is true; it is highly recommended to always leave
+	// authentication turned on, not only on Stargate nodes, but also on data nodes as well. Note that Stargate REST
+	// APIs are currently only accessible if authentication is enabled, and if the authenticator in use in the whole
+	// cluster is PasswordAuthenticator. The usage of any other authenticator will cause the REST API to become
+	// inaccessible, see https://github.com/stargate/stargate/issues/792 for more. Stargate CQL API however remains
+	// accessible even if authentication is disabled in the cluster, or when a custom authenticator is being used.
+	// +optional
+	// +kubebuilder:default=true
+	Auth *bool `json:"auth,omitempty"`
+
 	CassandraEncryption *CassandraEncryption `json:"cassandraEncryption,omitempty"`
 }
 
@@ -199,13 +209,11 @@ type CassandraEncryption struct {
 	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 }
 
-type AuthOptions struct {
+func (in StargateSpec) IsAuthEnabled() bool {
+	return in.Auth == nil || *in.Auth
+}
 
-	// Whether to enable authentication for Stargate. The default is true; it is highly recommended
-	// to always leave authentication turned on, not only on Stargate nodes, but also on data nodes
-	// as well.
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+type AuthOptions struct {
 
 	// The method to use for authenticating requests to the Stargate APIs. Stargate currently has
 	// two authentication / authorization methods:
@@ -230,10 +238,6 @@ type AuthOptions struct {
 	// Required when using JWT authentication method, ignored otherwise.
 	// +optional
 	JwtProviderUrl string `json:"providerUrl,omitempty"`
-}
-
-func (in AuthOptions) IsEnabled() bool {
-	return in.Enabled == nil || *in.Enabled
 }
 
 // StargateProgress is a word summarizing the state of a Stargate resource.

@@ -644,7 +644,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 func testNewDeploymentsAuthentication(t *testing.T) {
 	t.Run("disabled", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = api.AuthOptions{Enabled: pointer.Bool(false)}
+		sg.Spec.Auth = pointer.Bool(false)
 		deployments := NewDeployments(sg, dc)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
@@ -654,8 +654,8 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 	})
 	t.Run("table-based", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = api.AuthOptions{
-			Enabled:         pointer.Bool(true),
+		sg.Spec.Auth = pointer.Bool(true)
+		sg.Spec.AuthOptions = &api.AuthOptions{
 			ApiAuthMethod:   "Table",
 			TokenTtlSeconds: 123,
 		}
@@ -669,8 +669,8 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 	})
 	t.Run("JWT-based", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = api.AuthOptions{
-			Enabled:        pointer.Bool(true),
+		sg.Spec.Auth = pointer.Bool(true)
+		sg.Spec.AuthOptions = &api.AuthOptions{
 			ApiAuthMethod:  "JWT",
 			JwtProviderUrl: "https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token",
 		}

@@ -21,7 +21,7 @@ spec:
         stargate:
           size: 1
           heapSize: 384Mi
-          auth:
+          authOptions:
             apiAuthMethod: JWT
             providerUrl: http://keycloak-stargate-service:8080/realms/stargate/protocol/openid-connect/certs
           cassandraConfigMapRef:

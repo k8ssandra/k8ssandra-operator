@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 )
 
 func ResourceName(dc *cassdcapi.CassandraDatacenter) string {
@@ -46,12 +45,6 @@ func NewStargate(
 		cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
 	}
 
-	stargateTemplate = stargateTemplate.DeepCopy()
-
-	if stargateTemplate.Auth.Enabled == nil {
-		stargateTemplate.Auth.Enabled = pointer.Bool(kc.Spec.IsAuthEnabled())
-	}
-
 	desiredStargate := &stargateapi.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   stargateKey.Namespace,
@@ -70,6 +63,7 @@ func NewStargate(
 			StargateDatacenterTemplate: *stargateTemplate,
 			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
 			CassandraEncryption:        &cassandraEncryption,
+			Auth:                       kc.Spec.Auth,
 		},
 	}
 
