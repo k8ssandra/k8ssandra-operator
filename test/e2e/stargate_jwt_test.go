@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // https://stargate.io/docs/stargate/1.0/developers-guide/authnz.html#_jwt_based_authenticationauthorization
@@ -32,10 +33,14 @@ func stargateJwt(t *testing.T, ctx context.Context, namespace string, f *framewo
 	adminToken := jwtCreateAdminAccessToken(t, restClient)
 	jwtCreateStargateUser(t, restClient, adminToken)
 	userToken := jwtCreateStargateUserAccessToken(t, restClient)
-	statusCode1 := jwtCheckStargateUserToken(t, restClient, f.DataPlaneContexts[0], userToken, 9876)
-	assert.Equal(t, http.StatusOK, statusCode1)
-	statusCode2 := jwtCheckStargateUserToken(t, restClient, f.DataPlaneContexts[0], userToken, 1234)
-	assert.Equal(t, http.StatusUnauthorized, statusCode2)
+	assert.Eventually(t, func() bool {
+		statusCode := jwtCheckStargateUserToken(t, restClient, f.DataPlaneContexts[0], userToken, 9876)
+		return statusCode == http.StatusOK
+	}, time.Minute, 5*time.Second, "failed to retrieve shopping cart for user 9876")
+	assert.Eventually(t, func() bool {
+		statusCode := jwtCheckStargateUserToken(t, restClient, f.DataPlaneContexts[0], userToken, 1234)
+		return statusCode == http.StatusUnauthorized
+	}, time.Minute, 5*time.Second, "failed to retrieve shopping cart for user 1234")
 }
 
 func jwtDeployKeycloak(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string) {
@@ -67,11 +72,11 @@ func jwtUndeployKeycloak(t *testing.T, f *framework.E2eFramework, namespace stri
 }
 
 func jwtCreateAndPopulateSchema(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string) {
-	jwtExecuteCql(t, f, ctx, namespace, "CREATE ROLE IF NOT EXISTS 'web_user' WITH PASSWORD = 'web_user' AND LOGIN = TRUE")
 	jwtExecuteCql(t, f, ctx, namespace, "CREATE KEYSPACE IF NOT EXISTS store WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':'1'}")
 	jwtExecuteCql(t, f, ctx, namespace, "CREATE TABLE IF NOT EXISTS store.shopping_cart (userid text PRIMARY KEY, item_count int, last_update_timestamp timestamp);")
 	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('9876', 2, toTimeStamp(toDate(now())))")
 	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('1234', 5, toTimeStamp(toDate(now())))")
+	jwtExecuteCql(t, f, ctx, namespace, "CREATE ROLE IF NOT EXISTS 'web_user' WITH PASSWORD = 'web_user' AND LOGIN = TRUE")
 	jwtExecuteCql(t, f, ctx, namespace, "GRANT MODIFY ON TABLE store.shopping_cart TO web_user")
 	jwtExecuteCql(t, f, ctx, namespace, "GRANT SELECT ON TABLE store.shopping_cart TO web_user")
 }
