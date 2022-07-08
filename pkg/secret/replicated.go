@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
@@ -12,8 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"math/big"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -163,10 +164,12 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 	return &replicationapi.ReplicatedSecret{
 		ObjectMeta: getManagedObjectMeta(kcKey.Name, kcKey),
 		Spec: replicationapi.ReplicatedSecretSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.ManagedByLabels(kcKey),
+			ReplicatedResourceSpec: &replicationapi.ReplicatedResourceSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: labels.ManagedByLabels(kcKey),
+				},
+				ReplicationTargets: replicationTargets,
 			},
-			ReplicationTargets: replicationTargets,
 		},
 	}
 }

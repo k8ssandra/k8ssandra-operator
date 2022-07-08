@@ -3,9 +3,10 @@ package replication
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -249,7 +250,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 				break TargetSecrets
 			}
 
-			if requiresUpdate(sec, fetchedSecret) {
+			if objectRequiresUpdate(sec, fetchedSecret) {
 				logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
 				syncSecrets(sec, fetchedSecret)
 				if err = remoteClient.Update(ctx, fetchedSecret); err != nil {
@@ -285,59 +286,34 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, err
 }
 
-func requiresUpdate(source, dest client.Object) bool {
-	// In case we target the same cluster
-	if source.GetUID() == dest.GetUID() {
-		return false
-	}
-
-	if srcHash, found := source.GetAnnotations()[coreapi.ResourceHashAnnotation]; found {
-		// Get dest hash value
-		destHash, destFound := dest.GetAnnotations()[coreapi.ResourceHashAnnotation]
-		if !destFound {
-			return true
-		}
-
-		if destSec, valid := dest.(*corev1.Secret); valid {
-			hash := utils.DeepHashString(destSec.Data)
-			if destHash != hash {
-				// Destination data did not match destination hash
-				return true
-			}
-		}
-
-		return srcHash != destHash
-	}
-	return false
-}
-
 func syncSecrets(src, dest *corev1.Secret) {
 	origMeta := dest.ObjectMeta
 	src.DeepCopyInto(dest)
 	dest.ObjectMeta = origMeta
 	dest.OwnerReferences = []metav1.OwnerReference{}
+	syncMetadata(&src.ObjectMeta, &dest.ObjectMeta)
 
-	// sync annotations, src is more important
-	if dest.GetAnnotations() == nil {
-		dest.Annotations = make(map[string]string)
-	}
+	// // sync annotations, src is more important
+	// if dest.GetAnnotations() == nil {
+	// 	dest.Annotations = make(map[string]string)
+	// }
 
-	for k, v := range src.Annotations {
-		if !filterValue(k) {
-			dest.Annotations[k] = v
-		}
-	}
+	// for k, v := range src.Annotations {
+	// 	if !filterValue(k) {
+	// 		dest.Annotations[k] = v
+	// 	}
+	// }
 
-	// sync labels, src is more important
-	if dest.GetLabels() == nil {
-		dest.Labels = make(map[string]string)
-	}
+	// // sync labels, src is more important
+	// if dest.GetLabels() == nil {
+	// 	dest.Labels = make(map[string]string)
+	// }
 
-	for k, v := range src.Labels {
-		if !filterValue(k) {
-			dest.Labels[k] = v
-		}
-	}
+	// for k, v := range src.Labels {
+	// 	if !filterValue(k) {
+	// 		dest.Labels[k] = v
+	// 	}
+	// }
 }
 
 // filterValue verifies the annotation is not something datacenter specific
