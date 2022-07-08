@@ -20,17 +20,37 @@ spec:
               requests:
                 storage: 5Gi
         initContainers:
-          - name: "server-config-init"
           - name: "jmx-credentials"
+          - name: "server-config-init"
           - name: init-busybox
             image: busybox
             command: ["sleep", "10"]
+            volumeMounts:
+              - name: busybox-vol
+                mountPath: /etc/busybox
         containers:
-          - name: "server-system-logger"
           - name: "cassandra"
+          - name: "server-system-logger"
           - name: busybox
             image: busybox
             command: ["sleep", "3600"]
+            volumeMounts:
+              - name: busybox-vol
+                mountPath: /etc/busybox
+        extraVolumes:
+          volumes:
+            - name: busybox-vol
+              emptyDir: {}
+          stsAdditionalVolumes:
+            - name: sts-extra-vol
+              mountPath: "/etc/extra"
+              pvcSpec:
+                storageClassName: standard
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 10Mi
         config:
           cassandraYaml:
             allocate_tokens_for_local_replication_factor: 3

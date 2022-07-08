@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] Update to Medusa v0.13.3
+* [FEATURE] [#620](https://github.com/k8ssandra/k8ssandra-operator/issues/620) Enable injecting volumes in the Cassandra pods
 * [FEATURE] [#569](https://github.com/k8ssandra/k8ssandra-operator/issues/569) Enable injecting containers and init containers into the Cassandra pods
 * [FEATURE] [#496](https://github.com/k8ssandra/k8ssandra-operator/issues/496) Allow overriding Cassandra cluster names
 * [FEATURE] [#460](https://github.com/k8ssandra/k8ssandra-operator/pull/460) Add support for scheduling backups.

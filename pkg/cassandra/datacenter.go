@@ -112,6 +112,7 @@ type DatacenterConfig struct {
 	ServerTruststorePassword string
 	Containers               []corev1.Container
 	InitContainers           []corev1.Container
+	ExtraVolumes             *api.K8ssandraVolumes
 }
 
 const (
@@ -362,6 +363,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.InitContainers = clusterTemplate.DatacenterOptions.InitContainers
 	}
 
+	if dcTemplate.DatacenterOptions.ExtraVolumes != nil {
+		dcConfig.ExtraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
+	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
+		dcConfig.ExtraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
+	}
+
 	return dcConfig
 }
 
@@ -386,6 +393,32 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 		}
 	} else {
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+	}
+}
+
+func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
+	// Add and mount additional volumes that need to be managed by the statefulset
+	if extraVolumes.StsAdditionalVolumes != nil {
+		if dcConfig.StorageConfig == nil {
+			dcConfig.StorageConfig = &cassdcapi.StorageConfig{
+				AdditionalVolumes: *extraVolumes.StsAdditionalVolumes,
+			}
+		} else {
+			dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, *extraVolumes.StsAdditionalVolumes...)
+		}
+	}
+
+	// Add extra volumes that do not need to be managed by the statefulset
+	for _, volume := range extraVolumes.Volumes {
+		if dcConfig.PodTemplateSpec == nil {
+			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{volume},
+				},
+			}
+		} else {
+			dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+		}
 	}
 }
 
