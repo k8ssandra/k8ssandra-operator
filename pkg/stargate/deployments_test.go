@@ -648,7 +648,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 		deployments := NewDeployments(sg, dc)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
 		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
 		assert.NotContains(t, javaOpts.Value, "-Dstargate.auth_id")
 	})
@@ -662,7 +662,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 		deployments := NewDeployments(sg, dc)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
 		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_id=AuthTableBasedService")
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_tokenttl=123")
@@ -677,7 +677,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 		deployments := NewDeployments(sg, dc)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		javaOpts := findEnvVar(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
+		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
 		require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_id=AuthJwtService")
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth.jwt_provider_url=https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token")

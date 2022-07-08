@@ -62,8 +62,8 @@ func NewStargate(
 		Spec: stargateapi.StargateSpec{
 			StargateDatacenterTemplate: *stargateTemplate,
 			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
-			CassandraEncryption:        &cassandraEncryption,
 			Auth:                       kc.Spec.Auth,
+			CassandraEncryption:        &cassandraEncryption,
 		},
 	}
 
