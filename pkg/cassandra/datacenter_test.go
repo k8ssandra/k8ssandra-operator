@@ -372,14 +372,10 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  "test-container",
-								Image: "test-image",
-							},
-						},
+				AdditionalContainers: []corev1.Container{
+					{
+						Name:  "test-container",
+						Image: "test-image",
 					},
 				},
 			},
@@ -404,20 +400,16 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{
-							{
-								Name:  "test-init-container",
-								Image: "test-image",
-							},
-						},
-						Containers: []corev1.Container{
-							{
-								Name:  "test-container",
-								Image: "test-image",
-							},
-						},
+				AdditionalInitContainers: []corev1.Container{
+					{
+						Name:  "test-init-container",
+						Image: "test-image",
+					},
+				},
+				AdditionalContainers: []corev1.Container{
+					{
+						Name:  "test-container",
+						Image: "test-image",
 					},
 				},
 			},

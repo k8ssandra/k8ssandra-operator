@@ -88,6 +88,16 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
+
+		// Create additional init containers if requested
+		if len(dcConfig.AdditionalInitContainers) > 0 {
+			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalInitContainers)
+		}
+		// Create additional containers if requested
+		if len(dcConfig.AdditionalContainers) > 0 {
+			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalContainers)
+		}
+
 		// Inject MCAC metrics filters
 		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
 
