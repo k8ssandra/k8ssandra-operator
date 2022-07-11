@@ -18,6 +18,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Update to Medusa v0.13.3
 * [FEATURE] [#496](https://github.com/k8ssandra/k8ssandra-operator/issues/496) Allow overriding Cassandra cluster names
 * [FEATURE] [#460](https://github.com/k8ssandra/k8ssandra-operator/pull/460) Add support for scheduling backups.
+* [FEATURE] [#531](https://github.com/k8ssandra/k8ssandra-operator/issues/531) Add support for JWT authentication in Stargate
 * [ENHANCEMENT] [#573](https://github.com/k8ssandra/k8ssandra-operator/issues/573) Add the ability to set metrics filters in MCAC
 * [ENHANCEMENT] [#584](https://github.com/k8ssandra/k8ssandra-operator/issues/584) Make Medusa use the Cassandra data PV for restore downloads
 * [ENHANCEMENT] [#354](https://github.com/k8ssandra/k8ssandra-operator/issues/354) Add encryption support to Medusa

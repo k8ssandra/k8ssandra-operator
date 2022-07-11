@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: keycloak-stargate
+  labels:
+    app.kubernetes.io/name: keycloak
+spec:
+  hostname: keycloak-stargate
+  containers:
+    - name: keycloak
+      image: quay.io/keycloak/keycloak:18.0.0
+      args:
+        - start-dev
+        - "--import-realm"
+      ports:
+        - containerPort: 8080
+      env:
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: admin
+      volumeMounts:
+        - mountPath: /opt/keycloak/data/import/stargate-realm.json
+          name: stargate-realm
+          subPath: stargate-realm.json
+        - mountPath: /tmp/vertx-cache
+          name: vertx-cache
+      readinessProbe:
+        httpGet:
+          path: /realms/master
+          port: 8080
+  volumes:
+    - name: stargate-realm
+      configMap:
+        name: keycloak-stargate-realm-cm
+    - name: vertx-cache
+      emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-stargate-service
+spec:
+  selector:
+    app.kubernetes.io/name: keycloak
+  clusterIP: None
+  ports:
+    - name: keycloak-web
+      protocol: TCP
+      port: 8080
+      targetPort: 8080

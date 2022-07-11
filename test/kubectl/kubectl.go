@@ -193,6 +193,30 @@ func Exec(opts Options, pod string, args ...string) (string, error) {
 	return stdout.String(), nil
 }
 
+func PortForward(opts Options, ctx context.Context, target string, externalPort, internalPort int) error {
+	cmd := exec.CommandContext(ctx, "kubectl")
+
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+
+	if len(opts.Namespace) > 0 {
+		cmd.Args = append(cmd.Args, "-n", opts.Namespace)
+	}
+
+	cmd.Args = append(cmd.Args, "port-forward", target, fmt.Sprintf("%v:%v", externalPort, internalPort))
+
+	fmt.Println(cmd)
+
+	output, err := cmd.CombinedOutput()
+
+	if logOutput || err != nil {
+		fmt.Println(string(output))
+	}
+
+	return err
+}
+
 type ClusterInfoOptions struct {
 	Options
 

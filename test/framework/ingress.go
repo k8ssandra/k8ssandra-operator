@@ -1,22 +1,13 @@
 package framework
 
 import (
-	"context"
-	"fmt"
-	"github.com/datastax/go-cassandra-native-protocol/client"
-	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
-	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/resty.v1"
 	"net"
-	"net/http"
-	"net/url"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 type HostAndPort string
@@ -31,7 +22,7 @@ func (s HostAndPort) Port() string {
 	return port
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName, username, password string, stargateRestHostAndPort, stargateCqlHostAndPort HostAndPort) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName string, stargateRestHostAndPort HostAndPort) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "stargate", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
@@ -40,37 +31,9 @@ func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespa
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	require.NoError(t, err)
-	timeout := 2 * time.Minute
-	interval := 1 * time.Second
-	stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
-	require.Eventually(t, func() bool {
-		body := map[string]string{"username": username, "password": password}
-		request := resty.NewRequest().
-			SetHeader("Content-Type", "application/json").
-			SetBody(body)
-		response, err := request.Post(stargateHttp)
-		if username != "" {
-			return err == nil && response.StatusCode() == http.StatusCreated
-		} else {
-			return err == nil && response.StatusCode() == http.StatusBadRequest
-		}
-	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
-	require.Eventually(t, func() bool {
-		var credentials *client.AuthCredentials
-		if username != "" {
-			credentials = &client.AuthCredentials{Username: username, Password: password}
-		}
-		cqlClient := client.NewCqlClient(string(stargateCqlHostAndPort), credentials)
-		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
-		if err != nil {
-			return false
-		}
-		_ = connection.Close()
-		return true
-	}, timeout, interval, "Address is unreachable: %s", stargateCqlHostAndPort)
 }
 
-func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, k8sContext, namespace, reaperServiceName string, reaperHostAndPort HostAndPort) {
+func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext, namespace, reaperServiceName string, reaperHostAndPort HostAndPort) {
 	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
 	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "reaper", k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
@@ -79,15 +42,6 @@ func (f *E2eFramework) DeployReaperIngresses(t *testing.T, ctx context.Context, 
 	require.NoError(t, err)
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	require.NoError(t, err)
-	timeout := 2 * time.Minute
-	interval := 1 * time.Second
-	reaperHttp := fmt.Sprintf("http://%s", reaperHostAndPort)
-	require.Eventually(t, func() bool {
-		reaperURL, _ := url.Parse(reaperHttp)
-		reaperClient := reaperclient.NewClient(reaperURL)
-		up, err := reaperClient.IsReaperUp(ctx)
-		return up && err == nil
-	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
 }
 
 func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {

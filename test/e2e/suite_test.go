@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/datastax/go-cassandra-native-protocol/primitive"
+	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
+	"gopkg.in/resty.v1"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,6 +40,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	gocassclient "github.com/datastax/go-cassandra-native-protocol/client"
 )
 
 type pollingConfig struct {
@@ -291,6 +298,10 @@ func TestOperator(t *testing.T) {
 		testFunc:       createSingleDatacenterClusterWithUpgrade,
 		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
 		initialVersion: pointer.String("v1.0.0"),
+	}))
+	t.Run("StargateJwt", e2eTest(ctx, &e2eTestOpts{
+		testFunc: stargateJwt,
+		fixture:  framework.NewTestFixture("stargate-jwt", controlPlane),
 	}))
 }
 
@@ -705,8 +716,9 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
@@ -766,8 +778,9 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
@@ -801,8 +814,9 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
@@ -851,8 +865,9 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 3}
 	testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
@@ -1279,14 +1294,16 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key)+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
@@ -1378,14 +1395,16 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key)+"-stargate-service", username, password, stargateRestHostAndPort, stargateCqlHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key)+"-stargate-service", stargateRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
+	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
 
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
@@ -1570,6 +1589,55 @@ func assertCassandraDatacenterK8cStatusReady(
 		}
 		return true
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+}
+
+func checkStargateApisReachable(
+	t *testing.T,
+	stargateRestHostAndPort framework.HostAndPort,
+	stargateCqlHostAndPort framework.HostAndPort,
+	username string,
+	password string,
+) {
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
+	require.Eventually(t, func() bool {
+		body := map[string]string{"username": username, "password": password}
+		request := resty.NewRequest().
+			SetHeader("Content-Type", "application/json").
+			SetBody(body)
+		response, err := request.Post(stargateHttp)
+		if username != "" {
+			return err == nil && response.StatusCode() == http.StatusCreated
+		} else {
+			return err == nil && response.StatusCode() == http.StatusBadRequest
+		}
+	}, timeout, interval, "Address is unreachable: %s", stargateHttp)
+	require.Eventually(t, func() bool {
+		var credentials *gocassclient.AuthCredentials
+		if username != "" {
+			credentials = &gocassclient.AuthCredentials{Username: username, Password: password}
+		}
+		cqlClient := gocassclient.NewCqlClient(string(stargateCqlHostAndPort), credentials)
+		connection, err := cqlClient.ConnectAndInit(context.Background(), primitive.ProtocolVersion4, 1)
+		if err != nil {
+			return false
+		}
+		_ = connection.Close()
+		return true
+	}, timeout, interval, "Address is unreachable: %s", stargateCqlHostAndPort)
+}
+
+func checkReaperApiReachable(t *testing.T, ctx context.Context, reaperHostAndPort framework.HostAndPort) {
+	timeout := 2 * time.Minute
+	interval := 1 * time.Second
+	reaperHttp := fmt.Sprintf("http://%s", reaperHostAndPort)
+	require.Eventually(t, func() bool {
+		reaperURL, _ := url.Parse(reaperHttp)
+		reaperClient := reaperclient.NewClient(reaperURL)
+		up, err := reaperClient.IsReaperUp(ctx)
+		return up && err == nil
+	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
 }
 
 func configureZeroLog() {
