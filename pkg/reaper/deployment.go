@@ -14,6 +14,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -24,6 +25,13 @@ const (
 	DefaultVersion         = "3.1.1"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
+
+	InitContainerMemRequest = "128Mi"
+	InitContainerMemLimit   = "512Mi"
+	InitContainerCpuRequest = "100m"
+	MainContainerMemRequest = "256Mi"
+	MainContainerMemLimit   = "3Gi"
+	MainContainerCpuRequest = "100m"
 )
 
 var defaultImage = images.Image{
@@ -173,6 +181,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
 	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
 
+	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
+	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: reaper.Namespace,
@@ -187,7 +198,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
-					InitContainers: computeInitContainers(reaper, initImage, envVars, volumeMounts),
+					InitContainers: computeInitContainers(reaper, initImage, envVars, volumeMounts, initContainerResources),
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
@@ -210,6 +221,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 							LivenessProbe:  livenessProbe,
 							Env:            envVars,
 							VolumeMounts:   volumeMounts,
+							Resources:      *mainContainerResources,
 						},
 					},
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
@@ -226,7 +238,44 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	return deployment
 }
 
-func computeInitContainers(reaper *api.Reaper, initImage *images.Image, envVars []corev1.EnvVar, volumeMounts []corev1.VolumeMount) []corev1.Container {
+func computeInitContainerResources(resourceRequirements *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	if resourceRequirements != nil {
+		return resourceRequirements
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(InitContainerCpuRequest),
+			corev1.ResourceMemory: resource.MustParse(InitContainerMemRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse(InitContainerMemLimit),
+		},
+	}
+}
+
+func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	if resourceRequirements != nil {
+		return resourceRequirements
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(MainContainerCpuRequest),
+			corev1.ResourceMemory: resource.MustParse(MainContainerMemRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse(MainContainerMemLimit),
+		},
+	}
+}
+
+func computeInitContainers(
+	reaper *api.Reaper,
+	initImage *images.Image,
+	envVars []corev1.EnvVar,
+	volumeMounts []corev1.VolumeMount,
+	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
 	var initContainers []corev1.Container
 	if !reaper.Spec.SkipSchemaMigration {
 		initContainers = append(initContainers,
@@ -238,6 +287,7 @@ func computeInitContainers(reaper *api.Reaper, initImage *images.Image, envVars 
 				Env:             envVars,
 				Args:            []string{"schema-migration"},
 				VolumeMounts:    volumeMounts,
+				Resources:       *resourceRequirements,
 			})
 	}
 	return initContainers
