@@ -1656,13 +1656,13 @@ func checkInjectedContainersPresence(t *testing.T, ctx context.Context, f *frame
 	}
 
 	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "busybox"); containerFound {
-		require.Equal(t, 1, containerIndex, "busybox container should be the first container in cassandra pod")
+		require.Equal(t, 2, containerIndex, "busybox container should be the third container in cassandra pod")
 	} else {
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
 
 	if initContainerIndex, initContainerFound := cassandra.FindInitContainer(cassdc.Spec.PodTemplateSpec, "init-busybox"); initContainerFound {
-		require.Equal(t, 1, initContainerIndex, "busybox container should be the first container in cassandra pod")
+		require.Equal(t, 2, initContainerIndex, "busybox container should be the third container in cassandra pod")
 	} else {
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}

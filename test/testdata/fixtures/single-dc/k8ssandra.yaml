@@ -20,10 +20,14 @@ spec:
               requests:
                 storage: 5Gi
         additionalInitContainers:
+          - name: "server-config-init"
+          - name: "jmx-credentials"
           - name: init-busybox
             image: busybox
             command: ["sleep", "10"]
         additionalContainers:
+          - name: "server-system-logger"
+          - name: "cassandra"
           - name: busybox
             image: busybox
             command: ["sleep", "3600"]

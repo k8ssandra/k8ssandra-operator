@@ -2163,11 +2163,11 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 
 	posInit, foundInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "injected-init-container")
 	require.True(foundInit, "failed to find injected-init-container")
-	require.Equal(1, posInit, "injected-init-container should be the second init container")
+	require.Equal(0, posInit, "injected-init-container should be the second init container")
 
 	posMain, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
-	require.Equal(1, posMain, "injected-container should be the second container")
+	require.Equal(0, posMain, "injected-container should be the second container")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)

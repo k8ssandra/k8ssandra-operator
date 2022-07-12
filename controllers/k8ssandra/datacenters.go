@@ -56,11 +56,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	// Reconcile CassandraDatacenter objects only
 	for idx, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if err := cassandra.ValidateDcTemplate(dcTemplate); err != nil {
-			logger.Error(err, fmt.Sprintf("Failed to validate template for DC %s", dcTemplate.Meta.Name))
-			return result.Error(err), actualDcs
-		}
-
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -71,6 +66,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		// Create additional init containers if requested
+		if len(dcConfig.AdditionalInitContainers) > 0 {
+			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalInitContainers)
+		}
+		// Create additional containers if requested
+		if len(dcConfig.AdditionalContainers) > 0 {
+			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalContainers)
+		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
@@ -87,15 +90,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Create Medusa related objects
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
-		}
-
-		// Create additional init containers if requested
-		if len(dcConfig.AdditionalInitContainers) > 0 {
-			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalInitContainers)
-		}
-		// Create additional containers if requested
-		if len(dcConfig.AdditionalContainers) > 0 {
-			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalContainers)
 		}
 
 		// Inject MCAC metrics filters
