@@ -21,6 +21,13 @@ const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
 	DefaultMedusaVersion         = "0.13.3"
+
+	InitContainerMemRequest = "100Mi"
+	InitContainerMemLimit   = "8Gi"
+	InitContainerCpuRequest = "100m"
+	MainContainerMemRequest = "100Mi"
+	MainContainerMemLimit   = "8Gi"
+	MainContainerCpuRequest = "100m"
 )
 
 var (
@@ -145,6 +152,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, logger, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
@@ -157,6 +165,22 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	} else {
 		// Overwrite existing medusa-restore init container
 		dcConfig.PodTemplateSpec.Spec.InitContainers[restoreContainerIndex] = *restoreContainer
+	}
+}
+
+func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.ResourceRequirements {
+	if medusaSpec.Resources != nil {
+		return *medusaSpec.InitContainerResources
+	}
+
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(InitContainerCpuRequest),
+			corev1.ResourceMemory: resource.MustParse(InitContainerMemRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse(InitContainerMemLimit),
+		},
 	}
 }
 
@@ -176,6 +200,7 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 
 	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 
 	if !found {
 		logger.Info("Couldn't find medusa container")
@@ -184,6 +209,22 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	} else {
 		// Overwrite existing medusa container
 		dcConfig.PodTemplateSpec.Spec.Containers[medusaContainerIndex] = *medusaContainer
+	}
+}
+
+func medusaMainContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.ResourceRequirements {
+	if medusaSpec.Resources != nil {
+		return *medusaSpec.Resources
+	}
+
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(MainContainerCpuRequest),
+			corev1.ResourceMemory: resource.MustParse(MainContainerMemRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse(MainContainerMemLimit),
+		},
 	}
 }
 
