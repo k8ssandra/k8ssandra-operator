@@ -149,10 +149,13 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
 		// medusa-restore init container doesn't exist, we need to add it
-		// We'll add the server-config-init init container in first position so it initializes cassandra.yaml for Medusa to use.
+		// We'll add the server-config-init init container in first position so it initializes cassandra.yaml for Medusa to use, if it doesn't exist already.
 		// The definition of that container will be completed later by cass-operator.
-		serverConfigContainer := &corev1.Container{Name: "server-config-init"}
-		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *serverConfigContainer)
+		_, serverConfigInitContainerFound := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "server-config-init")
+		if !serverConfigInitContainerFound {
+			serverConfigContainer := &corev1.Container{Name: "server-config-init"}
+			dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *serverConfigContainer)
+		}
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *restoreContainer)
 	} else {
 		// Overwrite existing medusa-restore init container

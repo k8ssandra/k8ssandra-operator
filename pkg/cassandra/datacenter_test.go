@@ -386,6 +386,12 @@ func TestCoalesce(t *testing.T) {
 				DatacenterOptions: api.DatacenterOptions{
 					InitContainers: []corev1.Container{
 						{
+							Name: "server-config-init",
+						},
+						{
+							Name: "medusa-restore",
+						},
+						{
 							Name:  "test-init-container",
 							Image: "test-image",
 						},
@@ -401,6 +407,12 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
 				InitContainers: []corev1.Container{
+					{
+						Name: "server-config-init",
+					},
+					{
+						Name: "medusa-restore",
+					},
 					{
 						Name:  "test-init-container",
 						Image: "test-image",

@@ -315,24 +315,27 @@ type DatacenterOptions struct {
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
 	// Containers defines containers to be deployed in each Cassandra pod.
-	// K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to control ordering.
+	// K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to override specific settings,
+	// such as mounts or resources request/limits for example.
 	// Example:
 	//  containers:
 	//  - name: server-system-logger
 	//  - name: custom-container
 	//    image: busybox
 	//  - name: cassandra
-	// Otherwise containers referenced here will be injected in first position
 	// +optional
 	Containers []corev1.Container `json:"containers,omitempty"`
 
 	// InitContainers defines init-containers to be deployed in each Cassandra pod.
-	// K8ssandra-operator and cass-operator will create their own init-containers, which can be referenced here to control ordering.
+	// K8ssandra-operator and cass-operator will create their own init-containers, which can be referenced here to control ordering or override specific settings
+	// such as mounts or resources request/limits for example.
+	// Only the name of the k8ssandra-operator/cass-operator init-containers is required, not their full definition which will be created by the operators.
 	// Example:
 	//  initContainers:
 	//  - name: server-config-init
 	//  - name: custom-init-container
 	//    image: busybox
+	//  - name: medusa-restore
 	// Otherwise init-containers referenced here will be injected in first position
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`

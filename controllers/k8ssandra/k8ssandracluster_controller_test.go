@@ -2106,6 +2106,11 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				StorageProperties: medusaapi.Storage{
+					StorageProvider: "local",
+				},
+			},
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ServerVersion: serverVersion,
@@ -2130,6 +2135,12 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 						Size:       dc1Size,
 						DatacenterOptions: api.DatacenterOptions{
 							InitContainers: []corev1.Container{
+								{
+									Name: "server-config-init",
+								},
+								{
+									Name: "medusa-restore",
+								},
 								{
 									Name:  "injected-init-container",
 									Image: "busybox",
@@ -2161,13 +2172,24 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 	err = f.Get(ctx, dc1Key, dc)
 	require.NoError(err, "failed to get CassandraDatacenter dc1")
 
+	posCfgInit, foundCfgInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "server-config-init")
+	require.True(foundCfgInit, "failed to find server-config-init init container")
+	require.Equal(0, posCfgInit, "server-config-init should be the first init container")
+
+	posMedusaInit, foundMedusaInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "medusa-restore")
+	require.True(foundMedusaInit, "failed to find medusa-restore init container")
+	require.Equal(1, posMedusaInit, "medusa-restore should be the second init container")
+
 	posInit, foundInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "injected-init-container")
 	require.True(foundInit, "failed to find injected-init-container")
-	require.Equal(0, posInit, "injected-init-container should be the second init container")
+	require.Equal(2, posInit, "injected-init-container should be the third init container")
 
-	posMain, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
+	posJmxInit, foundJmxInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "jmx-credentials")
+	require.True(foundJmxInit, "failed to find jmx-credentials init container")
+	require.Equal(3, posJmxInit, "jmx-credentials should be the fourth init container")
+
+	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
-	require.Equal(0, posMain, "injected-container should be the second container")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
