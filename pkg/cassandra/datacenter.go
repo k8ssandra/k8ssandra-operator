@@ -110,8 +110,8 @@ type DatacenterConfig struct {
 	ClientTruststorePassword string
 	ServerKeystorePassword   string
 	ServerTruststorePassword string
-	AdditionalContainers     []corev1.Container
-	AdditionalInitContainers []corev1.Container
+	Containers               []corev1.Container
+	InitContainers           []corev1.Container
 }
 
 const (
@@ -350,42 +350,42 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
 	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
 
-	if len(dcTemplate.DatacenterOptions.AdditionalContainers) > 0 {
-		dcConfig.AdditionalContainers = dcTemplate.DatacenterOptions.AdditionalContainers
-	} else if len(clusterTemplate.DatacenterOptions.AdditionalContainers) > 0 {
-		dcConfig.AdditionalContainers = clusterTemplate.DatacenterOptions.AdditionalContainers
+	if len(dcTemplate.DatacenterOptions.Containers) > 0 {
+		dcConfig.Containers = dcTemplate.DatacenterOptions.Containers
+	} else if len(clusterTemplate.DatacenterOptions.Containers) > 0 {
+		dcConfig.Containers = clusterTemplate.DatacenterOptions.Containers
 	}
 
-	if len(dcTemplate.DatacenterOptions.AdditionalInitContainers) > 0 {
-		dcConfig.AdditionalInitContainers = dcTemplate.DatacenterOptions.AdditionalInitContainers
-	} else if len(clusterTemplate.DatacenterOptions.AdditionalInitContainers) > 0 {
-		dcConfig.AdditionalInitContainers = clusterTemplate.DatacenterOptions.AdditionalInitContainers
+	if len(dcTemplate.DatacenterOptions.InitContainers) > 0 {
+		dcConfig.InitContainers = dcTemplate.DatacenterOptions.InitContainers
+	} else if len(clusterTemplate.DatacenterOptions.InitContainers) > 0 {
+		dcConfig.InitContainers = clusterTemplate.DatacenterOptions.InitContainers
 	}
 
 	return dcConfig
 }
 
-func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, additionalContainers []corev1.Container) {
+func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers []corev1.Container) {
 	if dcConfig.PodTemplateSpec == nil {
 		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
-				Containers: additionalContainers,
+				Containers: containers,
 			},
 		}
 	} else {
-		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, additionalContainers...)
+		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
 	}
 }
 
-func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, additionalInitContainers []corev1.Container) {
+func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers []corev1.Container) {
 	if dcConfig.PodTemplateSpec == nil {
 		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
-				InitContainers: additionalInitContainers,
+				InitContainers: initContainers,
 			},
 		}
 	} else {
-		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, additionalInitContainers...)
+		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
 	}
 }
 

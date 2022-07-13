@@ -2114,7 +2114,7 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 							StorageClassName: &defaultStorageClass,
 						},
 					},
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "injected-container",
 							Image: "busybox",
@@ -2129,7 +2129,7 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       dc1Size,
 						DatacenterOptions: api.DatacenterOptions{
-							AdditionalInitContainers: []corev1.Container{
+							InitContainers: []corev1.Container{
 								{
 									Name:  "injected-init-container",
 									Image: "busybox",

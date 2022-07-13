@@ -67,12 +67,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		// Create additional init containers if requested
-		if len(dcConfig.AdditionalInitContainers) > 0 {
-			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalInitContainers)
+		if len(dcConfig.InitContainers) > 0 {
+			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
 		}
 		// Create additional containers if requested
-		if len(dcConfig.AdditionalContainers) > 0 {
-			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.AdditionalContainers)
+		if len(dcConfig.Containers) > 0 {
+			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
 		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 

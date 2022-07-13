@@ -362,7 +362,7 @@ func TestCoalesce(t *testing.T) {
 			name: "Additional cluster container",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
 							Image: "test-image",
@@ -372,7 +372,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				AdditionalContainers: []corev1.Container{
+				Containers: []corev1.Container{
 					{
 						Name:  "test-container",
 						Image: "test-image",
@@ -384,13 +384,13 @@ func TestCoalesce(t *testing.T) {
 			name: "Additional cluster container and init containers",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					AdditionalInitContainers: []corev1.Container{
+					InitContainers: []corev1.Container{
 						{
 							Name:  "test-init-container",
 							Image: "test-image",
 						},
 					},
-					AdditionalContainers: []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name:  "test-container",
 							Image: "test-image",
@@ -400,13 +400,13 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				AdditionalInitContainers: []corev1.Container{
+				InitContainers: []corev1.Container{
 					{
 						Name:  "test-init-container",
 						Image: "test-image",
 					},
 				},
-				AdditionalContainers: []corev1.Container{
+				Containers: []corev1.Container{
 					{
 						Name:  "test-container",
 						Image: "test-image",

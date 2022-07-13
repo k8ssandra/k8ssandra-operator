@@ -1432,15 +1432,15 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 		*out = new(telemetryv1alpha1.TelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.AdditionalContainers != nil {
-		in, out := &in.AdditionalContainers, &out.AdditionalContainers
+	if in.Containers != nil {
+		in, out := &in.Containers, &out.Containers
 		*out = make([]v1.Container, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.AdditionalInitContainers != nil {
-		in, out := &in.AdditionalInitContainers, &out.AdditionalInitContainers
+	if in.InitContainers != nil {
+		in, out := &in.InitContainers, &out.InitContainers
 		*out = make([]v1.Container, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

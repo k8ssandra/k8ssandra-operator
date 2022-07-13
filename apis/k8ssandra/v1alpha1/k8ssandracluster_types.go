@@ -314,13 +314,28 @@ type DatacenterOptions struct {
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
-	// AdditionalContainers defines additional containers to be deployed in each Cassandra pod.
+	// Containers defines containers to be deployed in each Cassandra pod.
+	// K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to control ordering.
+	// Example:
+	//  containers:
+	//  - name: server-system-logger
+	//  - name: custom-container
+	//    image: busybox
+	//  - name: cassandra
+	// Otherwise containers referenced here will be injected in first position
 	// +optional
-	AdditionalContainers []corev1.Container `json:"additionalContainers,omitempty"`
+	Containers []corev1.Container `json:"containers,omitempty"`
 
-	// AdditionalInitContainers defines additional init containers to be deployed in each Cassandra pod.
+	// InitContainers defines init-containers to be deployed in each Cassandra pod.
+	// K8ssandra-operator and cass-operator will create their own init-containers, which can be referenced here to control ordering.
+	// Example:
+	//  initContainers:
+	//  - name: server-config-init
+	//  - name: custom-init-container
+	//    image: busybox
+	// Otherwise init-containers referenced here will be injected in first position
 	// +optional
-	AdditionalInitContainers []corev1.Container `json:"additionalInitContainers,omitempty"`
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
