@@ -376,3 +376,70 @@ func TestInitContainerDefaultResources(t *testing.T) {
 	assert.Equal(t, resource.MustParse(MainContainerMemLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
 
 }
+
+func TestInitContainerCustomResources(t *testing.T) {
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "secret",
+			},
+			BucketName: "bucket",
+		},
+		CassandraUserSecretRef: corev1.LocalObjectReference{
+			Name: "test-superuser",
+		},
+		InitContainerResources: &corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("10Gi"),
+				corev1.ResourceCPU:    resource.MustParse("10"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("20Gi"),
+				corev1.ResourceCPU:    resource.MustParse("20"),
+			},
+		},
+		Resources: &corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("30Gi"),
+				corev1.ResourceCPU:    resource.MustParse("30"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("40Gi"),
+				corev1.ResourceCPU:    resource.MustParse("40"),
+			},
+		},
+	}
+
+	dcConfig := cassandra.DatacenterConfig{
+		PodTemplateSpec: &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers:     []corev1.Container{},
+				InitContainers: []corev1.Container{},
+			},
+		},
+	}
+
+	logger := logr.New(logr.Discard().GetSink())
+
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaSpec, "test", logger)
+
+	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
+	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
+	// Init container resources
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	assert.True(t, found, "Couldn't find medusa-restore init container")
+
+	assert.Equal(t, resource.MustParse("10Gi"), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Memory(), "expected init container memory request to be set")
+	assert.Equal(t, resource.MustParse("10"), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Cpu(), "expected init container cpu request to be set")
+	assert.Equal(t, resource.MustParse("20Gi"), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Limits.Memory(), "expected init container memory limit to be set")
+	assert.Equal(t, resource.MustParse("20"), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Limits.Cpu(), "expected init container cpu limit to be set")
+
+	// Main container resources
+	assert.Equal(t, resource.MustParse("30Gi"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory(), "expected main container memory request to be set")
+	assert.Equal(t, resource.MustParse("30"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu(), "expected main container cpu request to be set")
+	assert.Equal(t, resource.MustParse("40Gi"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
+	assert.Equal(t, resource.MustParse("40"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu(), "expected main container cpu limit to be set")
+
+}

@@ -169,7 +169,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 }
 
 func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.ResourceRequirements {
-	if medusaSpec.Resources != nil {
+	if medusaSpec.InitContainerResources != nil {
 		return *medusaSpec.InitContainerResources
 	}
 
