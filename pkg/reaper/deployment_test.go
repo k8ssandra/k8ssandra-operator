@@ -10,6 +10,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -463,4 +464,54 @@ func newTestDatacenter() *cassdcapi.CassandraDatacenter {
 			ServerVersion: "4.0.1",
 		},
 	}
+}
+
+func TestDefaultResources(t *testing.T) {
+	reaper := newTestReaper()
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+
+	// Init container resources
+	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
+	assert.Equal(t, resource.MustParse(InitContainerCpuRequest), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Cpu(), "expected init container cpu request to be set")
+	assert.Equal(t, resource.MustParse(InitContainerMemLimit), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Limits.Memory(), "expected init container memory limit to be set")
+
+	// Main container resources
+	assert.Equal(t, resource.MustParse(MainContainerMemRequest), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "expected main container memory request to be set")
+	assert.Equal(t, resource.MustParse(MainContainerCpuRequest), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "expected main container cpu request to be set")
+	assert.Equal(t, resource.MustParse(MainContainerMemLimit), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
+}
+
+func TestCustomResources(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.Resources = &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("10Gi"),
+			corev1.ResourceCPU:    resource.MustParse("4"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("20Gi"),
+		},
+	}
+
+	reaper.Spec.InitContainerResources = &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("1Gi"),
+			corev1.ResourceCPU:    resource.MustParse("2"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("2Gi"),
+		},
+	}
+
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+
+	// Init container resources
+	assert.Equal(t, resource.MustParse("1Gi"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
+	assert.Equal(t, resource.MustParse("2"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Cpu(), "expected init container cpu request to be set")
+	assert.Equal(t, resource.MustParse("2Gi"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Limits.Memory(), "expected init container memory limit to be set")
+
+	// Main container resources
+	assert.Equal(t, resource.MustParse("10Gi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "expected main container memory request to be set")
+	assert.Equal(t, resource.MustParse("4"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "expected main container cpu request to be set")
+	assert.Equal(t, resource.MustParse("20Gi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
 }

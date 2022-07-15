@@ -149,4 +149,12 @@ type MedusaClusterTemplate struct {
 	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
 	// +optional
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
+
+	// medusa-restore init container resources.
+	// +optional
+	InitContainerResources *corev1.ResourceRequirements `json:"initContainerResources,omitempty"`
+
+	// Medusa main container resources.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"containerResources,omitempty"`
 }

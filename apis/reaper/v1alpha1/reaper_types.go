@@ -116,6 +116,14 @@ type ReaperTemplate struct {
 	// +kubebuilder:default="2Gi"
 	// +optional
 	HeapSize *resource.Quantity `json:"heapSize,omitempty"`
+
+	// Main Container resources.
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// Init Container resources.
+	// +optional
+	InitContainerResources *corev1.ResourceRequirements `json:"initContainerResources,omitempty"`
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.
