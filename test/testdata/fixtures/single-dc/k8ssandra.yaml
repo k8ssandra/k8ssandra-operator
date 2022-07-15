@@ -41,7 +41,7 @@ spec:
           volumes:
             - name: busybox-vol
               emptyDir: {}
-          stsAdditionalVolumes:
+          pvcs:
             - name: sts-extra-vol
               mountPath: "/etc/extra"
               pvcSpec:

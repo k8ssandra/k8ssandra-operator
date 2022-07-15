@@ -5675,143 +5675,16 @@ spec:
                             - name
                             type: object
                           type: array
-<<<<<<< 9071b6d111b98b810b2d374165f8ef6c4dff9cec
-                        initContainers:
-                          description: 'InitContainers defines init-containers to
-                            be deployed in each Cassandra pod. K8ssandra-operator
-                            and cass-operator will create their own init-containers,
-                            which can be referenced here to control ordering or override
-                            specific settings such as mounts or resources request/limits
-                            for example. Only the name of the k8ssandra-operator/cass-operator
-                            init-containers is required, not their full definition
-                            which will be created by the operators. Example: initContainers:
-                            - name: server-config-init - name: custom-init-container
-                            image: busybox - name: medusa-restore Otherwise init-containers
-                            referenced here will be injected in first position'
-                          items:
-                            description: A single application container that you want
-                              to run within a pod.
-                            properties:
-                              args:
-                                description: 'Arguments to the entrypoint. The docker
-                                  image''s CMD is used if this is not provided. Variable
-                                  references $(VAR_NAME) are expanded using the container''s
-                                  environment. If a variable cannot be resolved, the
-                                  reference in the input string will be unchanged.
-                                  Double $$ are reduced to a single $, which allows
-                                  for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
-                                  will produce the string literal "$(VAR_NAME)". Escaped
-                                  references will never be expanded, regardless of
-                                  whether the variable exists or not. Cannot be updated.
-                                  More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
-                                items:
-                                  type: string
-                                type: array
-                              command:
-                                description: 'Entrypoint array. Not executed within
-                                  a shell. The docker image''s ENTRYPOINT is used
-                                  if this is not provided. Variable references $(VAR_NAME)
-                                  are expanded using the container''s environment.
-                                  If a variable cannot be resolved, the reference
-                                  in the input string will be unchanged. Double $$
-                                  are reduced to a single $, which allows for escaping
-                                  the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                                  produce the string literal "$(VAR_NAME)". Escaped
-                                  references will never be expanded, regardless of
-                                  whether the variable exists or not. Cannot be updated.
-                                  More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell'
-                                items:
-                                  type: string
-                                type: array
-                              env:
-                                description: List of environment variables to set
-                                  in the container. Cannot be updated.
-                                items:
-                                  description: EnvVar represents an environment variable
-                                    present in a Container.
-                                  properties:
-                                    name:
-                                      description: Name of the environment variable.
-                                        Must be a C_IDENTIFIER.
-                                      type: string
-                                    value:
-                                      description: 'Variable references $(VAR_NAME)
-                                        are expanded using the previously defined
-                                        environment variables in the container and
-                                        any service environment variables. If a variable
-                                        cannot be resolved, the reference in the input
-                                        string will be unchanged. Double $$ are reduced
-                                        to a single $, which allows for escaping the
-                                        $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)" will
-                                        produce the string literal "$(VAR_NAME)".
-                                        Escaped references will never be expanded,
-                                        regardless of whether the variable exists
-                                        or not. Defaults to "".'
-                                      type: string
-                                    valueFrom:
-                                      description: Source for the environment variable's
-                                        value. Cannot be used if value is not empty.
-                                      properties:
-                                        configMapKeyRef:
-                                          description: Selects a key of a ConfigMap.
-                                          properties:
-                                            key:
-                                              description: The key to select.
-                                              type: string
-                                            name:
-                                              description: 'Name of the referent.
-                                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                                TODO: Add other useful fields. apiVersion,
-                                                kind, uid?'
-                                              type: string
-                                            optional:
-                                              description: Specify whether the ConfigMap
-                                                or its key must be defined
-                                              type: boolean
-                                          required:
-                                          - key
-                                          type: object
-                                        fieldRef:
-                                          description: 'Selects a field of the pod:
-                                            supports metadata.name, metadata.namespace,
-                                            `metadata.labels[''<KEY>'']`, `metadata.annotations[''<KEY>'']`,
-                                            spec.nodeName, spec.serviceAccountName,
-                                            status.hostIP, status.podIP, status.podIPs.'
-                                          properties:
-                                            apiVersion:
-                                              description: Version of the schema the
-                                                FieldPath is written in terms of,
-                                                defaults to "v1".
-                                              type: string
-                                            fieldPath:
-                                              description: Path of the field to select
-                                                in the specified API version.
-                                              type: string
-                                          required:
-                                          - fieldPath
-                                          type: object
-                                        resourceFieldRef:
-                                          description: 'Selects a resource of the
-                                            container: only resources limits and requests
-                                            (limits.cpu, limits.memory, limits.ephemeral-storage,
-                                            requests.cpu, requests.memory and requests.ephemeral-storage)
-                                            are currently supported.'
-                                          properties:
-                                            containerName:
-                                              description: 'Container name: required
-                                                for volumes, optional for env vars'
-                                              type: string
-                                            divisor:
-=======
                         extraVolumes:
                           description: Volumes defines additional volumes to be added
                             to each Cassandra pod. If the volume uses a PersistentVolumeClaim,
                             the PVC will be managed by the statefulset.
                           properties:
-                            stsAdditionalVolumes:
-                              description: AdditionalVolumes defines additional volumes
-                                to be added to each Cassandra pod and managed by the
-                                statefulset.
+                            pvcs:
+                              description: PVCs defines additional volumes to be added
+                                to each Cassandra pod and managed by the statefulset.
+                                Such volumes are automatically mounted by cass-operator
+                                into the server-system-logger and cassandra containers.
                               items:
                                 description: AdditionalVolumes StorageConfig defines
                                   additional storage configurations
@@ -5925,7 +5798,6 @@ spec:
                                         properties:
                                           limits:
                                             additionalProperties:
->>>>>>> Allow injecting additional volumes into the Cassandra pods
                                               anyOf:
                                               - type: integer
                                               - type: string
@@ -7748,10 +7620,14 @@ spec:
                           description: 'InitContainers defines init-containers to
                             be deployed in each Cassandra pod. K8ssandra-operator
                             and cass-operator will create their own init-containers,
-                            which can be referenced here to control ordering. Example:
-                            initContainers: - name: server-config-init - name: custom-init-container
-                            image: busybox Otherwise init-containers referenced here
-                            will be injected in first position'
+                            which can be referenced here to control ordering or override
+                            specific settings such as mounts or resources request/limits
+                            for example. Only the name of the k8ssandra-operator/cass-operator
+                            init-containers is required, not their full definition
+                            which will be created by the operators. Example: initContainers:
+                            - name: server-config-init - name: custom-init-container
+                            image: busybox - name: medusa-restore Otherwise init-containers
+                            referenced here will be injected in first position'
                           items:
                             description: A single application container that you want
                               to run within a pod.
@@ -13052,9 +12928,11 @@ spec:
                       each Cassandra pod. If the volume uses a PersistentVolumeClaim,
                       the PVC will be managed by the statefulset.
                     properties:
-                      stsAdditionalVolumes:
-                        description: AdditionalVolumes defines additional volumes
-                          to be added to each Cassandra pod and managed by the statefulset.
+                      pvcs:
+                        description: PVCs defines additional volumes to be added to
+                          each Cassandra pod and managed by the statefulset. Such
+                          volumes are automatically mounted by cass-operator into
+                          the server-system-logger and cassandra containers.
                         items:
                           description: AdditionalVolumes StorageConfig defines additional
                             storage configurations
@@ -15611,7 +15489,6 @@ spec:
                                   x-kubernetes-int-or-string: true
                               required:
                               - port
-<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
                               type: object
                             terminationGracePeriodSeconds:
                               description: Optional duration in seconds the pod needs
@@ -15664,68 +15541,6 @@ spec:
                                 for a container, it defaults to Limits if that is
                                 explicitly specified, otherwise to an implementation-defined
                                 value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-=======
->>>>>>> Allow injecting containers and init containers into the Cassandra pods
-                              type: object
-                            terminationGracePeriodSeconds:
-                              description: Optional duration in seconds the pod needs
-                                to terminate gracefully upon probe failure. The grace
-                                period is the duration in seconds after the processes
-                                running in the pod are sent a termination signal and
-                                the time when the processes are forcibly halted with
-                                a kill signal. Set this value longer than the expected
-                                cleanup time for your process. If this value is nil,
-                                the pod's terminationGracePeriodSeconds will be used.
-                                Otherwise, this value overrides the value provided
-                                by the pod spec. Value must be non-negative integer.
-                                The value zero indicates stop immediately via the
-                                kill signal (no opportunity to shut down). This is
-                                a beta field and requires enabling ProbeTerminationGracePeriod
-                                feature gate. Minimum value is 1. spec.terminationGracePeriodSeconds
-                                is used if unset.
-                              format: int64
-                              type: integer
-                            timeoutSeconds:
-                              description: 'Number of seconds after which the probe
-                                times out. Defaults to 1 second. Minimum value is
-                                1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                              format: int32
-                              type: integer
-                          type: object
-<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
-                        securityContext:
-                          description: 'SecurityContext defines the security options
-                            the container should be run with. If set, the fields of
-                            SecurityContext override the equivalent fields of PodSecurityContext.
-                            More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
-                          properties:
-=======
-                        resources:
-                          description: 'Compute Resources required by this container.
-                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                          properties:
-                            limits:
-                              additionalProperties:
-                                anyOf:
-                                - type: integer
-                                - type: string
-                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                x-kubernetes-int-or-string: true
-                              description: 'Limits describes the maximum amount of
-                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                              type: object
-                            requests:
-                              additionalProperties:
-                                anyOf:
-                                - type: integer
-                                - type: string
-                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                x-kubernetes-int-or-string: true
-                              description: 'Requests describes the minimum amount
-                                of compute resources required. If Requests is omitted
-                                for a container, it defaults to Limits if that is
-                                explicitly specified, otherwise to an implementation-defined
-                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                           type: object
                         securityContext:
@@ -15734,7 +15549,6 @@ spec:
                             SecurityContext override the equivalent fields of PodSecurityContext.
                             More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/'
                           properties:
->>>>>>> Allow injecting containers and init containers into the Cassandra pods
                             allowPrivilegeEscalation:
                               description: 'AllowPrivilegeEscalation controls whether
                                 a process can gain more privileges than its parent
@@ -15752,7 +15566,6 @@ spec:
                               properties:
                                 add:
                                   description: Added capabilities
-<<<<<<< 0e16335decd782d2c199d31afb070b3ccf8608b1
                                   items:
                                     description: Capability represent POSIX capabilities
                                       type
@@ -15763,18 +15576,6 @@ spec:
                                   items:
                                     description: Capability represent POSIX capabilities
                                       type
-=======
-                                  items:
-                                    description: Capability represent POSIX capabilities
-                                      type
-                                    type: string
-                                  type: array
-                                drop:
-                                  description: Removed capabilities
-                                  items:
-                                    description: Capability represent POSIX capabilities
-                                      type
->>>>>>> Allow injecting containers and init containers into the Cassandra pods
                                     type: string
                                   type: array
                               type: object

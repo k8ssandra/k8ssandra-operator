@@ -2090,8 +2090,7 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
-// Create a cluster with server and client encryption but client encryption stores missing.
-// Verify that dc1 never gets created.
+// Create a cluster with both volumes and additional volumes being injected and check that the volumes are created in the podTemplateSpec.
 func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
@@ -2132,7 +2131,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 						},
 					},
 					ExtraVolumes: &api.K8ssandraVolumes{
-						StsAdditionalVolumes: &[]cassdcapi.AdditionalVolumes{
+						PVCs: &[]cassdcapi.AdditionalVolumes{
 							{
 								Name:      "injected-volume",
 								MountPath: "/etc/injected",

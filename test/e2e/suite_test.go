@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/datastax/go-cassandra-native-protocol/primitive"
-	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
-	"gopkg.in/resty.v1"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,6 +12,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/datastax/go-cassandra-native-protocol/primitive"
+	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
+	"gopkg.in/resty.v1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -1752,5 +1753,51 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	_, found := cassandra.FindVolume(cassdc.Spec.PodTemplateSpec, "busybox-vol")
 	require.True(t, found, "busybox-vol volume not found in cassandra pod")
 
+	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "busybox"); containerFound {
+		volumeMount := cassandra.FindVolumeMount(&cassdc.Spec.PodTemplateSpec.Spec.Containers[containerIndex], "busybox-vol")
+		require.NotNil(t, volumeMount, "busybox-vol volume mount not found in busybox container")
+		require.Equal(t, "/etc/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
+	} else {
+		return fmt.Errorf("cannot find busybox injected container in pod template spec")
+	}
+
+	if initContainerIndex, initContainerFound := cassandra.FindInitContainer(cassdc.Spec.PodTemplateSpec, "init-busybox"); initContainerFound {
+		volumeMount := cassandra.FindVolumeMount(&cassdc.Spec.PodTemplateSpec.Spec.InitContainers[initContainerIndex], "busybox-vol")
+		require.NotNil(t, volumeMount, "busybox-vol volume mount not found in init-busybox container")
+		require.Equal(t, "/etc/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
+	} else {
+		return fmt.Errorf("cannot find busybox injected container in pod template spec")
+	}
+
+	cassandraPods, err := getCassandraDatacenterPods(t, f, ctx, dcKey)
+	require.NoError(t, err, "failed listing Cassandra pods")
+	cassandraIndex, cassandraFound := findContainerInPod(t, cassandraPods[0], "cassandra")
+	require.True(t, cassandraFound, "cannot find cassandra container in cassandra pod")
+	volumeMount := cassandra.FindVolumeMount(&cassandraPods[0].Spec.Containers[cassandraIndex], "sts-extra-vol")
+	require.NotNil(t, volumeMount, "sts-extra-vol volume mount not found in cassandra container")
+	require.Equal(t, "/etc/extra", volumeMount.MountPath, "expected sts-extra-vol mount path")
+
 	return nil
+}
+
+func getCassandraDatacenterPods(t *testing.T, f *framework.E2eFramework, ctx context.Context, dcKey framework.ClusterKey) ([]corev1.Pod, error) {
+	podList := &corev1.PodList{}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcKey.Name}
+	err := f.List(ctx, dcKey, podList, labels)
+	require.NoError(t, err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", dcKey.Name)
+
+	pods := make([]corev1.Pod, 0)
+	pods = append(pods, podList.Items...)
+
+	return pods, nil
+}
+
+func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {
+	for i, container := range pod.Spec.Containers {
+		t.Logf("checking container %s in pod %s", container.Name, pod.Name)
+		if container.Name == containerName {
+			return i, true
+		}
+	}
+	return -1, false
 }

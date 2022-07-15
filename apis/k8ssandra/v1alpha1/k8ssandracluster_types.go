@@ -351,10 +351,10 @@ type K8ssandraVolumes struct {
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
 
-	// StsAdditionalVolumes defines additional volumes to be added to each Cassandra pod and managed by the statefulset.
+	// PVCs defines additional volumes to be added to each Cassandra pod and managed by the statefulset.
 	// Such volumes are automatically mounted by cass-operator into the server-system-logger and cassandra containers.
 	// +optional
-	StsAdditionalVolumes *[]cassdcapi.AdditionalVolumes `json:"stsAdditionalVolumes,omitempty"`
+	PVCs *[]cassdcapi.AdditionalVolumes `json:"pvcs,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
