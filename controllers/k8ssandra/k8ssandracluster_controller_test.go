@@ -2204,7 +2204,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
 
-	require.Equal(1, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 1 additional volume")
+	require.Equal(2, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 1 additional volume")
 	require.Equal("/etc/injected", dc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected injected-volume mount path")
 
 	t.Log("deleting K8ssandraCluster")
