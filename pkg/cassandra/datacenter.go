@@ -398,13 +398,13 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 
 func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
 	// Add and mount additional volumes that need to be managed by the statefulset
-	if extraVolumes.PVCs != nil {
+	if len(extraVolumes.PVCs) > 0 {
 		if dcConfig.StorageConfig == nil {
 			dcConfig.StorageConfig = &cassdcapi.StorageConfig{
-				AdditionalVolumes: *extraVolumes.PVCs,
+				AdditionalVolumes: extraVolumes.PVCs,
 			}
 		} else {
-			dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, *extraVolumes.PVCs...)
+			dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, extraVolumes.PVCs...)
 		}
 	}
 

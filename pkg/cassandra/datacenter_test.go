@@ -431,7 +431,7 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ExtraVolumes: &api.K8ssandraVolumes{
-						PVCs: &[]cassdcapi.AdditionalVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
 							{
 								Name:      "test-volume",
 								MountPath: "/test",
@@ -443,7 +443,7 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
 				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: &[]cassdcapi.AdditionalVolumes{
+					PVCs: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume",
 							MountPath: "/test",
@@ -457,7 +457,7 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ExtraVolumes: &api.K8ssandraVolumes{
-						PVCs: &[]cassdcapi.AdditionalVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
 							{
 								Name:      "test-volume",
 								MountPath: "/test",
@@ -469,7 +469,7 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ExtraVolumes: &api.K8ssandraVolumes{
-						PVCs: &[]cassdcapi.AdditionalVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
 							{
 								Name:      "test-volume-dc",
 								MountPath: "/test-dc",
@@ -480,7 +480,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: &[]cassdcapi.AdditionalVolumes{
+					PVCs: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume-dc",
 							MountPath: "/test-dc",

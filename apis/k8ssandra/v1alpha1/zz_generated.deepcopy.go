@@ -2106,13 +2106,9 @@ func (in *K8ssandraVolumes) DeepCopyInto(out *K8ssandraVolumes) {
 	}
 	if in.PVCs != nil {
 		in, out := &in.PVCs, &out.PVCs
-		*out = new([]v1beta1.AdditionalVolumes)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make([]v1beta1.AdditionalVolumes, len(*in))
-			for i := range *in {
-				(*in)[i].DeepCopyInto(&(*out)[i])
-			}
+		*out = make([]v1beta1.AdditionalVolumes, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }

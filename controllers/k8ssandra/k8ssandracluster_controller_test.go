@@ -2131,7 +2131,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 						},
 					},
 					ExtraVolumes: &api.K8ssandraVolumes{
-						PVCs: &[]cassdcapi.AdditionalVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
 							{
 								Name:      "injected-volume",
 								MountPath: "/etc/injected",
