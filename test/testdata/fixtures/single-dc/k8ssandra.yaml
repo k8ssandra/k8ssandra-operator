@@ -19,6 +19,18 @@ spec:
             resources:
               requests:
                 storage: 5Gi
+        initContainers:
+          - name: "server-config-init"
+          - name: "jmx-credentials"
+          - name: init-busybox
+            image: busybox
+            command: ["sleep", "10"]
+        containers:
+          - name: "server-system-logger"
+          - name: "cassandra"
+          - name: busybox
+            image: busybox
+            command: ["sleep", "3600"]
         config:
           cassandraYaml:
             allocate_tokens_for_local_replication_factor: 3

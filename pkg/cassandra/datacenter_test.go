@@ -358,6 +358,74 @@ func TestCoalesce(t *testing.T) {
 				Stopped: true,
 			},
 		},
+		{
+			name: "Additional cluster container",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					Containers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image",
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				Containers: []corev1.Container{
+					{
+						Name:  "test-container",
+						Image: "test-image",
+					},
+				},
+			},
+		},
+		{
+			name: "Additional cluster container and init containers",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					InitContainers: []corev1.Container{
+						{
+							Name: "server-config-init",
+						},
+						{
+							Name: "medusa-restore",
+						},
+						{
+							Name:  "test-init-container",
+							Image: "test-image",
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:  "test-container",
+							Image: "test-image",
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				InitContainers: []corev1.Container{
+					{
+						Name: "server-config-init",
+					},
+					{
+						Name: "medusa-restore",
+					},
+					{
+						Name:  "test-init-container",
+						Image: "test-image",
+					},
+				},
+				Containers: []corev1.Container{
+					{
+						Name:  "test-container",
+						Image: "test-image",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

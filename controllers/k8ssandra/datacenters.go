@@ -66,6 +66,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		// Create additional init containers if requested
+		if len(dcConfig.InitContainers) > 0 {
+			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
+		}
+		// Create additional containers if requested
+		if len(dcConfig.Containers) > 0 {
+			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
+		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
@@ -83,6 +91,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
+
 		// Inject MCAC metrics filters
 		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
 
