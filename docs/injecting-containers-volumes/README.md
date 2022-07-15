@@ -38,7 +38,7 @@ spec:
 ```
 
 The above example will inject the `init-busybox` init-container and the `busybox` container into the Cassandra pods, respectively in first position within their kinds.
-Fine grained control over the order of the injected containers can be achieved by also specifying the (init-)containers that K8ssandra-operator or cass-operator will add during the reconcile, and that should appear before the custom containers:
+Fine grained control over the order of the injected init-containers can be achieved by also specifying the init-containers that K8ssandra-operator or cass-operator will add during the reconcile, and that should appear before the custom containers:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -61,19 +61,19 @@ spec:
               requests:
                 storage: 5Gi
         initContainers:
-          - name: jmx-credentials
           - name: server-config-init
           - name: init-busybox
             image: busybox
             command: ["sleep", "10"]
+          - name: jmx-credentials
         containers:
-          - name: server-system-logger
           - name: busybox
             image: busybox
             command: ["sleep", "3600"]
 ```
 
-In the above example, the `init-busybox` container will be injected right after the `jmx-credentials` init-container and the `busybox` container will be injected right after the `server-system-logger` container.
+In the above example, the `init-busybox` container will be injected right after the `server-config-init` init-container.
+The order of the main containers doesn't have any impact as they all start concurrently.
 
 K8ssandra-operator is likely to generate the following init-containers in this order:
 
@@ -84,7 +84,7 @@ cass-operator will generate the following init-container:
 
 - `server-config-init`: always generated
 
-The `medusa-restore` init-container must always be placed after the `server-config-init` one.
+**Note:** The `medusa-restore` init-container must always be placed after the `server-config-init` one.
 
 K8ssandra-operator is likely to generate the following container:
 
@@ -99,7 +99,9 @@ cass-operator will generate the following containers in this order:
 ## Injecting volumes
 
 Extra volumes can be injected into the Cassandra pods through the `.spec.cassandra.extraVolumes` field.
-This field allows to specify standard volume definitions that will be added to the Cassandra pods (`.spec.cassandra.extraVolumes.volumes`), and require to be mounted explicitly in the containers, and PVC volumes which will be mounted automatically by cass-operator and managed by the Cassandra statefulset (`.spec.cassandra.extraVolumes.stsAdditionalVolumes`).
+This field allows to specify two types of volumes:
+
+- standard volume definitions that will be added to the Cassandra pods (`.spec.cassandra.extraVolumes.volumes`), and require to be mounted explicitly in the containers. - PVC volumes which will be mounted automatically by cass-operator and managed by the Cassandra statefulset (`.spec.cassandra.extraVolumes.pvcs`).
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -144,7 +146,7 @@ spec:
           volumes:
             - name: busybox-vol
               emptyDir: {}
-          stsAdditionalVolumes:
+          pvcs:
             - name: sts-extra-vol
               mountPath: "/etc/extra"
               pvcSpec:
