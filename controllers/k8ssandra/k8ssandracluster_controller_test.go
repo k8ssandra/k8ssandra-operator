@@ -111,7 +111,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
 	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
-	t.Run("InjectContainers", testEnv.ControllerTest(ctx, injectContainers))
+	t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -2090,9 +2090,8 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
-// Create a cluster with server and client encryption but client encryption stores missing.
-// Verify that dc1 never gets created.
-func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+// Create a cluster with both volumes and additional volumes being injected and check that the volumes are created in the podTemplateSpec.
+func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
 	clusterName := "cluster-with-injection"
@@ -2123,6 +2122,20 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 						{
 							Name:  "injected-container",
 							Image: "busybox",
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "injected-volume",
+									MountPath: "/injected-volume",
+								},
+							},
+						},
+					},
+					ExtraVolumes: &api.K8ssandraVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
+							{
+								Name:      "injected-volume",
+								MountPath: "/etc/injected",
+							},
 						},
 					},
 				},
@@ -2190,6 +2203,9 @@ func injectContainers(t *testing.T, ctx context.Context, f *framework.Framework,
 
 	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
+
+	require.Equal(2, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 1 additional volume")
+	require.Equal("/etc/injected", dc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected injected-volume mount path")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)

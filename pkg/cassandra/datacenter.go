@@ -112,6 +112,7 @@ type DatacenterConfig struct {
 	ServerTruststorePassword string
 	Containers               []corev1.Container
 	InitContainers           []corev1.Container
+	ExtraVolumes             *api.K8ssandraVolumes
 }
 
 const (
@@ -362,6 +363,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.InitContainers = clusterTemplate.DatacenterOptions.InitContainers
 	}
 
+	if dcTemplate.DatacenterOptions.ExtraVolumes != nil {
+		dcConfig.ExtraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
+	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
+		dcConfig.ExtraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
+	}
+
 	return dcConfig
 }
 
@@ -386,6 +393,32 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 		}
 	} else {
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+	}
+}
+
+func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
+	// Add and mount additional volumes that need to be managed by the statefulset
+	if len(extraVolumes.PVCs) > 0 {
+		if dcConfig.StorageConfig == nil {
+			dcConfig.StorageConfig = &cassdcapi.StorageConfig{
+				AdditionalVolumes: extraVolumes.PVCs,
+			}
+		} else {
+			dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, extraVolumes.PVCs...)
+		}
+	}
+
+	// Add extra volumes that do not need to be managed by the statefulset
+	for _, volume := range extraVolumes.Volumes {
+		if dcConfig.PodTemplateSpec == nil {
+			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{volume},
+				},
+			}
+		} else {
+			dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+		}
 	}
 }
 
@@ -435,6 +468,15 @@ func FindAdditionalVolume(dcConfig *DatacenterConfig, volumeName string) (int, b
 	}
 
 	return -1, false
+}
+
+func FindVolumeMount(container *corev1.Container, name string) *corev1.VolumeMount {
+	for _, v := range container.VolumeMounts {
+		if v.Name == name {
+			return &v
+		}
+	}
+	return nil
 }
 
 func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {

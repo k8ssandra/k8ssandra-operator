@@ -18,6 +18,7 @@ import (
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/stretchr/testify/require"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -693,4 +694,17 @@ func (f *E2eFramework) GetContainerLogs(k8sContext, namespace, pod, container st
 		return "", err
 	}
 	return output, nil
+}
+
+// GetCassandraPodIPs returns the Cassandra pods for a given cassdc.
+func (f *E2eFramework) GetCassandraDatacenterPods(t *testing.T, ctx context.Context, dcKey ClusterKey) ([]corev1.Pod, error) {
+	podList := &corev1.PodList{}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcKey.Name}
+	err := f.List(ctx, dcKey, podList, labels)
+	require.NoError(t, err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", dcKey.Name)
+
+	pods := make([]corev1.Pod, 0)
+	pods = append(pods, podList.Items...)
+
+	return pods, nil
 }

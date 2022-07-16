@@ -339,6 +339,22 @@ type DatacenterOptions struct {
 	// Otherwise init-containers referenced here will be injected in first position
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// Volumes defines additional volumes to be added to each Cassandra pod.
+	// If the volume uses a PersistentVolumeClaim, the PVC will be managed by the statefulset.
+	// +optional
+	ExtraVolumes *K8ssandraVolumes `json:"extraVolumes,omitempty"`
+}
+
+type K8ssandraVolumes struct {
+	// Volumes defines volumes to be added to each Cassandra pod.
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// PVCs defines additional volumes to be added to each Cassandra pod and managed by the statefulset.
+	// Such volumes are automatically mounted by cass-operator into the cassandra containers.
+	// +optional
+	PVCs []cassdcapi.AdditionalVolumes `json:"pvcs,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

@@ -74,6 +74,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if len(dcConfig.Containers) > 0 {
 			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
 		}
+
+		// Create additional volumes if requested
+		if dcConfig.ExtraVolumes != nil {
+			cassandra.AddVolumesToPodTemplateSpec(dcConfig, *dcConfig.ExtraVolumes)
+		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on

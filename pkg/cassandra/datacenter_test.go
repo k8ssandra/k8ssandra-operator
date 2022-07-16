@@ -426,6 +426,69 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Additional Volumes",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ExtraVolumes: &api.K8ssandraVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
+							{
+								Name:      "test-volume",
+								MountPath: "/test",
+							},
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				ExtraVolumes: &api.K8ssandraVolumes{
+					PVCs: []cassdcapi.AdditionalVolumes{
+						{
+							Name:      "test-volume",
+							MountPath: "/test",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Additional Volumes dc level",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ExtraVolumes: &api.K8ssandraVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
+							{
+								Name:      "test-volume",
+								MountPath: "/test",
+							},
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ExtraVolumes: &api.K8ssandraVolumes{
+						PVCs: []cassdcapi.AdditionalVolumes{
+							{
+								Name:      "test-volume-dc",
+								MountPath: "/test-dc",
+							},
+						},
+					},
+				},
+			},
+			want: &DatacenterConfig{
+				ExtraVolumes: &api.K8ssandraVolumes{
+					PVCs: []cassdcapi.AdditionalVolumes{
+						{
+							Name:      "test-volume-dc",
+							MountPath: "/test-dc",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
