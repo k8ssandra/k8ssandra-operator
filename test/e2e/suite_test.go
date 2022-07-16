@@ -1769,7 +1769,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
 
-	cassandraPods, err := getCassandraDatacenterPods(t, f, ctx, dcKey)
+	cassandraPods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey)
 	require.NoError(t, err, "failed listing Cassandra pods")
 	cassandraIndex, cassandraFound := findContainerInPod(t, cassandraPods[0], "cassandra")
 	require.True(t, cassandraFound, "cannot find cassandra container in cassandra pod")
@@ -1778,18 +1778,6 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	require.Equal(t, "/etc/extra", volumeMount.MountPath, "expected sts-extra-vol mount path")
 
 	return nil
-}
-
-func getCassandraDatacenterPods(t *testing.T, f *framework.E2eFramework, ctx context.Context, dcKey framework.ClusterKey) ([]corev1.Pod, error) {
-	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcKey.Name}
-	err := f.List(ctx, dcKey, podList, labels)
-	require.NoError(t, err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", dcKey.Name)
-
-	pods := make([]corev1.Pod, 0)
-	pods = append(pods, podList.Items...)
-
-	return pods, nil
 }
 
 func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {
