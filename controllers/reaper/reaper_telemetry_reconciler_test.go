@@ -53,5 +53,4 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
-	assert.Equal(t, reaper.Name, currentSM.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement)
 }
