@@ -73,7 +73,7 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 		}
 	case thisReaper.Spec.Telemetry.Prometheus.Enabled:
 		logger.Info("Prometheus config found", "TelemetrySpec", thisReaper.Spec.Telemetry)
-		desiredSM, err := cfg.NewStargateServiceMonitor()
+		desiredSM, err := cfg.NewReaperServiceMonitor()
 		if err != nil {
 			return err
 		}
