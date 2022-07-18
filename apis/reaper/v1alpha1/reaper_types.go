@@ -62,15 +62,15 @@ type ReaperTemplate struct {
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:3.2.0".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.0"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:3.2.0".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.0"}
 	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
