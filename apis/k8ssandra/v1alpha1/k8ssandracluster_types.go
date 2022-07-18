@@ -179,6 +179,14 @@ func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTem
 	return datacenters
 }
 
+// Name returns a sanitized version of the cassandra cluster name override if it exists, otherwise the k8c object name
+func (in *K8ssandraCluster) SanitizedName() string {
+	if in.Spec.Cassandra.ClusterName != "" {
+		return cassdcapi.CleanupForKubernetes(in.Spec.Cassandra.ClusterName)
+	}
+	return in.ObjectMeta.Name
+}
+
 // +kubebuilder:object:root=true
 
 // K8ssandraClusterList contains a list of K8ssandraCluster

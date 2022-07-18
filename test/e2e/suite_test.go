@@ -713,7 +713,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
@@ -775,7 +775,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	}
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
@@ -811,7 +811,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
@@ -848,7 +848,7 @@ func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Con
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-default-sts-0", "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
 }
 
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
@@ -896,7 +896,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -933,7 +933,7 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -950,7 +950,7 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	replication := map[string]int{"dc1": 2, "dc2": 1}
-	checkKeyspaceReplication(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.Name, DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	checkKeyspaceReplication(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		"system_auth", replication)
 }
 
@@ -993,11 +993,11 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	dcSize := 2
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
@@ -1033,7 +1033,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -1052,7 +1052,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -1110,7 +1110,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -1163,11 +1163,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkReaperReady(t, f, ctx, reaper2Key)
 
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		"CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		"CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
 	require.NoError(err, "failed to create keyspace")
 
@@ -1185,7 +1185,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", DcPrefix(t, f, dc1Key)+"-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -1278,7 +1278,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
@@ -1392,7 +1392,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.Name)
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])

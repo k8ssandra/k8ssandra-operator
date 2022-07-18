@@ -58,10 +58,10 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
-		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Name, logger)
-		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Name, logger)
-		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.Name, logger)
-		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.Name))
+		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.SanitizedName(), logger)
+		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.SanitizedName(), logger)
+		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName(), logger)
+		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName()))
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
@@ -79,7 +79,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 	if kc.Spec.Medusa != nil {
 		cassandraUserSecretRef := kc.Spec.Medusa.CassandraUserSecretRef
 		if cassandraUserSecretRef.Name == "" {
-			cassandraUserSecretRef.Name = medusa.CassandraUserSecretName(kc.Spec.Medusa, kc.Name)
+			cassandraUserSecretRef.Name = medusa.CassandraUserSecretName(kc.Spec.Medusa, kc.SanitizedName())
 		}
 		logger = logger.WithValues(
 			"MedusaCassandraUserSecretRef",
@@ -108,11 +108,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		medusaIni := medusa.CreateMedusaIni(kc)
 		configMapKey := client.ObjectKey{
 			Namespace: kc.Namespace,
-			Name:      fmt.Sprintf("%s-medusa", kc.Name),
+			Name:      fmt.Sprintf("%s-medusa", kc.SanitizedName()),
 		}
 
 		logger := logger.WithValues("MedusaConfigMap", configMapKey)
-		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.Name, medusaIni)
+		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
 		// Compute a hash which will allow to compare desired and actual configMaps
 		annotations.AddHashAnnotation(desiredConfigMap)
 		actualConfigMap := &corev1.ConfigMap{}
