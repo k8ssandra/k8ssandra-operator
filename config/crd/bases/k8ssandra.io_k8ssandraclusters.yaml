@@ -5684,7 +5684,7 @@ spec:
                               description: PVCs defines additional volumes to be added
                                 to each Cassandra pod and managed by the statefulset.
                                 Such volumes are automatically mounted by cass-operator
-                                into the server-system-logger and cassandra containers.
+                                into the cassandra containers.
                               items:
                                 description: AdditionalVolumes StorageConfig defines
                                   additional storage configurations
@@ -12932,7 +12932,7 @@ spec:
                         description: PVCs defines additional volumes to be added to
                           each Cassandra pod and managed by the statefulset. Such
                           volumes are automatically mounted by cass-operator into
-                          the server-system-logger and cassandra containers.
+                          the cassandra containers.
                         items:
                           description: AdditionalVolumes StorageConfig defines additional
                             storage configurations

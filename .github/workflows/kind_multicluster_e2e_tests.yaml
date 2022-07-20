@@ -93,8 +93,8 @@ jobs:
     steps:
       - name: Raise open files limit
         run: |
-          echo fs.file-max=1000000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
-          echo fs.inotify.max_user_instances=1280 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          echo fs.file-max=1000000 | sudo tee -a /etc/sysctl.conf
+          echo fs.inotify.max_user_instances=1280 | sudo tee -a /etc/sysctl.conf
           echo fs.inotify.max_user_watches=655360 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
           ulimit -a
       - name: Free diskspace by removing unused packages
