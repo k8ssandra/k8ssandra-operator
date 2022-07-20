@@ -79,8 +79,6 @@ spec:
                         type: integer
                       cdcWorkingDir:
                         type: string
-                      enabled:
-                        type: boolean
                       errorCommitLogReprocessEnabled:
                         type: boolean
                       pulsarAuthParams:
@@ -96,6 +94,7 @@ spec:
                       pulsarMaxPendingMessagesAcrossPartitions:
                         type: integer
                       pulsarServiceUrl:
+                        minLength: 1
                         type: string
                       sslAllowInsecureConnection:
                         type: string
@@ -120,7 +119,6 @@ spec:
                       topicPrefix:
                         type: string
                     required:
-                    - enabled
                     - pulsarServiceUrl
                     type: object
                   clientEncryptionStores:
@@ -2902,8 +2900,6 @@ spec:
                               type: integer
                             cdcWorkingDir:
                               type: string
-                            enabled:
-                              type: boolean
                             errorCommitLogReprocessEnabled:
                               type: boolean
                             pulsarAuthParams:
@@ -2919,6 +2915,7 @@ spec:
                             pulsarMaxPendingMessagesAcrossPartitions:
                               type: integer
                             pulsarServiceUrl:
+                              minLength: 1
                               type: string
                             sslAllowInsecureConnection:
                               type: string
@@ -2943,7 +2940,6 @@ spec:
                             topicPrefix:
                               type: string
                           required:
-                          - enabled
                           - pulsarServiceUrl
                           type: object
                         config:
@@ -5798,8 +5794,8 @@ spec:
                                 Such volumes are automatically mounted by cass-operator
                                 into the cassandra containers.
                               items:
-                                description: StorageConfig defines additional storage
-                                  configurations
+                                description: AdditionalVolumes StorageConfig defines
+                                  additional storage configurations
                                 properties:
                                   mountPath:
                                     description: Mount path into cassandra container
@@ -12555,8 +12551,8 @@ spec:
                           properties:
                             additionalVolumes:
                               items:
-                                description: StorageConfig defines additional storage
-                                  configurations
+                                description: AdditionalVolumes StorageConfig defines
+                                  additional storage configurations
                                 properties:
                                   mountPath:
                                     description: Mount path into cassandra container
@@ -13046,7 +13042,8 @@ spec:
                           volumes are automatically mounted by cass-operator into
                           the cassandra containers.
                         items:
-                          description: StorageConfig defines additional storage configurations
+                          description: AdditionalVolumes StorageConfig defines additional
+                            storage configurations
                           properties:
                             mountPath:
                               description: Mount path into cassandra container
@@ -16278,7 +16275,8 @@ spec:
                     properties:
                       additionalVolumes:
                         items:
-                          description: StorageConfig defines additional storage configurations
+                          description: AdditionalVolumes StorageConfig defines additional
+                            storage configurations
                           properties:
                             mountPath:
                               description: Mount path into cassandra container

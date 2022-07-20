@@ -576,7 +576,6 @@ func TestNewDatacenter_Fail_NoServerVersion(t *testing.T) {
 func TestCDC(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.CDC = &cassdcapi.CDCConfiguration{
-		Enabled:          true,
 		PulsarServiceUrl: pointer.String("pulsar://test-url"),
 	}
 	cassDC, err := NewDatacenter(

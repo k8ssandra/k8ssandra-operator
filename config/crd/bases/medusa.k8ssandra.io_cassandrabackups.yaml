@@ -8275,8 +8275,8 @@ spec:
                         properties:
                           additionalVolumes:
                             items:
-                              description: StorageConfig defines additional storage
-                                configurations
+                              description: AdditionalVolumes StorageConfig defines
+                                additional storage configurations
                               properties:
                                 mountPath:
                                   description: Mount path into cassandra container
