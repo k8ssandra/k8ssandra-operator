@@ -16,14 +16,22 @@ type PrometheusTelemetrySpec struct {
 
 type McacTelemetrySpec struct {
 	// MetricFilters allows passing filters to MCAC in order to reduce the amount of extracted metrics.
-	// Not setting this field will result in the default filters being used.
-	// Setting it to an empty list will result in all metrics being extracted.
-	// Examples:
+	// Not setting this field will result in the default filters being used:
 	// - "deny:org.apache.cassandra.metrics.Table"
 	// - "deny:org.apache.cassandra.metrics.table"
 	// - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
 	// - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
 	// - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"
+	// - "allow:org.apache.cassandra.metrics.table.LiveDiskSpaceUsed"
+	// - "allow:org.apache.cassandra.metrics.Table.Pending"
+	// - "allow:org.apache.cassandra.metrics.Table.Memtable"
+	// - "allow:org.apache.cassandra.metrics.Table.Compaction"
+	// - "allow:org.apache.cassandra.metrics.table.read"
+	// - "allow:org.apache.cassandra.metrics.table.write"
+	// - "allow:org.apache.cassandra.metrics.table.range"
+	// - "allow:org.apache.cassandra.metrics.table.coordinator"
+	// - "allow:org.apache.cassandra.metrics.table.dropped_mutations"
+	// Setting it to an empty list will result in all metrics being extracted.
 	// +optional
 	MetricFilters *[]string `json:"metricFilters,omitempty"`
 }
