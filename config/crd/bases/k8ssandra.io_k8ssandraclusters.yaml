@@ -1136,6 +1136,12 @@ spec:
                             description: Exists in 3.11, 4.0, trunk
                             type: integer
                         type: object
+                      dseYaml:
+                        properties:
+                          foo:
+                            description: TODO
+                            type: string
+                        type: object
                       jvmOptions:
                         properties:
                           additionalOptions:
@@ -3925,6 +3931,12 @@ spec:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: integer
                               type: object
+                            dseYaml:
+                              properties:
+                                foo:
+                                  description: TODO
+                                  type: string
+                              type: object
                             jvmOptions:
                               properties:
                                 additionalOptions:
@@ -5783,6 +5795,15 @@ spec:
                             - name
                             type: object
                           type: array
+                        dseWorkloads:
+                          properties:
+                            analyticsEnabled:
+                              type: boolean
+                            graphEnabled:
+                              type: boolean
+                            searchEnabled:
+                              type: boolean
+                          type: object
                         extraVolumes:
                           description: Volumes defines additional volumes to be added
                             to each Cassandra pod. If the volume uses a PersistentVolumeClaim,
@@ -9211,8 +9232,10 @@ spec:
                             based on ServerVersion.
                           type: string
                         serverVersion:
-                          description: ServerVersion is the Cassandra version.
-                          pattern: (3\.11\.\d+)|(4\.0\.\d+)
+                          description: 'ServerVersion is the Cassandra or DSE version.
+                            The following versions are supported: - Cassandra: 3.11.X
+                            and 4.0.X - DSE: 6.8.X'
+                          pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.0\.\d+)
                           type: string
                         size:
                           description: Size is the number Cassandra pods to deploy
@@ -13058,6 +13081,15 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     type: array
+                  dseWorkloads:
+                    properties:
+                      analyticsEnabled:
+                        type: boolean
+                      graphEnabled:
+                        type: boolean
+                      searchEnabled:
+                        type: boolean
+                    type: object
                   extraVolumes:
                     description: Volumes defines additional volumes to be added to
                       each Cassandra pod. If the volume uses a PersistentVolumeClaim,
@@ -16285,9 +16317,18 @@ spec:
                       Note that this should be a management-api image. If left empty
                       the operator will choose a default image based on ServerVersion.
                     type: string
+                  serverType:
+                    default: cassandra
+                    description: 'Server type: "cassandra" or "dse".'
+                    enum:
+                    - cassandra
+                    - dse
+                    type: string
                   serverVersion:
-                    description: ServerVersion is the Cassandra version.
-                    pattern: (3\.11\.\d+)|(4\.0\.\d+)
+                    description: 'ServerVersion is the Cassandra or DSE version. The
+                      following versions are supported: - Cassandra: 3.11.X and 4.0.X
+                      - DSE: 6.8.X'
+                    pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.0\.\d+)
                     type: string
                   softPodAntiAffinity:
                     description: SoftPodAntiAffinity sets whether multiple Cassandra

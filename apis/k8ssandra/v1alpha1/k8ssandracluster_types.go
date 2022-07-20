@@ -231,6 +231,11 @@ type CassandraClusterTemplate struct {
 	// CRD name.
 	// +optional
 	ClusterName string `json:"clusterName,omitempty"`
+
+	// Server type: "cassandra" or "dse".
+	// +kubebuilder:validation:Enum=cassandra;dse
+	// +kubebuilder:default=cassandra
+	ServerType string `json:"serverType,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
@@ -263,8 +268,10 @@ type CassandraDatacenterTemplate struct {
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
 type DatacenterOptions struct {
-	// ServerVersion is the Cassandra version.
-	// +kubebuilder:validation:Pattern=(3\.11\.\d+)|(4\.0\.\d+)
+	// ServerVersion is the Cassandra or DSE version. The following versions are supported:
+	// - Cassandra: 3.11.X and 4.0.X
+	// - DSE: 6.8.X
+	// +kubebuilder:validation:Pattern=(6\.8\.\d+)|(3\.11\.\d+)|(4\.0\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a
@@ -358,6 +365,9 @@ type DatacenterOptions struct {
 	// If the volume uses a PersistentVolumeClaim, the PVC will be managed by the statefulset.
 	// +optional
 	ExtraVolumes *K8ssandraVolumes `json:"extraVolumes,omitempty"`
+
+	// +optional
+	DseWorkloads *cassdcapi.DseWorkloads `json:"dseWorkloads,omitempty"`
 }
 
 type K8ssandraVolumes struct {

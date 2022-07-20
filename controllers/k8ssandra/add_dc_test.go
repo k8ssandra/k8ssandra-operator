@@ -54,6 +54,7 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				ServerType: "cassandra",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -118,6 +119,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				ServerType: "cassandra",
 				DatacenterOptions: api.DatacenterOptions{
 					ServerVersion: "4.0.1",
 					StorageConfig: &cassdcapi.StorageConfig{

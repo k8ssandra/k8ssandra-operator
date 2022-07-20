@@ -90,6 +90,7 @@ type DatacenterConfig struct {
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
 	ServerVersion            *semver.Version
+	ServerType               string
 	JmxInitContainerImage    *images.Image
 	Size                     int32
 	Stopped                  bool
@@ -115,6 +116,7 @@ type DatacenterConfig struct {
 	InitContainers           []corev1.Container
 	ExtraVolumes             *api.K8ssandraVolumes
 	CDC                      *cassdcapi.CDCConfiguration
+	DseWorkloads             *cassdcapi.DseWorkloads
 }
 
 const (
@@ -129,6 +131,9 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.ServerVersion == nil {
 		return nil, DCConfigIncomplete{"template.ServerVersion"}
+	}
+	if template.ServerType == "" {
+		return nil, DCConfigIncomplete{"template.ServerType"}
 	}
 
 	if err := validateCassandraYaml(&template.CassandraConfig.CassandraYaml); err != nil {
@@ -168,7 +173,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Stopped:             template.Stopped,
 			ServerVersion:       template.ServerVersion.String(),
 			ServerImage:         template.ServerImage,
-			ServerType:          "cassandra",
+			ServerType:          template.ServerType,
 			Config:              rawConfig,
 			Racks:               template.Racks,
 			StorageConfig:       *template.StorageConfig,
@@ -178,6 +183,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Networking:          template.Networking,
 			PodTemplateSpec:     template.PodTemplateSpec,
 			CDC:                 template.CDC,
+			DseWorkloads:        template.DseWorkloads,
 		},
 	}
 
@@ -275,6 +281,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// Handler cluster-wide settings first
 	dcConfig.Cluster = clusterName
 	dcConfig.SuperuserSecretRef = clusterTemplate.SuperuserSecretRef
+	dcConfig.ServerType = clusterTemplate.ServerType
 
 	// DC-level settings
 	dcConfig.Meta = dcTemplate.Meta
@@ -374,6 +381,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.ExtraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
 	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
 		dcConfig.ExtraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
+	}
+
+	if dcTemplate.DatacenterOptions.DseWorkloads != nil {
+		dcConfig.DseWorkloads = dcTemplate.DatacenterOptions.DseWorkloads
+	} else if clusterTemplate.DatacenterOptions.DseWorkloads != nil {
+		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
 	}
 
 	return dcConfig
