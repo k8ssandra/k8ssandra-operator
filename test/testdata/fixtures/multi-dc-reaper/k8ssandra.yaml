@@ -51,6 +51,8 @@ spec:
         config:
           jvmOptions:
             heapSize: 512Mi
+            heapNewGenSize: 256Mi
+            gc: CMS
         networking:
           hostNetwork: true
       - metadata:
@@ -68,6 +70,8 @@ spec:
         config:
           jvmOptions:
             heapSize: 512Mi
+            heapNewGenSize: 256Mi
+            gc: CMS
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi

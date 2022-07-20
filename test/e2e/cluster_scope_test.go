@@ -71,7 +71,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
-	count := 6
+	count := 4
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], dc1Namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	t.Log("check nodes in dc2 see nodes in dc1")

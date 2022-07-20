@@ -232,9 +232,6 @@ func restoreBackup(t *testing.T, ctx context.Context, namespace string, f *frame
 
 	err := f.Create(ctx, restoreClusterKey, restore)
 	require.NoError(err, "failed to restore CassandraBackup")
-
-	// The datacenter should stop for the restore to happen
-	checkDatacenterUpdating(t, ctx, dcKey, f)
 }
 
 func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
@@ -256,9 +253,6 @@ func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	err := f.Create(ctx, restoreClusterKey, restore)
 	require.NoError(err, "failed to restore MedusaBackup")
-
-	// The datacenter should stop for the restore to happen
-	checkDatacenterUpdating(t, ctx, dcKey, f)
 }
 
 func verifyRestoreFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {

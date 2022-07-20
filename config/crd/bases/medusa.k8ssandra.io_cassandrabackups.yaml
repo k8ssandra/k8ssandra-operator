@@ -171,6 +171,59 @@ spec:
                           get updated.
                         format: int32
                         type: integer
+                      cdc:
+                        description: CDC allows configuration of the change data capture
+                          agent which can run within the Management API container.
+                          Use it to send data to Pulsar.
+                        properties:
+                          cdcConcurrentProcessors:
+                            type: integer
+                          cdcPollIntervalM:
+                            type: integer
+                          cdcWorkingDir:
+                            type: string
+                          errorCommitLogReprocessEnabled:
+                            type: boolean
+                          pulsarAuthParams:
+                            type: string
+                          pulsarAuthPluginClassName:
+                            type: string
+                          pulsarBatchDelayInMs:
+                            type: integer
+                          pulsarKeyBasedBatcher:
+                            type: boolean
+                          pulsarMaxPendingMessages:
+                            type: integer
+                          pulsarMaxPendingMessagesAcrossPartitions:
+                            type: integer
+                          pulsarServiceUrl:
+                            minLength: 1
+                            type: string
+                          sslAllowInsecureConnection:
+                            type: string
+                          sslCipherSuites:
+                            type: string
+                          sslEnabledProtocols:
+                            type: string
+                          sslHostnameVerificationEnable:
+                            type: string
+                          sslKeystorePassword:
+                            type: string
+                          sslKeystorePath:
+                            type: string
+                          sslProvider:
+                            type: string
+                          sslTruststorePassword:
+                            type: string
+                          sslTruststorePath:
+                            type: string
+                          sslTruststoreType:
+                            type: string
+                          topicPrefix:
+                            type: string
+                        required:
+                        - pulsarServiceUrl
+                        type: object
                       clusterName:
                         description: The name by which CQL clients and instances will
                           know the cluster. If the same cluster name is shared by

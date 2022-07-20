@@ -74,6 +74,8 @@ spec:
             require_client_auth: true
       jvmOptions:
         heapSize: 512Mi
+        heapNewGenSize: 256Mi
+        gc: CMS
     networking:
       hostNetwork: true
     datacenters:

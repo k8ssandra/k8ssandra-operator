@@ -594,7 +594,7 @@ func applyPollingDefaults() {
 	polling.medusaBackupDone.timeout = 2 * time.Minute
 	polling.medusaBackupDone.interval = 5 * time.Second
 
-	polling.medusaRestoreDone.timeout = 5 * time.Minute
+	polling.medusaRestoreDone.timeout = 10 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
 	polling.datacenterUpdating.timeout = 1 * time.Minute
@@ -901,7 +901,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 
 	t.Log("check that nodes in dc1 see nodes in dc2")
 	pod := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
-	count := 6
+	count := 4
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
