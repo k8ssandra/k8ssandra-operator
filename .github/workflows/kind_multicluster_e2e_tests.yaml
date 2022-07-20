@@ -91,6 +91,12 @@ jobs:
       CONTROL_PLANE: kind-k8ssandra-0
       DATA_PLANES: kind-k8ssandra-0,kind-k8ssandra-1
     steps:
+      - name: Raise open files limit
+        run: |
+          echo fs.file-max=1000000 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          echo fs.inotify.max_user_instances=1280 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          echo fs.inotify.max_user_watches=655360 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          ulimit -a
       - name: Free diskspace by removing unused packages
         run: |
           sudo rm -rf /usr/local/lib/android
