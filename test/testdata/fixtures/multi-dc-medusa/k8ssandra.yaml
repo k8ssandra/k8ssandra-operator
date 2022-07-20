@@ -18,6 +18,8 @@ spec:
     config:
       jvmOptions:
         heapSize: 512M
+        heapNewGenSize: 256Mi
+        gc: CMS
     networking:
       hostNetwork: true
     datacenters:
