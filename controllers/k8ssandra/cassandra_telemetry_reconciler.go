@@ -30,9 +30,9 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		MonitoringTargetName: actualDc.Name,
 		ServiceMonitorName:   kc.SanitizedName() + "-" + actualDc.Name + "-" + "cass-servicemonitor",
 		Logger:               logger,
-		CommonLabels:         mustLabels(kc.SanitizedName(), kc.Namespace, actualDc.Name),
+		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name),
 	}
-	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.SanitizedName())
+	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
 	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
 	if err != nil {

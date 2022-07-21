@@ -184,7 +184,7 @@ func (in *K8ssandraCluster) SanitizedName() string {
 	if in.Spec.Cassandra.ClusterName != "" {
 		return cassdcapi.CleanupForKubernetes(in.Spec.Cassandra.ClusterName)
 	}
-	return in.ObjectMeta.Name
+	return in.Name
 }
 
 // +kubebuilder:object:root=true
