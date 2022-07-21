@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: k8ssandra-operator
 resources:
 - ../../../config/fixtures/k8ssandra-base
-# take basic deployment, add stargate, and add telemetry for both stargate and cassandra.
+# take basic deployment, add stargate and reaper, and add telemetry for stargate, cassandra and reaper.
 patches:
 - patch: |-
     - op: add
@@ -18,6 +18,12 @@ patches:
       path: /spec/cassandra/telemetry
       value:
         prometheus:
+            enabled: true
+    - op: add
+      path: /spec/reaper
+      value:
+        telemetry:
+          prometheus:
             enabled: true
   target:
     kind: K8ssandraCluster

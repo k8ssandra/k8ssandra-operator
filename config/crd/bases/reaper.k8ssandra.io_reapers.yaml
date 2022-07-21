@@ -998,9 +998,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.1
+                  tag: 3.2.0
                 description: The image to use for the Reaper pod main container. The
-                  default is "thelastpickle/cassandra-reaper:3.1.1".
+                  default is "thelastpickle/cassandra-reaper:3.2.0".
                 properties:
                   name:
                     description: The image name to use.
@@ -1082,9 +1082,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.1.1
+                  tag: 3.2.0
                 description: The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.1.1".
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.2.0".
                 properties:
                   name:
                     description: The image name to use.
@@ -1972,6 +1972,40 @@ spec:
                   already up-to-date, or if you know upfront that QUORUM cannot be
                   achieved (for example, because a DC is down).
                 type: boolean
+              telemetry:
+                description: Telemetry defines the desired telemetry integrations
+                  to deploy targeting the Reaper pods for all DCs in this cluster
+                  (unless overriden by DC specific settings)
+                properties:
+                  mcac:
+                    properties:
+                      metricFilters:
+                        description: 'MetricFilters allows passing filters to MCAC
+                          in order to reduce the amount of extracted metrics. Not
+                          setting this field will result in the default filters being
+                          used. Setting it to an empty list will result in all metrics
+                          being extracted. Examples: - "deny:org.apache.cassandra.metrics.Table"
+                          - "deny:org.apache.cassandra.metrics.table" - "allow:org.apache.cassandra.metrics.table.live_ss_table_count"
+                          - "allow:org.apache.cassandra.metrics.Table.LiveSSTableCount"
+                          - "allow:org.apache.cassandra.metrics.table.live_disk_space_used"'
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  prometheus:
+                    properties:
+                      commonLabels:
+                        additionalProperties:
+                          type: string
+                        description: CommonLabels are applied to all serviceMonitors
+                          created.
+                        type: object
+                      enabled:
+                        description: Enable the creation of Prometheus serviceMonitors
+                          for this resource (Cassandra or Stargate).
+                        type: boolean
+                    type: object
+                type: object
               tolerations:
                 description: Tolerations applied to the Reaper pods.
                 items:

@@ -209,6 +209,11 @@ func (r *ReaperReconciler) reconcileDeployment(
 		}
 	}
 
+	if err = r.reconcileReaperTelemetry(ctx, actualReaper, logger, r.Client); err != nil {
+		logger.Error(err, "reconcileReaperTelemetry failed")
+		return ctrl.Result{}, err
+	}
+
 	actualDeployment = actualDeployment.DeepCopy()
 
 	// Check if the deployment needs to be updated

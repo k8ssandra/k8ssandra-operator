@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
@@ -61,15 +62,15 @@ type ReaperTemplate struct {
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:3.2.0".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.0"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
-	// The default is "thelastpickle/cassandra-reaper:3.1.1".
+	// The default is "thelastpickle/cassandra-reaper:3.2.0".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.1.1"}
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.0"}
 	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
@@ -124,6 +125,11 @@ type ReaperTemplate struct {
 	// Init Container resources.
 	// +optional
 	InitContainerResources *corev1.ResourceRequirements `json:"initContainerResources,omitempty"`
+
+	// Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster
+	// (unless overriden by DC specific settings)
+	// +optional
+	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 }
 
 // AutoScheduling includes options to configure the auto scheduling of repairs for new clusters.
