@@ -314,6 +314,11 @@ type DatacenterOptions struct {
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
+	// CDC defines the desired state for CDC integrations. It can be used to feed mutation events from Cassandra into an Apache Pulsar cluster,
+	// from where they can be expored to external systems.
+	// +optional
+	CDC *cassdcapi.CDCConfiguration `json:"cdc,omitempty"`
+
 	// Containers defines containers to be deployed in each Cassandra pod.
 	// K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to override specific settings,
 	// such as mounts or resources request/limits for example.

@@ -1432,6 +1432,11 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 		*out = new(telemetryv1alpha1.TelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CDC != nil {
+		in, out := &in.CDC, &out.CDC
+		*out = new(v1beta1.CDCConfiguration)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Containers != nil {
 		in, out := &in.Containers, &out.Containers
 		*out = make([]v1.Container, len(*in))

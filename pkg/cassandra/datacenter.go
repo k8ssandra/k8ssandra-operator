@@ -113,6 +113,7 @@ type DatacenterConfig struct {
 	Containers               []corev1.Container
 	InitContainers           []corev1.Container
 	ExtraVolumes             *api.K8ssandraVolumes
+	CDC                      *cassdcapi.CDCConfiguration
 }
 
 const (
@@ -175,6 +176,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Users:               template.Users,
 			Networking:          template.Networking,
 			PodTemplateSpec:     template.PodTemplateSpec,
+			CDC:                 template.CDC,
 		},
 	}
 
@@ -332,6 +334,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.MgmtAPIHeap = clusterTemplate.DatacenterOptions.MgmtAPIHeap
 	} else {
 		dcConfig.MgmtAPIHeap = dcTemplate.DatacenterOptions.MgmtAPIHeap
+	}
+
+	if dcTemplate.CDC != nil {
+		dcConfig.CDC = dcTemplate.CDC
 	}
 
 	if dcTemplate.DatacenterOptions.SoftPodAntiAffinity == nil {

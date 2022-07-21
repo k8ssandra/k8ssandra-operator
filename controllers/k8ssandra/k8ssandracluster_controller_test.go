@@ -676,6 +676,9 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 									MaxHeapSize: parseQuantity("1024Mi"),
 								},
 							},
+							CDC: &cassdcapi.CDCConfiguration{
+								PulsarServiceUrl: pointer.String("pulsar://test-url"),
+							},
 						},
 					},
 				},
@@ -734,6 +737,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking, dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
+	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
 
 	actualConfig, err = gabs.ParseJSON(dc2.Spec.Config)
 	require.NoError(err, fmt.Sprintf("failed to parse dc2 config %s", dc2.Spec.Config))
