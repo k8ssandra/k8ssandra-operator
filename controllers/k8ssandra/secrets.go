@@ -25,7 +25,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 	// required to connect to Cassandra nodes by CQL nor JMX.
 	if kc.Spec.Cassandra.SuperuserSecretRef.Name == "" {
 		patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Name)
+		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.SanitizedName())
 		if err := r.Patch(ctx, kc, patch); err != nil {
 			if errors.IsConflict(err) {
 				return result.RequeueSoon(1 * time.Second)
@@ -33,7 +33,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 			return result.Error(fmt.Errorf("failed to set default superuser secret name: %v", err))
 		}
 
-		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.Name)
+		kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.SanitizedName())
 		logger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretRef.Name)
 	}
 
@@ -59,13 +59,13 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				uiUserSecretRef = kc.Spec.Reaper.UiUserSecretRef
 			}
 			if cassandraUserSecretRef.Name == "" {
-				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.Name)
+				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.SanitizedName())
 			}
 			if jmxUserSecretRef.Name == "" {
-				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.Name)
+				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.SanitizedName())
 			}
 			if uiUserSecretRef.Name == "" {
-				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.Name)
+				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.SanitizedName())
 			}
 			kcKey := utils.GetKey(kc)
 			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {

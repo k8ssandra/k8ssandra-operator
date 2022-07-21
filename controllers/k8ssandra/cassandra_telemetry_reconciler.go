@@ -28,7 +28,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
-		ServiceMonitorName:   kc.Name + "-" + actualDc.Name + "-" + "cass-servicemonitor",
+		ServiceMonitorName:   kc.SanitizedName() + "-" + actualDc.Name + "-" + "cass-servicemonitor",
 		Logger:               logger,
 		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name),
 	}

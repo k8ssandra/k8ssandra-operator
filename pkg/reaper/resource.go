@@ -55,13 +55,13 @@ func NewReaper(
 		// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
 		// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
 		if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
-			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.Name)
+			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.SanitizedName())
 		}
 		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
-			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.Name)
+			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.SanitizedName())
 		}
 		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
-			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.Name)
+			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
 		}
 	}
 	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the

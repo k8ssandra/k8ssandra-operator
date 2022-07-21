@@ -25,6 +25,8 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	require.NoError(f.Client.Get(ctx, kcKey, kc), "Failed to get K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
@@ -34,7 +36,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-default-sts-0", "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
 
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
@@ -86,6 +88,8 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	require.NoError(f.Client.Get(ctx, kcKey, kc), "Failed to get K8ssandraCluster")
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -102,12 +106,12 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
 
 	t.Logf("check Stargate auth keyspace created in both clusters. DC prefixes: %s / %s ", dc1Prefix, dc2Prefix)
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dc1Prefix+"-default-sts-0", stargate.AuthKeyspace)
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, "test", dc2Prefix+"-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", stargate.AuthKeyspace)
 
 	t.Log("check Reaper custom keyspace created in both clusters")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dc1Prefix+"-default-sts-0", "reaper_ks")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, "test", dc2Prefix+"-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", "reaper_ks")
 
 	checkStargateReady(t, f, ctx, stargate1Key)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
@@ -122,7 +126,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 
 	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, "test")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
 
 	t.Log("check that nodes in dc1 see nodes in dc2")

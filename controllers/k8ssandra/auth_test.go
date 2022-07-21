@@ -61,8 +61,8 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.SanitizedName()))
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.SanitizedName()))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
