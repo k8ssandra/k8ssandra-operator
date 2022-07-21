@@ -33,7 +33,7 @@ func NewStargate(
 ) *stargateapi.Stargate {
 
 	cassandraEncryption := stargateapi.CassandraEncryption{}
-	dcConfig := cassandra.Coalesce(kc.Name, kc.Spec.Cassandra, &dcTemplate)
+	dcConfig := cassandra.Coalesce(kc.SanitizedName(), kc.Spec.Cassandra, &dcTemplate)
 
 	if cassandra.ClientEncryptionEnabled(dcConfig) {
 		logger.Info("Client encryption enabled, setting it up in Stargate")
