@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.2.0 - 2022-07-22
+
 * [CHANGE] Update to Reaper v3.2.0
 * [CHANGE] Update to cass-operator v1.12.0
 * [CHANGE] Update to Medusa v0.13.4
