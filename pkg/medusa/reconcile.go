@@ -20,7 +20,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.13.3"
+	DefaultMedusaVersion         = "0.13.4"
 
 	InitContainerMemRequest = "100Mi"
 	InitContainerMemLimit   = "8Gi"
