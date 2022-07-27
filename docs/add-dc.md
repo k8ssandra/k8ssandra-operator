@@ -1,8 +1,7 @@
 # Adding a Datacenter to a Cluster
 K8ssandra Operator supports adding a new datacenter to an existing cluster. 
 
-**Note:** See [Adding a datacenter to a cluster](https://docs.datastax.
-com/en/cassandra-oss/3.0/cassandra/operations/opsAddDCToCluster.html) 
+**Note:** See [Adding a datacenter to a cluster](https://docs.datastax.com/en/cassandra-oss/3.0/cassandra/operations/opsAddDCToCluster.html).
 
 Let's say we have 3 Kubernetes clusters - `control-plane`, `east`, and `west`. We want to create a K8ssandraCluster with a 3-node DC in `east`. We also want Stargate and Reaper enabled.
 
