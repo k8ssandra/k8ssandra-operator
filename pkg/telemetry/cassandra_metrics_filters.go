@@ -1,9 +1,7 @@
 package telemetry
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -31,15 +29,6 @@ var (
 // InjectCassandraTelemetryFilters adds MCAC filters to the cassandra container as an env variable.
 // If filter list is set to nil, the default filters are used, otherwise the provided filters are used.
 func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) error {
-	fmt.Println("DC config in InjectCassandraTelemetryFilters was")
-	if dcConfig == nil {
-		fmt.Println("NIL!!")
-	}
-	out, err := json.Marshal(*dcConfig)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(out))
 	filtersEnvVar := v1.EnvVar{}
 	if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
 		// Default filters are applied
