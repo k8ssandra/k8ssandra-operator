@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"errors"
 	"fmt"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -13,7 +14,11 @@ import (
 const JmxInitContainer = "jmx-credentials"
 
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
-func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) {
+func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
+
+	if dcConfig.PodTemplateSpec == nil {
+		return errors.New("PodTemplateSpec was nil, cannot add auth settings")
+	}
 
 	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled)
 
@@ -42,11 +47,6 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) {
 	// any JMX client.
 	// TODO use Cassandra internals for JMX authentication, see https://github.com/k8ssandra/k8ssandra/issues/323
 	if authEnabled {
-		if dcConfig.PodTemplateSpec == nil {
-			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-			// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
-			UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
-		}
 		image := dcConfig.JmxInitContainerImage.ApplyDefaults(DefaultJmxInitImage)
 		dcConfig.PodTemplateSpec.Spec.ImagePullSecrets = images.CollectPullSecrets(image)
 		UpdateInitContainer(dcConfig.PodTemplateSpec, JmxInitContainer, func(c *corev1.Container) {
@@ -82,6 +82,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) {
 			}
 		})
 	}
+	return nil
 }
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,

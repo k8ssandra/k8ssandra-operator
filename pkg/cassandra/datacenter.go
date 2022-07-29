@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -378,27 +379,21 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	return dcConfig
 }
 
-func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers []corev1.Container) {
+func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers []corev1.Container) error {
 	if dcConfig.PodTemplateSpec == nil {
-		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers: containers,
-			},
-		}
+		return errors.New("PodTemplateSpec was nil, cannot add containers")
 	} else {
 		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
+		return nil
 	}
 }
 
-func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers []corev1.Container) {
+func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers []corev1.Container) error {
 	if dcConfig.PodTemplateSpec == nil {
-		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				InitContainers: initContainers,
-			},
-		}
+		return errors.New("PodTemplateSpec was nil, cannot add init containers")
 	} else {
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+		return nil
 	}
 }
 
@@ -429,7 +424,7 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
-	if dcPodTemplateSpec.Spec.Containers != nil {
+	if dcPodTemplateSpec != nil && dcPodTemplateSpec.Spec.Containers != nil {
 		for i, container := range dcPodTemplateSpec.Spec.Containers {
 			if container.Name == containerName {
 				return i, true
