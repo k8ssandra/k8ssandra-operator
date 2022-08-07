@@ -67,8 +67,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 		if dcConfig.PodTemplateSpec == nil {
 			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-			// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
-			cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+			if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
+				// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
+				cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+			}
 		}
 		// Create additional init containers if requested
 		if len(dcConfig.InitContainers) > 0 {
