@@ -67,11 +67,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 		if dcConfig.PodTemplateSpec == nil {
 			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-			if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
-				// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
-				cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
-			}
 		}
+		logger.Info("after dcConfig.PodTemplateSpec check dcConfig was", "dcConfig", dcConfig)
 		// Create additional init containers if requested
 		if len(dcConfig.InitContainers) > 0 {
 			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
@@ -79,6 +76,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 		}
+		logger.Info("after AddInitContainersToPodTemplateSpec check dcConfig was", "dcConfig", dcConfig)
 		// Create additional containers if requested
 		if len(dcConfig.Containers) > 0 {
 			err := cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
@@ -86,12 +84,20 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(err), actualDcs
 			}
 		}
+		logger.Info("after AddContainersToPodTemplateSpec check dcConfig was", "dcConfig", dcConfig)
+
+		// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
+		if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
+			logger.Info("No containers defined in podTemplateSpec, creating a default cassandra container")
+			cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+		}
 
 		// Create additional volumes if requested
 		if dcConfig.ExtraVolumes != nil {
 			cassandra.AddVolumesToPodTemplateSpec(dcConfig, *dcConfig.ExtraVolumes)
 		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
+		logger.Info("after ApplyAuth check dcConfig was", "dcConfig", dcConfig)
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
 		// unauthenticated clusters.
@@ -108,12 +114,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
+		logger.Info("after medusaResult check dcConfig was", "dcConfig", dcConfig)
 
 		// Inject MCAC metrics filters
 		err := telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
 		if err != nil {
 			return result.Error(err), actualDcs
 		}
+		logger.Info("after InjectCassandraTelemetryFilters check dcConfig was", "dcConfig", dcConfig)
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
