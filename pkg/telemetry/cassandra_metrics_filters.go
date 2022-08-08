@@ -37,10 +37,10 @@ func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcC
 		// Custom filters are applied
 		filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(*telemetrySpec.Mcac.MetricFilters, " ")}
 	}
-	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
 	if dcConfig.PodTemplateSpec == nil {
 		return errors.New("no PodTemplateSpec in dcConfig to inject telemetry filtering env vars into")
 	}
+	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
 	if containerFound {
 		dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env = append(dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env,
 			filtersEnvVar)
