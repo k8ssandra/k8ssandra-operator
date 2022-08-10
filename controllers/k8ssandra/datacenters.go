@@ -63,13 +63,30 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// its fields are pointers, and without the copy we could end of with shared
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+
+		// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
+		if dcConfig.PodTemplateSpec == nil {
+			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
+		}
 		// Create additional init containers if requested
 		if len(dcConfig.InitContainers) > 0 {
-			cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
+			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
+			if err != nil {
+				return result.Error(err), actualDcs
+			}
 		}
 		// Create additional containers if requested
 		if len(dcConfig.Containers) > 0 {
-			cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
+			err := cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
+			if err != nil {
+				return result.Error(err), actualDcs
+			}
+		}
+
+		// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
+		if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
+			logger.Info("No containers defined in podTemplateSpec, creating a default cassandra container")
+			cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 		}
 
 		// Create additional volumes if requested
@@ -95,7 +112,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		// Inject MCAC metrics filters
-		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		err := telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		if err != nil {
+			return result.Error(err), actualDcs
+		}
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
