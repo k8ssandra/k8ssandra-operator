@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"errors"
 	"strings"
 
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -27,7 +28,7 @@ var (
 
 // InjectCassandraTelemetryFilters adds MCAC filters to the cassandra container as an env variable.
 // If filter list is set to nil, the default filters are used, otherwise the provided filters are used.
-func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) {
+func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) error {
 	filtersEnvVar := v1.EnvVar{}
 	if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
 		// Default filters are applied
@@ -35,6 +36,9 @@ func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcC
 	} else {
 		// Custom filters are applied
 		filtersEnvVar = v1.EnvVar{Name: "METRIC_FILTERS", Value: strings.Join(*telemetrySpec.Mcac.MetricFilters, " ")}
+	}
+	if dcConfig.PodTemplateSpec == nil {
+		return errors.New("no PodTemplateSpec in dcConfig to inject telemetry filtering env vars into")
 	}
 	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
 	if containerFound {
@@ -46,4 +50,5 @@ func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcC
 			Env:  []v1.EnvVar{filtersEnvVar},
 		})
 	}
+	return nil
 }
