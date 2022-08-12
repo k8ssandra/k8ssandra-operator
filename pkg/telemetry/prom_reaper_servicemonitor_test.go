@@ -23,5 +23,5 @@ func Test_PrometheusResourcer_NewReaperServiceMonitor_SUCCESS(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "error creating new service monitor", err)
 	}
-	assert.Equal(t, "health", actualSM.Spec.Endpoints[0].Port)
+	assert.Equal(t, "admin", actualSM.Spec.Endpoints[0].Port)
 }

@@ -20,7 +20,7 @@ spec:
   endpoints:
     - interval: 15s
       path: /prometheusMetrics
-      port: health
+      port: admin
       scheme: http
       scrapeTimeout: 15s
 `
