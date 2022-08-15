@@ -13056,7 +13056,6 @@ spec:
                       required:
                       - size
                       type: object
-                      x-kubernetes-preserve-unknown-fields: true
                     type: array
                   extraVolumes:
                     description: Volumes defines additional volumes to be added to

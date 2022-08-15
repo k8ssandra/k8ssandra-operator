@@ -233,8 +233,6 @@ type CassandraClusterTemplate struct {
 	ClusterName string `json:"clusterName,omitempty"`
 }
 
-// +kubebuilder:pruning:PreserveUnknownFields
-
 type CassandraDatacenterTemplate struct {
 	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
 
