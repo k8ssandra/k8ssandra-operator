@@ -15,3 +15,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#641](https://github.com/k8ssandra/k8ssandra-operator/issues/641) Reaper ServiceMonitor is not properly configured

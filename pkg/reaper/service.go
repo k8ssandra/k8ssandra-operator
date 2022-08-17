@@ -31,6 +31,14 @@ func NewService(key types.NamespacedName, reaper *api.Reaper) *corev1.Service {
 					Type:   intstr.String,
 					StrVal: "app",
 				},
+			}, {
+				Port:     8081,
+				Name:     "admin",
+				Protocol: corev1.ProtocolTCP,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.String,
+					StrVal: "admin",
+				},
 			}},
 			Selector: labels,
 		},

@@ -20,9 +20,9 @@ func TestNewService(t *testing.T) {
 	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Labels)
 
 	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Spec.Selector)
-	assert.Len(t, service.Spec.Ports, 1)
+	assert.Len(t, service.Spec.Ports, 2)
 
-	port := corev1.ServicePort{
+	appPort := corev1.ServicePort{
 		Name:     "app",
 		Protocol: corev1.ProtocolTCP,
 		Port:     8080,
@@ -31,5 +31,15 @@ func TestNewService(t *testing.T) {
 			StrVal: "app",
 		},
 	}
-	assert.Equal(t, port, service.Spec.Ports[0])
+	adminPort := corev1.ServicePort{
+		Name:     "admin",
+		Protocol: corev1.ProtocolTCP,
+		Port:     8081,
+		TargetPort: intstr.IntOrString{
+			Type:   intstr.String,
+			StrVal: "admin",
+		},
+	}
+	assert.Contains(t, service.Spec.Ports, appPort)
+	assert.Contains(t, service.Spec.Ports, adminPort)
 }
