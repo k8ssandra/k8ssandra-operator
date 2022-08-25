@@ -30,6 +30,9 @@ type CassandraConfig struct {
 
 	// +optional
 	JvmOptions JvmOptions `json:"jvmOptions,omitempty" cass-config:"*:;recurse"`
+
+	// +optional
+	DSEYaml DSEYaml `json:"dseYaml,omitempty" cass-config:"*:dse-yaml;recurse"`
 }
 
 // CassandraYaml defines the contents of the cassandra.yaml file. For more info see:

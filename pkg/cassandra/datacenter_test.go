@@ -39,6 +39,7 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
+				ServerType:         "dse",
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				Meta: api.EmbeddedObjectMeta{
@@ -62,6 +63,7 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
+				ServerType:         "dse",
 			},
 		},
 		{
@@ -489,6 +491,22 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Override DseWorkloads",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					DseWorkloads: &cassdcapi.DseWorkloads{AnalyticsEnabled: true},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					DseWorkloads: &cassdcapi.DseWorkloads{GraphEnabled: true},
+				},
+			},
+			want: &DatacenterConfig{
+				DseWorkloads: &cassdcapi.DseWorkloads{GraphEnabled: true},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -640,6 +658,7 @@ func GetDatacenterConfig() DatacenterConfig {
 	return DatacenterConfig{
 		Cluster:       "k8ssandra",
 		ServerVersion: semver.MustParse("4.0.3"),
+		ServerType:    "cassandra",
 		Meta: api.EmbeddedObjectMeta{
 			Namespace: "k8ssandra",
 			Name:      "dc1",
