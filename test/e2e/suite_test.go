@@ -169,6 +169,7 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
+		dse:      true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -368,6 +369,9 @@ type e2eTestOpts struct {
 	// initialVersion is used to set the initial version of the operator when performing
 	// an upgrade test.
 	initialVersion *string
+
+	// dse is used to specify if the e2e tests will run against DSE or Cassandra
+	dse bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -375,7 +379,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}

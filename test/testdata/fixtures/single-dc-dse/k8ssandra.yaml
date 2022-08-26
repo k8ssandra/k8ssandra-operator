@@ -7,13 +7,13 @@ spec:
     serverVersion: 6.8.19
     serverType: dse
     dseWorkloads:
-      graphEnabled: true
-      searchEnabled: true
+      graphEnabled: false
+      searchEnabled: false
     datacenters:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 1
+        size: 3
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard

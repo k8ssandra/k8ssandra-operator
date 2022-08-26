@@ -45,12 +45,18 @@ type E2eFramework struct {
 var (
 	nodeToolStatusUN = regexp.MustCompile("UN\\s\\s")
 	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
+	CqlshBin         = "/opt/cassandra/bin/cqlsh"
 )
 
-func NewE2eFramework(t *testing.T, kubeconfigFile, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
+func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
 	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
+	}
+
+	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
+	if useDse {
+		CqlshBin = "/opt/dse/bin/cqlsh"
 	}
 
 	remoteClients := make(map[string]client.Client, 0)
