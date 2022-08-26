@@ -20,9 +20,9 @@ type Stores struct {
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
 // +kubebuilder:object:generate=true
 type ClientEncryptionOptions struct {
-	EncryptionSettings `json:",inline" cass-config:"*:;recurse"`
-	Enabled            bool `json:"enabled" cass-config:"*:enabled;retainzero"`
-	Optional           bool `json:"optional,omitempty" cass-config:"*:optional"`
+	EncryptionSettings `json:",inline" cass-config:"*:,dse:*:;recurse"`
+	Enabled            bool `json:"enabled" cass-config:"*:enabled,dse:*:enabled;retainzero"`
+	Optional           bool `json:"optional,omitempty" cass-config:"*:optional,dse:*:optional"`
 }
 
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
@@ -30,45 +30,45 @@ type ClientEncryptionOptions struct {
 type ServerEncryptionOptions struct {
 	// +kubebuilder:default=false
 	// +kubebuilder:validation:optional
-	Optional *bool `json:"optional,omitempty" cass-config:">=4.x:optional"`
+	Optional *bool `json:"optional,omitempty" cass-config:">=4.x:optional,dse:>=6.8.x:optional"`
 
 	// +kubebuilder:validation:Enum=none;dc;rack;all
 	// +kubebuilder:default=none
 	// +kubebuilder:validation:optional
-	InternodeEncryption string `json:"internode_encryption,omitempty" cass-config:"*:internode_encryption"`
+	InternodeEncryption string `json:"internode_encryption,omitempty" cass-config:"*:internode_encryption,dse:*:internode_encryption"`
 
 	// +kubebuilder:default=false
 	// +kubebuilder:validation:optional
-	RequireEndpointVerification bool `json:"require_endpoint_verification,omitempty" cass-config:"*:require_endpoint_verification"`
+	RequireEndpointVerification bool `json:"require_endpoint_verification,omitempty" cass-config:"*:require_endpoint_verification,dse:*:require_endpoint_verification"`
 
 	// +kubebuilder:default=false
 	// +kubebuilder:validation:optional
-	EnableLegacySslStoragePort bool `json:"enable_legacy_ssl_storage_port,omitempty" cass-config:"*:enable_legacy_ssl_storage_port"`
+	EnableLegacySslStoragePort bool `json:"enable_legacy_ssl_storage_port,omitempty" cass-config:"*:enable_legacy_ssl_storage_port,dse:*:enable_legacy_ssl_storage_port"`
 
-	EncryptionSettings `json:",inline" cass-config:"*:;recurse"`
+	EncryptionSettings `json:",inline" cass-config:"*:,dse:*:;recurse"`
 }
 
 // See the cassandra.yaml file for explanations on how to set these options: https://github.com/apache/cassandra/blob/cassandra-4.0/conf/cassandra.yaml#L1091-L1183
 // +kubebuilder:object:generate=true
 type EncryptionSettings struct {
 	// +kubebuilder:validation:optional
-	Protocol string `json:"protocol,omitempty" cass-config:"*:protocol"`
+	Protocol string `json:"protocol,omitempty" cass-config:"*:protocol,dse:*:protocol"`
 
 	// +kubebuilder:validation:optional
-	AcceptedProtocols []string `json:"accepted_protocols,omitempty" cass-config:"*:accepted_protocols"`
+	AcceptedProtocols []string `json:"accepted_protocols,omitempty" cass-config:"*:accepted_protocols,dse:*:accepted_protocols"`
 
 	// +kubebuilder:validation:optional
-	Algorithm string `json:"algorithm,omitempty" cass-config:"*:algorithm"`
+	Algorithm string `json:"algorithm,omitempty" cass-config:"*:algorithm,dse:*:algorithm"`
 
 	// +kubebuilder:validation:optional
-	StoreType string `json:"store_type,omitempty" cass-config:"*:store_type"`
+	StoreType string `json:"store_type,omitempty" cass-config:"*:store_type,dse:*:store_type"`
 
 	// +kubebuilder:validation:optional
-	CipherSuites []string `json:"cipher_suites,omitempty" cass-config:"*:cipher_suites"`
+	CipherSuites []string `json:"cipher_suites,omitempty" cass-config:"*:cipher_suites,dse:*:cipher_suites"`
 
 	// +kubebuilder:default=false
 	// +kubebuilder:validation:optional
-	RequireClientAuth bool `json:"require_client_auth,omitempty" cass-config:"*:require_client_auth"`
+	RequireClientAuth bool `json:"require_client_auth,omitempty" cass-config:"*:require_client_auth,dse:*:require_client_auth"`
 }
 
 type StoreType string

@@ -21,11 +21,41 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"simple",
 			"*:foo/bar",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{{
-					constraint: newConstraint("*"),
-					path:       "foo/bar",
-					segments:   []string{"foo", "bar"},
-				}},
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar",
+						segments:   []string{"foo", "bar"},
+					}},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"simple DSE",
+			"dse:*:foo/bar",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"dse": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar",
+						segments:   []string{"foo", "bar"},
+					}},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"simple DSE case insensitive",
+			"Foo:*:foo/bar",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"foo": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar",
+						segments:   []string{"foo", "bar"},
+					}},
+				},
 			},
 			assert.NoError,
 		},
@@ -33,11 +63,13 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"simple recurse",
 			"*:foo/bar;recurse",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{{
-					constraint: newConstraint("*"),
-					path:       "foo/bar",
-					segments:   []string{"foo", "bar"},
-				}},
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar",
+						segments:   []string{"foo", "bar"},
+					}},
+				},
 				recurse: true,
 			},
 			assert.NoError,
@@ -46,11 +78,13 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"simple retainzero",
 			"*:foo/bar;retainzero",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{{
-					constraint: newConstraint("*"),
-					path:       "foo/bar",
-					segments:   []string{"foo", "bar"},
-				}},
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar",
+						segments:   []string{"foo", "bar"},
+					}},
+				},
 				retainZero: true,
 			},
 			assert.NoError,
@@ -59,35 +93,86 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"many constraints",
 			"^3.11.x:foo/bar,>=4.x:foo/qix",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{
-					{
-						constraint: newConstraint("^3.11.x"),
-						path:       "foo/bar",
-						segments:   []string{"foo", "bar"},
-					},
-					{
-						constraint: newConstraint(">=4.x"),
-						path:       "foo/qix",
-						segments:   []string{"foo", "qix"},
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^3.11.x"),
+							path:       "foo/bar",
+							segments:   []string{"foo", "bar"},
+						},
+						{
+							constraint: newConstraint(">=4.x"),
+							path:       "foo/qix",
+							segments:   []string{"foo", "qix"},
+						},
 					},
 				},
 			},
 			assert.NoError,
 		},
 		{
-			"many constraints whitespace",
-			"^ 3.11.x : /foo/bar/ , >=4.x : foo/qix ; recurse ",
+			"many constraints same server type",
+			"CASSANDRA:^3.11.x:foo/bar,>=4.x:foo/qix",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{
-					{
-						constraint: newConstraint("^3.11.x"),
-						path:       "foo/bar",
-						segments:   []string{"foo", "bar"},
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^3.11.x"),
+							path:       "foo/bar",
+							segments:   []string{"foo", "bar"},
+						},
+						{
+							constraint: newConstraint(">=4.x"),
+							path:       "foo/qix",
+							segments:   []string{"foo", "qix"},
+						},
 					},
-					{
-						constraint: newConstraint(">=4.x"),
-						path:       "foo/qix",
-						segments:   []string{"foo", "qix"},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"many constraints different server type",
+			"CASSANDRA:^3.11.x:foo/bar,>=4.x:foo/qix,DSE:>=6.8.x:foo/qiz",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^3.11.x"),
+							path:       "foo/bar",
+							segments:   []string{"foo", "bar"},
+						},
+						{
+							constraint: newConstraint(">=4.x"),
+							path:       "foo/qix",
+							segments:   []string{"foo", "qix"},
+						},
+					},
+					"dse": {{
+						constraint: newConstraint(">=6.8.x"),
+						path:       "foo/qiz",
+						segments:   []string{"foo", "qiz"},
+					}},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"many constraints whitespace",
+			"^ 3.11.x : /foo/bar/ , CASSANDRA : >=4.x : foo/qix ; recurse ",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^3.11.x"),
+							path:       "foo/bar",
+							segments:   []string{"foo", "bar"},
+						},
+						{
+							constraint: newConstraint(">=4.x"),
+							path:       "foo/qix",
+							segments:   []string{"foo", "qix"},
+						},
 					},
 				},
 				recurse: true,
@@ -98,16 +183,18 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"no path recursive",
 			"^3.11.x: , >=4.x: ;recurse",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{
-					{
-						constraint: newConstraint("^3.11.x"),
-						path:       "",
-						segments:   nil,
-					},
-					{
-						constraint: newConstraint(">=4.x"),
-						path:       "",
-						segments:   nil,
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^3.11.x"),
+							path:       "",
+							segments:   nil,
+						},
+						{
+							constraint: newConstraint(">=4.x"),
+							path:       "",
+							segments:   nil,
+						},
 					},
 				},
 				recurse: true,
@@ -118,12 +205,12 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"root path recursive",
 			"*:/;recurse",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{
-					{
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {{
 						constraint: newConstraint("*"),
 						path:       "",
 						segments:   nil,
-					},
+					}},
 				},
 				recurse: true,
 			},
@@ -133,12 +220,12 @@ func Test_parseCassConfigTag(t *testing.T) {
 			"trim whitespace and slash",
 			"*: /foo/bar/qix/ ",
 			&cassConfigTag{
-				paths: []cassConfigTagPath{
-					{
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {{
 						constraint: newConstraint("*"),
 						path:       "foo/bar/qix",
 						segments:   []string{"foo", "bar", "qix"},
-					},
+					}},
 				},
 			},
 			assert.NoError,
