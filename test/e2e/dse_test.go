@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -24,6 +23,6 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 
 	t.Log("Check that we can communicate through CQL with DSE")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", 3))
-	require.NoError(t, err, "failed to create keyspace")
+		"SELECT * FROM system.local")
+	require.NoError(t, err, "failed to execute CQL query")
 }

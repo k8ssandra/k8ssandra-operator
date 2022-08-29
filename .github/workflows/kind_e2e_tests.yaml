@@ -84,6 +84,7 @@ jobs:
           - GCTests/4.0-jdk11-ZGC
           - UpgradeOperatorImage
           - StargateJwt
+          - CreateSingleDseDatacenterCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

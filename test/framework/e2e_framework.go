@@ -40,12 +40,12 @@ import (
 
 type E2eFramework struct {
 	*Framework
+	cqlshBin string
 }
 
 var (
 	nodeToolStatusUN = regexp.MustCompile("UN\\s\\s")
 	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
-	CqlshBin         = "/opt/cassandra/bin/cqlsh"
 )
 
 func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
@@ -55,8 +55,9 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPl
 	}
 
 	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
+	cqlshBinLocation := "/opt/cassandra/bin/cqlsh"
 	if useDse {
-		CqlshBin = "/opt/dse/bin/cqlsh"
+		cqlshBinLocation = "/opt/dse/bin/cqlsh"
 	}
 
 	remoteClients := make(map[string]client.Client, 0)
@@ -89,7 +90,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPl
 
 	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
 
-	return &E2eFramework{Framework: f}, nil
+	return &E2eFramework{Framework: f, cqlshBin: cqlshBinLocation}, nil
 }
 
 func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client, error) {

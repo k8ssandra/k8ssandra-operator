@@ -41,7 +41,7 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	return kubectl.Exec(options, pod,
-		CqlshBin,
+		f.cqlshBin,
 		"--username",
 		username,
 		"--password",
