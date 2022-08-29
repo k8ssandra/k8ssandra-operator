@@ -7,8 +7,8 @@ spec:
     serverVersion: 6.8.19
     serverType: dse
     dseWorkloads:
-      graphEnabled: true
-      searchEnabled: true
+      graphEnabled: false
+      searchEnabled: false
     datacenters:
       - metadata:
           name: dc1

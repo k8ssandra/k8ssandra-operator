@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	corev1 "k8s.io/api/core/v1"
@@ -37,9 +38,10 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 	if err != nil {
 		return "", err
 	}
+
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	return kubectl.Exec(options, pod,
-		"/opt/cassandra/bin/cqlsh",
+		f.cqlshBin,
 		"--username",
 		username,
 		"--password",
