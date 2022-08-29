@@ -85,6 +85,7 @@ jobs:
           - UpgradeOperatorImage
           - StargateJwt
           - CreateSingleDseDatacenterCluster
+          - CreateSingleDseSearchDatacenterCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
