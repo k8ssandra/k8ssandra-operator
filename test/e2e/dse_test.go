@@ -2,12 +2,14 @@ package e2e
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
+	gremlingo "github.com/apache/tinkerpop/gremlin-go/driver"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
@@ -75,4 +77,45 @@ func createSingleDseSearchDatacenterCluster(t *testing.T, ctx context.Context, n
 func basicAuth(username, password string) string {
 	auth := username + ":" + password
 	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+// createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled
+func createSingleDseGraphDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
+
+	t.Log("deploying graph ingress routes in", f.DataPlaneContexts[0])
+	graphHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].Graph
+	f.DeployGraphIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-service", graphHostAndPort)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
+	require.NoError(t, err, "failed to retrieve database credentials")
+
+	t.Log("Check that we can reach the graph endpoint of DSE")
+
+	var remote *gremlingo.DriverRemoteConnection
+
+	require.Eventually(t, func() bool {
+		remote, err = gremlingo.NewDriverRemoteConnection(fmt.Sprintf("ws://%s:%s/gremlin", graphHostAndPort.Host(), graphHostAndPort.Port()),
+			func(settings *gremlingo.DriverRemoteConnectionSettings) {
+				settings.TlsConfig = &tls.Config{InsecureSkipVerify: true}
+				settings.AuthInfo = gremlingo.BasicAuthInfo(username, password)
+			})
+		return err == nil
+	}, 2*time.Minute, 10*time.Second, "failed to create remote graph connection")
+	defer remote.Close()
+
+	_, err = remote.Submit("system.graph('test').create()")
+	require.NoError(t, err, "failed to create graph")
+
+	_, err = remote.Submit("g.V().count()")
+	require.NoError(t, err, "failed to execute gremlin query against DSE")
 }

@@ -1,0 +1,32 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 6.8.19
+    serverType: dse
+    dseWorkloads:
+      graphEnabled: true
+      searchEnabled: false
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          cassandraYaml:
+            allocate_tokens_for_local_replication_factor: 3
+          jvmOptions:
+            heap_initial_size: 512Mi
+            heap_max_size: 512Mi
+          dseYaml: {}
+    mgmtAPIHeap: 64Mi

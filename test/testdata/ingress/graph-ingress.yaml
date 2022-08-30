@@ -1,0 +1,14 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cluster1-dc1-graph-service-http-ingress
+  namespace: k8ssandra
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`graph.example.com`)
+      kind: Rule
+      services:
+        - name: cluster1-dc1-service
+          port: 8182

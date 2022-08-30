@@ -10,7 +10,7 @@ require (
 	github.com/datastax/go-cassandra-native-protocol v0.0.0-20210829124742-a80a54434112
 	github.com/go-logr/logr v1.2.0
 	github.com/go-logr/zapr v1.2.0
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/gruntwork-io/terratest v0.37.7
 	github.com/k8ssandra/cass-operator v1.12.0
 	github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5
@@ -34,7 +34,10 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 )
 
-require sigs.k8s.io/yaml v1.3.0
+require (
+	github.com/apache/tinkerpop/gremlin-go v0.0.0-20220530191148-29272fa563ec
+	sigs.k8s.io/yaml v1.3.0
+)
 
 require (
 	cloud.google.com/go v0.93.3 // indirect
@@ -57,11 +60,13 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/nicksnyder/go-i18n/v2 v2.2.0 // indirect
 	github.com/pavel-v-chernykh/keystore-go v2.1.0+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect
