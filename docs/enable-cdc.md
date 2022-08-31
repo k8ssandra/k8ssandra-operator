@@ -19,9 +19,9 @@ helm repo update
 helm install pulsar --create-namespace -n pulsar datastax-pulsar/pulsar
 ```
 
-### Deploy a KL8ssandraDatacenter
+### Deploy a K8ssandraCluster
 
-Next, you'll want to deploy a K8ssandraDatacenter with the Pulsar service's location referenced:
+Next, you'll want to deploy a K8ssandraCluster with the Pulsar service's location referenced:
 
 ```
 apiVersion: k8ssandra.io/v1alpha1
@@ -47,9 +47,9 @@ spec:
                 storage: 5Gi
 ```
 
-### Create your tables with cdc=enabled
+### Create your tables with cdc=true
 
-When creating your tables, you'll need to do so with cdc=enabled as below:
+When creating your tables, you'll need to do so with cdc=true as below:
 
 ```
 kubectl exec -it test-cluster-dc1-default-sts-0 -- bash
