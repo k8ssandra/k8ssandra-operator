@@ -2294,10 +2294,10 @@ func TestCreateJsonConfig(t *testing.T) {
 								ConflictRetryCount:    pointer.Int(120),
 								ExecutionRetryDelayMs: pointer.Int(121),
 								ExecutionRetryCount:   pointer.Int(122),
-								BlockAllocatorOptions: &api.DsefsBlockAllocatorOptions{
-									OverflowMarginMb: pointer.Int(123),
-									OverflowFactor:   parseQuantity("1.05"),
-								},
+							},
+							BlockAllocatorOptions: &api.DsefsBlockAllocatorOptions{
+								OverflowMarginMb: pointer.Int(123),
+								OverflowFactor:   parseQuantity("1.05"),
 							},
 						},
 						InsightsOptions: &api.InsightsOptions{
@@ -2305,24 +2305,24 @@ func TestCreateJsonConfig(t *testing.T) {
 							LogDir:  pointer.String("logDir"),
 						},
 						AuditLoggingOptions: &api.AuditLoggingOptions{
-							Enabled:            pointer.Bool(true),
-							Logger:             pointer.String("logger"),
-							IncludedCategories: pointer.String("includedCategories"),
-							ExcludedCategories: pointer.String("excludedCategories"),
-							IncludedKeyspaces:  pointer.String("includedKeyspaces"),
-							ExcludedKeyspaces:  pointer.String("excludedKeyspaces"),
-							IncludedRoles:      pointer.String("includedRoles"),
-							ExcludedRoles:      pointer.String("excludedRoles"),
-						},
-						AuditLoggingRetentionTimeHours: pointer.Int(100),
-						AuditWriterOptions: &api.AuditWriterOptions{
-							Mode:               pointer.String("mode"),
-							BatchSize:          pointer.Int(101),
-							FlushTimeMs:        pointer.Int(102),
-							QueueSize:          pointer.Int(103),
-							WriteConsistency:   pointer.String("writeConsistency"),
-							DroppedEventLog:    pointer.String("droppedEventLog"),
-							DayPartitionMillis: pointer.Int(104),
+							Enabled:                        pointer.Bool(true),
+							Logger:                         pointer.String("logger"),
+							IncludedCategories:             pointer.String("includedCategories"),
+							ExcludedCategories:             pointer.String("excludedCategories"),
+							IncludedKeyspaces:              pointer.String("includedKeyspaces"),
+							ExcludedKeyspaces:              pointer.String("excludedKeyspaces"),
+							IncludedRoles:                  pointer.String("includedRoles"),
+							ExcludedRoles:                  pointer.String("excludedRoles"),
+							AuditLoggingRetentionTimeHours: pointer.Int(100),
+							CassandraAuditWriterOptions: &api.CassandraAuditWriterOptions{
+								Mode:               pointer.String("mode"),
+								BatchSize:          pointer.Int(101),
+								FlushTimeMs:        pointer.Int(102),
+								QueueSize:          pointer.Int(103),
+								WriteConsistency:   pointer.String("writeConsistency"),
+								DroppedEventLog:    pointer.String("droppedEventLog"),
+								DayPartitionMillis: pointer.Int(104),
+							},
 						},
 						TieredStorageOptions: map[string]api.TieredStorageOptions{
 							"option1": {
@@ -2353,29 +2353,35 @@ func TestCreateJsonConfig(t *testing.T) {
 							HandshakeTimeoutSeconds:     pointer.Int(106),
 							ClientRequestTimeoutSeconds: pointer.Int(107),
 						},
-						GremlinServerOptions: &api.GremlinServerOptions{
-							Port:             pointer.Int(100),
-							ThreadPoolWorker: pointer.Int(101),
-							GremlinPool:      pointer.Int(102),
-							ScriptEngines: &api.GremlinScriptEngine{
-								GremlinGroovy: &api.GremlinGroovy{
-									Config: &api.GremlinGroovyConfig{
-										SandboxEnabled: pointer.Bool(true),
-										SandboxRules: &api.GremlinGroovySandboxRules{
-											WhitelistPackages: []string{"package1", "package2"},
-											WhitelistTypes:    []string{"type1", "type2"},
-											WhitelistSupers:   []string{"super1", "super2"},
-											BlacklistPackages: []string{"package3", "package4"},
-											BlacklistSupers:   []string{"super3", "super4"},
+						GraphOptions: &api.GraphOptions{
+							AnalyticEvaluationTimeoutInMinutes: pointer.Int(100),
+							RealtimeEvaluationTimeoutInSeconds: pointer.Int(101),
+							SchemaAgreementTimeoutInMs:         pointer.Int(102),
+							SystemEvaluationTimeoutInSeconds:   pointer.Int(103),
+							AdjacencyCacheSizeInMb:             pointer.Int(104),
+							IndexCacheSizeInMb:                 pointer.Int(105),
+							MaxQueryParams:                     pointer.Int(106),
+							GremlinServerOptions: &api.GremlinServerOptions{
+								Port:             pointer.Int(100),
+								ThreadPoolWorker: pointer.Int(101),
+								GremlinPool:      pointer.Int(102),
+								ScriptEngines: &api.GremlinScriptEngine{
+									GremlinGroovy: &api.GremlinGroovy{
+										Config: &api.GremlinGroovyConfig{
+											SandboxEnabled: pointer.Bool(true),
+											SandboxRules: &api.GremlinGroovySandboxRules{
+												WhitelistPackages: []string{"package1", "package2"},
+												WhitelistTypes:    []string{"type1", "type2"},
+												WhitelistSupers:   []string{"super1", "super2"},
+												BlacklistPackages: []string{"package3", "package4"},
+												BlacklistSupers:   []string{"super3", "super4"},
+											},
 										},
 									},
 								},
 							},
 						},
-						// TODO
-						GraphOptions: &api.GraphOptions{},
-						ServerId:     pointer.String("server-id"),
-						IndexOptions: &api.IndexOptions{},
+						ServerId: pointer.String("server-id"),
 					},
 				},
 			},
@@ -2620,6 +2626,15 @@ func TestCreateJsonConfig(t *testing.T) {
 					},
 					"async_bootstrap_reindex": true,
 					"audit_logging_options": {
+						"cassandra_audit_writer_options": {
+							"batch_size": 101,
+							"day_partition_millis": 104,
+							"dropped_event_log": "droppedEventLog",
+							"flush_time": 102,
+							"mode": "mode",
+							"queue_size": 103,
+							"write_consistency": "writeConsistency"
+						},
 						"enabled": true,
 						"excluded_categories": "excludedCategories",
 						"excluded_keyspaces": "excludedKeyspaces",
@@ -2627,7 +2642,8 @@ func TestCreateJsonConfig(t *testing.T) {
 						"included_categories": "includedCategories",
 						"included_keyspaces": "includedKeyspaces",
 						"included_roles": "includedRoles",
-						"logger": "logger"
+						"logger": "logger",
+						"retention_time": 100
 					},
 					"authentication_options": {
 						"allow_digest_with_kerberos": true,
@@ -2643,15 +2659,6 @@ func TestCreateJsonConfig(t *testing.T) {
 						"transitional_mode": "strict"
 				   	},
 					"back_pressure_threshold_per_core": 100,
-					"cassandra_audit_writer_options": {
-						"batch_size": 101,
-						"day_partition_millis": 104,
-						"dropped_event_log": "droppedEventLog",
-						"flush_time": 102,
-						"mode": "mode",
-						"queue_size": 103,
-						"write_consistency": "writeConsistency"
-					},
 					"cluster_summary_stats_options": {
 						"enabled": true,
 						"refresh_rate_ms": 100
@@ -2677,6 +2684,10 @@ func TestCreateJsonConfig(t *testing.T) {
 						"refresh_rate_ms": 100
 					},
 					"dsefs_options": {
+						"block_allocator_options": {
+							"overflow_factor": 1.05,
+							"overflow_margin_mb": 123
+						},
 						"compression_frame_max_size": 105,
 						"data_directories": [
 							{
@@ -2709,10 +2720,6 @@ func TestCreateJsonConfig(t *testing.T) {
 						"service_close_timeout_ms": 103,
 						"service_startup_timeout_ms": 102,
 						"transaction_options": {
-							"block_allocator_options": {
-								"overflow_factor": 1.05,
-								"overflow_margin_mb": 123
-							},
 							"conflict_retry_count": 120,
 							"conflict_retry_delay_ms": 119,
 							"execution_retry_count": 122,
@@ -2725,35 +2732,40 @@ func TestCreateJsonConfig(t *testing.T) {
 					"enable_index_disk_failure_policy": true,
 					"flush_max_time_per_core": 101,
 					"graph": {
+						"adjacency_cache_size_in_mb": 104,
+						"analytic_evaluation_timeout_in_minutes": 100,
+						"gremlin_server": {
+							"gremlinPool": 102,
+							"port": 100,
+							"scriptEngines": {
+								"gremlin-groovy": {
+									"config": {
+										"sandbox_enabled": true,
+										"sandbox_rules": {
+											"blacklist_packages": ["package3", "package4"],
+											"blacklist_supers": ["super3", "super4"],
+											"whitelist_packages": ["package1", "package2"],
+											"whitelist_supers": ["super1", "super2"],
+											"whitelist_types": ["type1", "type2"]
+										}
+									}
+								}
+							},
+							"threadPoolWorker": 101
+						},
+						"index_cache_size_in_mb": 105,
+						"max_query_params": 106,
+						"realtime_evaluation_timeout_in_seconds": 101,
+						"schema_agreement_timeout_in_ms": 102,
+						"system_evaluation_timeout_in_seconds": 103
 					},
 					"graph_events": {
 						"ttl_seconds": 100
-					},
-					"gremlin_server": {
-						"gremlinPool": 102,
-						"port": 100,
-						"scriptEngines": {
-							"gremlin-groovy": {
-								"config": {
-									"sandbox_enabled": true,
-									"sandbox_rules": {
-										"blacklist_packages": ["package3", "package4"],
-										"blacklist_supers": ["super3", "super4"],
-										"whitelist_packages": ["package1", "package2"],
-										"whitelist_supers": ["super1", "super2"],
-										"whitelist_types": ["type1", "type2"]
-									}
-								}
-							}
-						},
-						"threadPoolWorker": 101
 					},
 					"histogram_data_options": {
 						"enabled": true,
 						"refresh_rate_ms": 100,
 						"retention_count": 100
-					},
-					"index_options": {
 					},
 					"insights_options": {
 						"data_dir": "dataDir",
@@ -2815,7 +2827,7 @@ func TestCreateJsonConfig(t *testing.T) {
 						"truststore_type": "JKS",
 						"use_ssl": true,
 						"use_tls": true,
-						"user_member_of_attribute": "user.member.of.attribute",
+						"user_memberof_attribute": "user.member.of.attribute",
 						"user_search_base": "user.search.base",
 						"user_search_filter": "user.search.filter"
 				   	},
@@ -2840,7 +2852,6 @@ func TestCreateJsonConfig(t *testing.T) {
 						"enabled": true,
 						"refresh_rate_ms": 100
 					},
-					"retention_time": 100,
 					"resource_manager_options": {
 						"worker_options": {
 							"cores_total": 1,
@@ -2950,7 +2961,7 @@ func TestCreateJsonConfig(t *testing.T) {
         	            	"truststore_type": "truststoreType"
 						}
 					},
-					"system_info_encryption_options": {
+					"system_info_encryption": {
 						"chunk_length_kb": 129,
 						"cipher_algorithm": "cipher.algorithm",
 						"enabled": true,

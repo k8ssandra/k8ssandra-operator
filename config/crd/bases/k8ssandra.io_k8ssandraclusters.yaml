@@ -1234,6 +1234,87 @@ spec:
                           audit_logging_options:
                             description: Configures database activity logging.
                             properties:
+                              cassandra_audit_writer_options:
+                                description: Options for logger CassandraAuditWriter.
+                                properties:
+                                  batch_size:
+                                    description: 'Available only when mode: async.
+                                      Must be greater than 0. The maximum number of
+                                      events the writer dequeues before writing them
+                                      out to the table. If warnings in the logs reveal
+                                      that batches are too large, decrease this value
+                                      or increase the value of batch_size_warn_threshold_in_kb
+                                      in cassandra.yaml. Default: 50'
+                                    type: integer
+                                  day_partition_millis:
+                                    description: 'The time interval in milliseconds
+                                      between changing nodes to spread audit log information
+                                      across multiple nodes. For example, to change
+                                      the target node every 12 hours, specify 43200000
+                                      milliseconds. Default: 3600000 (1 hour)'
+                                    type: integer
+                                  dropped_event_log:
+                                    description: 'dropped_event_log The directory
+                                      to store the log file that reports dropped events.
+                                      Default: /var/log/cassandra/dropped_audit_events.log
+                                      TODO mountable directory'
+                                    type: string
+                                  flush_time:
+                                    description: 'Available only when mode: async.
+                                      The maximum amount of time in milliseconds before
+                                      an event is removed from the queue by a writer
+                                      before being written out. This flush time prevents
+                                      events from waiting too long before being written
+                                      to the table when there are not a lot of queries
+                                      happening. Default: 500'
+                                    type: integer
+                                  mode:
+                                    description: 'The mode the writer runs in. - sync:
+                                      A query is not executed until the audit event
+                                      is successfully written. - async: Audit events
+                                      are queued for writing to the audit table, but
+                                      are not necessarily logged before the query
+                                      executes. A pool of writer threads consumes
+                                      the audit events from the queue, and writes
+                                      them to the audit table in batch queries. Important:
+                                      While async substantially improves performance
+                                      under load, if there is a failure between when
+                                      a query is executed, and its audit event is
+                                      written to the table, the audit table might
+                                      be missing entries for queries that were executed.
+                                      Default: sync'
+                                    enum:
+                                    - sync
+                                    - async
+                                    type: string
+                                  queue_size:
+                                    description: 'The size of the queue feeding the
+                                      asynchronous audit log writer threads. - Number
+                                      of events: When there are more events being
+                                      produced than the writers can write out, the
+                                      queue fills up, and newer queries are blocked
+                                      until there is space on the queue. - When set
+                                      to zero, the queue size is unbounded, which
+                                      can lead to resource exhaustion under heavy
+                                      query load. Default: 30000'
+                                    type: integer
+                                  write_consistency:
+                                    description: 'The consistency level that is used
+                                      to write audit events. Default: QUORUM'
+                                    enum:
+                                    - ANY
+                                    - ONE
+                                    - TWO
+                                    - THREE
+                                    - QUORUM
+                                    - ALL
+                                    - LOCAL_QUORUM
+                                    - EACH_QUORUM
+                                    - SERIAL
+                                    - LOCAL_SERIAL
+                                    - LOCAL_ONE
+                                    type: string
+                                type: object
                               enabled:
                                 description: 'Enables database activity auditing.
                                   Default: false'
@@ -1303,6 +1384,12 @@ spec:
                                 - SLF4JAuditWriter
                                 - CassandraAuditWriter
                                 type: string
+                              retention_time:
+                                description: 'The number of hours to retain audit
+                                  events by supporting loggers for the CassandraAuditWriter.
+                                  - hours: The number of hours to retain audit events.
+                                  - 0: Retain events forever. Default: 0'
+                                type: integer
                             type: object
                           authentication_options:
                             description: Configures DseAuthenticator to authenticate
@@ -1438,84 +1525,6 @@ spec:
                               of threads per core (TPC), not all TPC threads can be
                               actively indexing. Default: 1024'
                             type: integer
-                          cassandra_audit_writer_options:
-                            properties:
-                              batch_size:
-                                description: 'Available only when mode: async. Must
-                                  be greater than 0. The maximum number of events
-                                  the writer dequeues before writing them out to the
-                                  table. If warnings in the logs reveal that batches
-                                  are too large, decrease this value or increase the
-                                  value of batch_size_warn_threshold_in_kb in cassandra.yaml.
-                                  Default: 50'
-                                type: integer
-                              day_partition_millis:
-                                description: 'The time interval in milliseconds between
-                                  changing nodes to spread audit log information across
-                                  multiple nodes. For example, to change the target
-                                  node every 12 hours, specify 43200000 milliseconds.
-                                  Default: 3600000 (1 hour)'
-                                type: integer
-                              dropped_event_log:
-                                description: 'dropped_event_log The directory to store
-                                  the log file that reports dropped events. Default:
-                                  /var/log/cassandra/dropped_audit_events.log TODO
-                                  mountable directory'
-                                type: string
-                              flush_time:
-                                description: 'Available only when mode: async. The
-                                  maximum amount of time in milliseconds before an
-                                  event is removed from the queue by a writer before
-                                  being written out. This flush time prevents events
-                                  from waiting too long before being written to the
-                                  table when there are not a lot of queries happening.
-                                  Default: 500'
-                                type: integer
-                              mode:
-                                description: 'The mode the writer runs in. - sync:
-                                  A query is not executed until the audit event is
-                                  successfully written. - async: Audit events are
-                                  queued for writing to the audit table, but are not
-                                  necessarily logged before the query executes. A
-                                  pool of writer threads consumes the audit events
-                                  from the queue, and writes them to the audit table
-                                  in batch queries. Important: While async substantially
-                                  improves performance under load, if there is a failure
-                                  between when a query is executed, and its audit
-                                  event is written to the table, the audit table might
-                                  be missing entries for queries that were executed.
-                                  Default: sync'
-                                enum:
-                                - sync
-                                - async
-                                type: string
-                              queue_size:
-                                description: 'The size of the queue feeding the asynchronous
-                                  audit log writer threads. - Number of events: When
-                                  there are more events being produced than the writers
-                                  can write out, the queue fills up, and newer queries
-                                  are blocked until there is space on the queue. -
-                                  When set to zero, the queue size is unbounded, which
-                                  can lead to resource exhaustion under heavy query
-                                  load. Default: 30000'
-                                type: integer
-                              write_consistency:
-                                description: 'The consistency level that is used to
-                                  write audit events. Default: QUORUM'
-                                enum:
-                                - ANY
-                                - ONE
-                                - TWO
-                                - THREE
-                                - QUORUM
-                                - ALL
-                                - LOCAL_QUORUM
-                                - EACH_QUORUM
-                                - SERIAL
-                                - LOCAL_SERIAL
-                                - LOCAL_ONE
-                                type: string
-                            type: object
                           cluster_summary_stats_options:
                             description: Configures collection of statistics at a
                               cluster-wide level.
@@ -1638,6 +1647,31 @@ spec:
                           dsefs_options:
                             description: Configures DSEFS (DSE Fielsystem).
                             properties:
+                              block_allocator_options:
+                                description: 'Controls how much additional data can
+                                  be placed on the local coordinator before the local
+                                  node overflows to the other nodes. The trade-off
+                                  is between data locality of writes and balancing
+                                  the cluster. A local node is preferred for a new
+                                  block allocation, if: used_size_on_the_local_node
+                                  < average_used_size_per_node x overflow_factor +
+                                  overflow_margin.'
+                                properties:
+                                  overflow_factor:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    description: '- factor: Overflow factor on an
+                                      exponential scale. - 1.0: Disable block allocation
+                                      overflow Default: 1.05'
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
+                                  overflow_margin_mb:
+                                    description: '- margin_size: Overflow margin size
+                                      in megabytes. - 0: Disable block allocation
+                                      overflow Default: 1024'
+                                    type: integer
+                                type: object
                               compression_frame_max_size:
                                 description: 'The maximum accepted size of a compression
                                   frame defined during file upload. Default: 1048576'
@@ -1803,31 +1837,6 @@ spec:
                               transaction_options:
                                 description: Configures DSEFS transaction times.
                                 properties:
-                                  block_allocator_options:
-                                    description: 'Controls how much additional data
-                                      can be placed on the local coordinator before
-                                      the local node overflows to the other nodes.
-                                      The trade-off is between data locality of writes
-                                      and balancing the cluster. A local node is preferred
-                                      for a new block allocation, if: used_size_on_the_local_node
-                                      < average_used_size_per_node x overflow_factor
-                                      + overflow_margin.'
-                                    properties:
-                                      overflow_factor:
-                                        anyOf:
-                                        - type: integer
-                                        - type: string
-                                        description: '- factor: Overflow factor on
-                                          an exponential scale. - 1.0: Disable block
-                                          allocation overflow Default: 1.05'
-                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                        x-kubernetes-int-or-string: true
-                                      overflow_margin_mb:
-                                        description: '- margin_size: Overflow margin
-                                          size in megabytes. - 0: Disable block allocation
-                                          overflow Default: 1024'
-                                        type: integer
-                                    type: object
                                   conflict_retry_count:
                                     description: 'The number of times to retry a transaction
                                       before giving up. Default: 40'
@@ -1909,6 +1918,90 @@ spec:
                                   (Spark) traversal to evaluate. Default: 10080 (168
                                   hours)'
                                 type: integer
+                              gremlin_server:
+                                description: Gremlin Server configuration (DSE Graph).
+                                properties:
+                                  gremlinPool:
+                                    description: 'This pool represents the workers
+                                      available to handle blocking operations in Gremlin
+                                      Server. - 0: the value of the JVM property cassandra.available_processors,
+                                      if that property is set - positive number: The
+                                      number of Gremlin threads available to execute
+                                      actual scripts in a ScriptEngine. Default: the
+                                      value of Runtime.getRuntime().availableProcessors()'
+                                    type: integer
+                                  port:
+                                    description: 'The available communications port
+                                      for Gremlin Server. Default: 8182'
+                                    type: integer
+                                  scriptEngines:
+                                    description: Configures gremlin server script
+                                      engines.
+                                    properties:
+                                      gremlin-groovy:
+                                        description: Configures for gremlin-groovy
+                                          scripts.
+                                        properties:
+                                          config:
+                                            properties:
+                                              sandbox_enabled:
+                                                description: 'Enables gremlin groovy
+                                                  sandbox. Default: true'
+                                                type: boolean
+                                              sandbox_rules:
+                                                description: Configures sandbox rules.
+                                                properties:
+                                                  blacklist_packages:
+                                                    description: 'List of packages,
+                                                      one package per line, to blacklist.
+                                                      Default: [] FIXME not implemented
+                                                      yet in config-builder'
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  blacklist_supers:
+                                                    description: 'List of super classes,
+                                                      one class per line, to blacklist.
+                                                      Default: [] FIXME not implemented
+                                                      yet in config-builder'
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  whitelist_packages:
+                                                    description: 'List of packages,
+                                                      one package per line, to whitelist.
+                                                      Default: []'
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  whitelist_supers:
+                                                    description: 'List of super classes,
+                                                      one class per line, to whitelist.
+                                                      Default: []'
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  whitelist_types:
+                                                    description: 'List of fully qualified
+                                                      types, one type per line, to
+                                                      whitelist. Default: []'
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                type: object
+                                            type: object
+                                        type: object
+                                    type: object
+                                  threadPoolWorker:
+                                    description: 'The number of worker threads that
+                                      handle non-blocking read and write (requests
+                                      and responses) on the Gremlin Server channel,
+                                      including routing requests to the right server
+                                      operations, handling scheduled jobs on the server,
+                                      and writing serialized responses back to the
+                                      client. Default: 2'
+                                    type: integer
+                                type: object
                               index_cache_size_in_mb:
                                 description: 'The amount of ram to allocate to the
                                   index cache. Default: 128'
@@ -1942,86 +2035,6 @@ spec:
                                   before it is expired. Default: 600'
                                 type: integer
                             type: object
-                          gremlin_server:
-                            description: Gremlin Server configuration (DSE Graph).
-                            properties:
-                              gremlinPool:
-                                description: 'This pool represents the workers available
-                                  to handle blocking operations in Gremlin Server.
-                                  - 0: the value of the JVM property cassandra.available_processors,
-                                  if that property is set - positive number: The number
-                                  of Gremlin threads available to execute actual scripts
-                                  in a ScriptEngine. Default: the value of Runtime.getRuntime().availableProcessors()'
-                                type: integer
-                              port:
-                                description: 'The available communications port for
-                                  Gremlin Server. Default: 8182'
-                                type: integer
-                              scriptEngines:
-                                description: Configures gremlin server script engines.
-                                properties:
-                                  gremlin-groovy:
-                                    description: Configures for gremlin-groovy scripts.
-                                    properties:
-                                      config:
-                                        properties:
-                                          sandbox_enabled:
-                                            description: 'Enables gremlin groovy sandbox.
-                                              Default: true'
-                                            type: boolean
-                                          sandbox_rules:
-                                            description: Configures sandbox rules.
-                                            properties:
-                                              blacklist_packages:
-                                                description: 'List of packages, one
-                                                  package per line, to blacklist.
-                                                  Default: [] FIXME not implemented
-                                                  yet in config-builder'
-                                                items:
-                                                  type: string
-                                                type: array
-                                              blacklist_supers:
-                                                description: 'List of super classes,
-                                                  one class per line, to blacklist.
-                                                  Default: [] FIXME not implemented
-                                                  yet in config-builder'
-                                                items:
-                                                  type: string
-                                                type: array
-                                              whitelist_packages:
-                                                description: 'List of packages, one
-                                                  package per line, to whitelist.
-                                                  Default: []'
-                                                items:
-                                                  type: string
-                                                type: array
-                                              whitelist_supers:
-                                                description: 'List of super classes,
-                                                  one class per line, to whitelist.
-                                                  Default: []'
-                                                items:
-                                                  type: string
-                                                type: array
-                                              whitelist_types:
-                                                description: 'List of fully qualified
-                                                  types, one type per line, to whitelist.
-                                                  Default: []'
-                                                items:
-                                                  type: string
-                                                type: array
-                                            type: object
-                                        type: object
-                                    type: object
-                                type: object
-                              threadPoolWorker:
-                                description: 'The number of worker threads that handle
-                                  non-blocking read and write (requests and responses)
-                                  on the Gremlin Server channel, including routing
-                                  requests to the right server operations, handling
-                                  scheduled jobs on the server, and writing serialized
-                                  responses back to the client. Default: 2'
-                                type: integer
-                            type: object
                           histogram_data_options:
                             description: Histogram data for the dropped mutation metrics
                               are stored in the dropped_messages table in the dse_perf
@@ -2036,20 +2049,6 @@ spec:
                               retention_count:
                                 description: 'Default: 3'
                                 type: integer
-                            type: object
-                          index_options:
-                            description: FIXME not present in the official documentation
-                            properties:
-                              segment_write_buffer_space_mb:
-                                description: FIXME not present in the official documentation
-                                type: integer
-                              zerocopy_used_threshold:
-                                anyOf:
-                                - type: integer
-                                - type: string
-                                description: FIXME not present in the official documentation
-                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                x-kubernetes-int-or-string: true
                             type: object
                           insights_options:
                             description: Options for DSE Metrics Collector (Insights).
@@ -2456,7 +2455,7 @@ spec:
                                   server. - false: Do not enable TLS connections to
                                   the LDAP server Default: false'
                                 type: boolean
-                              user_member_of_attribute:
+                              user_memberof_attribute:
                                 description: 'Contains a list of group names. Role
                                   manager assigns DSE roles that exactly match any
                                   group name in the list. Required when managing roles
@@ -2691,12 +2690,6 @@ spec:
                                     type: array
                                 type: object
                             type: object
-                          retention_time:
-                            description: 'The number of hours to retain audit events
-                              by supporting loggers for the CassandraAuditWriter.
-                              - hours: The number of hours to retain audit events.
-                              - 0: Retain events forever. Default: 0'
-                            type: integer
                           role_management_options:
                             description: 'Configures the DSE Role Manager. To enable
                               role manager, set: - authorization_options enabled to
@@ -3103,7 +3096,7 @@ spec:
                                     type: string
                                 type: object
                             type: object
-                          system_info_encryption_options:
+                          system_info_encryption:
                             description: Sets the encryption settings for system resources
                               that might contain sensitive information, including
                               the system.batchlog and system.paxos tables, hint files,
@@ -3122,6 +3115,12 @@ spec:
                                   algorithms names and strengths are: - AES: 128,
                                   192, or 256 - DES: 56 - DESede: 112 or 168 - Blowfish:
                                   32-448 - RC2: 40-128 Default: AES'
+                                enum:
+                                - AES
+                                - DES
+                                - DESede
+                                - Blowfish
+                                - RC2
                                 type: string
                               enabled:
                                 description: 'Enables encryption of system resources.
@@ -6122,6 +6121,93 @@ spec:
                                 audit_logging_options:
                                   description: Configures database activity logging.
                                   properties:
+                                    cassandra_audit_writer_options:
+                                      description: Options for logger CassandraAuditWriter.
+                                      properties:
+                                        batch_size:
+                                          description: 'Available only when mode:
+                                            async. Must be greater than 0. The maximum
+                                            number of events the writer dequeues before
+                                            writing them out to the table. If warnings
+                                            in the logs reveal that batches are too
+                                            large, decrease this value or increase
+                                            the value of batch_size_warn_threshold_in_kb
+                                            in cassandra.yaml. Default: 50'
+                                          type: integer
+                                        day_partition_millis:
+                                          description: 'The time interval in milliseconds
+                                            between changing nodes to spread audit
+                                            log information across multiple nodes.
+                                            For example, to change the target node
+                                            every 12 hours, specify 43200000 milliseconds.
+                                            Default: 3600000 (1 hour)'
+                                          type: integer
+                                        dropped_event_log:
+                                          description: 'dropped_event_log The directory
+                                            to store the log file that reports dropped
+                                            events. Default: /var/log/cassandra/dropped_audit_events.log
+                                            TODO mountable directory'
+                                          type: string
+                                        flush_time:
+                                          description: 'Available only when mode:
+                                            async. The maximum amount of time in milliseconds
+                                            before an event is removed from the queue
+                                            by a writer before being written out.
+                                            This flush time prevents events from waiting
+                                            too long before being written to the table
+                                            when there are not a lot of queries happening.
+                                            Default: 500'
+                                          type: integer
+                                        mode:
+                                          description: 'The mode the writer runs in.
+                                            - sync: A query is not executed until
+                                            the audit event is successfully written.
+                                            - async: Audit events are queued for writing
+                                            to the audit table, but are not necessarily
+                                            logged before the query executes. A pool
+                                            of writer threads consumes the audit events
+                                            from the queue, and writes them to the
+                                            audit table in batch queries. Important:
+                                            While async substantially improves performance
+                                            under load, if there is a failure between
+                                            when a query is executed, and its audit
+                                            event is written to the table, the audit
+                                            table might be missing entries for queries
+                                            that were executed. Default: sync'
+                                          enum:
+                                          - sync
+                                          - async
+                                          type: string
+                                        queue_size:
+                                          description: 'The size of the queue feeding
+                                            the asynchronous audit log writer threads.
+                                            - Number of events: When there are more
+                                            events being produced than the writers
+                                            can write out, the queue fills up, and
+                                            newer queries are blocked until there
+                                            is space on the queue. - When set to zero,
+                                            the queue size is unbounded, which can
+                                            lead to resource exhaustion under heavy
+                                            query load. Default: 30000'
+                                          type: integer
+                                        write_consistency:
+                                          description: 'The consistency level that
+                                            is used to write audit events. Default:
+                                            QUORUM'
+                                          enum:
+                                          - ANY
+                                          - ONE
+                                          - TWO
+                                          - THREE
+                                          - QUORUM
+                                          - ALL
+                                          - LOCAL_QUORUM
+                                          - EACH_QUORUM
+                                          - SERIAL
+                                          - LOCAL_SERIAL
+                                          - LOCAL_ONE
+                                          type: string
+                                      type: object
                                     enabled:
                                       description: 'Enables database activity auditing.
                                         Default: false'
@@ -6197,6 +6283,13 @@ spec:
                                       - SLF4JAuditWriter
                                       - CassandraAuditWriter
                                       type: string
+                                    retention_time:
+                                      description: 'The number of hours to retain
+                                        audit events by supporting loggers for the
+                                        CassandraAuditWriter. - hours: The number
+                                        of hours to retain audit events. - 0: Retain
+                                        events forever. Default: 0'
+                                      type: integer
                                   type: object
                                 authentication_options:
                                   description: Configures DseAuthenticator to authenticate
@@ -6342,88 +6435,6 @@ spec:
                                     TPC threads can be actively indexing. Default:
                                     1024'
                                   type: integer
-                                cassandra_audit_writer_options:
-                                  properties:
-                                    batch_size:
-                                      description: 'Available only when mode: async.
-                                        Must be greater than 0. The maximum number
-                                        of events the writer dequeues before writing
-                                        them out to the table. If warnings in the
-                                        logs reveal that batches are too large, decrease
-                                        this value or increase the value of batch_size_warn_threshold_in_kb
-                                        in cassandra.yaml. Default: 50'
-                                      type: integer
-                                    day_partition_millis:
-                                      description: 'The time interval in milliseconds
-                                        between changing nodes to spread audit log
-                                        information across multiple nodes. For example,
-                                        to change the target node every 12 hours,
-                                        specify 43200000 milliseconds. Default: 3600000
-                                        (1 hour)'
-                                      type: integer
-                                    dropped_event_log:
-                                      description: 'dropped_event_log The directory
-                                        to store the log file that reports dropped
-                                        events. Default: /var/log/cassandra/dropped_audit_events.log
-                                        TODO mountable directory'
-                                      type: string
-                                    flush_time:
-                                      description: 'Available only when mode: async.
-                                        The maximum amount of time in milliseconds
-                                        before an event is removed from the queue
-                                        by a writer before being written out. This
-                                        flush time prevents events from waiting too
-                                        long before being written to the table when
-                                        there are not a lot of queries happening.
-                                        Default: 500'
-                                      type: integer
-                                    mode:
-                                      description: 'The mode the writer runs in. -
-                                        sync: A query is not executed until the audit
-                                        event is successfully written. - async: Audit
-                                        events are queued for writing to the audit
-                                        table, but are not necessarily logged before
-                                        the query executes. A pool of writer threads
-                                        consumes the audit events from the queue,
-                                        and writes them to the audit table in batch
-                                        queries. Important: While async substantially
-                                        improves performance under load, if there
-                                        is a failure between when a query is executed,
-                                        and its audit event is written to the table,
-                                        the audit table might be missing entries for
-                                        queries that were executed. Default: sync'
-                                      enum:
-                                      - sync
-                                      - async
-                                      type: string
-                                    queue_size:
-                                      description: 'The size of the queue feeding
-                                        the asynchronous audit log writer threads.
-                                        - Number of events: When there are more events
-                                        being produced than the writers can write
-                                        out, the queue fills up, and newer queries
-                                        are blocked until there is space on the queue.
-                                        - When set to zero, the queue size is unbounded,
-                                        which can lead to resource exhaustion under
-                                        heavy query load. Default: 30000'
-                                      type: integer
-                                    write_consistency:
-                                      description: 'The consistency level that is
-                                        used to write audit events. Default: QUORUM'
-                                      enum:
-                                      - ANY
-                                      - ONE
-                                      - TWO
-                                      - THREE
-                                      - QUORUM
-                                      - ALL
-                                      - LOCAL_QUORUM
-                                      - EACH_QUORUM
-                                      - SERIAL
-                                      - LOCAL_SERIAL
-                                      - LOCAL_ONE
-                                      type: string
-                                  type: object
                                 cluster_summary_stats_options:
                                   description: Configures collection of statistics
                                     at a cluster-wide level.
@@ -6551,6 +6562,31 @@ spec:
                                 dsefs_options:
                                   description: Configures DSEFS (DSE Fielsystem).
                                   properties:
+                                    block_allocator_options:
+                                      description: 'Controls how much additional data
+                                        can be placed on the local coordinator before
+                                        the local node overflows to the other nodes.
+                                        The trade-off is between data locality of
+                                        writes and balancing the cluster. A local
+                                        node is preferred for a new block allocation,
+                                        if: used_size_on_the_local_node < average_used_size_per_node
+                                        x overflow_factor + overflow_margin.'
+                                      properties:
+                                        overflow_factor:
+                                          anyOf:
+                                          - type: integer
+                                          - type: string
+                                          description: '- factor: Overflow factor
+                                            on an exponential scale. - 1.0: Disable
+                                            block allocation overflow Default: 1.05'
+                                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                          x-kubernetes-int-or-string: true
+                                        overflow_margin_mb:
+                                          description: '- margin_size: Overflow margin
+                                            size in megabytes. - 0: Disable block
+                                            allocation overflow Default: 1024'
+                                          type: integer
+                                      type: object
                                     compression_frame_max_size:
                                       description: 'The maximum accepted size of a
                                         compression frame defined during file upload.
@@ -6729,34 +6765,6 @@ spec:
                                     transaction_options:
                                       description: Configures DSEFS transaction times.
                                       properties:
-                                        block_allocator_options:
-                                          description: 'Controls how much additional
-                                            data can be placed on the local coordinator
-                                            before the local node overflows to the
-                                            other nodes. The trade-off is between
-                                            data locality of writes and balancing
-                                            the cluster. A local node is preferred
-                                            for a new block allocation, if: used_size_on_the_local_node
-                                            < average_used_size_per_node x overflow_factor
-                                            + overflow_margin.'
-                                          properties:
-                                            overflow_factor:
-                                              anyOf:
-                                              - type: integer
-                                              - type: string
-                                              description: '- factor: Overflow factor
-                                                on an exponential scale. - 1.0: Disable
-                                                block allocation overflow Default:
-                                                1.05'
-                                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                              x-kubernetes-int-or-string: true
-                                            overflow_margin_mb:
-                                              description: '- margin_size: Overflow
-                                                margin size in megabytes. - 0: Disable
-                                                block allocation overflow Default:
-                                                1024'
-                                              type: integer
-                                          type: object
                                         conflict_retry_count:
                                           description: 'The number of times to retry
                                             a transaction before giving up. Default:
@@ -6843,6 +6851,99 @@ spec:
                                         analytic (Spark) traversal to evaluate. Default:
                                         10080 (168 hours)'
                                       type: integer
+                                    gremlin_server:
+                                      description: Gremlin Server configuration (DSE
+                                        Graph).
+                                      properties:
+                                        gremlinPool:
+                                          description: 'This pool represents the workers
+                                            available to handle blocking operations
+                                            in Gremlin Server. - 0: the value of the
+                                            JVM property cassandra.available_processors,
+                                            if that property is set - positive number:
+                                            The number of Gremlin threads available
+                                            to execute actual scripts in a ScriptEngine.
+                                            Default: the value of Runtime.getRuntime().availableProcessors()'
+                                          type: integer
+                                        port:
+                                          description: 'The available communications
+                                            port for Gremlin Server. Default: 8182'
+                                          type: integer
+                                        scriptEngines:
+                                          description: Configures gremlin server script
+                                            engines.
+                                          properties:
+                                            gremlin-groovy:
+                                              description: Configures for gremlin-groovy
+                                                scripts.
+                                              properties:
+                                                config:
+                                                  properties:
+                                                    sandbox_enabled:
+                                                      description: 'Enables gremlin
+                                                        groovy sandbox. Default: true'
+                                                      type: boolean
+                                                    sandbox_rules:
+                                                      description: Configures sandbox
+                                                        rules.
+                                                      properties:
+                                                        blacklist_packages:
+                                                          description: 'List of packages,
+                                                            one package per line,
+                                                            to blacklist. Default:
+                                                            [] FIXME not implemented
+                                                            yet in config-builder'
+                                                          items:
+                                                            type: string
+                                                          type: array
+                                                        blacklist_supers:
+                                                          description: 'List of super
+                                                            classes, one class per
+                                                            line, to blacklist. Default:
+                                                            [] FIXME not implemented
+                                                            yet in config-builder'
+                                                          items:
+                                                            type: string
+                                                          type: array
+                                                        whitelist_packages:
+                                                          description: 'List of packages,
+                                                            one package per line,
+                                                            to whitelist. Default:
+                                                            []'
+                                                          items:
+                                                            type: string
+                                                          type: array
+                                                        whitelist_supers:
+                                                          description: 'List of super
+                                                            classes, one class per
+                                                            line, to whitelist. Default:
+                                                            []'
+                                                          items:
+                                                            type: string
+                                                          type: array
+                                                        whitelist_types:
+                                                          description: 'List of fully
+                                                            qualified types, one type
+                                                            per line, to whitelist.
+                                                            Default: []'
+                                                          items:
+                                                            type: string
+                                                          type: array
+                                                      type: object
+                                                  type: object
+                                              type: object
+                                          type: object
+                                        threadPoolWorker:
+                                          description: 'The number of worker threads
+                                            that handle non-blocking read and write
+                                            (requests and responses) on the Gremlin
+                                            Server channel, including routing requests
+                                            to the right server operations, handling
+                                            scheduled jobs on the server, and writing
+                                            serialized responses back to the client.
+                                            Default: 2'
+                                          type: integer
+                                      type: object
                                     index_cache_size_in_mb:
                                       description: 'The amount of ram to allocate
                                         to the index cache. Default: 128'
@@ -6877,94 +6978,6 @@ spec:
                                         before it is expired. Default: 600'
                                       type: integer
                                   type: object
-                                gremlin_server:
-                                  description: Gremlin Server configuration (DSE Graph).
-                                  properties:
-                                    gremlinPool:
-                                      description: 'This pool represents the workers
-                                        available to handle blocking operations in
-                                        Gremlin Server. - 0: the value of the JVM
-                                        property cassandra.available_processors, if
-                                        that property is set - positive number: The
-                                        number of Gremlin threads available to execute
-                                        actual scripts in a ScriptEngine. Default:
-                                        the value of Runtime.getRuntime().availableProcessors()'
-                                      type: integer
-                                    port:
-                                      description: 'The available communications port
-                                        for Gremlin Server. Default: 8182'
-                                      type: integer
-                                    scriptEngines:
-                                      description: Configures gremlin server script
-                                        engines.
-                                      properties:
-                                        gremlin-groovy:
-                                          description: Configures for gremlin-groovy
-                                            scripts.
-                                          properties:
-                                            config:
-                                              properties:
-                                                sandbox_enabled:
-                                                  description: 'Enables gremlin groovy
-                                                    sandbox. Default: true'
-                                                  type: boolean
-                                                sandbox_rules:
-                                                  description: Configures sandbox
-                                                    rules.
-                                                  properties:
-                                                    blacklist_packages:
-                                                      description: 'List of packages,
-                                                        one package per line, to blacklist.
-                                                        Default: [] FIXME not implemented
-                                                        yet in config-builder'
-                                                      items:
-                                                        type: string
-                                                      type: array
-                                                    blacklist_supers:
-                                                      description: 'List of super
-                                                        classes, one class per line,
-                                                        to blacklist. Default: []
-                                                        FIXME not implemented yet
-                                                        in config-builder'
-                                                      items:
-                                                        type: string
-                                                      type: array
-                                                    whitelist_packages:
-                                                      description: 'List of packages,
-                                                        one package per line, to whitelist.
-                                                        Default: []'
-                                                      items:
-                                                        type: string
-                                                      type: array
-                                                    whitelist_supers:
-                                                      description: 'List of super
-                                                        classes, one class per line,
-                                                        to whitelist. Default: []'
-                                                      items:
-                                                        type: string
-                                                      type: array
-                                                    whitelist_types:
-                                                      description: 'List of fully
-                                                        qualified types, one type
-                                                        per line, to whitelist. Default:
-                                                        []'
-                                                      items:
-                                                        type: string
-                                                      type: array
-                                                  type: object
-                                              type: object
-                                          type: object
-                                      type: object
-                                    threadPoolWorker:
-                                      description: 'The number of worker threads that
-                                        handle non-blocking read and write (requests
-                                        and responses) on the Gremlin Server channel,
-                                        including routing requests to the right server
-                                        operations, handling scheduled jobs on the
-                                        server, and writing serialized responses back
-                                        to the client. Default: 2'
-                                      type: integer
-                                  type: object
                                 histogram_data_options:
                                   description: Histogram data for the dropped mutation
                                     metrics are stored in the dropped_messages table
@@ -6979,22 +6992,6 @@ spec:
                                     retention_count:
                                       description: 'Default: 3'
                                       type: integer
-                                  type: object
-                                index_options:
-                                  description: FIXME not present in the official documentation
-                                  properties:
-                                    segment_write_buffer_space_mb:
-                                      description: FIXME not present in the official
-                                        documentation
-                                      type: integer
-                                    zerocopy_used_threshold:
-                                      anyOf:
-                                      - type: integer
-                                      - type: string
-                                      description: FIXME not present in the official
-                                        documentation
-                                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                                      x-kubernetes-int-or-string: true
                                   type: object
                                 insights_options:
                                   description: Options for DSE Metrics Collector (Insights).
@@ -7431,7 +7428,7 @@ spec:
                                         TLS connections to the LDAP server Default:
                                         false'
                                       type: boolean
-                                    user_member_of_attribute:
+                                    user_memberof_attribute:
                                       description: 'Contains a list of group names.
                                         Role manager assigns DSE roles that exactly
                                         match any group name in the list. Required
@@ -7678,12 +7675,6 @@ spec:
                                           type: array
                                       type: object
                                   type: object
-                                retention_time:
-                                  description: 'The number of hours to retain audit
-                                    events by supporting loggers for the CassandraAuditWriter.
-                                    - hours: The number of hours to retain audit events.
-                                    - 0: Retain events forever. Default: 0'
-                                  type: integer
                                 role_management_options:
                                   description: 'Configures the DSE Role Manager. To
                                     enable role manager, set: - authorization_options
@@ -8110,7 +8101,7 @@ spec:
                                           type: string
                                       type: object
                                   type: object
-                                system_info_encryption_options:
+                                system_info_encryption:
                                   description: Sets the encryption settings for system
                                     resources that might contain sensitive information,
                                     including the system.batchlog and system.paxos
@@ -8131,6 +8122,12 @@ spec:
                                         - AES: 128, 192, or 256 - DES: 56 - DESede:
                                         112 or 168 - Blowfish: 32-448 - RC2: 40-128
                                         Default: AES'
+                                      enum:
+                                      - AES
+                                      - DES
+                                      - DESede
+                                      - Blowfish
+                                      - RC2
                                       type: string
                                     enabled:
                                       description: 'Enables encryption of system resources.

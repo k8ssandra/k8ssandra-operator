@@ -53,7 +53,7 @@ type DseYaml struct {
 	// including the system.batchlog and system.paxos tables, hint files, and the database commit
 	// log.
 	// +optional
-	SystemInfoEncryptionOptions *SystemInfoEncryptionOptions `json:"system_info_encryption_options,omitempty" cass-config:"dse:*:system_info_encryption_options;recurse"`
+	SystemInfoEncryptionOptions *SystemInfoEncryptionOptions `json:"system_info_encryption,omitempty" cass-config:"dse:*:system_info_encryption;recurse"`
 
 	// Settings for using encrypted passwords in sensitive configuration file properties.
 	// +optional
@@ -134,16 +134,6 @@ type DseYaml struct {
 	// +optional
 	AuditLoggingOptions *AuditLoggingOptions `json:"audit_logging_options,omitempty" cass-config:"dse:*:audit_logging_options;recurse"`
 
-	// The number of hours to retain audit events by supporting loggers for the CassandraAuditWriter.
-	// - hours: The number of hours to retain audit events.
-	// - 0: Retain events forever.
-	// Default: 0
-	// +optional
-	AuditLoggingRetentionTimeHours *int `json:"retention_time,omitempty" cass-config:"dse:*:retention_time"`
-
-	// +optional
-	AuditWriterOptions *AuditWriterOptions `json:"cassandra_audit_writer_options,omitempty" cass-config:"dse:*:cassandra_audit_writer_options;recurse"`
-
 	// Configures the smart movement of data across different types of storage media so that data is
 	// matched to the most suitable drive type, according to the required performance and cost
 	// characteristics. Each key must be the name of a disk configuration strategy.
@@ -159,10 +149,6 @@ type DseYaml struct {
 	// +optional
 	InternodeMessagingOptions *InternodeMessagingOptions `json:"internode_messaging_options,omitempty" cass-config:"dse:*:internode_messaging_options;recurse"`
 
-	// Gremlin Server configuration (DSE Graph).
-	// +optional
-	GremlinServerOptions *GremlinServerOptions `json:"gremlin_server,omitempty" cass-config:"dse:*:gremlin_server;recurse"`
-
 	// System-level configuration options for DSE Graph.
 	// +optional
 	GraphOptions *GraphOptions `json:"graph,omitempty" cass-config:"dse:*:graph;recurse"`
@@ -176,8 +162,9 @@ type DseYaml struct {
 	ServerId *string `json:"server_id,omitempty" cass-config:"dse:*:server_id"`
 
 	// FIXME not present in the official documentation
+	// FIXME present in config-builder, apparently related to backup_service, but does not seem to be recognized by DSE
 	// +optional
-	IndexOptions *IndexOptions `json:"index_options,omitempty" cass-config:"dse:*:index_options;recurse"`
+	// IndexOptions *IndexOptions `json:"index_options,omitempty" cass-config:"dse:*:index_options;recurse"`
 }
 
 type AuthenticationOptions struct {
@@ -469,7 +456,7 @@ type LdapOptions struct {
 	// default user attribute in Microsoft Active Directory (AD).
 	// Default: memberof
 	// +optional
-	UserMemberOfAttribute *string `json:"user_member_of_attribute,omitempty" cass-config:"dse:*:user_member_of_attribute"`
+	UserMemberOfAttribute *string `json:"user_memberof_attribute,omitempty" cass-config:"dse:*:user_memberof_attribute"`
 
 	// Option to define additional search bases for users. If the user is not found in one search
 	// base, DSE attempts to find the user in another search base, until all search bases have been
@@ -633,6 +620,7 @@ type SystemInfoEncryptionOptions struct {
 	// - RC2: 40-128
 	// Default: AES
 	// +optional
+	// +kubebuilder:validation:Enum=AES;DES;DESede;Blowfish;RC2
 	CipherAlgorithm *string `json:"cipher_algorithm,omitempty" cass-config:"dse:*:cipher_algorithm"`
 
 	// Length of key to use for the system resources.
@@ -1381,6 +1369,13 @@ type DsefsOptions struct {
 	// Configures DSEFS transaction times.
 	// +optional
 	TransactionOptions *DsefsTransactionOptions `json:"transaction_options,omitempty" cass-config:"dse:*:transaction_options;recurse"`
+
+	// Controls how much additional data can be placed on the local coordinator before the local
+	// node overflows to the other nodes. The trade-off is between data locality of writes and
+	// balancing the cluster. A local node is preferred for a new block allocation, if:
+	// used_size_on_the_local_node < average_used_size_per_node x overflow_factor + overflow_margin.
+	// +optional
+	BlockAllocatorOptions *DsefsBlockAllocatorOptions `json:"block_allocator_options,omitempty" cass-config:"dse:*:block_allocator_options;recurse"`
 }
 
 type DsefsDataDirectory struct {
@@ -1501,13 +1496,6 @@ type DsefsTransactionOptions struct {
 	// Default: 3
 	// +optional
 	ExecutionRetryCount *int `json:"execution_retry_count,omitempty" cass-config:"dse:*:execution_retry_count"`
-
-	// Controls how much additional data can be placed on the local coordinator before the local
-	// node overflows to the other nodes. The trade-off is between data locality of writes and
-	// balancing the cluster. A local node is preferred for a new block allocation, if:
-	// used_size_on_the_local_node < average_used_size_per_node x overflow_factor + overflow_margin.
-	// +optional
-	BlockAllocatorOptions *DsefsBlockAllocatorOptions `json:"block_allocator_options,omitempty" cass-config:"dse:*:block_allocator_options;recurse"`
 }
 
 type DsefsBlockAllocatorOptions struct {
@@ -1615,9 +1603,20 @@ type AuditLoggingOptions struct {
 	// Default: exclude no roles
 	// +optional
 	ExcludedRoles *string `json:"excluded_roles,omitempty" cass-config:"dse:*:excluded_roles"`
+
+	// The number of hours to retain audit events by supporting loggers for the CassandraAuditWriter.
+	// - hours: The number of hours to retain audit events.
+	// - 0: Retain events forever.
+	// Default: 0
+	// +optional
+	AuditLoggingRetentionTimeHours *int `json:"retention_time,omitempty" cass-config:"dse:*:retention_time"`
+
+	// Options for logger CassandraAuditWriter.
+	// +optional
+	CassandraAuditWriterOptions *CassandraAuditWriterOptions `json:"cassandra_audit_writer_options,omitempty" cass-config:"dse:*:cassandra_audit_writer_options;recurse"`
 }
 
-type AuditWriterOptions struct {
+type CassandraAuditWriterOptions struct {
 
 	// The mode the writer runs in.
 	// - sync: A query is not executed until the audit event is successfully written.
@@ -1883,6 +1882,10 @@ type GraphOptions struct {
 	// Default: 16
 	// +optional
 	MaxQueryParams *int `json:"max_query_params,omitempty" cass-config:"dse:*:max_query_params"`
+
+	// Gremlin Server configuration (DSE Graph).
+	// +optional
+	GremlinServerOptions *GremlinServerOptions `json:"gremlin_server,omitempty" cass-config:"dse:*:gremlin_server;recurse"`
 }
 
 type AnalyticsOptions struct {
