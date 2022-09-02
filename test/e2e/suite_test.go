@@ -55,6 +55,7 @@ type ingressConfig struct {
 	StargateCql  framework.HostAndPort `json:"stargate_cql"`
 	ReaperRest   framework.HostAndPort `json:"reaper_rest"`
 	Solr         framework.HostAndPort `json:"solr"`
+	Graph        framework.HostAndPort `json:"graph"`
 }
 
 var (
@@ -175,6 +176,11 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseSearchDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse-search", controlPlane),
+		dse:      true,
+	}))
+	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleDseGraphDatacenterCluster,
+		fixture:  framework.NewTestFixture("single-dc-dse-graph", controlPlane),
 		dse:      true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
@@ -564,6 +570,7 @@ func processFlags(t *testing.T) {
 				StargateCql:  framework.HostAndPort(fmt.Sprintf("stargate.127.0.0.1.nip.io:3%v942", prefix)),
 				ReaperRest:   framework.HostAndPort(fmt.Sprintf("reaper.127.0.0.1.nip.io:3%v080", prefix)),
 				Solr:         framework.HostAndPort(fmt.Sprintf("solr.127.0.0.1.nip.io:3%v080", prefix)),
+				Graph:        framework.HostAndPort(fmt.Sprintf("graph.127.0.0.1.nip.io:3%v080", prefix)),
 			}
 		}
 	} else {

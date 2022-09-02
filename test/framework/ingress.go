@@ -56,6 +56,17 @@ func (f *E2eFramework) DeploySolrIngresses(t *testing.T, k8sContext, namespace, 
 	require.NoError(t, err)
 }
 
+func (f *E2eFramework) DeployGraphIngresses(t *testing.T, k8sContext, namespace, graphServiceName string, graphHostAndPort HostAndPort) {
+	src := filepath.Join("..", "..", "test", "testdata", "ingress", "graph-ingress.yaml")
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "graph", k8sContext)
+	_, err := utils.CopyFileToDir(src, dest)
+	require.NoError(t, err)
+	err = generateGraphIngressKustomization(k8sContext, namespace, graphServiceName, graphHostAndPort.Host())
+	require.NoError(t, err)
+	err = f.kustomizeAndApply(dest, namespace, k8sContext)
+	require.NoError(t, err)
+}
+
 func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	err := kubectl.DeleteAllOf(options, "IngressRoute")
@@ -206,4 +217,44 @@ patchesJson6902:
 `
 	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
 	return generateKustomizationFile("ingress/solr/"+k8sContext, k, tmpl)
+}
+
+func generateGraphIngressKustomization(k8sContext, namespace, serviceName, host string) error {
+	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- graph-ingress.yaml
+namespace: {{ .Namespace }}
+patches:
+- target:	
+    group: traefik.containo.us
+    version: v1alpha1
+    kind: IngressRoute
+    name: cluster1-dc1-graph-service-http-ingress
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: "{{ .ServiceName }}-http-ingress"
+patchesJson6902:
+  - target:
+      group: traefik.containo.us
+      version: v1alpha1
+      kind: IngressRoute
+      name: .*
+    patch: |-
+      - op: replace
+        path: /spec/routes/0/match
+        value: "Host(` + "`{{ .Host }}`" + `)"
+  - target:
+      group: traefik.containo.us
+      version: v1alpha1
+      kind: IngressRoute
+      name: .*
+    patch: |-
+      - op: replace
+        path: /spec/routes/0/services/0/name
+        value: "{{ .ServiceName }}"
+`
+	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
+	return generateKustomizationFile("ingress/graph/"+k8sContext, k, tmpl)
 }

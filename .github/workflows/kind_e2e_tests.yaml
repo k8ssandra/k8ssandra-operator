@@ -86,6 +86,7 @@ jobs:
           - StargateJwt
           - CreateSingleDseDatacenterCluster
           - CreateSingleDseSearchDatacenterCluster
+          - CreateSingleDseGraphDatacenterCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
