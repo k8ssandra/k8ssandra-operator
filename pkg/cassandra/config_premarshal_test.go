@@ -31,7 +31,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		ChildRecurseDSE     *simple `cass-config:"dse:*:parent/;recurse"`
 	}
 	type invalid1 struct {
-		Field1 string `cass-config:"invalid tag"`
+		Field1 string `cass-config:"dse:*:path:invalid tag"`
 	}
 	type invalid2 struct {
 		Field1 *invalid1 `cass-config:"*:;recurse"`
@@ -277,10 +277,9 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
-					assert.Contains(t, msg, "wrong path entry: 'invalid tag'")
+					assert.Contains(t, err.Error(), "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
+					assert.Contains(t, err.Error(), "wrong path entry: 'dse:*:path:invalid tag'")
 			},
 		},
 		{
@@ -290,11 +289,10 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "field cassandra.invalid2.Field1: recurse failed") &&
-					assert.Contains(t, msg, "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
-					assert.Contains(t, msg, "wrong path entry: 'invalid tag'")
+					assert.Contains(t, err.Error(), "field cassandra.invalid2.Field1: recurse failed") &&
+					assert.Contains(t, err.Error(), "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
+					assert.Contains(t, err.Error(), "wrong path entry: 'dse:*:path:invalid tag'")
 			},
 		},
 		{
@@ -307,10 +305,9 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "field cassandra.conflict1.Field2: cannot put value") &&
-					assert.Contains(t, msg, "key foo already exists")
+					assert.Contains(t, err.Error(), "field cassandra.conflict1.Field2: cannot put value") &&
+					assert.Contains(t, err.Error(), "key foo already exists")
 			},
 		},
 		{
@@ -323,10 +320,9 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "field cassandra.conflict2.Field2: cannot merge map") &&
-					assert.Contains(t, msg, "key simple1 already exists")
+					assert.Contains(t, err.Error(), "field cassandra.conflict2.Field2: cannot merge map") &&
+					assert.Contains(t, err.Error(), "key simple1 already exists")
 			},
 		},
 		{
@@ -339,10 +335,9 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "field cassandra.conflict3.Field2: cannot merge map") &&
-					assert.Contains(t, msg, "path foo/simple1 exists but its value is of type *int")
+					assert.Contains(t, err.Error(), "field cassandra.conflict3.Field2: cannot merge map") &&
+					assert.Contains(t, err.Error(), "path foo/simple1 exists but its value is of type *int")
 			},
 		},
 		{
@@ -355,10 +350,9 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			nil,
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
-				msg := err.Error()
 				return assert.NotNil(t, err) &&
-					assert.Contains(t, msg, "field cassandra.conflict4.Field2: cannot merge map") &&
-					assert.Contains(t, msg, "key simple1 already exists")
+					assert.Contains(t, err.Error(), "field cassandra.conflict4.Field2: cannot merge map") &&
+					assert.Contains(t, err.Error(), "key simple1 already exists")
 			},
 		},
 		{

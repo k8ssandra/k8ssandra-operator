@@ -26,10 +26,10 @@ import (
 
 type CassandraConfig struct {
 	// +optional
-	CassandraYaml CassandraYaml `json:"cassandraYaml,omitempty" cass-config:"*:cassandra-yaml,dse:*:cassandra-yaml;recurse"`
+	CassandraYaml CassandraYaml `json:"cassandraYaml,omitempty" cass-config:"cassandra-yaml;recurse"`
 
 	// +optional
-	JvmOptions JvmOptions `json:"jvmOptions,omitempty" cass-config:"*:,dse:*:;recurse"`
+	JvmOptions JvmOptions `json:"jvmOptions,omitempty" cass-config:";recurse"`
 
 	// +optional
 	DseYaml DseYaml `json:"dseYaml,omitempty" cass-config:"dse:*:dse-yaml;recurse"`
@@ -40,7 +40,7 @@ type CassandraConfig struct {
 type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	AllocateTokensForKeyspace *string `json:"allocate_tokens_for_keyspace,omitempty" cass-config:"*:allocate_tokens_for_keyspace,dse:*:allocate_tokens_for_keyspace"`
+	AllocateTokensForKeyspace *string `json:"allocate_tokens_for_keyspace,omitempty" cass-config:"allocate_tokens_for_keyspace"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -62,11 +62,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	Authenticator *string `json:"authenticator,omitempty" cass-config:"*:authenticator,dse:*:authenticator"`
+	Authenticator *string `json:"authenticator,omitempty" cass-config:"authenticator"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	Authorizer *string `json:"authorizer,omitempty" cass-config:"*:authorizer,dse:*:authorizer"`
+	Authorizer *string `json:"authorizer,omitempty" cass-config:"authorizer"`
 
 	// Exists in trunk
 	// +optional
@@ -86,7 +86,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	AutoSnapshot *bool `json:"auto_snapshot,omitempty" cass-config:"*:auto_snapshot,dse:*:auto_snapshot"`
+	AutoSnapshot *bool `json:"auto_snapshot,omitempty" cass-config:"auto_snapshot"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -102,23 +102,23 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BackPressureEnabled *bool `json:"back_pressure_enabled,omitempty" cass-config:"*:back_pressure_enabled,dse:*:back_pressure_enabled"`
+	BackPressureEnabled *bool `json:"back_pressure_enabled,omitempty" cass-config:"back_pressure_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BackPressureStrategy *ParameterizedClass `json:"back_pressure_strategy,omitempty" cass-config:"*:back_pressure_strategy,dse:*:back_pressure_strategy;recurse"`
+	BackPressureStrategy *ParameterizedClass `json:"back_pressure_strategy,omitempty" cass-config:"back_pressure_strategy;recurse"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BatchSizeFailThresholdInKb *int `json:"batch_size_fail_threshold_in_kb,omitempty" cass-config:"*:batch_size_fail_threshold_in_kb,dse:*:batch_size_fail_threshold_in_kb"`
+	BatchSizeFailThresholdInKb *int `json:"batch_size_fail_threshold_in_kb,omitempty" cass-config:"batch_size_fail_threshold_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BatchSizeWarnThresholdInKb *int `json:"batch_size_warn_threshold_in_kb,omitempty" cass-config:"*:batch_size_warn_threshold_in_kb,dse:*:batch_size_warn_threshold_in_kb"`
+	BatchSizeWarnThresholdInKb *int `json:"batch_size_warn_threshold_in_kb,omitempty" cass-config:"batch_size_warn_threshold_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BatchlogReplayThrottleInKb *int `json:"batchlog_replay_throttle_in_kb,omitempty" cass-config:"*:batchlog_replay_throttle_in_kb,dse:*:batchlog_replay_throttle_in_kb"`
+	BatchlogReplayThrottleInKb *int `json:"batchlog_replay_throttle_in_kb,omitempty" cass-config:"batchlog_replay_throttle_in_kb"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -130,40 +130,40 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	BufferPoolUseHeapIfExhausted *bool `json:"buffer_pool_use_heap_if_exhausted,omitempty" cass-config:"*:buffer_pool_use_heap_if_exhausted,dse:*:buffer_pool_use_heap_if_exhausted"`
+	BufferPoolUseHeapIfExhausted *bool `json:"buffer_pool_use_heap_if_exhausted,omitempty" cass-config:"buffer_pool_use_heap_if_exhausted"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CasContentionTimeoutInMs *int `json:"cas_contention_timeout_in_ms,omitempty" cass-config:"*:cas_contention_timeout_in_ms,dse:*:cas_contention_timeout_in_ms"`
+	CasContentionTimeoutInMs *int `json:"cas_contention_timeout_in_ms,omitempty" cass-config:"cas_contention_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CdcEnabled *bool `json:"cdc_enabled,omitempty" cass-config:"*:cdc_enabled,dse:*:cdc_enabled"`
+	CdcEnabled *bool `json:"cdc_enabled,omitempty" cass-config:"cdc_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CdcFreeSpaceCheckIntervalMs *int `json:"cdc_free_space_check_interval_ms,omitempty" cass-config:"*:cdc_free_space_check_interval_ms,dse:*:cdc_free_space_check_interval_ms"`
+	CdcFreeSpaceCheckIntervalMs *int `json:"cdc_free_space_check_interval_ms,omitempty" cass-config:"cdc_free_space_check_interval_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
 	// TODO mountable directory
-	CdcRawDirectory *string `json:"cdc_raw_directory,omitempty" cass-config:"*:cdc_raw_directory,dse:*:cdc_raw_directory"`
+	CdcRawDirectory *string `json:"cdc_raw_directory,omitempty" cass-config:"cdc_raw_directory"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CdcTotalSpaceInMb *int `json:"cdc_total_space_in_mb,omitempty" cass-config:"*:cdc_total_space_in_mb,dse:*:cdc_total_space_in_mb"`
+	CdcTotalSpaceInMb *int `json:"cdc_total_space_in_mb,omitempty" cass-config:"cdc_total_space_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CheckForDuplicateRowsDuringCompaction *bool `json:"check_for_duplicate_rows_during_compaction,omitempty" cass-config:"*:check_for_duplicate_rows_during_compaction,dse:*:check_for_duplicate_rows_during_compaction"`
+	CheckForDuplicateRowsDuringCompaction *bool `json:"check_for_duplicate_rows_during_compaction,omitempty" cass-config:"check_for_duplicate_rows_during_compaction"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CheckForDuplicateRowsDuringReads *bool `json:"check_for_duplicate_rows_during_reads,omitempty" cass-config:"*:check_for_duplicate_rows_during_reads,dse:*:check_for_duplicate_rows_during_reads"`
+	CheckForDuplicateRowsDuringReads *bool `json:"check_for_duplicate_rows_during_reads,omitempty" cass-config:"check_for_duplicate_rows_during_reads"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ClientEncryptionOptions *encryption.ClientEncryptionOptions `json:"client_encryption_options,omitempty" cass-config:"*:client_encryption_options,dse:*:client_encryption_options;recurse"`
+	ClientEncryptionOptions *encryption.ClientEncryptionOptions `json:"client_encryption_options,omitempty" cass-config:"client_encryption_options;recurse"`
 
 	// Exists in trunk
 	// +optional
@@ -171,36 +171,36 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ColumnIndexCacheSizeInKb *int `json:"column_index_cache_size_in_kb,omitempty" cass-config:"*:column_index_cache_size_in_kb,dse:*:column_index_cache_size_in_kb"`
+	ColumnIndexCacheSizeInKb *int `json:"column_index_cache_size_in_kb,omitempty" cass-config:"column_index_cache_size_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ColumnIndexSizeInKb *int `json:"column_index_size_in_kb,omitempty" cass-config:"*:column_index_size_in_kb,dse:*:column_index_size_in_kb"`
+	ColumnIndexSizeInKb *int `json:"column_index_size_in_kb,omitempty" cass-config:"column_index_size_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogCompression *ParameterizedClass `json:"commitlog_compression,omitempty" cass-config:"*:commitlog_compression,dse:*:commitlog_compression;recurse"`
+	CommitlogCompression *ParameterizedClass `json:"commitlog_compression,omitempty" cass-config:"commitlog_compression;recurse"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogMaxCompressionBuffersInPool *int `json:"commitlog_max_compression_buffers_in_pool,omitempty" cass-config:"*:commitlog_max_compression_buffers_in_pool,dse:*:commitlog_max_compression_buffers_in_pool"`
+	CommitlogMaxCompressionBuffersInPool *int `json:"commitlog_max_compression_buffers_in_pool,omitempty" cass-config:"commitlog_max_compression_buffers_in_pool"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogPeriodicQueueSize *int `json:"commitlog_periodic_queue_size,omitempty" cass-config:"*:commitlog_periodic_queue_size,dse:*:commitlog_periodic_queue_size"`
+	CommitlogPeriodicQueueSize *int `json:"commitlog_periodic_queue_size,omitempty" cass-config:"commitlog_periodic_queue_size"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogSegmentSizeInMb *int `json:"commitlog_segment_size_in_mb,omitempty" cass-config:"*:commitlog_segment_size_in_mb,dse:*:commitlog_segment_size_in_mb"`
+	CommitlogSegmentSizeInMb *int `json:"commitlog_segment_size_in_mb,omitempty" cass-config:"commitlog_segment_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=periodic;batch;group
 	// +optional
-	CommitlogSync *string `json:"commitlog_sync,omitempty" cass-config:"*:commitlog_sync,dse:*:commitlog_sync"`
+	CommitlogSync *string `json:"commitlog_sync,omitempty" cass-config:"commitlog_sync"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogSyncBatchWindowInMs *string `json:"commitlog_sync_batch_window_in_ms,omitempty" cass-config:"*:commitlog_sync_batch_window_in_ms,dse:*:commitlog_sync_batch_window_in_ms"`
+	CommitlogSyncBatchWindowInMs *string `json:"commitlog_sync_batch_window_in_ms,omitempty" cass-config:"commitlog_sync_batch_window_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -208,19 +208,19 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogSyncPeriodInMs *int `json:"commitlog_sync_period_in_ms,omitempty" cass-config:"*:commitlog_sync_period_in_ms,dse:*:commitlog_sync_period_in_ms"`
+	CommitlogSyncPeriodInMs *int `json:"commitlog_sync_period_in_ms,omitempty" cass-config:"commitlog_sync_period_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CommitlogTotalSpaceInMb *int `json:"commitlog_total_space_in_mb,omitempty" cass-config:"*:commitlog_total_space_in_mb,dse:*:commitlog_total_space_in_mb"`
+	CommitlogTotalSpaceInMb *int `json:"commitlog_total_space_in_mb,omitempty" cass-config:"commitlog_total_space_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CompactionLargePartitionWarningThresholdMb *int `json:"compaction_large_partition_warning_threshold_mb,omitempty" cass-config:"*:compaction_large_partition_warning_threshold_mb,dse:*:compaction_large_partition_warning_threshold_mb"`
+	CompactionLargePartitionWarningThresholdMb *int `json:"compaction_large_partition_warning_threshold_mb,omitempty" cass-config:"compaction_large_partition_warning_threshold_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CompactionThroughputMbPerSec *int `json:"compaction_throughput_mb_per_sec,omitempty" cass-config:"*:compaction_throughput_mb_per_sec,dse:*:compaction_throughput_mb_per_sec"`
+	CompactionThroughputMbPerSec *int `json:"compaction_throughput_mb_per_sec,omitempty" cass-config:"compaction_throughput_mb_per_sec"`
 
 	// Exists in trunk
 	// +optional
@@ -228,11 +228,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentCompactors *int `json:"concurrent_compactors,omitempty" cass-config:"*:concurrent_compactors,dse:*:concurrent_compactors"`
+	ConcurrentCompactors *int `json:"concurrent_compactors,omitempty" cass-config:"concurrent_compactors"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentCounterWrites *int `json:"concurrent_counter_writes,omitempty" cass-config:"*:concurrent_counter_writes,dse:*:concurrent_counter_writes"`
+	ConcurrentCounterWrites *int `json:"concurrent_counter_writes,omitempty" cass-config:"concurrent_counter_writes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -240,15 +240,15 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentMaterializedViewWrites *int `json:"concurrent_materialized_view_writes,omitempty" cass-config:"*:concurrent_materialized_view_writes,dse:*:concurrent_materialized_view_writes"`
+	ConcurrentMaterializedViewWrites *int `json:"concurrent_materialized_view_writes,omitempty" cass-config:"concurrent_materialized_view_writes"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentReads *int `json:"concurrent_reads,omitempty" cass-config:"*:concurrent_reads,dse:*:concurrent_reads"`
+	ConcurrentReads *int `json:"concurrent_reads,omitempty" cass-config:"concurrent_reads"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentReplicates *int `json:"concurrent_replicates,omitempty" cass-config:"*:concurrent_replicates,dse:*:concurrent_replicates"`
+	ConcurrentReplicates *int `json:"concurrent_replicates,omitempty" cass-config:"concurrent_replicates"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -256,7 +256,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ConcurrentWrites *int `json:"concurrent_writes,omitempty" cass-config:"*:concurrent_writes,dse:*:concurrent_writes"`
+	ConcurrentWrites *int `json:"concurrent_writes,omitempty" cass-config:"concurrent_writes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -269,35 +269,35 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CounterCacheKeysToSave *int `json:"counter_cache_keys_to_save,omitempty" cass-config:"*:counter_cache_keys_to_save,dse:*:counter_cache_keys_to_save"`
+	CounterCacheKeysToSave *int `json:"counter_cache_keys_to_save,omitempty" cass-config:"counter_cache_keys_to_save"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CounterCacheSavePeriod *int `json:"counter_cache_save_period,omitempty" cass-config:"*:counter_cache_save_period,dse:*:counter_cache_save_period"`
+	CounterCacheSavePeriod *int `json:"counter_cache_save_period,omitempty" cass-config:"counter_cache_save_period"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CounterCacheSizeInMb *int `json:"counter_cache_size_in_mb,omitempty" cass-config:"*:counter_cache_size_in_mb,dse:*:counter_cache_size_in_mb"`
+	CounterCacheSizeInMb *int `json:"counter_cache_size_in_mb,omitempty" cass-config:"counter_cache_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CounterWriteRequestTimeoutInMs *int `json:"counter_write_request_timeout_in_ms,omitempty" cass-config:"*:counter_write_request_timeout_in_ms,dse:*:counter_write_request_timeout_in_ms"`
+	CounterWriteRequestTimeoutInMs *int `json:"counter_write_request_timeout_in_ms,omitempty" cass-config:"counter_write_request_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CredentialsCacheMaxEntries *int `json:"credentials_cache_max_entries,omitempty" cass-config:"*:credentials_cache_max_entries,dse:*:credentials_cache_max_entries"`
+	CredentialsCacheMaxEntries *int `json:"credentials_cache_max_entries,omitempty" cass-config:"credentials_cache_max_entries"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CredentialsUpdateIntervalInMs *int `json:"credentials_update_interval_in_ms,omitempty" cass-config:"*:credentials_update_interval_in_ms,dse:*:credentials_update_interval_in_ms"`
+	CredentialsUpdateIntervalInMs *int `json:"credentials_update_interval_in_ms,omitempty" cass-config:"credentials_update_interval_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CredentialsValidityInMs *int `json:"credentials_validity_in_ms,omitempty" cass-config:"*:credentials_validity_in_ms,dse:*:credentials_validity_in_ms"`
+	CredentialsValidityInMs *int `json:"credentials_validity_in_ms,omitempty" cass-config:"credentials_validity_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	CrossNodeTimeout *bool `json:"cross_node_timeout,omitempty" cass-config:"*:cross_node_timeout,dse:*:cross_node_timeout"`
+	CrossNodeTimeout *bool `json:"cross_node_timeout,omitempty" cass-config:"cross_node_timeout"`
 
 	// Exists in trunk
 	// +optional
@@ -331,36 +331,36 @@ type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=auto;mmap;mmap_index_only;standard
 	// +optional
-	DiskAccessMode *string `json:"disk_access_mode,omitempty" cass-config:"*:disk_access_mode,dse:*:disk_access_mode"`
+	DiskAccessMode *string `json:"disk_access_mode,omitempty" cass-config:"disk_access_mode"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DiskOptimizationEstimatePercentile *string `json:"disk_optimization_estimate_percentile,omitempty" cass-config:"*:disk_optimization_estimate_percentile,dse:*:disk_optimization_estimate_percentile"`
+	DiskOptimizationEstimatePercentile *string `json:"disk_optimization_estimate_percentile,omitempty" cass-config:"disk_optimization_estimate_percentile"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DiskOptimizationPageCrossChance *string `json:"disk_optimization_page_cross_chance,omitempty" cass-config:"*:disk_optimization_page_cross_chance,dse:*:disk_optimization_page_cross_chance"`
+	DiskOptimizationPageCrossChance *string `json:"disk_optimization_page_cross_chance,omitempty" cass-config:"disk_optimization_page_cross_chance"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=ssd;spinning
 	// +optional
-	DiskOptimizationStrategy *string `json:"disk_optimization_strategy,omitempty" cass-config:"*:disk_optimization_strategy,dse:*:disk_optimization_strategy"`
+	DiskOptimizationStrategy *string `json:"disk_optimization_strategy,omitempty" cass-config:"disk_optimization_strategy"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DynamicSnitch *bool `json:"dynamic_snitch,omitempty" cass-config:"*:dynamic_snitch,dse:*:dynamic_snitch"`
+	DynamicSnitch *bool `json:"dynamic_snitch,omitempty" cass-config:"dynamic_snitch"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DynamicSnitchBadnessThreshold *string `json:"dynamic_snitch_badness_threshold,omitempty" cass-config:"*:dynamic_snitch_badness_threshold,dse:*:dynamic_snitch_badness_threshold"`
+	DynamicSnitchBadnessThreshold *string `json:"dynamic_snitch_badness_threshold,omitempty" cass-config:"dynamic_snitch_badness_threshold"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DynamicSnitchResetIntervalInMs *int `json:"dynamic_snitch_reset_interval_in_ms,omitempty" cass-config:"*:dynamic_snitch_reset_interval_in_ms,dse:*:dynamic_snitch_reset_interval_in_ms"`
+	DynamicSnitchResetIntervalInMs *int `json:"dynamic_snitch_reset_interval_in_ms,omitempty" cass-config:"dynamic_snitch_reset_interval_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	DynamicSnitchUpdateIntervalInMs *int `json:"dynamic_snitch_update_interval_in_ms,omitempty" cass-config:"*:dynamic_snitch_update_interval_in_ms,dse:*:dynamic_snitch_update_interval_in_ms"`
+	DynamicSnitchUpdateIntervalInMs *int `json:"dynamic_snitch_update_interval_in_ms,omitempty" cass-config:"dynamic_snitch_update_interval_in_ms"`
 
 	// Exists in trunk
 	// +optional
@@ -376,11 +376,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableDropCompactStorage *bool `json:"enable_drop_compact_storage,omitempty" cass-config:"*:enable_drop_compact_storage,dse:*:enable_drop_compact_storage"`
+	EnableDropCompactStorage *bool `json:"enable_drop_compact_storage,omitempty" cass-config:"enable_drop_compact_storage"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableMaterializedViews *bool `json:"enable_materialized_views,omitempty" cass-config:"*:enable_materialized_views,dse:*:enable_materialized_views"`
+	EnableMaterializedViews *bool `json:"enable_materialized_views,omitempty" cass-config:"enable_materialized_views"`
 
 	// Exists in trunk
 	// +optional
@@ -388,11 +388,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableSasiIndexes *bool `json:"enable_sasi_indexes,omitempty" cass-config:"*:enable_sasi_indexes,dse:*:enable_sasi_indexes"`
+	EnableSasiIndexes *bool `json:"enable_sasi_indexes,omitempty" cass-config:"enable_sasi_indexes"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableScriptedUserDefinedFunctions *bool `json:"enable_scripted_user_defined_functions,omitempty" cass-config:"*:enable_scripted_user_defined_functions,dse:*:enable_scripted_user_defined_functions"`
+	EnableScriptedUserDefinedFunctions *bool `json:"enable_scripted_user_defined_functions,omitempty" cass-config:"enable_scripted_user_defined_functions"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -400,15 +400,15 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableUserDefinedFunctions *bool `json:"enable_user_defined_functions,omitempty" cass-config:"*:enable_user_defined_functions,dse:*:enable_user_defined_functions"`
+	EnableUserDefinedFunctions *bool `json:"enable_user_defined_functions,omitempty" cass-config:"enable_user_defined_functions"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EnableUserDefinedFunctionsThreads *bool `json:"enable_user_defined_functions_threads,omitempty" cass-config:"*:enable_user_defined_functions_threads,dse:*:enable_user_defined_functions_threads"`
+	EnableUserDefinedFunctionsThreads *bool `json:"enable_user_defined_functions_threads,omitempty" cass-config:"enable_user_defined_functions_threads"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	EndpointSnitch *string `json:"endpoint_snitch,omitempty" cass-config:"*:endpoint_snitch,dse:*:endpoint_snitch"`
+	EndpointSnitch *string `json:"endpoint_snitch,omitempty" cass-config:"endpoint_snitch"`
 
 	// Exists in trunk
 	// +optional
@@ -420,11 +420,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	FileCacheRoundUp *bool `json:"file_cache_round_up,omitempty" cass-config:"*:file_cache_round_up,dse:*:file_cache_round_up"`
+	FileCacheRoundUp *bool `json:"file_cache_round_up,omitempty" cass-config:"file_cache_round_up"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	FileCacheSizeInMb *int `json:"file_cache_size_in_mb,omitempty" cass-config:"*:file_cache_size_in_mb,dse:*:file_cache_size_in_mb"`
+	FileCacheSizeInMb *int `json:"file_cache_size_in_mb,omitempty" cass-config:"file_cache_size_in_mb"`
 
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=none;fast;table
@@ -437,11 +437,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	GcLogThresholdInMs *int `json:"gc_log_threshold_in_ms,omitempty" cass-config:"*:gc_log_threshold_in_ms,dse:*:gc_log_threshold_in_ms"`
+	GcLogThresholdInMs *int `json:"gc_log_threshold_in_ms,omitempty" cass-config:"gc_log_threshold_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	GcWarnThresholdInMs *int `json:"gc_warn_threshold_in_ms,omitempty" cass-config:"*:gc_warn_threshold_in_ms,dse:*:gc_warn_threshold_in_ms"`
+	GcWarnThresholdInMs *int `json:"gc_warn_threshold_in_ms,omitempty" cass-config:"gc_warn_threshold_in_ms"`
 
 	// Exists in trunk
 	// +optional
@@ -449,23 +449,23 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	HintedHandoffDisabledDatacenters *[]string `json:"hinted_handoff_disabled_datacenters,omitempty" cass-config:"*:hinted_handoff_disabled_datacenters,dse:*:hinted_handoff_disabled_datacenters"`
+	HintedHandoffDisabledDatacenters *[]string `json:"hinted_handoff_disabled_datacenters,omitempty" cass-config:"hinted_handoff_disabled_datacenters"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	HintedHandoffEnabled *bool `json:"hinted_handoff_enabled,omitempty" cass-config:"*:hinted_handoff_enabled,dse:*:hinted_handoff_enabled"`
+	HintedHandoffEnabled *bool `json:"hinted_handoff_enabled,omitempty" cass-config:"hinted_handoff_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	HintedHandoffThrottleInKb *int `json:"hinted_handoff_throttle_in_kb,omitempty" cass-config:"*:hinted_handoff_throttle_in_kb,dse:*:hinted_handoff_throttle_in_kb"`
+	HintedHandoffThrottleInKb *int `json:"hinted_handoff_throttle_in_kb,omitempty" cass-config:"hinted_handoff_throttle_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	HintsCompression *ParameterizedClass `json:"hints_compression,omitempty" cass-config:"*:hints_compression,dse:*:hints_compression;recurse"`
+	HintsCompression *ParameterizedClass `json:"hints_compression,omitempty" cass-config:"hints_compression;recurse"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	HintsFlushPeriodInMs *int `json:"hints_flush_period_in_ms,omitempty" cass-config:"*:hints_flush_period_in_ms,dse:*:hints_flush_period_in_ms"`
+	HintsFlushPeriodInMs *int `json:"hints_flush_period_in_ms,omitempty" cass-config:"hints_flush_period_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=ANY;ONE;TWO;THREE;QUORUM;ALL;LOCAL_QUORUM;EACH_QUORUM;SERIAL;LOCAL_SERIAL;LOCAL_ONE;NODE_LOCAL
@@ -478,11 +478,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	IndexSummaryCapacityInMb *int `json:"index_summary_capacity_in_mb,omitempty" cass-config:"*:index_summary_capacity_in_mb,dse:*:index_summary_capacity_in_mb"`
+	IndexSummaryCapacityInMb *int `json:"index_summary_capacity_in_mb,omitempty" cass-config:"index_summary_capacity_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	IndexSummaryResizeIntervalInMinutes *int `json:"index_summary_resize_interval_in_minutes,omitempty" cass-config:"*:index_summary_resize_interval_in_minutes,dse:*:index_summary_resize_interval_in_minutes"`
+	IndexSummaryResizeIntervalInMinutes *int `json:"index_summary_resize_interval_in_minutes,omitempty" cass-config:"index_summary_resize_interval_in_minutes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -490,11 +490,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	InterDcStreamThroughputOutboundMegabitsPerSec *int `json:"inter_dc_stream_throughput_outbound_megabits_per_sec,omitempty" cass-config:"*:inter_dc_stream_throughput_outbound_megabits_per_sec,dse:*:inter_dc_stream_throughput_outbound_megabits_per_sec"`
+	InterDcStreamThroughputOutboundMegabitsPerSec *int `json:"inter_dc_stream_throughput_outbound_megabits_per_sec,omitempty" cass-config:"inter_dc_stream_throughput_outbound_megabits_per_sec"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	InterDcTcpNodelay *bool `json:"inter_dc_tcp_nodelay,omitempty" cass-config:"*:inter_dc_tcp_nodelay,dse:*:inter_dc_tcp_nodelay"`
+	InterDcTcpNodelay *bool `json:"inter_dc_tcp_nodelay,omitempty" cass-config:"inter_dc_tcp_nodelay"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -522,12 +522,12 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	InternodeAuthenticator *string `json:"internode_authenticator,omitempty" cass-config:"*:internode_authenticator,dse:*:internode_authenticator"`
+	InternodeAuthenticator *string `json:"internode_authenticator,omitempty" cass-config:"internode_authenticator"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=all;none;dc
 	// +optional
-	InternodeCompression *string `json:"internode_compression,omitempty" cass-config:"*:internode_compression,dse:*:internode_compression"`
+	InternodeCompression *string `json:"internode_compression,omitempty" cass-config:"internode_compression"`
 
 	// Exists in trunk
 	// +optional
@@ -567,7 +567,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	KeyCacheKeysToSave *int `json:"key_cache_keys_to_save,omitempty" cass-config:"*:key_cache_keys_to_save,dse:*:key_cache_keys_to_save"`
+	KeyCacheKeysToSave *int `json:"key_cache_keys_to_save,omitempty" cass-config:"key_cache_keys_to_save"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -575,11 +575,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	KeyCacheSavePeriod *int `json:"key_cache_save_period,omitempty" cass-config:"*:key_cache_save_period,dse:*:key_cache_save_period"`
+	KeyCacheSavePeriod *int `json:"key_cache_save_period,omitempty" cass-config:"key_cache_save_period"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	KeyCacheSizeInMb *int `json:"key_cache_size_in_mb,omitempty" cass-config:"*:key_cache_size_in_mb,dse:*:key_cache_size_in_mb"`
+	KeyCacheSizeInMb *int `json:"key_cache_size_in_mb,omitempty" cass-config:"key_cache_size_in_mb"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -591,52 +591,52 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxHintWindowInMs *int `json:"max_hint_window_in_ms,omitempty" cass-config:"*:max_hint_window_in_ms,dse:*:max_hint_window_in_ms"`
+	MaxHintWindowInMs *int `json:"max_hint_window_in_ms,omitempty" cass-config:"max_hint_window_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxHintsDeliveryThreads *int `json:"max_hints_delivery_threads,omitempty" cass-config:"*:max_hints_delivery_threads,dse:*:max_hints_delivery_threads"`
+	MaxHintsDeliveryThreads *int `json:"max_hints_delivery_threads,omitempty" cass-config:"max_hints_delivery_threads"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxHintsFileSizeInMb *int `json:"max_hints_file_size_in_mb,omitempty" cass-config:"*:max_hints_file_size_in_mb,dse:*:max_hints_file_size_in_mb"`
+	MaxHintsFileSizeInMb *int `json:"max_hints_file_size_in_mb,omitempty" cass-config:"max_hints_file_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxMutationSizeInKb *int `json:"max_mutation_size_in_kb,omitempty" cass-config:"*:max_mutation_size_in_kb,dse:*:max_mutation_size_in_kb"`
+	MaxMutationSizeInKb *int `json:"max_mutation_size_in_kb,omitempty" cass-config:"max_mutation_size_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxStreamingRetries *int `json:"max_streaming_retries,omitempty" cass-config:"*:max_streaming_retries,dse:*:max_streaming_retries"`
+	MaxStreamingRetries *int `json:"max_streaming_retries,omitempty" cass-config:"max_streaming_retries"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MaxValueSizeInMb *int `json:"max_value_size_in_mb,omitempty" cass-config:"*:max_value_size_in_mb,dse:*:max_value_size_in_mb"`
+	MaxValueSizeInMb *int `json:"max_value_size_in_mb,omitempty" cass-config:"max_value_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=unslabbed_heap_buffers;unslabbed_heap_buffers_logged;heap_buffers;offheap_buffers;offheap_objects
 	// +optional
-	MemtableAllocationType *string `json:"memtable_allocation_type,omitempty" cass-config:"*:memtable_allocation_type,dse:*:memtable_allocation_type"`
+	MemtableAllocationType *string `json:"memtable_allocation_type,omitempty" cass-config:"memtable_allocation_type"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MemtableCleanupThreshold *string `json:"memtable_cleanup_threshold,omitempty" cass-config:"*:memtable_cleanup_threshold,dse:*:memtable_cleanup_threshold"`
+	MemtableCleanupThreshold *string `json:"memtable_cleanup_threshold,omitempty" cass-config:"memtable_cleanup_threshold"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MemtableFlushWriters *int `json:"memtable_flush_writers,omitempty" cass-config:"*:memtable_flush_writers,dse:*:memtable_flush_writers"`
+	MemtableFlushWriters *int `json:"memtable_flush_writers,omitempty" cass-config:"memtable_flush_writers"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MemtableHeapSpaceInMb *int `json:"memtable_heap_space_in_mb,omitempty" cass-config:"*:memtable_heap_space_in_mb,dse:*:memtable_heap_space_in_mb"`
+	MemtableHeapSpaceInMb *int `json:"memtable_heap_space_in_mb,omitempty" cass-config:"memtable_heap_space_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MemtableOffheapSpaceInMb *int `json:"memtable_offheap_space_in_mb,omitempty" cass-config:"*:memtable_offheap_space_in_mb,dse:*:memtable_offheap_space_in_mb"`
+	MemtableOffheapSpaceInMb *int `json:"memtable_offheap_space_in_mb,omitempty" cass-config:"memtable_offheap_space_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	MinFreeSpacePerDriveInMb *int `json:"min_free_space_per_drive_in_mb,omitempty" cass-config:"*:min_free_space_per_drive_in_mb,dse:*:min_free_space_per_drive_in_mb"`
+	MinFreeSpacePerDriveInMb *int `json:"min_free_space_per_drive_in_mb,omitempty" cass-config:"min_free_space_per_drive_in_mb"`
 
 	// Exists in trunk
 	// +optional
@@ -648,7 +648,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportFlushInBatchesLegacy *bool `json:"native_transport_flush_in_batches_legacy,omitempty" cass-config:"*:native_transport_flush_in_batches_legacy,dse:*:native_transport_flush_in_batches_legacy"`
+	NativeTransportFlushInBatchesLegacy *bool `json:"native_transport_flush_in_batches_legacy,omitempty" cass-config:"native_transport_flush_in_batches_legacy"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -656,27 +656,27 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxConcurrentConnections *int `json:"native_transport_max_concurrent_connections,omitempty" cass-config:"*:native_transport_max_concurrent_connections,dse:*:native_transport_max_concurrent_connections"`
+	NativeTransportMaxConcurrentConnections *int `json:"native_transport_max_concurrent_connections,omitempty" cass-config:"native_transport_max_concurrent_connections"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxConcurrentConnectionsPerIp *int `json:"native_transport_max_concurrent_connections_per_ip,omitempty" cass-config:"*:native_transport_max_concurrent_connections_per_ip,dse:*:native_transport_max_concurrent_connections_per_ip"`
+	NativeTransportMaxConcurrentConnectionsPerIp *int `json:"native_transport_max_concurrent_connections_per_ip,omitempty" cass-config:"native_transport_max_concurrent_connections_per_ip"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxConcurrentRequestsInBytes *int `json:"native_transport_max_concurrent_requests_in_bytes,omitempty" cass-config:"*:native_transport_max_concurrent_requests_in_bytes,dse:*:native_transport_max_concurrent_requests_in_bytes"`
+	NativeTransportMaxConcurrentRequestsInBytes *int `json:"native_transport_max_concurrent_requests_in_bytes,omitempty" cass-config:"native_transport_max_concurrent_requests_in_bytes"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxConcurrentRequestsInBytesPerIp *int `json:"native_transport_max_concurrent_requests_in_bytes_per_ip,omitempty" cass-config:"*:native_transport_max_concurrent_requests_in_bytes_per_ip,dse:*:native_transport_max_concurrent_requests_in_bytes_per_ip"`
+	NativeTransportMaxConcurrentRequestsInBytesPerIp *int `json:"native_transport_max_concurrent_requests_in_bytes_per_ip,omitempty" cass-config:"native_transport_max_concurrent_requests_in_bytes_per_ip"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxFrameSizeInMb *int `json:"native_transport_max_frame_size_in_mb,omitempty" cass-config:"*:native_transport_max_frame_size_in_mb,dse:*:native_transport_max_frame_size_in_mb"`
+	NativeTransportMaxFrameSizeInMb *int `json:"native_transport_max_frame_size_in_mb,omitempty" cass-config:"native_transport_max_frame_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxNegotiableProtocolVersion *int `json:"native_transport_max_negotiable_protocol_version,omitempty" cass-config:"*:native_transport_max_negotiable_protocol_version,dse:*:native_transport_max_negotiable_protocol_version"`
+	NativeTransportMaxNegotiableProtocolVersion *int `json:"native_transport_max_negotiable_protocol_version,omitempty" cass-config:"native_transport_max_negotiable_protocol_version"`
 
 	// Exists in trunk
 	// +optional
@@ -684,7 +684,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NativeTransportMaxThreads *int `json:"native_transport_max_threads,omitempty" cass-config:"*:native_transport_max_threads,dse:*:native_transport_max_threads"`
+	NativeTransportMaxThreads *int `json:"native_transport_max_threads,omitempty" cass-config:"native_transport_max_threads"`
 
 	// Exists in trunk
 	// +optional
@@ -704,7 +704,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	NumTokens *int `json:"num_tokens,omitempty" cass-config:"*:num_tokens,dse:*:num_tokens"`
+	NumTokens *int `json:"num_tokens,omitempty" cass-config:"num_tokens"`
 
 	// Exists in 3.11
 	// +optional
@@ -712,15 +712,15 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	OtcCoalescingEnoughCoalescedMessages *int `json:"otc_coalescing_enough_coalesced_messages,omitempty" cass-config:"*:otc_coalescing_enough_coalesced_messages,dse:*:otc_coalescing_enough_coalesced_messages"`
+	OtcCoalescingEnoughCoalescedMessages *int `json:"otc_coalescing_enough_coalesced_messages,omitempty" cass-config:"otc_coalescing_enough_coalesced_messages"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	OtcCoalescingStrategy *string `json:"otc_coalescing_strategy,omitempty" cass-config:"*:otc_coalescing_strategy,dse:*:otc_coalescing_strategy"`
+	OtcCoalescingStrategy *string `json:"otc_coalescing_strategy,omitempty" cass-config:"otc_coalescing_strategy"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	OtcCoalescingWindowUs *int `json:"otc_coalescing_window_us,omitempty" cass-config:"*:otc_coalescing_window_us,dse:*:otc_coalescing_window_us"`
+	OtcCoalescingWindowUs *int `json:"otc_coalescing_window_us,omitempty" cass-config:"otc_coalescing_window_us"`
 
 	// Exists in trunk
 	// +optional
@@ -732,27 +732,27 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	PermissionsCacheMaxEntries *int `json:"permissions_cache_max_entries,omitempty" cass-config:"*:permissions_cache_max_entries,dse:*:permissions_cache_max_entries"`
+	PermissionsCacheMaxEntries *int `json:"permissions_cache_max_entries,omitempty" cass-config:"permissions_cache_max_entries"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	PermissionsUpdateIntervalInMs *int `json:"permissions_update_interval_in_ms,omitempty" cass-config:"*:permissions_update_interval_in_ms,dse:*:permissions_update_interval_in_ms"`
+	PermissionsUpdateIntervalInMs *int `json:"permissions_update_interval_in_ms,omitempty" cass-config:"permissions_update_interval_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	PermissionsValidityInMs *int `json:"permissions_validity_in_ms,omitempty" cass-config:"*:permissions_validity_in_ms,dse:*:permissions_validity_in_ms"`
+	PermissionsValidityInMs *int `json:"permissions_validity_in_ms,omitempty" cass-config:"permissions_validity_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	PhiConvictThreshold *string `json:"phi_convict_threshold,omitempty" cass-config:"*:phi_convict_threshold,dse:*:phi_convict_threshold"`
+	PhiConvictThreshold *string `json:"phi_convict_threshold,omitempty" cass-config:"phi_convict_threshold"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	PreparedStatementsCacheSizeMb *int `json:"prepared_statements_cache_size_mb,omitempty" cass-config:"*:prepared_statements_cache_size_mb,dse:*:prepared_statements_cache_size_mb"`
+	PreparedStatementsCacheSizeMb *int `json:"prepared_statements_cache_size_mb,omitempty" cass-config:"prepared_statements_cache_size_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RangeRequestTimeoutInMs *int `json:"range_request_timeout_in_ms,omitempty" cass-config:"*:range_request_timeout_in_ms,dse:*:range_request_timeout_in_ms"`
+	RangeRequestTimeoutInMs *int `json:"range_request_timeout_in_ms,omitempty" cass-config:"range_request_timeout_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -760,7 +760,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ReadRequestTimeoutInMs *int `json:"read_request_timeout_in_ms,omitempty" cass-config:"*:read_request_timeout_in_ms,dse:*:read_request_timeout_in_ms"`
+	ReadRequestTimeoutInMs *int `json:"read_request_timeout_in_ms,omitempty" cass-config:"read_request_timeout_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -777,7 +777,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RepairSessionMaxTreeDepth *int `json:"repair_session_max_tree_depth,omitempty" cass-config:"*:repair_session_max_tree_depth,dse:*:repair_session_max_tree_depth"`
+	RepairSessionMaxTreeDepth *int `json:"repair_session_max_tree_depth,omitempty" cass-config:"repair_session_max_tree_depth"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -793,7 +793,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ReplicaFilteringProtection *ReplicaFilteringProtectionOptions `json:"replica_filtering_protection,omitempty" cass-config:"*:replica_filtering_protection,dse:*:replica_filtering_protection;recurse"`
+	ReplicaFilteringProtection *ReplicaFilteringProtectionOptions `json:"replica_filtering_protection,omitempty" cass-config:"replica_filtering_protection;recurse"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -814,51 +814,51 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RequestTimeoutInMs *int `json:"request_timeout_in_ms,omitempty" cass-config:"*:request_timeout_in_ms,dse:*:request_timeout_in_ms"`
+	RequestTimeoutInMs *int `json:"request_timeout_in_ms,omitempty" cass-config:"request_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RoleManager *string `json:"role_manager,omitempty" cass-config:"*:role_manager,dse:*:role_manager"`
+	RoleManager *string `json:"role_manager,omitempty" cass-config:"role_manager"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RolesCacheMaxEntries *int `json:"roles_cache_max_entries,omitempty" cass-config:"*:roles_cache_max_entries,dse:*:roles_cache_max_entries"`
+	RolesCacheMaxEntries *int `json:"roles_cache_max_entries,omitempty" cass-config:"roles_cache_max_entries"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RolesUpdateIntervalInMs *int `json:"roles_update_interval_in_ms,omitempty" cass-config:"*:roles_update_interval_in_ms,dse:*:roles_update_interval_in_ms"`
+	RolesUpdateIntervalInMs *int `json:"roles_update_interval_in_ms,omitempty" cass-config:"roles_update_interval_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RolesValidityInMs *int `json:"roles_validity_in_ms,omitempty" cass-config:"*:roles_validity_in_ms,dse:*:roles_validity_in_ms"`
+	RolesValidityInMs *int `json:"roles_validity_in_ms,omitempty" cass-config:"roles_validity_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RowCacheClassName *string `json:"row_cache_class_name,omitempty" cass-config:"*:row_cache_class_name,dse:*:row_cache_class_name"`
+	RowCacheClassName *string `json:"row_cache_class_name,omitempty" cass-config:"row_cache_class_name"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RowCacheKeysToSave *int `json:"row_cache_keys_to_save,omitempty" cass-config:"*:row_cache_keys_to_save,dse:*:row_cache_keys_to_save"`
+	RowCacheKeysToSave *int `json:"row_cache_keys_to_save,omitempty" cass-config:"row_cache_keys_to_save"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RowCacheSavePeriod *int `json:"row_cache_save_period,omitempty" cass-config:"*:row_cache_save_period,dse:*:row_cache_save_period"`
+	RowCacheSavePeriod *int `json:"row_cache_save_period,omitempty" cass-config:"row_cache_save_period"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	RowCacheSizeInMb *int `json:"row_cache_size_in_mb,omitempty" cass-config:"*:row_cache_size_in_mb,dse:*:row_cache_size_in_mb"`
+	RowCacheSizeInMb *int `json:"row_cache_size_in_mb,omitempty" cass-config:"row_cache_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	ServerEncryptionOptions *encryption.ServerEncryptionOptions `json:"server_encryption_options,omitempty" cass-config:"*:server_encryption_options,dse:*:server_encryption_options;recurse"`
+	ServerEncryptionOptions *encryption.ServerEncryptionOptions `json:"server_encryption_options,omitempty" cass-config:"server_encryption_options;recurse"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	SlowQueryLogTimeoutInMs *int `json:"slow_query_log_timeout_in_ms,omitempty" cass-config:"*:slow_query_log_timeout_in_ms,dse:*:slow_query_log_timeout_in_ms"`
+	SlowQueryLogTimeoutInMs *int `json:"slow_query_log_timeout_in_ms,omitempty" cass-config:"slow_query_log_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	SnapshotBeforeCompaction *bool `json:"snapshot_before_compaction,omitempty" cass-config:"*:snapshot_before_compaction,dse:*:snapshot_before_compaction"`
+	SnapshotBeforeCompaction *bool `json:"snapshot_before_compaction,omitempty" cass-config:"snapshot_before_compaction"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -866,7 +866,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	SnapshotOnDuplicateRowDetection *bool `json:"snapshot_on_duplicate_row_detection,omitempty" cass-config:"*:snapshot_on_duplicate_row_detection,dse:*:snapshot_on_duplicate_row_detection"`
+	SnapshotOnDuplicateRowDetection *bool `json:"snapshot_on_duplicate_row_detection,omitempty" cass-config:"snapshot_on_duplicate_row_detection"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -874,7 +874,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	SstablePreemptiveOpenIntervalInMb *int `json:"sstable_preemptive_open_interval_in_mb,omitempty" cass-config:"*:sstable_preemptive_open_interval_in_mb,dse:*:sstable_preemptive_open_interval_in_mb"`
+	SstablePreemptiveOpenIntervalInMb *int `json:"sstable_preemptive_open_interval_in_mb,omitempty" cass-config:"sstable_preemptive_open_interval_in_mb"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -882,7 +882,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	StreamThroughputOutboundMegabitsPerSec *int `json:"stream_throughput_outbound_megabits_per_sec,omitempty" cass-config:"*:stream_throughput_outbound_megabits_per_sec,dse:*:stream_throughput_outbound_megabits_per_sec"`
+	StreamThroughputOutboundMegabitsPerSec *int `json:"stream_throughput_outbound_megabits_per_sec,omitempty" cass-config:"stream_throughput_outbound_megabits_per_sec"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -890,7 +890,7 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	StreamingKeepAlivePeriodInSecs *int `json:"streaming_keep_alive_period_in_secs,omitempty" cass-config:"*:streaming_keep_alive_period_in_secs,dse:*:streaming_keep_alive_period_in_secs"`
+	StreamingKeepAlivePeriodInSecs *int `json:"streaming_keep_alive_period_in_secs,omitempty" cass-config:"streaming_keep_alive_period_in_secs"`
 
 	// Exists in 3.11
 	// +optional
@@ -914,19 +914,19 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TombstoneFailureThreshold *int `json:"tombstone_failure_threshold,omitempty" cass-config:"*:tombstone_failure_threshold,dse:*:tombstone_failure_threshold"`
+	TombstoneFailureThreshold *int `json:"tombstone_failure_threshold,omitempty" cass-config:"tombstone_failure_threshold"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TombstoneWarnThreshold *int `json:"tombstone_warn_threshold,omitempty" cass-config:"*:tombstone_warn_threshold,dse:*:tombstone_warn_threshold"`
+	TombstoneWarnThreshold *int `json:"tombstone_warn_threshold,omitempty" cass-config:"tombstone_warn_threshold"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TracetypeQueryTtl *int `json:"tracetype_query_ttl,omitempty" cass-config:"*:tracetype_query_ttl,dse:*:tracetype_query_ttl"`
+	TracetypeQueryTtl *int `json:"tracetype_query_ttl,omitempty" cass-config:"tracetype_query_ttl"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TracetypeRepairTtl *int `json:"tracetype_repair_ttl,omitempty" cass-config:"*:tracetype_repair_ttl,dse:*:tracetype_repair_ttl"`
+	TracetypeRepairTtl *int `json:"tracetype_repair_ttl,omitempty" cass-config:"tracetype_repair_ttl"`
 
 	// Exists in trunk
 	// +optional
@@ -938,19 +938,19 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TrickleFsync *bool `json:"trickle_fsync,omitempty" cass-config:"*:trickle_fsync,dse:*:trickle_fsync"`
+	TrickleFsync *bool `json:"trickle_fsync,omitempty" cass-config:"trickle_fsync"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TrickleFsyncIntervalInKb *int `json:"trickle_fsync_interval_in_kb,omitempty" cass-config:"*:trickle_fsync_interval_in_kb,dse:*:trickle_fsync_interval_in_kb"`
+	TrickleFsyncIntervalInKb *int `json:"trickle_fsync_interval_in_kb,omitempty" cass-config:"trickle_fsync_interval_in_kb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	TruncateRequestTimeoutInMs *int `json:"truncate_request_timeout_in_ms,omitempty" cass-config:"*:truncate_request_timeout_in_ms,dse:*:truncate_request_timeout_in_ms"`
+	TruncateRequestTimeoutInMs *int `json:"truncate_request_timeout_in_ms,omitempty" cass-config:"truncate_request_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	UnloggedBatchAcrossPartitionsWarnThreshold *int `json:"unlogged_batch_across_partitions_warn_threshold,omitempty" cass-config:"*:unlogged_batch_across_partitions_warn_threshold,dse:*:unlogged_batch_across_partitions_warn_threshold"`
+	UnloggedBatchAcrossPartitionsWarnThreshold *int `json:"unlogged_batch_across_partitions_warn_threshold,omitempty" cass-config:"unlogged_batch_across_partitions_warn_threshold"`
 
 	// Exists in trunk
 	// +optional
@@ -962,16 +962,16 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	UserDefinedFunctionFailTimeout *int `json:"user_defined_function_fail_timeout,omitempty" cass-config:"*:user_defined_function_fail_timeout,dse:*:user_defined_function_fail_timeout"`
+	UserDefinedFunctionFailTimeout *int `json:"user_defined_function_fail_timeout,omitempty" cass-config:"user_defined_function_fail_timeout"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	UserDefinedFunctionWarnTimeout *int `json:"user_defined_function_warn_timeout,omitempty" cass-config:"*:user_defined_function_warn_timeout,dse:*:user_defined_function_warn_timeout"`
+	UserDefinedFunctionWarnTimeout *int `json:"user_defined_function_warn_timeout,omitempty" cass-config:"user_defined_function_warn_timeout"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=ignore;die;die_immediate
 	// +optional
-	UserFunctionTimeoutPolicy *string `json:"user_function_timeout_policy,omitempty" cass-config:"*:user_function_timeout_policy,dse:*:user_function_timeout_policy"`
+	UserFunctionTimeoutPolicy *string `json:"user_function_timeout_policy,omitempty" cass-config:"user_function_timeout_policy"`
 
 	// Exists in: 4.0, trunk
 	// +optional
@@ -979,11 +979,11 @@ type CassandraYaml struct {
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	WindowsTimerInterval *int `json:"windows_timer_interval,omitempty" cass-config:"*:windows_timer_interval,dse:*:windows_timer_interval"`
+	WindowsTimerInterval *int `json:"windows_timer_interval,omitempty" cass-config:"windows_timer_interval"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
-	WriteRequestTimeoutInMs *int `json:"write_request_timeout_in_ms,omitempty" cass-config:"*:write_request_timeout_in_ms,dse:*:write_request_timeout_in_ms"`
+	WriteRequestTimeoutInMs *int `json:"write_request_timeout_in_ms,omitempty" cass-config:"write_request_timeout_in_ms"`
 }
 
 type JvmOptions struct {
@@ -1523,59 +1523,59 @@ type JvmOptions struct {
 
 	// Additional, arbitrary JVM options (advanced).
 	// +optional
-	AdditionalOptions []string `json:"additionalOptions,omitempty" cass-config:"*:cassandra-env-sh/additional-jvm-opts,dse:*:cassandra-env-sh/additional-jvm-opts"`
+	AdditionalOptions []string `json:"additionalOptions,omitempty" cass-config:"cassandra-env-sh/additional-jvm-opts"`
 }
 
 type ParameterizedClass struct {
-	ClassName  string             `json:"class_name" cass-config:"*:class_name,dse:*:class_name"`
-	Parameters *map[string]string `json:"parameters,omitempty" cass-config:"*:parameters,dse:*:parameters"`
+	ClassName  string             `json:"class_name" cass-config:"class_name"`
+	Parameters *map[string]string `json:"parameters,omitempty" cass-config:"parameters"`
 }
 
 type ReplicaFilteringProtectionOptions struct {
-	CachedRowsWarnThreshold *int `json:"cached_rows_warn_threshold,omitempty" cass-config:"*:cached_rows_warn_threshold,dse:*:cached_rows_warn_threshold"`
-	CachedRowsFailThreshold *int `json:"cached_rows_fail_threshold,omitempty" cass-config:"*:cached_rows_fail_threshold,dse:*:cached_rows_fail_threshold"`
+	CachedRowsWarnThreshold *int `json:"cached_rows_warn_threshold,omitempty" cass-config:"cached_rows_warn_threshold"`
+	CachedRowsFailThreshold *int `json:"cached_rows_fail_threshold,omitempty" cass-config:"cached_rows_fail_threshold"`
 }
 
 type RequestSchedulerOptions struct {
-	ThrottleLimit *int            `json:"throttle_limit,omitempty" cass-config:"*:throttle_limit,dse:*:throttle_limit"`
-	DefaultWeight *int            `json:"default_weight,omitempty" cass-config:"*:default_weight,dse:*:default_weight"`
-	Weights       *map[string]int `json:"weights,omitempty" cass-config:"*:weights,dse:*:weights"`
+	ThrottleLimit *int            `json:"throttle_limit,omitempty" cass-config:"throttle_limit"`
+	DefaultWeight *int            `json:"default_weight,omitempty" cass-config:"default_weight"`
+	Weights       *map[string]int `json:"weights,omitempty" cass-config:"weights"`
 }
 
 type AuditLogOptions struct {
-	Enabled            bool                `json:"enabled" cass-config:"*:enabled,dse:*:enabled;retainzero"`
-	Logger             *ParameterizedClass `json:"logger,omitempty" cass-config:"*:logger,dse:*:logger;recurse"`
-	IncludedKeyspaces  *string             `json:"included_keyspaces,omitempty" cass-config:"*:included_keyspaces,dse:*:included_keyspaces"`
-	ExcludedKeyspaces  *string             `json:"excluded_keyspaces,omitempty" cass-config:"*:excluded_keyspaces,dse:*:excluded_keyspaces"`
-	IncludedCategories *string             `json:"included_categories,omitempty" cass-config:"*:included_categories,dse:*:included_categories"`
-	ExcludedCategories *string             `json:"excluded_categories,omitempty" cass-config:"*:excluded_categories,dse:*:excluded_categories"`
-	IncludedUsers      *string             `json:"included_users,omitempty" cass-config:"*:included_users,dse:*:included_users"`
-	ExcludedUsers      *string             `json:"excluded_users,omitempty" cass-config:"*:excluded_users,dse:*:excluded_users"`
-	RollCycle          *string             `json:"roll_cycle,omitempty" cass-config:"*:roll_cycle,dse:*:roll_cycle"`
-	Block              *bool               `json:"block,omitempty" cass-config:"*:block,dse:*:block"`
-	MaxQueueWeight     *int                `json:"max_queue_weight,omitempty" cass-config:"*:max_queue_weight,dse:*:max_queue_weight"`
-	MaxLogSize         *int                `json:"max_log_size,omitempty" cass-config:"*:max_log_size,dse:*:max_log_size"`
-	ArchiveCommand     *string             `json:"archive_command,omitempty" cass-config:"*:archive_command,dse:*:archive_command"`
-	MaxArchiveRetries  *int                `json:"max_archive_retries,omitempty" cass-config:"*:max_archive_retries,dse:*:max_archive_retries"`
+	Enabled            bool                `json:"enabled" cass-config:"enabled;retainzero"`
+	Logger             *ParameterizedClass `json:"logger,omitempty" cass-config:"logger;recurse"`
+	IncludedKeyspaces  *string             `json:"included_keyspaces,omitempty" cass-config:"included_keyspaces"`
+	ExcludedKeyspaces  *string             `json:"excluded_keyspaces,omitempty" cass-config:"excluded_keyspaces"`
+	IncludedCategories *string             `json:"included_categories,omitempty" cass-config:"included_categories"`
+	ExcludedCategories *string             `json:"excluded_categories,omitempty" cass-config:"excluded_categories"`
+	IncludedUsers      *string             `json:"included_users,omitempty" cass-config:"included_users"`
+	ExcludedUsers      *string             `json:"excluded_users,omitempty" cass-config:"excluded_users"`
+	RollCycle          *string             `json:"roll_cycle,omitempty" cass-config:"roll_cycle"`
+	Block              *bool               `json:"block,omitempty" cass-config:"block"`
+	MaxQueueWeight     *int                `json:"max_queue_weight,omitempty" cass-config:"max_queue_weight"`
+	MaxLogSize         *int                `json:"max_log_size,omitempty" cass-config:"max_log_size"`
+	ArchiveCommand     *string             `json:"archive_command,omitempty" cass-config:"archive_command"`
+	MaxArchiveRetries  *int                `json:"max_archive_retries,omitempty" cass-config:"max_archive_retries"`
 }
 
 type FullQueryLoggerOptions struct {
-	ArchiveCommand    *string `json:"archive_command,omitempty" cass-config:"*:archive_command,dse:*:archive_command"`
-	RollCycle         *string `json:"roll_cycle,omitempty" cass-config:"*:roll_cycle,dse:*:roll_cycle"`
-	Block             *bool   `json:"block,omitempty" cass-config:"*:block,dse:*:block"`
-	MaxQueueWeight    *int    `json:"max_queue_weight,omitempty" cass-config:"*:max_queue_weight,dse:*:max_queue_weight"`
-	MaxLogSize        *int    `json:"max_log_size,omitempty" cass-config:"*:max_log_size,dse:*:max_log_size"`
-	MaxArchiveRetries *int    `json:"max_archive_retries,omitempty" cass-config:"*:max_archive_retries,dse:*:max_archive_retries"`
-	LogDir            *string `json:"log_dir,omitempty" cass-config:"*:log_dir,dse:*:log_dir"`
+	ArchiveCommand    *string `json:"archive_command,omitempty" cass-config:"archive_command"`
+	RollCycle         *string `json:"roll_cycle,omitempty" cass-config:"roll_cycle"`
+	Block             *bool   `json:"block,omitempty" cass-config:"block"`
+	MaxQueueWeight    *int    `json:"max_queue_weight,omitempty" cass-config:"max_queue_weight"`
+	MaxLogSize        *int    `json:"max_log_size,omitempty" cass-config:"max_log_size"`
+	MaxArchiveRetries *int    `json:"max_archive_retries,omitempty" cass-config:"max_archive_retries"`
+	LogDir            *string `json:"log_dir,omitempty" cass-config:"log_dir"`
 }
 
 type SubnetGroups struct {
-	Subnets []string `json:"subnets" cass-config:"*:subnets,dse:*:subnets"`
+	Subnets []string `json:"subnets" cass-config:"subnets"`
 }
 
 type TrackWarnings struct {
-	Enabled             bool `json:"enabled" cass-config:"*:enabled,dse:*:enabled;retainzero"`
-	CoordinatorReadSize *int `json:"coordinator_read_size,omitempty" cass-config:"*:coordinator_read_size,dse:*:coordinator_read_size"`
-	LocalReadSize       *int `json:"local_read_size,omitempty" cass-config:"*:local_read_size,dse:*:local_read_size"`
-	RowIndexSize        *int `json:"row_index_size,omitempty" cass-config:"*:row_index_size,dse:*:row_index_size"`
+	Enabled             bool `json:"enabled" cass-config:"enabled;retainzero"`
+	CoordinatorReadSize *int `json:"coordinator_read_size,omitempty" cass-config:"coordinator_read_size"`
+	LocalReadSize       *int `json:"local_read_size,omitempty" cass-config:"local_read_size"`
+	RowIndexSize        *int `json:"row_index_size,omitempty" cass-config:"row_index_size"`
 }

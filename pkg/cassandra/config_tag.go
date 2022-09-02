@@ -26,6 +26,11 @@ func (t cassConfigTag) pathForVersion(version *semver.Version, serverType string
 			return &path
 		}
 	}
+	for _, path := range t.paths["*"] {
+		if valid, _ := path.constraint.Validate(version); valid {
+			return &path
+		}
+	}
 	return nil
 }
 
@@ -48,21 +53,22 @@ func (p cassConfigTagPath) isInline() bool {
 // segments := a series of path segments separated by a slash, e.g. foo/bar/qix
 // option := recurse | retainzero
 func parseCassConfigTag(text string) (*cassConfigTag, error) {
-	if len(text) == 0 {
+	if len(strings.TrimSpace(text)) == 0 {
 		return nil, fmt.Errorf("empty %v tag", cassConfigTagName)
 	}
 	tag := &cassConfigTag{}
 	parts := strings.Split(text, ";")
-	if len(parts[0]) == 0 {
-		return nil, fmt.Errorf("no path entry found in tag: '%v'", text)
-	}
 	pathEntries := strings.Split(parts[0], ",")
 	for _, pathEntry := range pathEntries {
 		pathParts := strings.Split(pathEntry, ":")
 		var typePart string
 		var constraintPart string
 		var pathPart string
-		if len(pathParts) == 2 {
+		if len(pathParts) == 1 {
+			typePart = "*"
+			constraintPart = "*"
+			pathPart = pathParts[0]
+		} else if len(pathParts) == 2 {
 			typePart = "cassandra"
 			constraintPart = pathParts[0]
 			pathPart = pathParts[1]

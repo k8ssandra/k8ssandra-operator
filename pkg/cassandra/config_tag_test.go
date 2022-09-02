@@ -231,6 +231,50 @@ func Test_parseCassConfigTag(t *testing.T) {
 			assert.NoError,
 		},
 		{
+			"no server type and no constraint",
+			" /foo/bar/qix/ ",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"*": {{
+						constraint: newConstraint("*"),
+						path:       "foo/bar/qix",
+						segments:   []string{"foo", "bar", "qix"},
+					}},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"no server type no constraint and no path with recurse",
+			";recurse",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"*": {{
+						constraint: newConstraint("*"),
+						path:       "",
+						segments:   nil,
+					}},
+				},
+				recurse: true,
+			},
+			assert.NoError,
+		},
+		{
+			"no server type no constraint and no path with recurse + whitespace",
+			"  ;  recurse",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"*": {{
+						constraint: newConstraint("*"),
+						path:       "",
+						segments:   nil,
+					}},
+				},
+				recurse: true,
+			},
+			assert.NoError,
+		},
+		{
 			"empty tag",
 			"",
 			nil,
@@ -239,19 +283,19 @@ func Test_parseCassConfigTag(t *testing.T) {
 			},
 		},
 		{
-			"no path entry",
-			";retainzero",
+			"empty tag whitespace",
+			" ",
 			nil,
 			func(t assert.TestingT, err error, mesAndArgs ...interface{}) bool {
-				return assert.Equal(t, "no path entry found in tag: ';retainzero'", err.Error())
+				return assert.Equal(t, "empty cass-config tag", err.Error())
 			},
 		},
 		{
 			"wrong path entry",
-			"wrong",
+			"dse:*:foo/bar:extraneous",
 			nil,
 			func(t assert.TestingT, err error, mesAndArgs ...interface{}) bool {
-				return assert.Equal(t, "wrong path entry: 'wrong'", err.Error())
+				return assert.Equal(t, "wrong path entry: 'dse:*:foo/bar:extraneous'", err.Error())
 			},
 		},
 		{
