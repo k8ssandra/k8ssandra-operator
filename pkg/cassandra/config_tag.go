@@ -46,9 +46,10 @@ func (p cassConfigTagPath) isInline() bool {
 
 // parseCassConfigTag parses a textual representation of a cass-config tag.
 // The textual representation is of the following general form:
-// tag := <path1>[,<path2>,...,<pathN>][;<option1>;<option2>;...;<optionN>]
-// path := [<type>:]<constraint>:[<segments>]
-// type := cassandra | dse (defaults to cassandra if not present)
+// tag := <path1>[;<path2>;...;<pathN>][;<option1>;<option2>;...;<optionN>]
+// path := <typeAndConstraint1>[,<typeAndConstraint2>,...,<typeAndConstraintN>]:[<segments>]
+// typeAndConstraint := [<type>@]<constraint>
+// type := any string (defaults to cassandra if not present)
 // constraint := a valid semver constraint
 // segments := a series of path segments separated by a slash, e.g. foo/bar/qix
 // option := recurse | retainzero
@@ -58,53 +59,16 @@ func parseCassConfigTag(text string) (*cassConfigTag, error) {
 	}
 	tag := &cassConfigTag{}
 	parts := strings.Split(text, ";")
-	pathEntries := strings.Split(parts[0], ",")
-	for _, pathEntry := range pathEntries {
-		pathParts := strings.Split(pathEntry, ":")
-		var typePart string
-		var constraintPart string
-		var pathPart string
-		if len(pathParts) == 1 {
-			typePart = "*"
-			constraintPart = "*"
-			pathPart = pathParts[0]
-		} else if len(pathParts) == 2 {
-			typePart = "cassandra"
-			constraintPart = pathParts[0]
-			pathPart = pathParts[1]
-		} else if len(pathParts) == 3 {
-			typePart = strings.TrimSpace(strings.ToLower(pathParts[0]))
-			constraintPart = pathParts[1]
-			pathPart = pathParts[2]
-		} else {
-			return nil, fmt.Errorf("wrong path entry: '%v'", pathEntry)
-		}
-		path := cassConfigTagPath{}
-		if constraint, err := semver.NewConstraint(strings.TrimSpace(constraintPart)); err != nil {
-			return nil, err
-		} else {
-			path.constraint = constraint
-		}
-		path.path = strings.Trim(pathPart, " /")
-		if len(path.path) > 0 {
-			path.segments = strings.Split(path.path, "/")
-		}
-		if tag.paths == nil {
-			tag.paths = make(map[string][]cassConfigTagPath)
-		}
-		if tag.paths[typePart] == nil {
-			tag.paths[typePart] = []cassConfigTagPath{}
-		}
-		tag.paths[typePart] = append(tag.paths[typePart], path)
-	}
-	for _, option := range parts[1:] {
-		switch strings.TrimSpace(option) {
+	for _, part := range parts {
+		switch strings.TrimSpace(part) {
 		case cassConfigTagOptionRecurse:
 			tag.recurse = true
 		case cassConfigTagOptionRetainZero:
 			tag.retainZero = true
 		default:
-			return nil, fmt.Errorf("unknown option: '%v'", option)
+			if err := parsePath(tag, part); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if tag.recurse && tag.retainZero {
@@ -120,4 +84,53 @@ func parseCassConfigTag(text string) (*cassConfigTag, error) {
 		}
 	}
 	return tag, nil
+}
+
+func parsePath(tag *cassConfigTag, part string) error {
+	var constraints = make(map[string]string)
+	var segmentsPart string
+	pathParts := strings.Split(part, ":")
+	if len(pathParts) == 1 {
+		constraints["*"] = "*"
+		segmentsPart = pathParts[0]
+	} else if len(pathParts) == 2 {
+		typeAndConstraintsParts := strings.Split(pathParts[0], ",")
+		for _, typeAndConstraintPart := range typeAndConstraintsParts {
+			typeAndConstraint := strings.Split(typeAndConstraintPart, "@")
+			var serverType, constraintStr string
+			if len(typeAndConstraint) == 1 {
+				serverType = "cassandra"
+				constraintStr = strings.TrimSpace(typeAndConstraint[0])
+			} else if len(typeAndConstraint) == 2 {
+				serverType = strings.ToLower(strings.TrimSpace(typeAndConstraint[0]))
+				constraintStr = strings.TrimSpace(typeAndConstraint[1])
+			} else {
+				return fmt.Errorf("wrong type and constraint: '%v'", typeAndConstraintPart)
+			}
+			constraints[serverType] = constraintStr
+		}
+		segmentsPart = pathParts[1]
+	} else {
+		return fmt.Errorf("wrong path entry: '%v'", part)
+	}
+	path := cassConfigTagPath{}
+	path.path = strings.Trim(segmentsPart, " /")
+	if len(path.path) > 0 {
+		path.segments = strings.Split(path.path, "/")
+	}
+	if tag.paths == nil {
+		tag.paths = make(map[string][]cassConfigTagPath)
+	}
+	for serverType, constraint := range constraints {
+		constr, err := semver.NewConstraint(constraint)
+		if err != nil {
+			return err
+		}
+		path.constraint = constr
+		if tag.paths[serverType] == nil {
+			tag.paths[serverType] = []cassConfigTagPath{}
+		}
+		tag.paths[serverType] = append(tag.paths[serverType], path)
+	}
+	return nil
 }

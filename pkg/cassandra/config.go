@@ -38,17 +38,17 @@ func CreateJsonConfig(apiConfig *DatacenterConfig) ([]byte, error) {
 // cassConfig is an internal type that is semantically equivalent to an api.CassandraConfig object,
 // with the addition of a few hidden fields that the user cannot set directly.
 type cassConfig struct {
-	*api.CassandraConfig   `cass-config:"*:,dse:*:;recurse"`
+	*api.CassandraConfig   `cass-config:";recurse"`
 	StartRpc               bool              `cass-config:"^3.11.x:cassandra-yaml/start_rpc;retainzero"`
-	ServerEncryptionStores *encryptionStores `cass-config:"*:cassandra-yaml/server_encryption_options,dse:*:cassandra-yaml/server_encryption_options;recurse"`
-	ClientEncryptionStores *encryptionStores `cass-config:"*:cassandra-yaml/client_encryption_options,dse:*:cassandra-yaml/client_encryption_options;recurse"`
+	ServerEncryptionStores *encryptionStores `cass-config:"cassandra-yaml/server_encryption_options;recurse"`
+	ClientEncryptionStores *encryptionStores `cass-config:"cassandra-yaml/client_encryption_options;recurse"`
 }
 
 type encryptionStores struct {
-	Keystore           string `cass-config:"*:keystore,dse:*:keystore"`
-	KeystorePassword   string `cass-config:"*:keystore_password,dse:*:keystore_password"`
-	Truststore         string `cass-config:"*:truststore,dse:*:truststore"`
-	TruststorePassword string `cass-config:"*:truststore_password,dse:*:truststore_password"`
+	Keystore           string `cass-config:"keystore"`
+	KeystorePassword   string `cass-config:"keystore_password"`
+	Truststore         string `cass-config:"truststore"`
+	TruststorePassword string `cass-config:"truststore_password"`
 }
 
 func addNumTokens(template *DatacenterConfig, cfg *cassConfig) {

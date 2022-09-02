@@ -32,7 +32,7 @@ type CassandraConfig struct {
 	JvmOptions JvmOptions `json:"jvmOptions,omitempty" cass-config:";recurse"`
 
 	// +optional
-	DseYaml DseYaml `json:"dseYaml,omitempty" cass-config:"dse:*:dse-yaml;recurse"`
+	DseYaml DseYaml `json:"dseYaml,omitempty" cass-config:"dse@*:dse-yaml;recurse"`
 }
 
 // CassandraYaml defines the contents of the cassandra.yaml file. For more info see:
@@ -44,11 +44,11 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AllocateTokensForLocalReplicationFactor *int `json:"allocate_tokens_for_local_replication_factor,omitempty" cass-config:">=4.x:allocate_tokens_for_local_replication_factor,dse:>=6.8.x:allocate_tokens_for_local_replication_factor"`
+	AllocateTokensForLocalReplicationFactor *int `json:"allocate_tokens_for_local_replication_factor,omitempty" cass-config:">=4.x,dse@>=6.8.x:allocate_tokens_for_local_replication_factor"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AuditLoggingOptions *AuditLogOptions `json:"audit_logging_options,omitempty" cass-config:">=4.x:audit_logging_options,dse:>=6.8.x:audit_logging_options;recurse"`
+	AuditLoggingOptions *AuditLogOptions `json:"audit_logging_options,omitempty" cass-config:">=4.x,dse@>=6.8.x:audit_logging_options"`
 
 	// Exists in trunk
 	// +kubebuilder:validation:Enum=ANY;ONE;TWO;THREE;QUORUM;ALL;LOCAL_QUORUM;EACH_QUORUM;SERIAL;LOCAL_SERIAL;LOCAL_ONE;NODE_LOCAL
@@ -74,15 +74,15 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AutoOptimiseFullRepairStreams *bool `json:"auto_optimise_full_repair_streams,omitempty" cass-config:">=4.x:auto_optimise_full_repair_streams,dse:>=6.8.x:auto_optimise_full_repair_streams"`
+	AutoOptimiseFullRepairStreams *bool `json:"auto_optimise_full_repair_streams,omitempty" cass-config:">=4.x,dse@>=6.8.x:auto_optimise_full_repair_streams"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AutoOptimiseIncRepairStreams *bool `json:"auto_optimise_inc_repair_streams,omitempty" cass-config:">=4.x:auto_optimise_inc_repair_streams,dse:>=6.8.x:auto_optimise_inc_repair_streams"`
+	AutoOptimiseIncRepairStreams *bool `json:"auto_optimise_inc_repair_streams,omitempty" cass-config:">=4.x,dse@>=6.8.x:auto_optimise_inc_repair_streams"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AutoOptimisePreviewRepairStreams *bool `json:"auto_optimise_preview_repair_streams,omitempty" cass-config:">=4.x:auto_optimise_preview_repair_streams,dse:>=6.8.x:auto_optimise_preview_repair_streams"`
+	AutoOptimisePreviewRepairStreams *bool `json:"auto_optimise_preview_repair_streams,omitempty" cass-config:">=4.x,dse@>=6.8.x:auto_optimise_preview_repair_streams"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -90,11 +90,11 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AutocompactionOnStartupEnabled *bool `json:"autocompaction_on_startup_enabled,omitempty" cass-config:">=4.x:autocompaction_on_startup_enabled,dse:>=6.8.x:autocompaction_on_startup_enabled"`
+	AutocompactionOnStartupEnabled *bool `json:"autocompaction_on_startup_enabled,omitempty" cass-config:">=4.x,dse@>=6.8.x:autocompaction_on_startup_enabled"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	AutomaticSstableUpgrade *bool `json:"automatic_sstable_upgrade,omitempty" cass-config:">=4.x:automatic_sstable_upgrade,dse:>=6.8.x:automatic_sstable_upgrade"`
+	AutomaticSstableUpgrade *bool `json:"automatic_sstable_upgrade,omitempty" cass-config:">=4.x,dse@>=6.8.x:automatic_sstable_upgrade"`
 
 	// Exists in trunk
 	// +optional
@@ -122,11 +122,11 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	BlockForPeersInRemoteDcs *bool `json:"block_for_peers_in_remote_dcs,omitempty" cass-config:">=4.x:block_for_peers_in_remote_dcs,dse:>=6.8.x:block_for_peers_in_remote_dcs"`
+	BlockForPeersInRemoteDcs *bool `json:"block_for_peers_in_remote_dcs,omitempty" cass-config:">=4.x,dse@>=6.8.x:block_for_peers_in_remote_dcs"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	BlockForPeersTimeoutInSecs *int `json:"block_for_peers_timeout_in_secs,omitempty" cass-config:">=4.x:block_for_peers_timeout_in_secs,dse:>=6.8.x:block_for_peers_timeout_in_secs"`
+	BlockForPeersTimeoutInSecs *int `json:"block_for_peers_timeout_in_secs,omitempty" cass-config:">=4.x,dse@>=6.8.x:block_for_peers_timeout_in_secs"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -204,7 +204,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	CommitlogSyncGroupWindowInMs *int `json:"commitlog_sync_group_window_in_ms,omitempty" cass-config:">=4.x:commitlog_sync_group_window_in_ms,dse:>=6.8.x:commitlog_sync_group_window_in_ms"`
+	CommitlogSyncGroupWindowInMs *int `json:"commitlog_sync_group_window_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:commitlog_sync_group_window_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -236,7 +236,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	ConcurrentMaterializedViewBuilders *int `json:"concurrent_materialized_view_builders,omitempty" cass-config:">=4.x:concurrent_materialized_view_builders,dse:>=6.8.x:concurrent_materialized_view_builders"`
+	ConcurrentMaterializedViewBuilders *int `json:"concurrent_materialized_view_builders,omitempty" cass-config:">=4.x,dse@>=6.8.x:concurrent_materialized_view_builders"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -252,7 +252,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	ConcurrentValidations *int `json:"concurrent_validations,omitempty" cass-config:">=4.x:concurrent_validations,dse:>=6.8.x:concurrent_validations"`
+	ConcurrentValidations *int `json:"concurrent_validations,omitempty" cass-config:">=4.x,dse@>=6.8.x:concurrent_validations"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -260,12 +260,12 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	ConsecutiveMessageErrorsThreshold *int `json:"consecutive_message_errors_threshold,omitempty" cass-config:">=4.x:consecutive_message_errors_threshold,dse:>=6.8.x:consecutive_message_errors_threshold"`
+	ConsecutiveMessageErrorsThreshold *int `json:"consecutive_message_errors_threshold,omitempty" cass-config:">=4.x,dse@>=6.8.x:consecutive_message_errors_threshold"`
 
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=disabled;warn;exception
 	// +optional
-	CorruptedTombstoneStrategy *string `json:"corrupted_tombstone_strategy,omitempty" cass-config:">=4.x:corrupted_tombstone_strategy,dse:>=6.8.x:corrupted_tombstone_strategy"`
+	CorruptedTombstoneStrategy *string `json:"corrupted_tombstone_strategy,omitempty" cass-config:">=4.x,dse@>=6.8.x:corrupted_tombstone_strategy"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -326,7 +326,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	DiagnosticEventsEnabled *bool `json:"diagnostic_events_enabled,omitempty" cass-config:">=4.x:diagnostic_events_enabled,dse:>=6.8.x:diagnostic_events_enabled"`
+	DiagnosticEventsEnabled *bool `json:"diagnostic_events_enabled,omitempty" cass-config:">=4.x,dse@>=6.8.x:diagnostic_events_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +kubebuilder:validation:Enum=auto;mmap;mmap_index_only;standard
@@ -396,7 +396,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	EnableTransientReplication *bool `json:"enable_transient_replication,omitempty" cass-config:">=4.x:enable_transient_replication,dse:>=6.8.x:enable_transient_replication"`
+	EnableTransientReplication *bool `json:"enable_transient_replication,omitempty" cass-config:">=4.x,dse@>=6.8.x:enable_transient_replication"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -416,7 +416,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	FileCacheEnabled *bool `json:"file_cache_enabled,omitempty" cass-config:">=4.x:file_cache_enabled,dse:>=6.8.x:file_cache_enabled"`
+	FileCacheEnabled *bool `json:"file_cache_enabled,omitempty" cass-config:">=4.x,dse@>=6.8.x:file_cache_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -429,11 +429,11 @@ type CassandraYaml struct {
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=none;fast;table
 	// +optional
-	FlushCompression *string `json:"flush_compression,omitempty" cass-config:">=4.x:flush_compression,dse:>=6.8.x:flush_compression"`
+	FlushCompression *string `json:"flush_compression,omitempty" cass-config:">=4.x,dse@>=6.8.x:flush_compression"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	FullQueryLoggingOptions *FullQueryLoggerOptions `json:"full_query_logging_options,omitempty" cass-config:">=4.x:full_query_logging_options,dse:>=6.8.x:full_query_logging_options;recurse"`
+	FullQueryLoggingOptions *FullQueryLoggerOptions `json:"full_query_logging_options,omitempty" cass-config:">=4.x,dse@>=6.8.x:full_query_logging_options"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -470,7 +470,7 @@ type CassandraYaml struct {
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=ANY;ONE;TWO;THREE;QUORUM;ALL;LOCAL_QUORUM;EACH_QUORUM;SERIAL;LOCAL_SERIAL;LOCAL_ONE;NODE_LOCAL
 	// +optional
-	IdealConsistencyLevel *string `json:"ideal_consistency_level,omitempty" cass-config:">=4.x:ideal_consistency_level,dse:>=6.8.x:ideal_consistency_level"`
+	IdealConsistencyLevel *string `json:"ideal_consistency_level,omitempty" cass-config:">=4.x,dse@>=6.8.x:ideal_consistency_level"`
 
 	// Exists in 3.11
 	// +optional
@@ -486,7 +486,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InitialRangeTombstoneListAllocationSize *int `json:"initial_range_tombstone_list_allocation_size,omitempty" cass-config:">=4.x:initial_range_tombstone_list_allocation_size,dse:>=6.8.x:initial_range_tombstone_list_allocation_size"`
+	InitialRangeTombstoneListAllocationSize *int `json:"initial_range_tombstone_list_allocation_size,omitempty" cass-config:">=4.x,dse@>=6.8.x:initial_range_tombstone_list_allocation_size"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -498,27 +498,27 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationReceiveQueueCapacityInBytes *int `json:"internode_application_receive_queue_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_receive_queue_capacity_in_bytes,dse:>=6.8.x:internode_application_receive_queue_capacity_in_bytes"`
+	InternodeApplicationReceiveQueueCapacityInBytes *int `json:"internode_application_receive_queue_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_receive_queue_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationReceiveQueueReserveEndpointCapacityInBytes *int `json:"internode_application_receive_queue_reserve_endpoint_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_receive_queue_reserve_endpoint_capacity_in_bytes,dse:>=6.8.x:internode_application_receive_queue_reserve_endpoint_capacity_in_bytes"`
+	InternodeApplicationReceiveQueueReserveEndpointCapacityInBytes *int `json:"internode_application_receive_queue_reserve_endpoint_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_receive_queue_reserve_endpoint_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationReceiveQueueReserveGlobalCapacityInBytes *int `json:"internode_application_receive_queue_reserve_global_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_receive_queue_reserve_global_capacity_in_bytes,dse:>=6.8.x:internode_application_receive_queue_reserve_global_capacity_in_bytes"`
+	InternodeApplicationReceiveQueueReserveGlobalCapacityInBytes *int `json:"internode_application_receive_queue_reserve_global_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_receive_queue_reserve_global_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationSendQueueCapacityInBytes *int `json:"internode_application_send_queue_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_send_queue_capacity_in_bytes,dse:>=6.8.x:internode_application_send_queue_capacity_in_bytes"`
+	InternodeApplicationSendQueueCapacityInBytes *int `json:"internode_application_send_queue_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_send_queue_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationSendQueueReserveEndpointCapacityInBytes *int `json:"internode_application_send_queue_reserve_endpoint_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_send_queue_reserve_endpoint_capacity_in_bytes,dse:>=6.8.x:internode_application_send_queue_reserve_endpoint_capacity_in_bytes"`
+	InternodeApplicationSendQueueReserveEndpointCapacityInBytes *int `json:"internode_application_send_queue_reserve_endpoint_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_send_queue_reserve_endpoint_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeApplicationSendQueueReserveGlobalCapacityInBytes *int `json:"internode_application_send_queue_reserve_global_capacity_in_bytes,omitempty" cass-config:">=4.x:internode_application_send_queue_reserve_global_capacity_in_bytes,dse:>=6.8.x:internode_application_send_queue_reserve_global_capacity_in_bytes"`
+	InternodeApplicationSendQueueReserveGlobalCapacityInBytes *int `json:"internode_application_send_queue_reserve_global_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_application_send_queue_reserve_global_capacity_in_bytes"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -535,7 +535,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeMaxMessageSizeInBytes *int `json:"internode_max_message_size_in_bytes,omitempty" cass-config:">=4.x:internode_max_message_size_in_bytes,dse:>=6.8.x:internode_max_message_size_in_bytes"`
+	InternodeMaxMessageSizeInBytes *int `json:"internode_max_message_size_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_max_message_size_in_bytes"`
 
 	// Exists in 3.11
 	// +optional
@@ -547,23 +547,23 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeSocketReceiveBufferSizeInBytes *int `json:"internode_socket_receive_buffer_size_in_bytes,omitempty" cass-config:">=4.x:internode_socket_receive_buffer_size_in_bytes,dse:>=6.8.x:internode_socket_receive_buffer_size_in_bytes"`
+	InternodeSocketReceiveBufferSizeInBytes *int `json:"internode_socket_receive_buffer_size_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_socket_receive_buffer_size_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeSocketSendBufferSizeInBytes *int `json:"internode_socket_send_buffer_size_in_bytes,omitempty" cass-config:">=4.x:internode_socket_send_buffer_size_in_bytes,dse:>=6.8.x:internode_socket_send_buffer_size_in_bytes"`
+	InternodeSocketSendBufferSizeInBytes *int `json:"internode_socket_send_buffer_size_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_socket_send_buffer_size_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeStreamingTcpUserTimeoutInMs *int `json:"internode_streaming_tcp_user_timeout_in_ms,omitempty" cass-config:">=4.x:internode_streaming_tcp_user_timeout_in_ms,dse:>=6.8.x:internode_streaming_tcp_user_timeout_in_ms"`
+	InternodeStreamingTcpUserTimeoutInMs *int `json:"internode_streaming_tcp_user_timeout_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_streaming_tcp_user_timeout_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeTcpConnectTimeoutInMs *int `json:"internode_tcp_connect_timeout_in_ms,omitempty" cass-config:">=4.x:internode_tcp_connect_timeout_in_ms,dse:>=6.8.x:internode_tcp_connect_timeout_in_ms"`
+	InternodeTcpConnectTimeoutInMs *int `json:"internode_tcp_connect_timeout_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_tcp_connect_timeout_in_ms"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	InternodeTcpUserTimeoutInMs *int `json:"internode_tcp_user_timeout_in_ms,omitempty" cass-config:">=4.x:internode_tcp_user_timeout_in_ms,dse:>=6.8.x:internode_tcp_user_timeout_in_ms"`
+	InternodeTcpUserTimeoutInMs *int `json:"internode_tcp_user_timeout_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:internode_tcp_user_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -571,7 +571,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	KeyCacheMigrateDuringCompaction *bool `json:"key_cache_migrate_during_compaction,omitempty" cass-config:">=4.x:key_cache_migrate_during_compaction,dse:>=6.8.x:key_cache_migrate_during_compaction"`
+	KeyCacheMigrateDuringCompaction *bool `json:"key_cache_migrate_during_compaction,omitempty" cass-config:">=4.x,dse@>=6.8.x:key_cache_migrate_during_compaction"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -583,11 +583,11 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	KeyspaceCountWarnThreshold *int `json:"keyspace_count_warn_threshold,omitempty" cass-config:">=4.x:keyspace_count_warn_threshold,dse:>=6.8.x:keyspace_count_warn_threshold"`
+	KeyspaceCountWarnThreshold *int `json:"keyspace_count_warn_threshold,omitempty" cass-config:">=4.x,dse@>=6.8.x:keyspace_count_warn_threshold"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	MaxConcurrentAutomaticSstableUpgrades *int `json:"max_concurrent_automatic_sstable_upgrades,omitempty" cass-config:">=4.x:max_concurrent_automatic_sstable_upgrades,dse:>=6.8.x:max_concurrent_automatic_sstable_upgrades"`
+	MaxConcurrentAutomaticSstableUpgrades *int `json:"max_concurrent_automatic_sstable_upgrades,omitempty" cass-config:">=4.x,dse@>=6.8.x:max_concurrent_automatic_sstable_upgrades"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -644,7 +644,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	NativeTransportAllowOlderProtocols *bool `json:"native_transport_allow_older_protocols,omitempty" cass-config:">=4.x:native_transport_allow_older_protocols,dse:>=6.8.x:native_transport_allow_older_protocols"`
+	NativeTransportAllowOlderProtocols *bool `json:"native_transport_allow_older_protocols,omitempty" cass-config:">=4.x,dse@>=6.8.x:native_transport_allow_older_protocols"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -652,7 +652,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	NativeTransportIdleTimeoutInMs *int `json:"native_transport_idle_timeout_in_ms,omitempty" cass-config:">=4.x:native_transport_idle_timeout_in_ms,dse:>=6.8.x:native_transport_idle_timeout_in_ms"`
+	NativeTransportIdleTimeoutInMs *int `json:"native_transport_idle_timeout_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:native_transport_idle_timeout_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -692,15 +692,15 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	NativeTransportReceiveQueueCapacityInBytes *int `json:"native_transport_receive_queue_capacity_in_bytes,omitempty" cass-config:">=4.x:native_transport_receive_queue_capacity_in_bytes,dse:>=6.8.x:native_transport_receive_queue_capacity_in_bytes"`
+	NativeTransportReceiveQueueCapacityInBytes *int `json:"native_transport_receive_queue_capacity_in_bytes,omitempty" cass-config:">=4.x,dse@>=6.8.x:native_transport_receive_queue_capacity_in_bytes"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	NetworkAuthorizer *string `json:"network_authorizer,omitempty" cass-config:">=4.x:network_authorizer,dse:>=6.8.x:network_authorizer"`
+	NetworkAuthorizer *string `json:"network_authorizer,omitempty" cass-config:">=4.x,dse@>=6.8.x:network_authorizer"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	NetworkingCacheSizeInMb *int `json:"networking_cache_size_in_mb,omitempty" cass-config:">=4.x:networking_cache_size_in_mb,dse:>=6.8.x:networking_cache_size_in_mb"`
+	NetworkingCacheSizeInMb *int `json:"networking_cache_size_in_mb,omitempty" cass-config:">=4.x,dse@>=6.8.x:networking_cache_size_in_mb"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -728,7 +728,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	PeriodicCommitlogSyncLagBlockInMs *int `json:"periodic_commitlog_sync_lag_block_in_ms,omitempty" cass-config:">=4.x:periodic_commitlog_sync_lag_block_in_ms,dse:>=6.8.x:periodic_commitlog_sync_lag_block_in_ms"`
+	PeriodicCommitlogSyncLagBlockInMs *int `json:"periodic_commitlog_sync_lag_block_in_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:periodic_commitlog_sync_lag_block_in_ms"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -756,7 +756,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RangeTombstoneListGrowthFactor *string `json:"range_tombstone_list_growth_factor,omitempty" cass-config:">=4.x:range_tombstone_list_growth_factor,dse:>=6.8.x:range_tombstone_list_growth_factor"`
+	RangeTombstoneListGrowthFactor *string `json:"range_tombstone_list_growth_factor,omitempty" cass-config:">=4.x,dse@>=6.8.x:range_tombstone_list_growth_factor"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -764,16 +764,16 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RejectRepairCompactionThreshold *int `json:"reject_repair_compaction_threshold,omitempty" cass-config:">=4.x:reject_repair_compaction_threshold,dse:>=6.8.x:reject_repair_compaction_threshold"`
+	RejectRepairCompactionThreshold *int `json:"reject_repair_compaction_threshold,omitempty" cass-config:">=4.x,dse@>=6.8.x:reject_repair_compaction_threshold"`
 
 	// Exists in: 4.0, trunk
 	// +kubebuilder:validation:Enum=queue;reject
 	// +optional
-	RepairCommandPoolFullStrategy *string `json:"repair_command_pool_full_strategy,omitempty" cass-config:">=4.x:repair_command_pool_full_strategy,dse:>=6.8.x:repair_command_pool_full_strategy"`
+	RepairCommandPoolFullStrategy *string `json:"repair_command_pool_full_strategy,omitempty" cass-config:">=4.x,dse@>=6.8.x:repair_command_pool_full_strategy"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RepairCommandPoolSize *int `json:"repair_command_pool_size,omitempty" cass-config:">=4.x:repair_command_pool_size,dse:>=6.8.x:repair_command_pool_size"`
+	RepairCommandPoolSize *int `json:"repair_command_pool_size,omitempty" cass-config:">=4.x,dse@>=6.8.x:repair_command_pool_size"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -781,15 +781,15 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RepairSessionSpaceInMb *int `json:"repair_session_space_in_mb,omitempty" cass-config:">=4.x:repair_session_space_in_mb,dse:>=6.8.x:repair_session_space_in_mb"`
+	RepairSessionSpaceInMb *int `json:"repair_session_space_in_mb,omitempty" cass-config:">=4.x,dse@>=6.8.x:repair_session_space_in_mb"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RepairedDataTrackingForPartitionReadsEnabled *bool `json:"repaired_data_tracking_for_partition_reads_enabled,omitempty" cass-config:">=4.x:repaired_data_tracking_for_partition_reads_enabled,dse:>=6.8.x:repaired_data_tracking_for_partition_reads_enabled"`
+	RepairedDataTrackingForPartitionReadsEnabled *bool `json:"repaired_data_tracking_for_partition_reads_enabled,omitempty" cass-config:">=4.x,dse@>=6.8.x:repaired_data_tracking_for_partition_reads_enabled"`
 
 	// Exists in: 4.0, trunk
 	// +optional
-	RepairedDataTrackingForRangeReadsEnabled *bool `json:"repaired_data_tracking_for_range_reads_enabled,omitempty" cass-config:">=4.x:repaired_data_tracking_for_range_reads_enabled,dse:>=6.8.x:repaired_data_tracking_for_range_reads_enabled"`
+	RepairedDataTrackingForRangeReadsEnabled *bool `json:"repaired_data_tracking_for_range_reads_enabled,omitempty" cass-config:">=4.x,dse@>=6.8.x:repaired_data_tracking_for_range_reads_enabled"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -797,7 +797,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	ReportUnconfirmedRepairedDataMismatches *bool `json:"report_unconfirmed_repaired_data_mismatches,omitempty" cass-config:">=4.x:report_unconfirmed_repaired_data_mismatches,dse:>=6.8.x:report_unconfirmed_repaired_data_mismatches"`
+	ReportUnconfirmedRepairedDataMismatches *bool `json:"report_unconfirmed_repaired_data_mismatches,omitempty" cass-config:">=4.x,dse@>=6.8.x:report_unconfirmed_repaired_data_mismatches"`
 
 	// Exists in 3.11
 	// +optional
@@ -862,7 +862,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	SnapshotLinksPerSecond *int `json:"snapshot_links_per_second,omitempty" cass-config:">=4.x:snapshot_links_per_second,dse:>=6.8.x:snapshot_links_per_second"`
+	SnapshotLinksPerSecond *int `json:"snapshot_links_per_second,omitempty" cass-config:">=4.x,dse@>=6.8.x:snapshot_links_per_second"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -870,7 +870,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	SnapshotOnRepairedDataMismatch *bool `json:"snapshot_on_repaired_data_mismatch,omitempty" cass-config:">=4.x:snapshot_on_repaired_data_mismatch,dse:>=6.8.x:snapshot_on_repaired_data_mismatch"`
+	SnapshotOnRepairedDataMismatch *bool `json:"snapshot_on_repaired_data_mismatch,omitempty" cass-config:">=4.x,dse@>=6.8.x:snapshot_on_repaired_data_mismatch"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -878,7 +878,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	StreamEntireSstables *bool `json:"stream_entire_sstables,omitempty" cass-config:">=4.x:stream_entire_sstables,dse:>=6.8.x:stream_entire_sstables"`
+	StreamEntireSstables *bool `json:"stream_entire_sstables,omitempty" cass-config:">=4.x,dse@>=6.8.x:stream_entire_sstables"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -886,7 +886,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	StreamingConnectionsPerHost *int `json:"streaming_connections_per_host,omitempty" cass-config:">=4.x:streaming_connections_per_host,dse:>=6.8.x:streaming_connections_per_host"`
+	StreamingConnectionsPerHost *int `json:"streaming_connections_per_host,omitempty" cass-config:">=4.x,dse@>=6.8.x:streaming_connections_per_host"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -898,7 +898,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	TableCountWarnThreshold *int `json:"table_count_warn_threshold,omitempty" cass-config:">=4.x:table_count_warn_threshold,dse:>=6.8.x:table_count_warn_threshold"`
+	TableCountWarnThreshold *int `json:"table_count_warn_threshold,omitempty" cass-config:">=4.x,dse@>=6.8.x:table_count_warn_threshold"`
 
 	// Exists in 3.11
 	// +optional
@@ -958,7 +958,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	UseOffheapMerkleTrees *bool `json:"use_offheap_merkle_trees,omitempty" cass-config:">=4.x:use_offheap_merkle_trees,dse:>=6.8.x:use_offheap_merkle_trees"`
+	UseOffheapMerkleTrees *bool `json:"use_offheap_merkle_trees,omitempty" cass-config:">=4.x,dse@>=6.8.x:use_offheap_merkle_trees"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -975,7 +975,7 @@ type CassandraYaml struct {
 
 	// Exists in: 4.0, trunk
 	// +optional
-	ValidationPreviewPurgeHeadStartInSec *int `json:"validation_preview_purge_head_start_in_sec,omitempty" cass-config:">=4.x:validation_preview_purge_head_start_in_sec,dse:>=6.8.x:validation_preview_purge_head_start_in_sec"`
+	ValidationPreviewPurgeHeadStartInSec *int `json:"validation_preview_purge_head_start_in_sec,omitempty" cass-config:">=4.x,dse@>=6.8.x:validation_preview_purge_head_start_in_sec"`
 
 	// Exists in 3.11, 4.0, trunk
 	// +optional
@@ -1000,14 +1000,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xms.
 	// +optional
-	InitialHeapSize *resource.Quantity `json:"heap_initial_size,omitempty" cass-config:"^3.11.x:jvm-options/initial_heap_size,>=4.x:jvm-server-options/initial_heap_size,dse:>=6.8.x:jvm-server-options/initial_heap_size"`
+	InitialHeapSize *resource.Quantity `json:"heap_initial_size,omitempty" cass-config:"^3.11.x:jvm-options/initial_heap_size;>=4.x,dse@>=6.8.x:jvm-server-options/initial_heap_size"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xmx.
 	// +optional
-	MaxHeapSize *resource.Quantity `json:"heap_max_size,omitempty" cass-config:"^3.11.x:jvm-options/max_heap_size,>=4.x:jvm-server-options/max_heap_size,dse:>=6.8.x:jvm-server-options/max_heap_size"`
+	MaxHeapSize *resource.Quantity `json:"heap_max_size,omitempty" cass-config:"^3.11.x:jvm-options/max_heap_size;>=4.x,dse@>=6.8.x:jvm-server-options/max_heap_size"`
 
 	// GENERAL VM OPTIONS
 
@@ -1017,7 +1017,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -ea.
 	// +optional
-	EnableAssertions *bool `json:"vm_enable_assertions,omitempty" cass-config:"^3.11.x:jvm-options/enable_assertions,>=4.x:jvm-server-options/enable_assertions,dse:>=6.8.x:jvm-server-options/enable_assertions"`
+	EnableAssertions *bool `json:"vm_enable_assertions,omitempty" cass-config:"^3.11.x:jvm-options/enable_assertions;>=4.x,dse@>=6.8.x:jvm-server-options/enable_assertions"`
 
 	// Enable thread priorities.
 	// Enabled by default.
@@ -1025,7 +1025,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseThreadPriorities.
 	// +optional
-	EnableThreadPriorities *bool `json:"vm_enable_thread_priorities,omitempty" cass-config:"^3.11.x:jvm-options/use_thread_priorities,>=4.x:jvm-server-options/use_thread_priorities,dse:>=6.8.x:jvm-server-options/use_thread_priorities"`
+	EnableThreadPriorities *bool `json:"vm_enable_thread_priorities,omitempty" cass-config:"^3.11.x:jvm-options/use_thread_priorities;>=4.x,dse@>=6.8.x:jvm-server-options/use_thread_priorities"`
 
 	// Enable lowering thread priority without being root on linux.
 	// See CASSANDRA-1181 for details.
@@ -1040,7 +1040,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+HeapDumpOnOutOfMemoryError.
 	// +optional
-	HeapDumpOnOutOfMemoryError *bool `json:"vm_heap_dump_on_out_of_memory_error,omitempty" cass-config:"^3.11.x:jvm-options/heap_dump_on_out_of_memory_error,>=4.x:jvm-server-options/heap_dump_on_out_of_memory_error,dse:>=6.8.x:jvm-server-options/heap_dump_on_out_of_memory_error"`
+	HeapDumpOnOutOfMemoryError *bool `json:"vm_heap_dump_on_out_of_memory_error,omitempty" cass-config:"^3.11.x:jvm-options/heap_dump_on_out_of_memory_error;>=4.x,dse@>=6.8.x:jvm-server-options/heap_dump_on_out_of_memory_error"`
 
 	// Per-thread stack size.
 	// Defaults to 256Ki.
@@ -1048,7 +1048,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xss.
 	// +optional
-	PerThreadStackSize *resource.Quantity `json:"vm_per_thread_stack_size,omitempty" cass-config:"^3.11.x:jvm-options/per_thread_stack_size,>=4.x:jvm-server-options/per_thread_stack_size,dse:>=6.8.x:jvm-server-options/per_thread_stack_size"`
+	PerThreadStackSize *resource.Quantity `json:"vm_per_thread_stack_size,omitempty" cass-config:"^3.11.x:jvm-options/per_thread_stack_size;>=4.x,dse@>=6.8.x:jvm-server-options/per_thread_stack_size"`
 
 	// The size of interned string table. Larger sizes are beneficial to gossip.
 	// Defaults to 1000003.
@@ -1056,7 +1056,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:StringTableSize.
 	// +optional
-	StringTableSize *resource.Quantity `json:"vm_string_table_size,omitempty" cass-config:"^3.11.x:jvm-options/string_table_size,>=4.x:jvm-server-options/string_table_size,dse:>=6.8.x:jvm-server-options/string_table_size"`
+	StringTableSize *resource.Quantity `json:"vm_string_table_size,omitempty" cass-config:"^3.11.x:jvm-options/string_table_size;>=4.x,dse@>=6.8.x:jvm-server-options/string_table_size"`
 
 	// Ensure all memory is faulted and zeroed on startup.
 	// Enabled by default.
@@ -1064,7 +1064,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+AlwaysPreTouch.
 	// +optional
-	AlwaysPreTouch *bool `json:"vm_always_pre_touch,omitempty" cass-config:"^3.11.x:jvm-options/always_pre_touch,>=4.x:jvm-server-options/always_pre_touch,dse:>=6.8.x:jvm-server-options/always_pre_touch"`
+	AlwaysPreTouch *bool `json:"vm_always_pre_touch,omitempty" cass-config:"^3.11.x:jvm-options/always_pre_touch;>=4.x,dse@>=6.8.x:jvm-server-options/always_pre_touch"`
 
 	// Disable biased locking to avoid biased lock revocation pauses.
 	// Disabled by default.
@@ -1074,7 +1074,7 @@ type JvmOptions struct {
 	// Note: the Cass Config Builder option is named use_biased_locking, but setting it to true
 	// disables biased locking.
 	// +optional
-	DisableBiasedLocking *bool `json:"vm_disable_biased_locking,omitempty" cass-config:"^3.11.x:jvm-options/use_biased_locking,>=4.x:jvm-server-options/use-biased-locking,dse:>=6.8.x:jvm-server-options/use-biased-locking"`
+	DisableBiasedLocking *bool `json:"vm_disable_biased_locking,omitempty" cass-config:"^3.11.x:jvm-options/use_biased_locking;>=4.x,dse@>=6.8.x:jvm-server-options/use-biased-locking"`
 
 	// Enable thread-local allocation blocks.
 	// Enabled by default.
@@ -1082,7 +1082,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseTLAB.
 	// +optional
-	UseTlab *bool `json:"vm_use_tlab,omitempty" cass-config:"^3.11.x:jvm-options/use_tlb,>=4.x:jvm-server-options/use_tlb,dse:>=6.8.x:jvm-server-options/use_tlb"`
+	UseTlab *bool `json:"vm_use_tlab,omitempty" cass-config:"^3.11.x:jvm-options/use_tlb;>=4.x,dse@>=6.8.x:jvm-server-options/use_tlb"`
 
 	// Allow resizing of thread-local allocation blocks.
 	// Enabled by default.
@@ -1090,7 +1090,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+ResizeTLAB.
 	// +optional
-	ResizeTlab *bool `json:"vm_resize_tlab,omitempty" cass-config:"^3.11.x:jvm-options/resize_tlb,>=4.x:jvm-server-options/resize_tlb,dse:>=6.8.x:jvm-server-options/resize_tlb"`
+	ResizeTlab *bool `json:"vm_resize_tlab,omitempty" cass-config:"^3.11.x:jvm-options/resize_tlb;>=4.x,dse@>=6.8.x:jvm-server-options/resize_tlb"`
 
 	// Disable hsperfdata mmap'ed file.
 	// Enabled by default.
@@ -1098,7 +1098,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+PerfDisableSharedMem.
 	// +optional
-	DisablePerfSharedMem *bool `json:"vm_disable_perf_shared_mem,omitempty" cass-config:"^3.11.x:jvm-options/perf_disable_shared_mem,>=4.x:jvm-server-options/perf_disable_shared_mem,dse:>=6.8.x:jvm-server-options/perf_disable_shared_mem"`
+	DisablePerfSharedMem *bool `json:"vm_disable_perf_shared_mem,omitempty" cass-config:"^3.11.x:jvm-options/perf_disable_shared_mem;>=4.x,dse@>=6.8.x:jvm-server-options/perf_disable_shared_mem"`
 
 	// Prefer binding to IPv4 network interfaces.
 	// Enabled by default.
@@ -1106,70 +1106,70 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Djava.net.preferIPv4Stack=true.
 	// +optional
-	PreferIpv4 *bool `json:"vm_prefer_ipv4,omitempty" cass-config:"^3.11.x:jvm-options/java_net_prefer_ipv4_stack,>=4.x:jvm-server-options/java_net_prefer_ipv4_stack,dse:>=6.8.x:jvm-server-options/java_net_prefer_ipv4_stack"`
+	PreferIpv4 *bool `json:"vm_prefer_ipv4,omitempty" cass-config:"^3.11.x:jvm-options/java_net_prefer_ipv4_stack;>=4.x,dse@>=6.8.x:jvm-server-options/java_net_prefer_ipv4_stack"`
 
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseNUMA.
 	// +optional
-	UseNuma *bool `json:"vm_use_numa,omitempty" cass-config:">=4.x:jvm-server-options/use_numa,dse:>=6.8.x:jvm-server-options/use_numa"`
+	UseNuma *bool `json:"vm_use_numa,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/use_numa"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.printHeapHistogramOnOutOfMemoryError.
 	// +optional
-	PrintHeapHistogramOnOutOfMemoryError *bool `json:"vm_print_heap_histogram_on_out_of_memory_error,omitempty" cass-config:">=4.x:jvm-server-options/print_heap_histogram_on_out_of_memory_error,dse:>=6.8.x:jvm-server-options/print_heap_histogram_on_out_of_memory_error"`
+	PrintHeapHistogramOnOutOfMemoryError *bool `json:"vm_print_heap_histogram_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/print_heap_histogram_on_out_of_memory_error"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+ExitOnOutOfMemoryError.
 	// +optional
-	ExitOnOutOfMemoryError *bool `json:"vm_exit_on_out_of_memory_error,omitempty" cass-config:">=4.x:jvm-server-options/exit_on_out_of_memory_error,dse:>=6.8.x:jvm-server-options/exit_on_out_of_memory_error"`
+	ExitOnOutOfMemoryError *bool `json:"vm_exit_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/exit_on_out_of_memory_error"`
 
 	// Disabled by default. Requires `exit_on_out_of_memory_error` to be disabled..
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+CrashOnOutOfMemoryError.
 	// +optional
-	CrashOnOutOfMemoryError *bool `json:"vm_crash_on_out_of_memory_error,omitempty" cass-config:">=4.x:jvm-server-options/crash_on_out_of_memory_error,dse:>=6.8.x:jvm-server-options/crash_on_out_of_memory_error"`
+	CrashOnOutOfMemoryError *bool `json:"vm_crash_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/crash_on_out_of_memory_error"`
 
 	// Defaults to 300000 milliseconds.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:GuaranteedSafepointInterval.
 	// +optional
-	GuaranteedSafepointIntervalMs *int `json:"vm_guaranteed_safepoint_interval_ms,omitempty" cass-config:">=4.x:jvm-server-options/guaranteed-safepoint-interval,dse:>=6.8.x:jvm-server-options/guaranteed-safepoint-interval"`
+	GuaranteedSafepointIntervalMs *int `json:"vm_guaranteed_safepoint_interval_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/guaranteed-safepoint-interval"`
 
 	// Defaults to 65536.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dio.netty.eventLoop.maxPendingTasks.
 	// +optional
-	NettyEventloopMaxPendingTasks *int `json:"netty_eventloop_maxpendingtasks,omitempty" cass-config:">=4.x:jvm-server-options/io_netty_eventloop_maxpendingtasks,dse:>=6.8.x:jvm-server-options/io_netty_eventloop_maxpendingtasks"`
+	NettyEventloopMaxPendingTasks *int `json:"netty_eventloop_maxpendingtasks,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/io_netty_eventloop_maxpendingtasks"`
 
 	// Netty setting `io.netty.tryReflectionSetAccessible`.
 	// Defaults to true.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Dio.netty.tryReflectionSetAccessible=true.
 	// +optional
-	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x:jvm11-server-options/io_netty_try_reflection_set_accessible,dse:>=6.8.x:jvm11-server-options/io_netty_try_reflection_set_accessible"`
+	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm11-server-options/io_netty_try_reflection_set_accessible"`
 
 	// Defaults to 1048576.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Djdk.nio.maxCachedBufferSize.
 	// +optional
-	NioMaxCachedBufferSize *resource.Quantity `json:"nio_maxcachedbuffersize,omitempty" cass-config:">=4.x:jvm-server-options/jdk_nio_maxcachedbuffersize,dse:>=6.8.x:jvm-server-options/jdk_nio_maxcachedbuffersize"`
+	NioMaxCachedBufferSize *resource.Quantity `json:"nio_maxcachedbuffersize,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/jdk_nio_maxcachedbuffersize"`
 
 	// Align direct memory allocations on page boundaries.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dsun.nio.PageAlignDirectMemory=true.
 	// +optional
-	NioAlignDirectMemory *bool `json:"nio_align_direct_memory,omitempty" cass-config:">=4.x:jvm-server-options/page-align-direct-memory,dse:>=6.8.x:jvm-server-options/page-align-direct-memory"`
+	NioAlignDirectMemory *bool `json:"nio_align_direct_memory,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/page-align-direct-memory"`
 
 	// Allow the current VM to attach to itself.
 	// Defaults to true.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Djdk.attach.allowAttachSelf=true.
 	// +optional
-	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x:jvm11-server-options/jdk_attach_allow_attach_self,dse:>=6.8.x:jvm11-server-options/jdk_attach_allow_attach_self"`
+	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm11-server-options/jdk_attach_allow_attach_self"`
 
 	// CASSANDRA STARTUP OPTIONS
 
@@ -1179,7 +1179,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.available_processors.
 	// +optional
-	AvailableProcessors *int `json:"cassandra_available_processors,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_available_processors,>=4.x:jvm-server-options/cassandra_available_processors,dse:>=6.8.x:jvm-server-options/cassandra_available_processors"`
+	AvailableProcessors *int `json:"cassandra_available_processors,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_available_processors;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_available_processors"`
 
 	// Enable pluggable metrics reporter.
 	// Disabled by default.
@@ -1188,7 +1188,7 @@ type JvmOptions struct {
 	// Corresponds to: -Dcassandra.metricsReporterConfigFile.
 	// +optional
 	// TODO mountable directory
-	MetricsReporterConfigFile *string `json:"cassandra_metrics_reporter_config_file,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_metrics_reporter_config_file,>=4.x:jvm-server-options/cassandra_metrics_reporter_config_file,dse:>=6.8.x:jvm-server-options/cassandra_metrics_reporter_config_file"`
+	MetricsReporterConfigFile *string `json:"cassandra_metrics_reporter_config_file,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_metrics_reporter_config_file;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_metrics_reporter_config_file"`
 
 	// Amount of time in milliseconds that a node waits before joining the ring.
 	// Disabled by default.
@@ -1196,7 +1196,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.ring_delay_ms.
 	// +optional
-	RingDelayMs *int `json:"cassandra_ring_delay_ms,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_ring_delay_ms,>=4.x:jvm-server-options/cassandra_ring_delay_ms,dse:>=6.8.x:jvm-server-options/cassandra_ring_delay_ms"`
+	RingDelayMs *int `json:"cassandra_ring_delay_ms,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_ring_delay_ms;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_ring_delay_ms"`
 
 	// Default location for the trigger JARs.
 	// Disabled by default.
@@ -1205,7 +1205,7 @@ type JvmOptions struct {
 	// Corresponds to: -Dcassandra.triggers_dir.
 	// +optional
 	// TODO mountable directory
-	TriggersDirectory *string `json:"cassandra_triggers_directory,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_triggers_dir,>=4.x:jvm-server-options/cassandra_triggers_dir,dse:>=6.8.x:jvm-server-options/cassandra_triggers_dir"`
+	TriggersDirectory *string `json:"cassandra_triggers_directory,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_triggers_dir;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_triggers_dir"`
 
 	// For testing new compaction and compression strategies.
 	// Disabled by default.
@@ -1213,7 +1213,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.write_survey.
 	// +optional
-	WriteSurvey *bool `json:"cassandra_write_survey,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_write_survey,>=4.x:jvm-server-options/cassandra_write_survey,dse:>=6.8.x:jvm-server-options/cassandra_write_survey"`
+	WriteSurvey *bool `json:"cassandra_write_survey,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_write_survey;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_write_survey"`
 
 	// Disable remote configuration via JMX of auth caches.
 	// Disabled by default.
@@ -1221,7 +1221,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.disable_auth_caches_remote_configuration.
 	// +optional
-	DisableAuthCachesRemoteConfiguration *bool `json:"cassandra_disable_auth_caches_remote_configuration,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_disable_auth_caches_remote_configuration,>=4.x:jvm-server-options/cassandra_disable_auth_caches_remote_configuration,dse:>=6.8.x:jvm-server-options/cassandra_disable_auth_caches_remote_configuration"`
+	DisableAuthCachesRemoteConfiguration *bool `json:"cassandra_disable_auth_caches_remote_configuration,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_disable_auth_caches_remote_configuration;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_disable_auth_caches_remote_configuration"`
 
 	// Disable dynamic calculation of the page size used when indexing an entire partition (during
 	// initial index build/rebuild).
@@ -1230,7 +1230,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.force_default_indexing_page_size.
 	// +optional
-	ForceDefaultIndexingPageSize *bool `json:"cassandra_force_default_indexing_page_size,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_force_default_indexing_page_size,>=4.x:jvm-server-options/cassandra_force_default_indexing_page_size,dse:>=6.8.x:jvm-server-options/cassandra_force_default_indexing_page_size"`
+	ForceDefaultIndexingPageSize *bool `json:"cassandra_force_default_indexing_page_size,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_force_default_indexing_page_size;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_force_default_indexing_page_size"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
@@ -1244,14 +1244,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.expiration_date_overflow_policy.
 	// +optional
-	ExpirationDateOverflowPolicy *string `json:"cassandra_expiration_date_overflow_policy,omitempty" cass-config:">=4.x:jvm-server-options/cassandra_expiration_date_overflow_policy,dse:>=6.8.x:jvm-server-options/cassandra_expiration_date_overflow_policy"`
+	ExpirationDateOverflowPolicy *string `json:"cassandra_expiration_date_overflow_policy,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/cassandra_expiration_date_overflow_policy"`
 
 	// Imposes an upper bound on hint lifetime below the normal min gc_grace_seconds.
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.maxHintTTL.
 	// +optional
-	MaxHintTtlSeconds *int `json:"cassandra_max_hint_ttl_seconds,omitempty" cass-config:">=4.x:jvm-server-options/cassandra_max_hint_ttl,dse:>=6.8.x:jvm-server-options/cassandra_max_hint_ttl"`
+	MaxHintTtlSeconds *int `json:"cassandra_max_hint_ttl_seconds,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/cassandra_max_hint_ttl"`
 
 	// GC OPTIONS
 
@@ -1265,7 +1265,7 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Enum=G1GC;CMS;ZGC;Shenandoah;Graal;Custom
 	// +kubebuilder:default=G1GC
 	// +optional
-	GarbageCollector string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector,>=4.x:jvm11-server-options/garbage_collector,dse:>=6.8.x:jvm11-server-options/garbage_collector"`
+	GarbageCollector string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x,dse@>=6.8.x:jvm11-server-options/garbage_collector"`
 
 	// CMS
 
@@ -1315,14 +1315,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent,>=4.x:jvm11-server-options/g1r_set_updating_pause_time_percent,dse:>=6.8.x:jvm11-server-options/g1r_set_updating_pause_time_percent"`
+	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent;>=4.x,dse@>=6.8.x:jvm11-server-options/g1r_set_updating_pause_time_percent"`
 
 	// G1GC Max GC Pause in milliseconds. Defaults to 500. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:MaxGCPauseMillis.
 	// +optional
-	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis,>=4.x:jvm11-server-options/max_gc_pause_millis,dse:>=6.8.x:jvm11-server-options/max_gc_pause_millis"`
+	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis;>=4.x,dse@>=6.8.x:jvm11-server-options/max_gc_pause_millis"`
 
 	// Initiating Heap Occupancy Percentage. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
@@ -1331,14 +1331,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent,>=4.x:jvm11-server-options/initiating_heap_occupancy_percent,dse:>=6.8.x:jvm11-server-options/initiating_heap_occupancy_percent"`
+	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent;>=4.x,dse@>=6.8.x:jvm11-server-options/initiating_heap_occupancy_percent"`
 
 	// Parallel GC Threads. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ParallelGCThreads.
 	// +optional
-	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads,>=4.x:jvm11-server-options/parallel_gc_threads,dse:>=6.8.x:jvm11-server-options/parallel_gc_threads"`
+	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads;>=4.x,dse@>=6.8.x:jvm11-server-options/parallel_gc_threads"`
 
 	// Concurrent GC Threads. Can only be used when G1 garbage collector is used.
 	// Disabled by default.
@@ -1346,7 +1346,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ConcGCThreads.
 	// +optional
-	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads,>=4.x:jvm11-server-options/conc_gc_threads,dse:>=6.8.x:jvm11-server-options/conc_gc_threads"`
+	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads;>=4.x,dse@>=6.8.x:jvm11-server-options/conc_gc_threads"`
 
 	// GC LOGGING OPTIONS (currently only available for Cassandra 3.11)
 
@@ -1433,32 +1433,32 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxPort *int `json:"jmx_port,omitempty" cass-config:"^3.11.x:jvm-options/jmx-port,>=4.x:jvm-server-options/jmx-port,dse:>=6.8.x:jvm-server-options/jmx-port"`
+	JmxPort *int `json:"jmx_port,omitempty" cass-config:"^3.11.x:jvm-options/jmx-port;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-port"`
 
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Possible values for 3.11 include `local-no-auth`, `remote-no-auth`, and `remote-dse-unified-auth`. Defaults to `local-no-auth`.
 	// Possible values for 4.0 include `local-no-auth`, `remote-no-auth`. Defaults to `local-no-auth`.
 	// +optional
-	JmxConnectionType *string `json:"jmx_connection_type,omitempty" cass-config:"^3.11.x:jvm-options/jmx-connection-type,>=4.x:jvm-server-options/jmx-connection-type,dse:>=6.8.x:jvm-server-options/jmx-connection-type"`
+	JmxConnectionType *string `json:"jmx_connection_type,omitempty" cass-config:"^3.11.x:jvm-options/jmx-connection-type;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-connection-type"`
 
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Defaults to false.
 	// Valid only when JmxConnectionType is "remote-no-auth", "remote-dse-unified-auth".
 	// +optional
-	JmxRemoteSsl *bool `json:"jmx_remote_ssl,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl,>=4.x:jvm-server-options/jmx-remote-ssl,dse:>=6.8.x:jvm-server-options/jmx-remote-ssl"`
+	JmxRemoteSsl *bool `json:"jmx_remote_ssl,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl"`
 
 	// Remote SSL options.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxRemoteSslOpts *string `json:"jmx_remote_ssl_opts,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl-opts,>=4.x:jvm-server-options/jmx-remote-ssl-opts,dse:>=6.8.x:jvm-server-options/jmx-remote-ssl-opts"`
+	JmxRemoteSslOpts *string `json:"jmx_remote_ssl_opts,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl-opts;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl-opts"`
 
 	// Require Client Authentication for remote SSL? Defaults to false.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxRemoteSslRequireClientAuth *bool `json:"jmx_remote_ssl_require_client_auth,omitempty" cass-config:">=4.x:jvm-server-options/jmx-remote-ssl-require-client-auth,dse:>=6.8.x:jvm-server-options/jmx-remote-ssl-require-client-auth"`
+	JmxRemoteSslRequireClientAuth *bool `json:"jmx_remote_ssl_require_client_auth,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl-require-client-auth"`
 
 	// DEBUG OPTIONS
 
@@ -1468,7 +1468,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UnlockCommercialFeatures.
 	// +optional
-	UnlockCommercialFeatures *bool `json:"debug_unlock_commercial_features,omitempty" cass-config:"^3.11.x:jvm-options/unlock_commercial_features,>=4.x:jvm-server-options/unlock_commercial_features,dse:>=6.8.x:jvm-server-options/unlock_commercial_features"`
+	UnlockCommercialFeatures *bool `json:"debug_unlock_commercial_features,omitempty" cass-config:"^3.11.x:jvm-options/unlock_commercial_features;>=4.x,dse@>=6.8.x:jvm-server-options/unlock_commercial_features"`
 
 	// Enable Flight Recorder (Use in production is subject to Oracle licensing).
 	// Disabled by default.
@@ -1476,7 +1476,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+FlightRecorder.
 	// +optional
-	EnableFlightRecorder *bool `json:"debug_enable_flight_recorder,omitempty" cass-config:"^3.11.x:jvm-options/flight_recorder,>=4.x:jvm-server-options/flight_recorder,dse:>=6.8.x:jvm-server-options/flight_recorder"`
+	EnableFlightRecorder *bool `json:"debug_enable_flight_recorder,omitempty" cass-config:"^3.11.x:jvm-options/flight_recorder;>=4.x,dse@>=6.8.x:jvm-server-options/flight_recorder"`
 
 	// Listen for JVM remote debuggers on port 1414.
 	// Disabled by default.
@@ -1484,14 +1484,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1414".
 	// +optional
-	ListenForRemoteDebuggers *bool `json:"debug_listen_remote_debuggers,omitempty" cass-config:"^3.11.x:jvm-options/agent_lib_jdwp,>=4.x:jvm-server-options/agent_lib_jdwp,dse:>=6.8.x:jvm-server-options/agent_lib_jdwp"`
+	ListenForRemoteDebuggers *bool `json:"debug_listen_remote_debuggers,omitempty" cass-config:"^3.11.x:jvm-options/agent_lib_jdwp;>=4.x,dse@>=6.8.x:jvm-server-options/agent_lib_jdwp"`
 
 	// Disable honoring user code @Contended annotations.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:-RestrictContended.
 	// +optional
-	DisableContendedAnnotations *bool `json:"debug_disable_contended_annotations,omitempty" cass-config:">=4.x:jvm-server-options/restrict-contended,dse:>=6.8.x:jvm-server-options/restrict-contended"`
+	DisableContendedAnnotations *bool `json:"debug_disable_contended_annotations,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/restrict-contended"`
 
 	// Whether the compiler should generate the necessary metadata for the parts of the code not at
 	// safe points as well. For use with Flight Recorder.
@@ -1499,27 +1499,27 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+DebugNonSafepoints.
 	// +optional
-	DebugNonSafepoints *bool `json:"debug_non_safepoints,omitempty" cass-config:">=4.x:jvm-server-options/debug-non-safepoints,dse:>=6.8.x:jvm-server-options/debug-non-safepoints"`
+	DebugNonSafepoints *bool `json:"debug_non_safepoints,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/debug-non-safepoints"`
 
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UnlockDiagnosticVMOptions.
 	// +optional
-	UnlockDiagnosticVmOptions *bool `json:"debug_unlock_diagnostic_vm_options,omitempty" cass-config:">=4.x:jvm-server-options/unlock-diagnostic-vm-options,dse:>=6.8.x:jvm-server-options/unlock-diagnostic-vm-options"`
+	UnlockDiagnosticVmOptions *bool `json:"debug_unlock_diagnostic_vm_options,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/unlock-diagnostic-vm-options"`
 
 	// Make Cassandra JVM log internal method compilation (developers only).
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+LogCompilation.
 	// +optional
-	LogCompilation *bool `json:"debug_log_compilation,omitempty" cass-config:">=4.x:jvm-server-options/log_compilation,dse:>=6.8.x:jvm-server-options/log_compilation"`
+	LogCompilation *bool `json:"debug_log_compilation,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/log_compilation"`
 
 	// Preserve Frame Pointer.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+PreserveFramePointer.
 	// +optional
-	PreserveFramePointer *bool `json:"debug_preserve_frame_pointer,omitempty" cass-config:">=4.x:jvm-server-options/preserve-frame-pointer,dse:>=6.8.x:jvm-server-options/preserve-frame-pointer"`
+	PreserveFramePointer *bool `json:"debug_preserve_frame_pointer,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/preserve-frame-pointer"`
 
 	// Additional, arbitrary JVM options (advanced).
 	// +optional

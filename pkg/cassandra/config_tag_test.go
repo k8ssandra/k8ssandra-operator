@@ -33,7 +33,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"simple DSE",
-			"dse:*:foo/bar",
+			"dse@*:foo/bar",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"dse": {{
@@ -47,7 +47,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"simple DSE case insensitive",
-			"Foo:*:foo/bar",
+			"Foo@*:foo/bar",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"foo": {{
@@ -91,7 +91,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"many constraints",
-			"^3.11.x:foo/bar,>=4.x:foo/qix",
+			"^3.11.x:foo/bar;>=4.x:foo/qix",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"cassandra": {
@@ -112,7 +112,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"many constraints same server type",
-			"CASSANDRA:^3.11.x:foo/bar,>=4.x:foo/qix",
+			"CASSANDRA@^3.11.x:foo/bar;>=4.x:foo/qix",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"cassandra": {
@@ -133,7 +133,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"many constraints different server type",
-			"CASSANDRA:^3.11.x:foo/bar,>=4.x:foo/qix,DSE:>=6.8.x:foo/qiz",
+			"CASSANDRA@^3.11.x:foo/bar;>=4.x:foo/qix;dse@>=6.8.x:foo/qiz",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"cassandra": {
@@ -159,7 +159,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"many constraints whitespace",
-			"^ 3.11.x : /foo/bar/ , CASSANDRA : >=4.x : foo/qix ; recurse ",
+			"^ 3.11.x : /foo/bar/ ; CASSANDRA @ >=4.x : foo/qix ; recurse ",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"cassandra": {
@@ -181,7 +181,7 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"no path recursive",
-			"^3.11.x: , >=4.x: ;recurse",
+			"^3.11.x: ; >=4.x: ;recurse",
 			&cassConfigTag{
 				paths: map[string][]cassConfigTagPath{
 					"cassandra": {
@@ -292,10 +292,10 @@ func Test_parseCassConfigTag(t *testing.T) {
 		},
 		{
 			"wrong path entry",
-			"dse:*:foo/bar:extraneous",
+			"dse@*:foo/bar:extraneous",
 			nil,
 			func(t assert.TestingT, err error, mesAndArgs ...interface{}) bool {
-				return assert.Equal(t, "wrong path entry: 'dse:*:foo/bar:extraneous'", err.Error())
+				return assert.Equal(t, "wrong path entry: 'dse@*:foo/bar:extraneous'", err.Error())
 			},
 		},
 		{
@@ -304,14 +304,6 @@ func Test_parseCassConfigTag(t *testing.T) {
 			nil,
 			func(t assert.TestingT, err error, mesAndArgs ...interface{}) bool {
 				return assert.Equal(t, "improper constraint: wrong", err.Error())
-			},
-		},
-		{
-			"unknown option",
-			"*:foo/bar;wrong",
-			nil,
-			func(t assert.TestingT, err error, mesAndArgs ...interface{}) bool {
-				return assert.Equal(t, "unknown option: 'wrong'", err.Error())
 			},
 		},
 		{

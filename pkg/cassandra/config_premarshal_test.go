@@ -13,10 +13,10 @@ func Test_preMarshalConfig(t *testing.T) {
 	type simple struct {
 		Simple1   *string `cass-config:"*:foo/simple1"`
 		Simple2   bool    `cass-config:"*:foo/simple2"`
-		SimpleDSE *bool   `cass-config:"dse:6.8.x:foo/simple/dse"`
+		SimpleDSE *bool   `cass-config:"dse@6.8.x:foo/simple/dse"`
 	}
 	type komplex struct {
-		ManyRestrictions               *string `cass-config:"^3.11.x:foo/many-restrictions-3x,cassandra:>=4.x:foo/many-restrictions-4x"`
+		ManyRestrictions               *string `cass-config:"^3.11.x:foo/many-restrictions-3x;cassandra@>=4.x:foo/many-restrictions-4x"`
 		V3Only                         *int    `cass-config:"^3.11.x:foo/3x-only"`
 		V4Only                         *int    `cass-config:">=4.x:foo/4x-only"`
 		RetainZero                     bool    `cass-config:"*:foo/retain-zero;retainzero"`
@@ -27,11 +27,11 @@ func Test_preMarshalConfig(t *testing.T) {
 		ChildRecurse                   *simple `cass-config:"*:foo;recurse"`
 	}
 	type dse struct {
-		ManyRestrictionsDSE *string `cass-config:">=4.x:many-restrictions-cassandra,dse:>=6.8.x:many-restrictions-dse"`
-		ChildRecurseDSE     *simple `cass-config:"dse:*:parent/;recurse"`
+		ManyRestrictionsDSE *string `cass-config:">=4.x:many-restrictions-cassandra;dse@>=6.8.x:many-restrictions-dse"`
+		ChildRecurseDSE     *simple `cass-config:"dse@*:parent/;recurse"`
 	}
 	type invalid1 struct {
-		Field1 string `cass-config:"dse:*:path:invalid tag"`
+		Field1 string `cass-config:"dse@*:path:invalid tag"`
 	}
 	type invalid2 struct {
 		Field1 *invalid1 `cass-config:"*:;recurse"`
@@ -279,7 +279,7 @@ func Test_preMarshalConfig(t *testing.T) {
 			func(t assert.TestingT, err error, _ ...interface{}) bool {
 				return assert.NotNil(t, err) &&
 					assert.Contains(t, err.Error(), "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
-					assert.Contains(t, err.Error(), "wrong path entry: 'dse:*:path:invalid tag'")
+					assert.Contains(t, err.Error(), "wrong path entry: 'dse@*:path:invalid tag'")
 			},
 		},
 		{
@@ -292,7 +292,7 @@ func Test_preMarshalConfig(t *testing.T) {
 				return assert.NotNil(t, err) &&
 					assert.Contains(t, err.Error(), "field cassandra.invalid2.Field1: recurse failed") &&
 					assert.Contains(t, err.Error(), "cannot parse cass-config tag on cassandra.invalid1.Field1") &&
-					assert.Contains(t, err.Error(), "wrong path entry: 'dse:*:path:invalid tag'")
+					assert.Contains(t, err.Error(), "wrong path entry: 'dse@*:path:invalid tag'")
 			},
 		},
 		{

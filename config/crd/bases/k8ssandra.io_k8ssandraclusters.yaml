@@ -2729,7 +2729,7 @@ spec:
                                     type: string
                                   kerberos:
                                     description: Mode for kerberos authentication
-                                      scheme.  Allowed values are 'internal' or 'ldap'.
+                                      scheme. Allowed values are 'internal' or 'ldap'.
                                       Introduced in DSE 6.8.9.
                                     enum:
                                     - internal
@@ -7718,7 +7718,7 @@ spec:
                                           type: string
                                         kerberos:
                                           description: Mode for kerberos authentication
-                                            scheme.  Allowed values are 'internal'
+                                            scheme. Allowed values are 'internal'
                                             or 'ldap'. Introduced in DSE 6.8.9.
                                           enum:
                                           - internal
