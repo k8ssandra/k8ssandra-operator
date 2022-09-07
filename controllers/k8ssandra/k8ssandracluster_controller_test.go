@@ -768,6 +768,7 @@ func parseCassandraConfig(config *api.CassandraConfig, serverVersion string, sys
 	)
 	template := cassandra.DatacenterConfig{
 		ServerVersion:   semver.MustParse(serverVersion),
+		ServerType:      "cassandra",
 		CassandraConfig: *config,
 	}
 	json, err := cassandra.CreateJsonConfig(&template)

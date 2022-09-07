@@ -24,9 +24,348 @@ spec:
                 storage: 5Gi
         config:
           cassandraYaml:
-            allocate_tokens_for_local_replication_factor: 3
+            authenticator: com.datastax.bdp.cassandra.auth.DseAuthenticator
+            authorizer: com.datastax.bdp.cassandra.auth.DseAuthorizer
+            role_manager: com.datastax.bdp.cassandra.auth.DseRoleManager
+          dseYaml:
+            advanced_replication_options:
+              enabled: false
+              advanced_replication_directory: /var/lib/cassandra/advrep
+              conf_driver_password_encryption_enabled: false
+              security_base_path: /base/path/to/advrep/security/files/
+            alwayson_sql_options:
+              enabled: false
+              alwayson_sql_status_check_wait_time_ms: 500
+              auth_user: alwayson_sql
+              heartbeat_update_interval_seconds: 30
+              log_dsefs_dir: /spark/log/alwayson_sql
+              reserve_port_wait_time_ms: 100
+              runner_max_errors: 10
+              thrift_port: 10000
+              web_ui_port: 9077
+              workpool: alwayson_sql
+            async_bootstrap_reindex: true
+            audit_logging_options:
+              enabled: true
+              excluded_categories: "QUERY"
+              excluded_keyspaces: "ks_1"
+              excluded_roles: "role_1"
+              included_categories: ""
+              included_keyspaces: ""
+              included_roles: ""
+              logger: SLF4JAuditWriter
+              cassandra_audit_writer_options:
+                batch_size: 50
+                day_partition_millis: 3600000
+                dropped_event_log: /var/log/cassandra/dropped_audit_events.log
+                flush_time: 500
+                mode: sync
+                queue_size: 30000
+                write_consistency: EACH_QUORUM
+              retention_time: 0
+            authentication_options:
+              enabled: true
+              allow_digest_with_kerberos: true
+              default_scheme: internal
+              plain_text_without_ssl: warn
+              scheme_permissions: false
+            authorization_options:
+              enabled: true
+              allow_row_level_security: false
+              transitional_mode: disabled
+            back_pressure_threshold_per_core: 1024
+            cluster_summary_stats_options:
+              enabled: true
+              refresh_rate_ms: 60000
+            config_encryption_active: false
+            config_encryption_key_name: system_key
+            cql_slow_log_options:
+              enabled: true
+              minimum_samples: 100
+              num_slowest_queries: 5
+              skip_writing_to_db: true
+              threshold: 200.0
+              ttl_seconds: 259200
+            cql_solr_query_paging: off
+            cql_solr_query_row_timeout: 10000
+            cql_system_info_options:
+              enabled: true
+              refresh_rate_ms: 60000
+            db_summary_stats_options:
+              enabled: true
+              refresh_rate_ms: 60000
+            dsefs_options:
+              enabled: false
+              block_allocator_options:
+                overflow_factor: 1.05
+                overflow_margin_mb: 1024
+              compression_frame_max_size: 1048576
+              data_directories:
+                - dir: /var/lib/dsefs/data
+                  min_free_space: 268435456
+                  storage_weight: 1.0
+              gossip_options:
+                round_delay_ms: 2000
+                shutdown_delay_ms: 30000
+                startup_delay_ms: 5000
+              keyspace_name: dsefs
+              private_port: 5599
+              public_port: 5598
+              query_cache_expire_after_ms: 2000
+              query_cache_size: 2048
+              rest_options:
+                client_close_timeout_ms: 60000
+                connection_open_timeout_ms: 55000
+                core_max_concurrent_connections_per_host: 8
+                idle_connection_timeout_ms: 60000
+                internode_idle_connection_timeout_ms: 0
+                request_timeout_ms: 330000
+                server_request_timeout_ms: 300000
+              server_close_timeout_ms: 2147483647
+              service_close_timeout_ms: 60000
+              service_startup_timeout_ms: 60000
+              transaction_options:
+                conflict_retry_count: 40
+                conflict_retry_delay_ms: 200
+                execution_retry_count: 3
+                execution_retry_delay_ms: 1000
+                transaction_timeout_ms: 3000
+              work_dir: /var/lib/dsefs
+            enable_health_based_routing: true
+            enable_index_disk_failure_policy: true
+            flush_max_time_per_core: 5
+            graph:
+              adjacency_cache_size_in_mb: 128
+              index_cache_size_in_mb: 128
+              max_query_params: 16
+              analytic_evaluation_timeout_in_minutes: 10080
+              realtime_evaluation_timeout_in_seconds: 30
+              schema_agreement_timeout_in_ms: 10000
+              system_evaluation_timeout_in_seconds: 180
+              gremlin_server:
+                gremlinPool: 2
+                port: 8182
+                scriptEngines:
+                  gremlin-groovy:
+                    config:
+                      sandbox_enabled: true
+                      sandbox_rules:
+                        blacklist_packages:
+                          - package3
+                          - package4
+                        blacklist_supers:
+                          - super3
+                          - super4
+                        whitelist_packages:
+                          - package1
+                          - package2
+                        whitelist_supers:
+                          - super1
+                          - super2
+                        whitelist_types:
+                          - type1
+                          - type2
+                threadPoolWorker: 2
+            graph_events:
+              ttl_seconds: 600
+            histogram_data_options:
+              enabled: true
+              refresh_rate_ms: 60000
+              retention_count: 3
+            insights_options:
+              data_dir: /var/lib/cassandra/insights_data
+              log_dir: /var/log/cassandra/
+            internode_messaging_options:
+              client_max_connections: 100
+              client_request_timeout_seconds: 60
+              client_worker_threads: 4
+              frame_length_in_mb: 256
+              handshake_timeout_seconds: 10
+              port: 8609
+              server_acceptor_threads: 2
+              server_worker_threads: 4
+            kerberos_options:
+              http_principal: HTTP/_HOST@REALM
+              keytab: /etc/dse/conf/dse.keytab
+              qop: auth
+              service_principal: dse/HOST@REALM
+            kmip_hosts:
+              group1:
+                hosts: host1,host2
+            ldap_options:
+              all_parent_groups_memberof_attribute: all.parent.groups.member.of.attribute
+              all_parent_groups_search_filter: all.parent.groups.search.filter
+              all_parent_groups_search_type: directory_search
+              connection_pool:
+                max_active: 8
+                max_idle: 8
+              credentials_validity_in_ms: 0
+              dns_service_discovery:
+                fqdn: www.host.com
+                lookup_timeout_ms: 5000
+                polling_interval_ms: 0
+                retention_duration_ms: 600000
+              extra_group_search_bases:
+                - group.search.base.1
+                - group.search.base.2
+              extra_user_search_bases:
+                - user.search.base.1
+                - user.search.base.2
+              group_name_attribute: group.name.attribute
+              group_search_base: group.search.base
+              group_search_filter: group.search.filter
+              group_search_type: directory_search
+              groups_update_interval_in_ms: 0
+              groups_validity_in_ms: 0
+              hostname_verification: false
+              search_dn: search.dn
+              search_password: search.password
+              search_validity_in_seconds: 0
+              server_host: ldap.server.host
+              server_port: 389
+              ssl_protocol: TLS
+              truststore_password: truststore.password
+              truststore_path: "/mnt/dir/truststore.jks"
+              truststore_type: JKS
+              use_ssl: false
+              use_tls: false
+              user_memberof_attribute: user.member.of.attribute
+              user_search_base: user.search.base
+              user_search_filter: user.search.filter
+            lease_metrics_options:
+              enabled: true
+              ttl_seconds: 604800
+            load_max_time_per_core: 5
+            max_memory_to_lock_fraction: 0.2
+            max_memory_to_lock_mb: 10240
+            node_health_options:
+              dropped_mutation_window_minutes: 30
+              refresh_rate_ms: 60000
+              uptime_ramp_up_period_seconds: 10800
+            performance_core_threads: 4
+            performance_max_threads: 4
+            performance_queue_capacity: 32000
+            ram_buffer_heap_space_in_mb: 1024
+            ram_buffer_offheap_space_in_mb: 1024
+            resource_level_latency_tracking_options:
+              enabled: true
+              refresh_rate_ms: 60000
+            resource_manager_options:
+              worker_options:
+                cores_total: 1
+                memory_total: 0.8
+                workpools:
+                  - cores: 1
+                    memory: 1
+                    name: workpool1
+            role_management_options:
+              mode: internal
+              mode_by_authentication:
+                internal: internal
+                kerberos: internal
+                ldap: internal
+              stats: true
+            server_id: server-id
+            shard_transport_options:
+              netty_client_request_timeout: 60000
+            solr_cache_stats_options:
+              enabled: true
+              refresh_rate_ms: 60000
+              ttl_seconds: 604800
+            solr_data_dir: /var/lib/cassandra/solr.data
+            solr_encryption_options:
+              decryption_cache_offheap_allocation: true
+              decryption_cache_size_in_mb: 1024
+            solr_field_cache_enabled: true
+            solr_index_stats_options:
+              enabled: true
+              refresh_rate_ms: 102
+              ttl_seconds: 10000
+            solr_latency_snapshot_options:
+              enabled: true
+              refresh_rate_ms: 60000
+              ttl_seconds: 10000
+            solr_request_handler_metrics_options:
+              enabled: true
+              refresh_rate_ms: 60000
+              ttl_seconds: 10000
+            solr_resource_upload_limit_mb: 105
+            solr_slow_sub_query_log_options:
+              enabled: true
+              async_writers: 101
+              threshold_ms: 3000
+              ttl_seconds: 10000
+            solr_update_handler_metrics_options:
+              enabled: true
+              refresh_rate_ms: 60000
+              ttl_seconds: 10000
+            spark_application_info_options:
+              enabled: true
+              driver:
+                connectorSource: true
+                jvmSource: true
+                sink: true
+                stateSource: true
+              executor:
+                connectorSource: true
+                jvmSource: true
+                sink: true
+              refresh_rate_ms: 100
+            spark_cluster_info_options:
+              enabled: true
+              refresh_rate_ms: 100
+            spark_daemon_readiness_assertion_interval: 100
+            spark_process_runner:
+              run_as_runner_options:
+                user_slots:
+                  - user1
+                  - user2
+              runner_type: default
+            spark_security_enabled: false
+            spark_security_encryption_enabled: false
+            spark_shared_secret_bit_length: 100
+            spark_ui_options:
+              encryption: inherit
+              encryption_options:
+                algorithm: algorithm
+                cipher_suites: cipherSuites
+                enabled: true
+                keystore: keystore
+                keystore_password: keystorePassword
+                keystore_type: JCEKS
+                protocol: protocol
+                require_client_auth: true
+                truststore: truststore
+                truststore_password: truststorePassword
+                truststore_type: PKCS12
+            system_info_encryption:
+              enabled: false
+              chunk_length_kb: 129
+              cipher_algorithm: AES
+              key_provider: key.provider
+              kmip_host: kmip.host
+              secret_key_strength: 128
+            system_key_directory: /etc/dse/conf
+            tiered_storage_options:
+              option1:
+                local_options:
+                  localOption1: localValue1
+                  localOption2: localValue2
+                tiers:
+                  - paths:
+                      - path1
+                      - path2
+            ttl_index_rebuild_options:
+              fixed_rate_period: 300
+              initial_delay: 20
+              max_docs_per_batch: 4096
+              thread_pool_size: 1
+            user_level_latency_tracking_options:
+              enabled: true
+              quantiles: true
+              refresh_rate_ms: 60000
+              top_stats_limit: 100
           jvmOptions:
             heap_initial_size: 512Mi
             heap_max_size: 512Mi
-          dseYaml: {}
     mgmtAPIHeap: 64Mi
