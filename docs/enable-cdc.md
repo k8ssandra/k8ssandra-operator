@@ -29,6 +29,7 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  auth: false
   cassandra:
     serverVersion: "4.0.4"
     datacenters:
@@ -52,8 +53,8 @@ spec:
 When creating your tables, you'll need to do so with cdc=true as below:
 
 ```
-kubectl exec -it test-cluster-dc1-default-sts-0 -- bash
-cqlsh test-cluster-dc1-all-pods-service.default.svc.cluster.local
+kubectl exec -it test-dc1-default-sts-0 -- bash
+cqlsh test-dc1-all-pods-service.default.svc.cluster.local
 CREATE KEYSPACE db1 WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', 'dc1':'3'};
 CREATE TABLE IF NOT EXISTS db1.table1 (key text PRIMARY KEY, c1 text) WITH cdc=true;
 ```
@@ -76,7 +77,7 @@ kubectl exec -it -n pulsar $PULSAR_POD -- bash
     "events.topic": "persistent://public/default/events-db1.table1",
     "keyspace": "db1",
     "table": "table1",
-    "contactPoints": "test-cluster-dc1-all-pods-service.default.svc.cluster.local",
+    "contactPoints": "test-dc1-all-pods-service.default.svc.cluster.local",
     "port": 9042,
     "loadBalancing.localDc": "dc1",
     "auth.provider": "None"
