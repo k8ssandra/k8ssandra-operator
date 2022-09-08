@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#567](https://github.com/k8ssandra/k8ssandra-operator/issues/567) Fix no seeds error when all the Cassandra pods of a DC get restarted at once
+
 ## v1.2.0 - 2022-07-22
 
 * [CHANGE] Update to Reaper v3.2.0
