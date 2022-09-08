@@ -61,11 +61,19 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	logger logr.Logger) result.ReconcileResult {
 	logger.Info("Reconciling seeds")
 
+	// Additional seed nodes should never be part of the current datacenter
+	filteredSeeds := make([]corev1.Pod, 0)
+	for _, seed := range seeds {
+		if seed.Labels[cassdcapi.DatacenterLabel] != dc.Name {
+			filteredSeeds = append(filteredSeeds, seed)
+		}
+	}
+
 	// The following if block was basically taken straight out of cass-operator. See
 	// https://github.com/k8ssandra/k8ssandra-operator/issues/210 for a detailed
 	// explanation of why this is being done.
 
-	desiredEndpoints := newEndpoints(dc, seeds, additionalSeeds)
+	desiredEndpoints := newEndpoints(dc, filteredSeeds, additionalSeeds)
 	actualEndpoints := &corev1.Endpoints{}
 	endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
 
@@ -73,7 +81,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 		// We can't have an Endpoints object that has no addresses or notReadyAddresses for
 		// its EndpointSubset elements. This would be the case if both seeds and
 		// additionalSeeds are empty, so we delete the Endpoints.
-		if len(seeds) == 0 && len(additionalSeeds) == 0 {
+		if len(filteredSeeds) == 0 && len(additionalSeeds) == 0 {
 			if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
 				return result.Error(fmt.Errorf("failed to delete endpoints for dc (%s): %v", dc.Name, err))
 			}
@@ -100,7 +108,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 			// first created and no pods have reached the ready state. Secondly, you
 			// cannot create an Endpoints object that has both empty Addresses and
 			// empty NotReadyAddresses.
-			if len(seeds) > 0 || len(additionalSeeds) > 0 {
+			if len(filteredSeeds) > 0 || len(additionalSeeds) > 0 {
 				logger.Info("Creating endpoints", "Endpoints", endpointsKey)
 				if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
 					logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
