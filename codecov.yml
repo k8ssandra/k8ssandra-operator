@@ -1,3 +1,11 @@
-# sample regex patterns
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+codecov:
+  require_ci_to_pass: no
+  notify:
+    after_n_builds: 1
+    wait_for_ci: no
 ignore:
-  - "**/zz_*.go"
+  - "**/zz_generated.deepcopy.go"
