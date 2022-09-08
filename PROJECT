@@ -49,6 +49,14 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  domain: k8ssandra.io
+  group: replication
+  kind: ReplicatedConfigMap
+  path: github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
   controller: true
   domain: k8ssandra.io
   group: reaper

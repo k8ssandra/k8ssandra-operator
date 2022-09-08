@@ -73,6 +73,17 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configMaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   verbs:
   - create
@@ -352,6 +363,31 @@ rules:
   - reaper.k8ssandra.io
   resources:
   - reapers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - replication.k8ssandra.io
+  resources:
+  - replicatedConfigMaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - replication.k8ssandra.io
+  resources:
+  - replicatedConfigMaps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - replication.k8ssandra.io
+  resources:
+  - replicatedConfigMaps/status
   verbs:
   - get
   - patch
