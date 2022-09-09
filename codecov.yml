@@ -3,9 +3,8 @@ comment:
   behavior: default
   require_changes: false
 codecov:
-  require_ci_to_pass: no
+  require_ci_to_pass: false
   notify:
-    after_n_builds: 1
-    wait_for_ci: no
+    wait_for_ci: false
 ignore:
   - "**/zz_generated.deepcopy.go"
