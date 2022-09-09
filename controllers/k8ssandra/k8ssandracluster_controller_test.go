@@ -112,7 +112,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
 	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
 	t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
-	t.Run("DatacentersTest", testEnv.ControllerTest(ctx, datacentersTest))
 	t.Run("CreateMultiDcDseCluster", testEnv.ControllerTest(ctx, createMultiDcDseCluster))
 }
 
@@ -2287,49 +2286,9 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
-	t.Log("check that dc1 was created")
+	t.Log("check that dc2 was created")
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
-
-	t.Log("update datacenter status to scaling up")
-	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterScalingUp,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to patch datacenter status")
-
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-
-	t.Log("check that the K8ssandraCluster status is updated")
-	require.Eventually(func() bool {
-		kc := &api.K8ssandraCluster{}
-		err = f.Get(ctx, kcKey, kc)
-		if err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
-
-		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
-			return false
-		}
-
-		if len(kc.Status.Datacenters) == 0 {
-			return false
-		}
-
-		k8ssandraStatus, found := kc.Status.Datacenters[dc2Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc2Key)
-			return false
-		}
-
-		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
-	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("check that dc1 has not been created yet")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
@@ -2347,45 +2306,6 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status ready")
-
-	t.Log("check that the K8ssandraCluster status is updated")
-	require.Eventually(func() bool {
-		kc := &api.K8ssandraCluster{}
-		err = f.Get(ctx, kcKey, kc)
-		if err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
-
-		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) != corev1.ConditionTrue {
-			t.Logf("Expected status condition %s to be true", api.CassandraInitialized)
-			return false
-		}
-
-		if len(kc.Status.Datacenters) != 2 {
-			return false
-		}
-
-		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc1Key)
-			return false
-		}
-
-		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
-		if condition == nil || condition.Status == corev1.ConditionFalse {
-			return false
-		}
-
-		k8ssandraStatus, found = kc.Status.Datacenters[dc1Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc1Key)
-			return false
-		}
-
-		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
-		return condition != nil && condition.Status == corev1.ConditionTrue
-	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)

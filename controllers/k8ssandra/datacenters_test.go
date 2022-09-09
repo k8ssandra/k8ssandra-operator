@@ -1,17 +1,18 @@
 package k8ssandra
 
 import (
-	"context"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	analyticsWorkloadDc = api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Name: "analytics",
+		},
 		DatacenterOptions: api.DatacenterOptions{
 			ServerVersion: "6.8.17",
 			DseWorkloads: &cassdcapi.DseWorkloads{
@@ -21,6 +22,9 @@ var (
 	}
 
 	searchWorkloadDc = api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Name: "search",
+		},
 		DatacenterOptions: api.DatacenterOptions{
 			ServerVersion: "6.8.17",
 			DseWorkloads: &cassdcapi.DseWorkloads{
@@ -30,6 +34,9 @@ var (
 	}
 
 	graphWorkloadDc = api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Name: "graph",
+		},
 		DatacenterOptions: api.DatacenterOptions{
 			ServerVersion: "6.8.17",
 			DseWorkloads: &cassdcapi.DseWorkloads{
@@ -39,6 +46,9 @@ var (
 	}
 
 	mixedWorkloadDc = api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Name: "mixed",
+		},
 		DatacenterOptions: api.DatacenterOptions{
 			ServerVersion: "6.8.17",
 			DseWorkloads: &cassdcapi.DseWorkloads{
@@ -49,6 +59,9 @@ var (
 	}
 
 	cassandraWorkloadDc = api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Name: "cassandra",
+		},
 		DatacenterOptions: api.DatacenterOptions{
 			ServerVersion: "6.8.17",
 			DseWorkloads: &cassdcapi.DseWorkloads{
@@ -60,7 +73,7 @@ var (
 	}
 )
 
-func datacentersTest(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+func TestDatacenters(t *testing.T) {
 	t.Run("DcUpgradePriorityTest", dcUpgradePriorityTest)
 	t.Run("SortDatacentersForUpgradeTest", sortDatacentersForUpgradeTest)
 	t.Run("SortNoChangeTest", sortNoChangeTest)
@@ -88,13 +101,13 @@ func sortDatacentersForUpgradeTest(t *testing.T) {
 	sortedDatacenters := sortDatacentersByPriority(datacenters)
 	assert.Equal(5, len(sortedDatacenters), "Expected 5 datacenters")
 	// The analytics enabled DCs should be first, which includes the mixed workload DC
-	assert.True(sortedDatacenters[0].DseWorkloads.AnalyticsEnabled, "Analytics workload DCs should be first")
-	assert.True(sortedDatacenters[1].DseWorkloads.AnalyticsEnabled, "Analytics workload DCs should be first")
+	assert.Equal("analytics", sortedDatacenters[0].Meta.Name, "Analytics workload DCs should be first")
+	assert.Equal("mixed", sortedDatacenters[1].Meta.Name, "Analytics workload DCs should be first")
 	// Second and third datacenters should be Cassandra and Graph only
-	assert.False(sortedDatacenters[2].DseWorkloads.AnalyticsEnabled || sortedDatacenters[2].DseWorkloads.SearchEnabled, "Analytics workload DC should be first and search should be last")
-	assert.False(sortedDatacenters[3].DseWorkloads.AnalyticsEnabled || sortedDatacenters[3].DseWorkloads.SearchEnabled, "Analytics workload DC should be first and search should be last")
+	assert.Equal("cassandra", sortedDatacenters[2].Meta.Name, "Analytics workload DC should be first and search should be last")
+	assert.Equal("graph", sortedDatacenters[3].Meta.Name, "Analytics workload DC should be first and search should be last")
 	// Search comes last
-	assert.Equal(searchWorkloadDc, sortedDatacenters[4], "Search workload DC should be last")
+	assert.Equal("search", sortedDatacenters[4].Meta.Name, "Search workload DC should be last")
 }
 
 func sortNoChangeTest(t *testing.T) {
