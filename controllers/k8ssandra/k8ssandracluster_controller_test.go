@@ -126,6 +126,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				ClusterName: "Not K8s_Compliant",
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -272,7 +273,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	sm := &promapi.ServiceMonitor{}
 	smKey := framework.ClusterKey{
 		NamespacedName: types.NamespacedName{
-			Name:      kc.Name + "-" + kc.Spec.Cassandra.Datacenters[0].Meta.Name + "-" + "cass-servicemonitor",
+			Name:      kc.SanitizedName() + "-" + kc.Spec.Cassandra.Datacenters[0].Meta.Name + "-" + "cass-servicemonitor",
 			Namespace: namespace,
 		},
 		K8sContext: f.DataPlaneContexts[1],
@@ -297,6 +298,13 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		}
 		return false
 	}, timeout, interval)
+
+	// Check that the datacenter has the original cluster name, without sanitization.
+	// dc1 := cassdcapi.CassandraDatacenter{}
+	// err = f.Get(ctx, dcKey, &dc1)
+	// require.NoError(err, "failed to get CassandraDatacenter")
+	// require.Equal(kc.Spec.Cassandra.ClusterName, dc1.Spec.ClusterName)
+
 	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
@@ -1795,7 +1803,7 @@ func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 func superuserSecretExists(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) func() bool {
 	secretName := kluster.Spec.Cassandra.SuperuserSecretRef.Name
 	if secretName == "" {
-		secretName = secret.DefaultSuperuserSecretName(kluster.Name)
+		secretName = secret.DefaultSuperuserSecretName(kluster.SanitizedName())
 	}
 	return secretExists(f, ctx, kluster.Namespace, secretName)
 }
