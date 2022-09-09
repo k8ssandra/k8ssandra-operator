@@ -41,6 +41,8 @@ jobs:
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
           make envtest test
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
