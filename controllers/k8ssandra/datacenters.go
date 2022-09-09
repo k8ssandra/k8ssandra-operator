@@ -441,10 +441,12 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 // The datacenters with the highest priority are first in the list.
 // The datacenters with the lowest priority are last in the list.
 func sortDatacentersByPriority(datacenters []api.CassandraDatacenterTemplate) []api.CassandraDatacenterTemplate {
-	sort.Slice(datacenters, func(i, j int) bool {
-		return dcUpgradePriority(datacenters[i]) > dcUpgradePriority(datacenters[j])
+	sortedDatacenters := make([]api.CassandraDatacenterTemplate, len(datacenters))
+	copy(sortedDatacenters, datacenters)
+	sort.Slice(sortedDatacenters, func(i, j int) bool {
+		return dcUpgradePriority(sortedDatacenters[i]) > dcUpgradePriority(sortedDatacenters[j])
 	})
-	return datacenters
+	return sortedDatacenters
 }
 
 // dcUpgradePriority returns the upgrade priority for the given datacenter.
