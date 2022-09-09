@@ -87,6 +87,7 @@ jobs:
           - CreateSingleDseDatacenterCluster
           - CreateSingleDseSearchDatacenterCluster
           - CreateSingleDseGraphDatacenterCluster
+          - ChangeDseWorkload
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

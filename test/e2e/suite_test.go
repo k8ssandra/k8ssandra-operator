@@ -183,6 +183,11 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("single-dc-dse-graph", controlPlane),
 		dse:      true,
 	}))
+	t.Run("ChangeDseWorkload", e2eTest(ctx, &e2eTestOpts{
+		testFunc: changeDseWorkload,
+		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
+		dse:      true,
+	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
 		fixture:                      framework.NewTestFixture("stargate", dataPlanes[0]),
