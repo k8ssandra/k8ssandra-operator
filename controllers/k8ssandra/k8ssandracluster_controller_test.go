@@ -300,10 +300,10 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	}, timeout, interval)
 
 	// Check that the datacenter has the original cluster name, without sanitization.
-	// dc1 := cassdcapi.CassandraDatacenter{}
-	// err = f.Get(ctx, dcKey, &dc1)
-	// require.NoError(err, "failed to get CassandraDatacenter")
-	// require.Equal(kc.Spec.Cassandra.ClusterName, dc1.Spec.ClusterName)
+	dc1 := cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dcKey, &dc1)
+	require.NoError(err, "failed to get CassandraDatacenter")
+	require.Equal(kc.Spec.Cassandra.ClusterName, dc1.Spec.ClusterName)
 
 	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")
