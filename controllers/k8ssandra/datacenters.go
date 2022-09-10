@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -52,7 +53,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	// Reconcile CassandraDatacenter objects only
-	for idx, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+	for idx, dcTemplate := range sortDatacentersByPriority(kc.Spec.Cassandra.Datacenters) {
 		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -433,4 +434,35 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 	annotations.AddHashAnnotation(task)
 
 	return task
+}
+
+// sortDatacentersByPriority sorts the datacenters by upgrade priority.
+// The datacenters are sorted in descending order of priority.
+// The datacenters with the highest priority are first in the list.
+// The datacenters with the lowest priority are last in the list.
+func sortDatacentersByPriority(datacenters []api.CassandraDatacenterTemplate) []api.CassandraDatacenterTemplate {
+	sortedDatacenters := make([]api.CassandraDatacenterTemplate, len(datacenters))
+	copy(sortedDatacenters, datacenters)
+	sort.Slice(sortedDatacenters, func(i, j int) bool {
+		return dcUpgradePriority(sortedDatacenters[i]) > dcUpgradePriority(sortedDatacenters[j])
+	})
+	return sortedDatacenters
+}
+
+// dcUpgradePriority returns the upgrade priority for the given datacenter.
+func dcUpgradePriority(dc api.CassandraDatacenterTemplate) int {
+	if dc.DseWorkloads == nil {
+		// Cassandra workload
+		return 2
+	}
+
+	if dc.DseWorkloads.AnalyticsEnabled {
+		return 3
+	}
+
+	if dc.DseWorkloads.SearchEnabled {
+		return 1
+	}
+
+	return 2
 }
