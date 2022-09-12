@@ -686,6 +686,8 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
+	// Check that the Cassandra cluster name override is passed to the cassdc without being modified
+	checkCassandraClusterName(t, ctx, k8ssandra, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
@@ -1816,4 +1818,13 @@ func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (ind
 		}
 	}
 	return -1, false
+}
+
+func checkCassandraClusterName(t *testing.T, ctx context.Context, k8ssandra *api.K8ssandraCluster, dcKey framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that the cassdc object has the right overriden cluster name, without any modification: %s", k8ssandra.Spec.Cassandra.ClusterName)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, cassdc)
+	require.NoError(t, err, "failed to get cassdc object")
+
+	require.Equal(t, k8ssandra.Spec.Cassandra.ClusterName, cassdc.Spec.ClusterName, "cassdc cluster name is not the expected one")
 }
