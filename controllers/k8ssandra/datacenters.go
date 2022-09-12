@@ -98,7 +98,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
 		// unauthenticated clusters.
-		cassandra.ApplySystemReplication(dcConfig, systemReplication)
+		// DSE doesn't support replicating to unexisting datacenters, even through the system property,
+		// which is why we're doing this for Cassandra only.
+		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
+			cassandra.ApplySystemReplication(dcConfig, systemReplication)
+		}
 
 		if dcConfig.ServerVersion.Major() != 3 && kc.HasStargates() {
 			// if we're not running Cassandra 3.11 and have Stargate pods, we need to allow alter RF during range movements
@@ -204,6 +208,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				}
 			}
 
+			// DC is in the process of being upgraded but hasn't completed yet. Let's wait for it to go through.
+			if actualDc.GetGeneration() != actualDc.Status.ObservedGeneration {
+				logger.Info("CassandraDatacenter is being updated. Requeuing the reconcile.", "Generation", actualDc.GetGeneration(), "ObservedGeneration", actualDc.Status.ObservedGeneration)
+				return result.Done(), actualDcs
+			}
+
 			logger.Info("The datacenter is reconciled")
 
 			actualDcs = append(actualDcs, actualDc)
@@ -219,9 +229,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 						return recResult, actualDcs
 					}
 				}
-
 			}
-
 		} else {
 			if errors.IsNotFound(err) {
 				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
@@ -273,23 +281,14 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 	}
 }
 
-func (r *K8ssandraClusterReconciler) removeDatacenterStatus(kc *api.K8ssandraCluster, dcName string) {
-	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
-		if kdcStatus.Stargate == nil {
-			delete(kc.Status.Datacenters, dcName)
-		} else {
-			kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
-				Stargate:  kdcStatus.Stargate.DeepCopy(),
-				Cassandra: nil,
-				Reaper:    kdcStatus.Reaper.DeepCopy(),
-			}
-		}
-	}
-}
-
 func datacenterAddedToExistingCluster(kc *api.K8ssandraCluster, dcName string) bool {
 	_, found := kc.Status.Datacenters[dcName]
-	return kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue && !found
+	if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
+		// Only request rebuild for the datacenter if it's not already in the cluster and if we have at least one datacenter already initialized.
+		return !found && len(kc.Status.Datacenters) > 0
+	} else {
+		return kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue && !found
+	}
 }
 
 func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8ssandraCluster) (string, error) {
@@ -365,13 +364,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		if finished {
 			// TODO what should we do if it failed?
 			logger.Info("Datacenter rebuild finished")
-			patch := client.MergeFromWithOptions(kc.DeepCopy())
-			delete(kc.Annotations, api.RebuildDcAnnotation)
-			if err = r.Client.Patch(ctx, kc, patch); err != nil {
-				err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)
-				return result.Error(err)
-			}
-			return result.Continue()
+			return r.removeRebuildDcAnnotation(kc, ctx)
 		} else {
 			logger.Info("Waiting for datacenter rebuild to complete", "Task", taskKey)
 			return result.RequeueSoon(15)
@@ -465,4 +458,14 @@ func dcUpgradePriority(dc api.CassandraDatacenterTemplate) int {
 	}
 
 	return 2
+}
+
+func (r *K8ssandraClusterReconciler) removeRebuildDcAnnotation(kc *api.K8ssandraCluster, ctx context.Context) result.ReconcileResult {
+	patch := client.MergeFromWithOptions(kc.DeepCopy())
+	delete(kc.Annotations, api.RebuildDcAnnotation)
+	if err := r.Client.Patch(ctx, kc, patch); err != nil {
+		err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)
+		return result.Error(err)
+	}
+	return result.Continue()
 }

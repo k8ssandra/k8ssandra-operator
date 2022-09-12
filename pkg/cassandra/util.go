@@ -40,6 +40,9 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 // That cannot be done when configuring replication through CQL which is why this func
 // should only be used for system keyspaces.
 func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
+	if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
+		return kc.GetInitializedDatacenters()
+	}
 	if initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue; initialized {
 		return kc.GetInitializedDatacenters()
 	} else {

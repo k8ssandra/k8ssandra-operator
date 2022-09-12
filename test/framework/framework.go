@@ -3,11 +3,12 @@ package framework
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -274,6 +275,7 @@ func (f *Framework) PatchK8ssandraCluster(ctx context.Context, key client.Object
 // DatacenterInitialized conditions to true.
 func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey) error {
 	now := metav1.Now()
+
 	return f.PatchDatacenterStatus(ctx, key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
 		dc.SetCondition(cassdcapi.DatacenterCondition{
@@ -286,7 +288,26 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})
+		dc.Status.ObservedGeneration = dc.Generation
 	})
+}
+
+// UpdateDatacenterGeneration fetches the CassandraDatacenter specified by key and persists
+// a status update to make the ObservedGeneration match the Generation.
+// It will wait for .meta.Generation to be different from .status.ObservedGeneration.
+// This is done to simulate the behavior of the CassandraDatacenter controller.
+func (f *Framework) UpdateDatacenterGeneration(ctx context.Context, t *testing.T, key ClusterKey) bool {
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, key, dc)
+	require.NoError(t, err, "failed to get CassandraDatacenter %s/%s", key.Namespace, key.Name)
+	if dc.Generation == dc.Status.ObservedGeneration {
+		// Expected generation change hasn't happened yet
+		return false
+	}
+	// Generation has changed, update the status accoringly
+	return f.PatchDatacenterStatus(ctx, key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.ObservedGeneration = dc.Generation
+	}) == nil
 }
 
 // SetDatacenterStatusStopped fetches the CassandraDatacenter specified by key and persists
@@ -306,6 +327,7 @@ func (f *Framework) SetDatacenterStatusStopped(ctx context.Context, key ClusterK
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})
+		dc.Status.ObservedGeneration = dc.Generation
 	})
 }
 

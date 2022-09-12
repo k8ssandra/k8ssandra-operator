@@ -14,6 +14,8 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 1
+        networking:
+          hostNetwork: true
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard

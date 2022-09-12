@@ -225,6 +225,14 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(err, "failed to update K8ssandraCluster")
 
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
+	}, timeout, interval, "failed to update dc2 generation")
+
 	t.Log("check that reaper reaper1 is deleted")
 	require.Eventually(func() bool {
 		err = f.Get(ctx, reaper1Key, &reaperapi.Reaper{})

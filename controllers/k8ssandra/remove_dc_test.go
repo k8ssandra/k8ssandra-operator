@@ -2,6 +2,8 @@ package k8ssandra
 
 import (
 	"context"
+	"testing"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -18,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"testing"
 )
 
 const (
@@ -134,6 +135,8 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 
 	addStargateAndReaperToCluster(ctx, t, f, kc)
 
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+
 	sg1Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
@@ -141,6 +144,16 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 			Name:      kc.Name + "-dc1-stargate",
 		},
 	}
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
+	}, timeout, interval, "failed to update dc2 generation")
 
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
@@ -193,8 +206,6 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	t.Logf("update reaper reaper2 status to ready")
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(err, "failed to patch reaper status")
-
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 

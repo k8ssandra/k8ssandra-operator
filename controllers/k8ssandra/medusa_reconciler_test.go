@@ -150,6 +150,10 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
 
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
+
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
@@ -168,6 +172,11 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		})
 	})
 	require.NoError(err, "failed to update dc2 status to ready")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
+	}, timeout, interval, "failed to update dc2 generation")
+
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
 
 	t.Log("check that the K8ssandraCluster status is updated")
