@@ -90,7 +90,7 @@ type DatacenterConfig struct {
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
 	ServerVersion            *semver.Version
-	ServerType               string
+	ServerType               api.Distribution
 	JmxInitContainerImage    *images.Image
 	Size                     int32
 	Stopped                  bool
@@ -173,7 +173,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Stopped:             template.Stopped,
 			ServerVersion:       template.ServerVersion.String(),
 			ServerImage:         template.ServerImage,
-			ServerType:          template.ServerType,
+			ServerType:          string(template.ServerType),
 			Config:              rawConfig,
 			Racks:               template.Racks,
 			StorageConfig:       *template.StorageConfig,

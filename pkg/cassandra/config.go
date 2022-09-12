@@ -28,7 +28,7 @@ func CreateJsonConfig(apiConfig *DatacenterConfig) ([]byte, error) {
 	addNumTokens(apiConfig, cfg)
 	addEncryptionOptions(apiConfig, cfg)
 	handleDeprecatedJvmOptions(cfg)
-	if out, err := preMarshalConfig(reflect.ValueOf(cfg), apiConfig.ServerVersion, apiConfig.ServerType); err != nil {
+	if out, err := preMarshalConfig(reflect.ValueOf(cfg), apiConfig.ServerVersion, string(apiConfig.ServerType)); err != nil {
 		return nil, err
 	} else {
 		return json.Marshal(out)
@@ -56,7 +56,7 @@ func addNumTokens(template *DatacenterConfig, cfg *cassConfig) {
 	// explicitly set it because the config builder defaults to num_tokens: 1
 	if cfg.CassandraYaml.NumTokens == nil {
 		version := template.ServerVersion
-		if strings.ToLower(template.ServerType) == "cassandra" && version.Major() == 3 {
+		if template.ServerType == api.DistributionCassandra && version.Major() == 3 {
 			cfg.CassandraYaml.NumTokens = pointer.Int(256)
 		} else {
 			cfg.CassandraYaml.NumTokens = pointer.Int(16)

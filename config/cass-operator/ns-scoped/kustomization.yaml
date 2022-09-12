@@ -7,3 +7,6 @@ resources:
 images:
   - name: k8ssandra/cass-operator
     newTag: v1.12.0
+
+components:
+  - ../../components/cass-operator-image-config
