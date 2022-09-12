@@ -179,11 +179,16 @@ func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTem
 	return datacenters
 }
 
-// SanitizedName returns a sanitized version of the Cassandra cluster name override if it exists,
-// otherwise the k8c object name.
+// SanitizedName returns a sanitized version of the name returned by CassClusterName()
 func (in *K8ssandraCluster) SanitizedName() string {
+	return cassdcapi.CleanupForKubernetes(in.CassClusterName())
+}
+
+// CassClusterName returns the Cassandra cluster name override if it exists,
+// otherwise the k8c object name.
+func (in *K8ssandraCluster) CassClusterName() string {
 	if in.Spec.Cassandra != nil && in.Spec.Cassandra.ClusterName != "" {
-		return cassdcapi.CleanupForKubernetes(in.Spec.Cassandra.ClusterName)
+		return in.Spec.Cassandra.ClusterName
 	}
 	return in.Name
 }

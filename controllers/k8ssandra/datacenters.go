@@ -43,7 +43,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 
-	cassClusterName := kc.SanitizedName()
+	cassClusterName := kc.CassClusterName()
 
 	seeds, err := r.findSeeds(ctx, kc, cassClusterName, logger)
 	if err != nil {
