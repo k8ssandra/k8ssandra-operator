@@ -27,7 +27,8 @@ func stargateJwt(t *testing.T, ctx context.Context, namespace string, f *framewo
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort)
+	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	restClient := resty.New()
 	adminToken := jwtCreateAdminAccessToken(t, restClient)

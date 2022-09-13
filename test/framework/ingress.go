@@ -35,9 +35,12 @@ type cqlIngressKustomization struct {
 	Host             string
 }
 
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName string, stargateRestHostAndPort HostAndPort) {
+func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName string, stargateRestHostAndPort, stargateGrpcHostAndPort HostAndPort) {
 	f.deployIngress(t, k8sContext, namespace, "stargate-ingress.yaml", "stargate", stargateTemplate,
 		&ingressKustomization{stargateServiceName, stargateRestHostAndPort.Host()})
+
+	f.deployIngress(t, k8sContext, namespace, "stargate-grpc-ingress.yaml", "stargate-grpc", stargateGrpcTemplate,
+		&ingressKustomization{stargateServiceName, stargateGrpcHostAndPort.Host()})
 
 	f.deployIngress(t, k8sContext, "ingress-nginx", "stargate-cql-ingress.yaml", "stargate-cql", stargateCqlTemplate,
 		&cqlIngressKustomization{namespace, stargateServiceName, stargateRestHostAndPort.Host()})
@@ -103,6 +106,34 @@ patches:
     - op: replace
       path: /spec/rules/0/http/paths/2/backend/service/name
       value: "{{ .ServiceName }}"
+`
+
+const stargateGrpcTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- stargate-grpc-ingress.yaml
+patches:
+- target:
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
+    name: cluster1-dc1-stargate-service-grpc-ingress
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: "{{ .ServiceName }}-grpc-ingress"
+    - op: replace
+      path: /spec/rules/0/host
+      value: "{{ .Host }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/0/backend/service/name
+      value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/tls/0/secretName
+      value: "{{ .ServiceName }}-grpc-tls-secret"
+    - op: replace
+      path: /spec/tls/0/hosts/0
+      value: "{{ .Host }}"
 `
 
 const stargateCqlTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1

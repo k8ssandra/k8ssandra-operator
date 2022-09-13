@@ -137,19 +137,21 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	t.Log("deploying Stargate and Reaper ingress routes in all data plane clusters")
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
@@ -169,10 +171,10 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	replication := map[string]int{"dc1": 1, "dc2": 1}
 
 	t.Run("TestStargateApi[0]", func(t *testing.T) {
-		testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, replication)
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, replication)
 	})
 	t.Run("TestStargateApi[1]", func(t *testing.T) {
-		testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, replication)
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, replication)
 	})
 }
 

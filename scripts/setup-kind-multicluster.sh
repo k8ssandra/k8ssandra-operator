@@ -90,6 +90,9 @@ nodes:
   - containerPort: 30080
     hostPort: 3${cluster_id}080
     protocol: TCP
+  - containerPort: 30443
+    hostPort: 3${cluster_id}443
+    protocol: TCP
   - containerPort: 30942
     hostPort: 3${cluster_id}942
     protocol: TCP

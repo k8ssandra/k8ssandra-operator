@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	neturl "net/url"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"testing"
 	"time"
@@ -16,17 +19,22 @@ import (
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	grpcclient "github.com/stargate/stargate-grpc-go-client/stargate/pkg/client"
+	grpcproto "github.com/stargate/stargate-grpc-go-client/stargate/pkg/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/rand"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func testStargateApis(t *testing.T, ctx context.Context, k8sContext, username, password string, replication map[string]int) {
+func testStargateApis(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, username, password string,
+	replication map[string]int,
+) {
 	t.Run(fmt.Sprintf("TestStargateApis[%s]", k8sContext), func(t *testing.T) {
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
 			t.Log("test Stargate native API in context " + k8sContext)
@@ -35,6 +43,10 @@ func testStargateApis(t *testing.T, ctx context.Context, k8sContext, username, p
 		t.Run("TestStargateRestApi", func(t *testing.T) {
 			t.Log("test Stargate REST API in context " + k8sContext)
 			testStargateRestApis(t, k8sContext, username, password, replication)
+		})
+		t.Run("TestStargateGrpcApi", func(t *testing.T) {
+			t.Log("test Stargate gRPC API in context " + k8sContext)
+			testStargateGrpcApi(t, f, ctx, k8sContext, namespace, clusterName, username, password, replication)
 		})
 	})
 }
@@ -58,6 +70,29 @@ func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContext, userna
 	createKeyspaceAndTableNative(t, connection, tableName, keyspaceName, replication)
 	insertRowsNative(t, connection, 10, tableName, keyspaceName)
 	checkRowCountNative(t, connection, 10, tableName, keyspaceName)
+}
+
+func testStargateGrpcApi(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, username, password string,
+	replication map[string]int,
+) {
+	grpcEndpoint := ingressConfigs[k8sContext].StargateGrpc
+	authEndpoint := ingressConfigs[k8sContext].StargateRest
+	connection, err := f.GetStargateGrpcConnection(ctx, k8sContext, namespace, clusterName, username, password, grpcEndpoint, authEndpoint)
+	assert.NoError(t, err, "gRPC connection failed")
+	defer connection.Close()
+
+	stargateGrpc, err := grpcclient.NewStargateClientWithConn(connection)
+	assert.NoError(t, err, "gRPC client creation failed")
+
+	tableName := fmt.Sprintf("table_%s", rand.String(6))
+	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
+	createKeyspaceAndTableGrpc(t, stargateGrpc, tableName, keyspaceName, replication)
+	insertRowsGrpc(t, stargateGrpc, 10, tableName, keyspaceName)
+	checkRowCountGrpc(t, stargateGrpc, 10, tableName, keyspaceName)
 }
 
 func testSchemaApi(t *testing.T, restClient *resty.Client, k8sContext, token string, replication map[string]int) {
@@ -344,6 +379,41 @@ func sendQuery(t *testing.T, connection *client.CqlClientConnection, query strin
 	}, time.Minute, 10*time.Second, "Connecting to Stargate CQL failed")
 
 	return result, err2
+}
+
+func createKeyspaceAndTableGrpc(t *testing.T, grpc *grpcclient.StargateClient, tableName, keyspaceName string, replication map[string]int) {
+	require.Eventually(t, func() bool {
+		cql := fmt.Sprintf(
+			"CREATE KEYSPACE IF NOT EXISTS %s with replication = {'class':'NetworkTopologyStrategy', %s}",
+			keyspaceName,
+			formatReplicationForCql(replication),
+		)
+		_, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
+		return err == nil
+	}, time.Minute, time.Second, "CREATE KEYSPACE via gRPC failed")
+	require.Eventually(t, func() bool {
+		cql := fmt.Sprintf(
+			"CREATE TABLE IF NOT EXISTS %s.%s (id timeuuid PRIMARY KEY, val text)", keyspaceName, tableName,
+		)
+		_, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
+		return err == nil
+	}, time.Minute, time.Second, "CREATE TABLE via gRPC failed")
+}
+
+func insertRowsGrpc(t *testing.T, grpc *grpcclient.StargateClient, nbRows int, tableName, keyspaceName string) {
+	for i := 0; i < nbRows; i++ {
+		cql := fmt.Sprintf("INSERT INTO %s.%s (id, val) VALUES (now(), '%d')", keyspaceName, tableName, i)
+		_, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
+		assert.NoError(t, err, "Query failed: %s", cql)
+	}
+}
+
+func checkRowCountGrpc(t *testing.T, grpc *grpcclient.StargateClient, nbRows int, tableName, keyspaceName string) {
+	cql := fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName)
+	response, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
+	if assert.NoError(t, err, "Query failed: %s", cql) {
+		assert.Len(t, response.GetResultSet().GetRows(), nbRows, "Expected SELECT query to return %d rows", nbRows)
+	}
 }
 
 func formatReplicationForRestApi(replication map[string]int) string {

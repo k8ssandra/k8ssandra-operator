@@ -34,6 +34,7 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 				{Port: 8082, Name: "rest"},
 				{Port: 8084, Name: "health"},
 				{Port: 8085, Name: "metrics"},
+				{Port: 8090, Name: "grpc"},
 				{Port: 9042, Name: "cassandra"},
 			},
 			Selector: map[string]string{

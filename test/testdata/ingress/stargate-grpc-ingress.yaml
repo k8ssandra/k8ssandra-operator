@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    cert-manager.io/issuer: k8ssandra-operator-selfsigned-issuer
+
+    # This is required for strict clients (e.g. Java) that reject certs with an empty DN.
+    # The actual value does not matter.
+    # See https://github.com/cert-manager/cert-manager/issues/3634
+    cert-manager.io/common-name: stargate-grpc
+
+  name: cluster1-dc1-stargate-service-grpc-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: stargate-grpc.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cluster1-dc1-stargate-service
+                port:
+                  number: 8090
+  tls:
+    - secretName: cluster1-dc1-stargate-service-grpc-tls-secret
+      hosts:
+        - stargate-grpc.example.com
