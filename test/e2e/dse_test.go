@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/pointer"
 	"net/http"
 	"testing"
 	"time"
@@ -21,18 +23,35 @@ import (
 // createSingleDseDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running
 func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
+	kc := &api.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
 	t.Log("Check that we can communicate through CQL with DSE")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
+
+	// modify server_id in dse.yaml and verify that the modification was applied by querying the server_id from system.local
+
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Cassandra.Datacenters[0].CassandraConfig.DseYaml.ServerId = pointer.String("modified")
+	err = f.Client.Patch(ctx, kc, patch)
+	require.NoError(t, err, "failed to patch K8ssandraCluster %v", kcKey)
+
+	checkDatacenterReady(t, ctx, dcKey, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+
+	output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
+		"SELECT server_id FROM system.local")
+	require.NoError(t, err, "failed to execute CQL query against DSE")
+	assert.Contains(t, output, "modified", "expected server_id to be modified")
 }
 
 // createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled
