@@ -1,41 +1,36 @@
-# https://github.com/traefik/traefik/blob/v2.5.1/docs/content/reference/dynamic-configuration/traefik.containo.us_ingressroutes.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
   name: cluster1-dc1-stargate-service-http-ingress
-  namespace: k8ssandra
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(`stargate.example.com`) && PathPrefix(`/v1/auth`)
-      kind: Rule
-      services:
-        - name: cluster1-dc1-stargate-service
-          port: 8081
-    - match: Host(`stargate.example.com`) && (PathPrefix(`/graphql-schema`) || PathPrefix(`/graphql/`) || PathPrefix(`/playground`))
-      kind: Rule
-      services:
-        - name: cluster1-dc1-stargate-service
-          port: 8080
-    - match: Host(`stargate.example.com`) && PathPrefix(`/v2/`)
-      kind: Rule
-      services:
-        - name: cluster1-dc1-stargate-service
-          port: 8082
----
-# https://github.com/traefik/traefik/blob/v2.5.1/docs/content/reference/dynamic-configuration/traefik.containo.us_ingressroutetcps.yaml
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRouteTCP
-metadata:
-  name: cluster1-dc1-stargate-service-native-ingress
-  namespace: k8ssandra
-spec:
-  entryPoints:
-    - cql
-  routes:
-    # no TLS enabled
-    - match: HostSNI(`*`) # can't use a specific hostname here because TLS is not enabled
-      services:
-        - name: cluster1-dc1-stargate-service
-          port: 9042
+  ingressClassName: nginx
+  rules:
+    - host: stargate.example.com
+      http:
+        paths:
+          # Auth
+          - path: /v1/auth.*
+            pathType: Prefix
+            backend:
+              service:
+                name: cluster1-dc1-stargate-service
+                port:
+                  number: 8081
+          # GraphQL
+          - path: /graphql-schema|/graphql/.+|/files/.+|/playground
+            pathType: Prefix
+            backend:
+              service:
+                name: cluster1-dc1-stargate-service
+                port:
+                  number: 8080
+          # REST, Document
+          - path: /v2.*
+            pathType: Prefix
+            backend:
+              service:
+                name: cluster1-dc1-stargate-service
+                port:
+                  number: 8082

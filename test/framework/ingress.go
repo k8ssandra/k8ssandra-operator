@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"fmt"
 	"net"
 	"path/filepath"
 	"testing"
@@ -23,238 +24,165 @@ func (s HostAndPort) Port() string {
 	return port
 }
 
+type ingressKustomization struct {
+	ServiceName string
+	Host        string
+}
+
+type cqlIngressKustomization struct {
+	ServiceNamespace string
+	ServiceName      string
+	Host             string
+}
+
 func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName string, stargateRestHostAndPort HostAndPort) {
-	src := filepath.Join("..", "..", "test", "testdata", "ingress", "stargate-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "stargate", k8sContext)
-	_, err := utils.CopyFileToDir(src, dest)
-	require.NoError(t, err)
-	err = generateStargateIngressKustomization(k8sContext, namespace, stargateServiceName, stargateRestHostAndPort.Host())
-	require.NoError(t, err)
-	err = f.kustomizeAndApply(dest, namespace, k8sContext)
-	require.NoError(t, err)
+	f.deployIngress(t, k8sContext, namespace, "stargate-ingress.yaml", "stargate", stargateTemplate,
+		&ingressKustomization{stargateServiceName, stargateRestHostAndPort.Host()})
+
+	f.deployIngress(t, k8sContext, "ingress-nginx", "stargate-cql-ingress.yaml", "stargate-cql", stargateCqlTemplate,
+		&cqlIngressKustomization{namespace, stargateServiceName, stargateRestHostAndPort.Host()})
 }
 
 func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext, namespace, reaperServiceName string, reaperHostAndPort HostAndPort) {
-	src := filepath.Join("..", "..", "test", "testdata", "ingress", "reaper-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "reaper", k8sContext)
-	_, err := utils.CopyFileToDir(src, dest)
-	require.NoError(t, err)
-	err = generateReaperIngressKustomization(k8sContext, namespace, reaperServiceName, reaperHostAndPort.Host())
-	require.NoError(t, err)
-	err = f.kustomizeAndApply(dest, namespace, k8sContext)
-	require.NoError(t, err)
+	f.deployIngress(t, k8sContext, namespace, "reaper-ingress.yaml", "reaper", reaperTemplate,
+		&ingressKustomization{reaperServiceName, reaperHostAndPort.Host()})
 }
 
 func (f *E2eFramework) DeploySolrIngresses(t *testing.T, k8sContext, namespace, solrServiceName string, solrHostAndPort HostAndPort) {
-	src := filepath.Join("..", "..", "test", "testdata", "ingress", "solr-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "solr", k8sContext)
-	_, err := utils.CopyFileToDir(src, dest)
-	require.NoError(t, err)
-	err = generateSolrIngressKustomization(k8sContext, namespace, solrServiceName, solrHostAndPort.Host())
-	require.NoError(t, err)
-	err = f.kustomizeAndApply(dest, namespace, k8sContext)
-	require.NoError(t, err)
+	f.deployIngress(t, k8sContext, namespace, "solr-ingress.yaml", "solr", solrTemplate,
+		&ingressKustomization{solrServiceName, solrHostAndPort.Host()})
 }
 
 func (f *E2eFramework) DeployGraphIngresses(t *testing.T, k8sContext, namespace, graphServiceName string, graphHostAndPort HostAndPort) {
-	src := filepath.Join("..", "..", "test", "testdata", "ingress", "graph-ingress.yaml")
-	dest := filepath.Join("..", "..", "build", "test-config", "ingress", "graph", k8sContext)
+	f.deployIngress(t, k8sContext, namespace, "graph-ingress.yaml", "graph", graphTemplate,
+		&ingressKustomization{graphServiceName, graphHostAndPort.Host()})
+}
+
+func (f *E2eFramework) deployIngress(t *testing.T, k8sContext, namespace, sourceYaml, buildDir, template string, templateData interface{}) {
+	src := filepath.Join("..", "..", "test", "testdata", "ingress", sourceYaml)
+	dest := filepath.Join("..", "..", "build", "test-config", "ingress", buildDir, k8sContext)
 	_, err := utils.CopyFileToDir(src, dest)
 	require.NoError(t, err)
-	err = generateGraphIngressKustomization(k8sContext, namespace, graphServiceName, graphHostAndPort.Host())
+
+	err = generateKustomizationFile(fmt.Sprintf("ingress/%s/%s", buildDir, k8sContext), templateData, template)
 	require.NoError(t, err)
+
 	err = f.kustomizeAndApply(dest, namespace, k8sContext)
 	require.NoError(t, err)
 }
 
 func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace string) {
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
-	err := kubectl.DeleteAllOf(options, "IngressRoute")
-	assert.NoError(t, err)
-	err = kubectl.DeleteAllOf(options, "IngressRouteTCP")
+	err := kubectl.DeleteAllOf(options, "Ingress")
 	assert.NoError(t, err)
 }
 
-type ingressKustomization struct {
-	Namespace   string
-	ServiceName string
-	Host        string
-}
-
-func generateStargateIngressKustomization(k8sContext, namespace, serviceName, host string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+const stargateTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - stargate-ingress.yaml
-namespace: {{ .Namespace }}
 patches:
 - target:	
-    group: traefik.containo.us
-    version: v1alpha1
-    kind: IngressRoute
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
     name: cluster1-dc1-stargate-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
       value: "{{ .ServiceName }}-http-ingress"
+    - op: replace
+      path: /spec/rules/0/host
+      value: "{{ .Host }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/0/backend/service/name
+      value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/1/backend/service/name
+      value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/2/backend/service/name
+      value: "{{ .ServiceName }}"
+`
+
+const stargateCqlTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- stargate-cql-ingress.yaml
+patches:
 - target:
-    group: traefik.containo.us
-    version: v1alpha1
-    kind: IngressRouteTCP
-    name: cluster1-dc1-stargate-service-native-ingress
+    group: ""
+    version: v1
+    kind: ConfigMap
+    name: ingress-nginx-tcp
   patch: |-
     - op: replace
-      path: /metadata/name
-      value: "{{ .ServiceName }}-native-ingress"
-patchesJson6902:
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/match
-        value: "Host(` + "`{{ .Host }}`" + `) && PathPrefix(` + "`/v1/auth`" + `)"
-      - op: replace
-        path: /spec/routes/1/match
-        value: "Host(` + "`{{ .Host }}`" + `) && (PathPrefix(` + "`/graphql-schema`" + `) || PathPrefix(` + "`/graphql/`" + `) || PathPrefix(` + "`/playground`" + `))"
-      - op: replace
-        path: /spec/routes/2/match
-        value: "Host(` + "`{{ .Host }}`" + `) && PathPrefix(` + "`/v2/`" + `)"
-      - op: replace
-        path: /spec/routes/0/services/0/name
-        value: "{{ .ServiceName }}"
-      - op: replace
-        path: /spec/routes/1/services/0/name
-        value: "{{ .ServiceName }}"
-      - op: replace
-        path: /spec/routes/2/services/0/name
-        value: "{{ .ServiceName }}"
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRouteTCP
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/services/0/name
-        value: "{{ .ServiceName }}"
+      path: /data/9042
+      value: "{{ .ServiceNamespace }}/{{ .ServiceName }}:9042"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
-	return generateKustomizationFile("ingress/stargate/"+k8sContext, k, tmpl)
-}
 
-func generateReaperIngressKustomization(k8sContext, namespace, serviceName, host string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+const reaperTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - reaper-ingress.yaml
-namespace: {{ .Namespace }}
 patches:
 - target:	
-    group: traefik.containo.us
-    version: v1alpha1
-    kind: IngressRoute
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
     name: cluster1-dc1-reaper-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
       value: "{{ .ServiceName }}-http-ingress"
-patchesJson6902:
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/match
-        value: "Host(` + "`{{ .Host }}`" + `)"
-      - op: replace
-        path: /spec/routes/0/services/0/name
-        value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/rules/0/host
+      value: "{{ .Host }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/0/backend/service/name
+      value: "{{ .ServiceName }}"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
-	return generateKustomizationFile("ingress/reaper/"+k8sContext, k, tmpl)
-}
 
-func generateSolrIngressKustomization(k8sContext, namespace, serviceName, host string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+const solrTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - solr-ingress.yaml
-namespace: {{ .Namespace }}
 patches:
 - target:	
-    group: traefik.containo.us
-    version: v1alpha1
-    kind: IngressRoute
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
     name: cluster1-dc1-solr-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
       value: "{{ .ServiceName }}-http-ingress"
-patchesJson6902:
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/match
-        value: "Host(` + "`{{ .Host }}`" + `) && PathPrefix(` + "`/solr`" + `)"
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/services/0/name
-        value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/rules/0/host
+      value: "{{ .Host }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/0/backend/service/name
+      value: "{{ .ServiceName }}"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
-	return generateKustomizationFile("ingress/solr/"+k8sContext, k, tmpl)
-}
 
-func generateGraphIngressKustomization(k8sContext, namespace, serviceName, host string) error {
-	tmpl := `apiVersion: kustomize.config.k8s.io/v1beta1
+const graphTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - graph-ingress.yaml
-namespace: {{ .Namespace }}
 patches:
 - target:	
-    group: traefik.containo.us
-    version: v1alpha1
-    kind: IngressRoute
+    group: networking.k8s.io
+    version: v1
+    kind: Ingress
     name: cluster1-dc1-graph-service-http-ingress
   patch: |-
     - op: replace
       path: /metadata/name
       value: "{{ .ServiceName }}-http-ingress"
-patchesJson6902:
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/match
-        value: "Host(` + "`{{ .Host }}`" + `)"
-  - target:
-      group: traefik.containo.us
-      version: v1alpha1
-      kind: IngressRoute
-      name: .*
-    patch: |-
-      - op: replace
-        path: /spec/routes/0/services/0/name
-        value: "{{ .ServiceName }}"
+    - op: replace
+      path: /spec/rules/0/host
+      value: "{{ .Host }}"
+    - op: replace
+      path: /spec/rules/0/http/paths/0/backend/service/name
+      value: "{{ .ServiceName }}"
 `
-	k := &ingressKustomization{Namespace: namespace, ServiceName: serviceName, Host: host}
-	return generateKustomizationFile("ingress/graph/"+k8sContext, k, tmpl)
-}

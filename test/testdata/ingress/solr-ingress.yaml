@@ -1,14 +1,17 @@
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
   name: cluster1-dc1-solr-service-http-ingress
-  namespace: k8ssandra
 spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(`solr.example.com`) && PathPrefix(`/solr`)
-      kind: Rule
-      services:
-        - name: cluster1-dc1-service
-          port: 8983
+  ingressClassName: nginx
+  rules:
+    - host: solr.example.com
+      http:
+        paths:
+          - path: /solr
+            pathType: Prefix
+            backend:
+              service:
+                name: cluster1-dc1-service
+                port:
+                  number: 8983
