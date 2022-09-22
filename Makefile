@@ -391,7 +391,7 @@ endif
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPSDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | $(OPSDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPSDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPSDK) bundle validate ./bundle
 
 .PHONY: bundle-build
