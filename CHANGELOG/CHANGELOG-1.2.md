@@ -15,8 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## V1.2.2
 
-* [ENHANCEMENT] [#681](https://github.com/k8ssandra/k8ssandra-operator/issues/681) Update to Go 1.18, Kubernetes 1.24,
-  Operator SDK 1.23, controller-gen 0.9.2, Kustomize 4.5.7, controller-runtime 0.12.2
+* [ENHANCEMENT] [#681](https://github.com/k8ssandra/k8ssandra-operator/issues/681) Update to Go 1.18, Kubernetes 1.24, Operator SDK 1.23, controller-gen 0.9.2, Kustomize 4.5.7, controller-runtime 0.12.2
 
 ## v1.2.1 - 2022-09-13
 
