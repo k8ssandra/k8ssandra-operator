@@ -455,8 +455,8 @@ install-kuttl:
 	cd ./bin ; \
 	OS="$$(uname | tr '[:upper:]' '[:lower:]')" ; \
   	ARCH="$$(uname -m | sed -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$$/arm64/')" ; \
-	curl -LO https://github.com/kudobuilder/kuttl/releases/download/v0.11.1/kuttl_0.11.1_$${OS}_$${ARCH}.tar.gz ; \
-	tar -zxvf kuttl_0.11.1_$${OS}_$${ARCH}.tar.gz ; 
+	curl -LO https://github.com/kudobuilder/kuttl/releases/download/v0.13.0/kuttl_0.13.0_$${OS}_$${ARCH}.tar.gz ; \
+	tar -zxvf kuttl_0.13.0_$${OS}_$${ARCH}.tar.gz ;
 
 # Regenerate the mocks using mockery
 mocks:
