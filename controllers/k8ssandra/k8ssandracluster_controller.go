@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -33,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/kubernetes/pkg/apis/core"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +58,7 @@ type K8ssandraClusterReconciler struct {
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
 	ManagementApi cassandra.ManagementApiFactory
+	Recorder      record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters;clientconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -69,6 +73,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",namespace="k8ssandra",resources=events,verbs=create;patch
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("K8ssandraCluster", req.NamespacedName)
@@ -86,6 +91,13 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	patch := client.MergeFromWithOptions(kc.DeepCopy())
 	result, err := r.reconcile(ctx, kc, logger)
 	if kc.GetDeletionTimestamp() == nil {
+		if err != nil {
+			kc.Status.Error = err.Error()
+			r.Recorder.Event(kc, core.EventTypeWarning, "Reconcile Error", err.Error())
+		} else {
+			kc.Status.Error = "None"
+			r.Recorder.Event(kc, core.EventTypeNormal, "Updated", fmt.Sprintf("Updated K8ssandraCluster %s/%s", kc.Namespace, kc.Name))
+		}
 		if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
 			logger.Error(patchErr, "failed to update k8ssandracluster status")
 		} else {

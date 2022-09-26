@@ -1212,6 +1212,22 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	err = f.Client.Update(ctx, kc)
 	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
 
+	// Check that the datacenter isn't deleted and that we have an error for it in the status
+	require.Eventually(func() bool {
+		err = f.Client.Get(ctx, kcKey, kc)
+		require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
+		return kc.Status.Error != "None" && strings.Contains(kc.Status.Error, "cannot decommission DC dc2")
+	}, 5*time.Minute, 5*time.Second, "timed out waiting for an error on dc2 removal")
+
+	t.Log("alter keyspaces to remove replicas from DC2")
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+		"ALTER KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1}")
+	require.NoError(err, "failed to alter keyspace")
+
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+		"ALTER KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1}")
+	require.NoError(err, "failed to alter keyspace")
+
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
 	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, 1*time.Minute, 3*time.Second)
 	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, 1*time.Minute, 3*time.Second)

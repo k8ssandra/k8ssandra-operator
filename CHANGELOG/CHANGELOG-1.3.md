@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [FEATURE] [#657](https://github.com/k8ssandra/k8ssandra-operator/issues/657) Basic DSE Support
 * [FEATURE] [#661](https://github.com/k8ssandra/k8ssandra-operator/issues/661) Support all dse.yaml options
+* [ENHANCEMENT] [#699](https://github.com/k8ssandra/k8ssandra-operator/issues/699) Prevent DC decommission if user keyspaces are replicated to it
 * [ENHANCEMENT] [#695](https://github.com/k8ssandra/k8ssandra-operator/issues/695) Support DSE multi DC clusters
 * [ENHANCEMENT] [#669](https://github.com/k8ssandra/k8ssandra-operator/issues/669) Deterministic DSE upgrades
 * [BUGFIX] [#696](https://github.com/k8ssandra/k8ssandra-operator/issues/696) Upgrade datacenters sequentially instead of concurrently

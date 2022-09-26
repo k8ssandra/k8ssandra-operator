@@ -78,6 +78,7 @@ func setupBackupTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClust
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
+			Recorder:         controlPlaneMgr.GetEventRecorderFor("k8ssandracluster-controller"),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err
@@ -137,6 +138,7 @@ func setupRestoreTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClus
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
+			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err
@@ -205,6 +207,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
+			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err
@@ -266,6 +269,7 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
+			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err
@@ -336,6 +340,7 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
+			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err

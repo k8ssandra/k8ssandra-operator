@@ -170,6 +170,7 @@ func main() {
 			Scheme:           mgr.GetScheme(),
 			ClientCache:      clientCache,
 			ManagementApi:    cassandra.NewManagementApiFactory(),
+			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
