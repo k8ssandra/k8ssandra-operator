@@ -99,65 +99,63 @@ Integration tests use the `envtest` package from controller-runtime.  See this [
 **Note:** If you want to run integration tests from your IDE you need to set the `KUBEBUILDER_ASSETS` env var. It should point to `<project-root>/testbin/bin`.
 
 ## Running e2e tests
-End-to-end tests require kind clusters that are built with the `scripts/setup-kind-multicluster.sh` script. 
+End-to-end tests run against local kind clusters. There are two possible setups:
+* "multi-cluster" tests require two kind clusters;
+* "single-cluster" tests only need one kind cluster.
 
-**Note:** There are plans to add the ability to run the tests against other clusters. This is being tracked in [#112](https://github.com/k8ssandra/k8ssandra-operator/issues/112).
+The name of the test will generally indicate its type. You can also find a complete list in the GitHub action
+definitions (look for the `matrix` property in
+[kind_multicluster_e2e_tests.yaml](../../.github/workflows/kind_multicluster_e2e_tests.yaml) or
+[kind_e2e_tests.yaml](../../.github/workflows/kind_e2e_tests.yaml)).
 
-### Automated procedure
+### Resource Requirements
+Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests
+on a MacBook Pro is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.
 
-The makefile has a target which will create the kind clusters (deleting them first if they already exist), build the docker image and load it into both clusters before running the e2e tests.
-Just run the following:
+### Multi-cluster tests
 
-```
-make kind-e2e-test
-```
+The makefile has targets to create and configure the kind clusters (note that this automates the steps detailed at the
+beginning of this document):
 
-If you want to run a single test, set the `E2E_TEST` variable as follows:
+```shell
+# - Create kind clusters (deleting any existing ones first)
+# - Install Cert Manager and Traefik (used for ingress in e2e tests)
+make multi-create
 
-```
-make E2E_TEST=TestOperator/SingleDatacenterCluster kind-e2e-test
-```
-
-### Manual procedure 
-
-#### Create the kind clusters
-The multi-cluster tests require two clusters.
-
-```
-./scripts/setup-kind-multicluster.sh --clusters 2
-```
-
-#### Build operator image
-
-Before running tests, build the operator image:
-
-```
-make docker-build
+# - Build the project
+# - Generate the CRDs, then load them into the Kind cluster
+# - Build the operator image, then load it into the Kind cluster
+make multi-prepare
 ```
 
-#### Load the operator image into the clusters
-Load the operator image with `make kind-load-image`:
+You can then run a test: 
 
-```
-make KIND_CLUSTER=k8ssandra-0 kind-load-image
-```
-
-```
-make KIND_CLUSTER=k8ssandra-1 kind-load-image
+```shell
+make E2E_TEST=TestOperator/CreateMultiDatacenterCluster e2e-test
 ```
 
-#### Run the tests
+There is also a target that does all of the above in a single step (this will destroy and recreate the clusters every
+time, so probably not the one to use if you're running a test repeatedly):
 
-`make e2e-test` runs the tests under `test/e2e`.
-
-If you want to run a single test, set the `E2E_TEST` variable as follows:
-
+```shell
+make E2E_TEST=TestOperator/CreateMultiDatacenterCluster kind-multi-e2e-test
 ```
+
+### Single-cluster tests
+
+Same principle, but the targets have different names:
+
+```shell
+make single-create
+make single-prepare
 make E2E_TEST=TestOperator/SingleDatacenterCluster e2e-test
 ```
 
-### Resource Requirements
-Multi-cluster tests will be more resource intensive than other tests. The Docker VM used to develop and run these tests on a MacBook Pro is configured with 6 CPUs and 10 GB of memory. Your mileage may vary on other operating systems/setups.
+Or as a single command:
+
+```shell
+make E2E_TEST=TestOperator/SingleDatacenterCluster kind-single-e2e-test
+```
 
 # Updating Dependencies
 Updating library, i.e., module dependencies requires updating `go.mod`. This can be done by running `go get`. 
