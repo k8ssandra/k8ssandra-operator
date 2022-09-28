@@ -240,7 +240,7 @@ type CassandraClusterTemplate struct {
 	// Server type: "cassandra" or "dse".
 	// +kubebuilder:validation:Enum=cassandra;dse
 	// +kubebuilder:default=cassandra
-	ServerType Distribution `json:"serverType,omitempty"`
+	ServerType ServerDistribution `json:"serverType,omitempty"`
 }
 
 // +kubebuilder:pruning:PreserveUnknownFields
@@ -422,9 +422,9 @@ func init() {
 	SchemeBuilder.Register(&K8ssandraCluster{}, &K8ssandraClusterList{})
 }
 
-type Distribution string
+type ServerDistribution string
 
 const (
-	DistributionCassandra = Distribution("cassandra")
-	DistributionDse       = Distribution("dse")
+	ServerDistributionCassandra = ServerDistribution("cassandra")
+	ServerDistributionDse       = ServerDistribution("dse")
 )

@@ -90,7 +90,7 @@ type DatacenterConfig struct {
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
 	ServerVersion            *semver.Version
-	ServerType               api.Distribution
+	ServerType               api.ServerDistribution
 	JmxInitContainerImage    *images.Image
 	Size                     int32
 	Stopped                  bool

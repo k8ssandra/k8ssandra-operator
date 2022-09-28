@@ -56,7 +56,7 @@ func addNumTokens(template *DatacenterConfig, cfg *cassConfig) {
 	// explicitly set it because the config builder defaults to num_tokens: 1
 	if cfg.CassandraYaml.NumTokens == nil {
 		version := template.ServerVersion
-		if template.ServerType == api.DistributionCassandra && version.Major() == 3 {
+		if template.ServerType == api.ServerDistributionCassandra && version.Major() == 3 {
 			cfg.CassandraYaml.NumTokens = pointer.Int(256)
 		} else {
 			cfg.CassandraYaml.NumTokens = pointer.Int(16)
