@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 6.8.19
+    serverVersion: 6.8.26
     serverType: dse
     dseWorkloads:
       graphEnabled: false

@@ -4,6 +4,10 @@ kind: Kustomization
 resources:
 - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=master
 
+
 images:
   - name: k8ssandra/cass-operator
     newTag: v1.12.0
+
+components:
+  - ../../components/cass-operator-image-config
