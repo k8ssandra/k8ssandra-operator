@@ -51,7 +51,6 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 
 	for _, ks := range userKeyspaces {
 		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(replicationStr, nil)
-		//mockMgmtApi.On(testutils.AlterKeyspace, ks, updatedReplication).Return(nil)
 	}
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {

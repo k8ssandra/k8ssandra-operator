@@ -18,7 +18,6 @@ package k8ssandra
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -96,7 +95,6 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			r.Recorder.Event(kc, core.EventTypeWarning, "Reconcile Error", err.Error())
 		} else {
 			kc.Status.Error = "None"
-			r.Recorder.Event(kc, core.EventTypeNormal, "Updated", fmt.Sprintf("Updated K8ssandraCluster %s/%s", kc.Namespace, kc.Name))
 		}
 		if patchErr := r.Status().Patch(ctx, kc, patch); patchErr != nil {
 			logger.Error(patchErr, "failed to update k8ssandracluster status")
