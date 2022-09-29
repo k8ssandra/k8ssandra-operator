@@ -87,7 +87,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	kc = kc.DeepCopy()
-	patch := client.MergeFromWithOptions(kc.DeepCopy())
+	patch := client.MergeFrom(kc.DeepCopy())
 	result, err := r.reconcile(ctx, kc, logger)
 	if kc.GetDeletionTimestamp() == nil {
 		if err != nil {
