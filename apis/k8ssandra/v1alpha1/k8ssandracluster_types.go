@@ -85,6 +85,9 @@ type K8ssandraClusterStatus struct {
 	//
 	// TODO Figure out how to inline this field
 	Datacenters map[string]K8ssandraStatus `json:"datacenters,omitempty"`
+
+	// +kubebuilder:default=None
+	Error string `json:"error,omitempty"`
 }
 
 type K8ssandraClusterConditionType string
@@ -123,6 +126,7 @@ type K8ssandraStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=k8ssandraclusters,shortName=k8c;k8cs
+// +kubebuilder:printcolumn:name="Error",type=string,JSONPath=".status.error",description="Latest reconcile error"
 
 // K8ssandraCluster is the Schema for the k8ssandraclusters API. The K8ssandraCluster CRD name is also the name of the
 // Cassandra cluster (which corresponds to cluster_name in cassandra.yaml).

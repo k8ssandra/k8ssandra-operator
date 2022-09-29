@@ -39,7 +39,8 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("SchemaDisagreementOnSystemKeyspaces", addDcTest(ctx, f, schemaDisagreementOnSystemKeyspaces, true))
 	t.Run("SchemaDisagreementOnStargate", addDcTest(ctx, f, schemaDisagreementOnStargate, true))
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
-	t.Run("DeleteDcWithUserKeyspaces", addDcTest(ctx, f, deleteDcWithUserKeyspaces, false))
+	t.Run("DeleteDcWithUserKeyspacesFails", addDcTest(ctx, f, deleteDcWithUserKeyspacesFails, false))
+	t.Run("DeleteDcWithUserKeyspacesSucceeds", addDcTest(ctx, f, deleteDcWithUserKeyspacesSucceeds, false))
 	t.Run("DeleteDcWithStargateAndReaper", addDcTest(ctx, f, deleteDcWithStargateAndReaper, false))
 }
 

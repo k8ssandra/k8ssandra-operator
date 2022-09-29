@@ -18,7 +18,12 @@ spec:
     singular: k8ssandracluster
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Latest reconcile error
+      jsonPath: .status.error
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: K8ssandraCluster is the Schema for the k8ssandraclusters API.
@@ -25247,6 +25252,9 @@ spec:
                   but when I do it won't serialize. \n TODO Figure out how to inline
                   this field"
                 type: object
+              error:
+                default: None
+                type: string
             type: object
         type: object
     served: true

@@ -60,7 +60,7 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	status := kc.Status.Datacenters[decommDcName]
 
 	if decommission {
-		if recResult := r.updateUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
+		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
 			return recResult
 		}
 		status.DecommissionProgress = api.DecommDeleting
@@ -236,9 +236,9 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	return result.Continue()
 }
 
-// updateUserKeyspacesReplicationForDecommission updates the replication strategy for all user-defined
-// keyspaces by removing decommDc.
-func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplicationForDecommission(
+// checkUserKeyspacesReplicationForDecommission checks if no user keyspace still has replicas
+// for a DC going being decommissioned.
+func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationForDecommission(
 	kc *api.K8ssandraCluster,
 	decommDc string,
 	mgmtApi cassandra.ManagementApiFacade,
@@ -256,14 +256,8 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplicationForDecommissi
 		if err != nil {
 			return result.Error(fmt.Errorf("failed to get replication for keyspace (%s): %v", ks, err))
 		}
-		if _, updateNeeded := replication[decommDc]; updateNeeded {
-			delete(replication, decommDc)
-			if err = mgmtApi.AlterKeyspace(ks, replication); err != nil {
-				if kerrors.IsSchemaDisagreement(err) {
-					return result.RequeueSoon(r.DefaultDelay)
-				}
-				return result.Error(fmt.Errorf("failed to update replication for keyspace (%s): %v", ks, err))
-			}
+		if _, hasReplicas := replication[decommDc]; hasReplicas {
+			return result.Error(fmt.Errorf("cannot decommission DC %s: keyspace %s still has replicas on it", decommDc, ks))
 		}
 	}
 

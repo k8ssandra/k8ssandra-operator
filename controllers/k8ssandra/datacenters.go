@@ -461,7 +461,7 @@ func dcUpgradePriority(dc api.CassandraDatacenterTemplate) int {
 }
 
 func (r *K8ssandraClusterReconciler) removeRebuildDcAnnotation(kc *api.K8ssandraCluster, ctx context.Context) result.ReconcileResult {
-	patch := client.MergeFromWithOptions(kc.DeepCopy())
+	patch := client.MergeFrom(kc.DeepCopy())
 	delete(kc.Annotations, api.RebuildDcAnnotation)
 	if err := r.Client.Patch(ctx, kc, patch); err != nil {
 		err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)

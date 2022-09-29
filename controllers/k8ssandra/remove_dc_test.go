@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -26,9 +27,8 @@ const (
 	cassdcFinalizer = "finalizer.cassandra.datastax.com"
 )
 
-func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
-	//assert := assert.New(t)
 
 	replication := map[string]int{"dc1": 3, "dc2": 3}
 	updatedReplication := map[string]int{"dc1": 3}
@@ -36,6 +36,62 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
 	replicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
+
+	userKeyspaces := []string{"ks1", "ks2"}
+
+	mockMgmtApi := testutils.NewFakeManagementApiFacade()
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_auth", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_distributed", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", replication).Return(nil)
+	mockMgmtApi.On(testutils.EnsureKeyspaceReplication, "system_traces", updatedReplication).Return(nil)
+	mockMgmtApi.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
+	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
+
+	for _, ks := range userKeyspaces {
+		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(replicationStr, nil)
+	}
+
+	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+		return mockMgmtApi, nil
+	}
+	managementApiFactory.SetAdapter(adapter)
+
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+
+	addDatacenterFinalizer(ctx, t, f, dc2Key)
+
+	kcKey := utils.GetKey(kc)
+
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster")
+
+	t.Log("remove dc2 from k8ssandraCluster spec")
+	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+	err = f.Client.Update(ctx, kc)
+	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+
+	t.Log("verify that dc2 removal generates an error")
+	require.Eventually(func() bool {
+		err := f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			return false
+		}
+		return strings.Contains(kc.Status.Error, "cannot decommission DC dc2")
+	}, timeout, interval, "expected error on dc2 removal not found")
+
+}
+
+func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	replication := map[string]int{"dc1": 3}
+	updatedReplication := map[string]int{"dc1": 3}
+
+	// We need a version of the map with string values because GetKeyspaceReplication returns
+	// a map[string]string.
+	replicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 
@@ -75,6 +131,15 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 
 	assertDecommissionAnnotationAdded(ctx, t, f, dc2Key)
 
+	t.Log("verify that dc2 removal generates no error")
+	require.Eventually(func() bool {
+		err := f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			return false
+		}
+		return kc.Status.Error == "None"
+	}, timeout, interval, "unexpected error on dc2 removal found")
+
 	// Make sure the status isn't updated too soon
 	assertDatacenterInClusterStatus(ctx, t, f, kcKey, dc2Key)
 
@@ -83,12 +148,6 @@ func deleteDcWithUserKeyspaces(ctx context.Context, t *testing.T, f *framework.F
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 
 	assertDatacenterRemovedFromClusterStatus(ctx, t, f, kcKey, dc2Key)
-
-	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
-
-	for _, ks := range userKeyspaces {
-		verifyKeyspaceReplicationAltered(t, mockMgmtApi, ks, updatedReplication)
-	}
 }
 
 func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
@@ -99,7 +158,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 
 	// We need a version of the map with string values because GetKeyspaceReplication returns
 	// a map[string]string.
-	replicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}
+	updatedReplicationStr := map[string]string{"class": cassandra.NetworkTopology, "dc1": "3"}
 
 	userKeyspaces := []string{"ks1", "ks2"}
 
@@ -119,8 +178,7 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	mockMgmtApi.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
 
 	for _, ks := range userKeyspaces {
-		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(replicationStr, nil)
-		mockMgmtApi.On(testutils.AlterKeyspace, ks, updatedReplication).Return(nil)
+		mockMgmtApi.On(testutils.GetKeyspaceReplication, ks).Return(updatedReplicationStr, nil)
 	}
 
 	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
@@ -237,10 +295,6 @@ func deleteDcWithStargateAndReaper(ctx context.Context, t *testing.T, f *framewo
 	f.AssertObjectDoesNotExist(ctx, t, reaper2Key, &reaperapi.Reaper{}, timeout, interval)
 
 	verifyReplicationOfInternalKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
-
-	for _, ks := range userKeyspaces {
-		verifyKeyspaceReplicationAltered(t, mockMgmtApi, ks, updatedReplication)
-	}
 }
 
 func assertDecommissionAnnotationAdded(ctx context.Context, t *testing.T, f *framework.Framework, dcKey framework.ClusterKey) {
