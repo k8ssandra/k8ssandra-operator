@@ -99,7 +99,7 @@ spec:
             dsefs_options:
               enabled: false
               block_allocator_options:
-                overflow_factor: 1.05
+                overflow_factor: 1050m
                 overflow_margin_mb: 1024
               compression_frame_max_size: 1048576
               data_directories:
@@ -238,7 +238,7 @@ spec:
               enabled: true
               ttl_seconds: 604800
             load_max_time_per_core: 5
-            max_memory_to_lock_fraction: 0.2
+            max_memory_to_lock_fraction: 200m
             max_memory_to_lock_mb: 10240
             node_health_options:
               dropped_mutation_window_minutes: 30
@@ -255,7 +255,7 @@ spec:
             resource_manager_options:
               worker_options:
                 cores_total: 1
-                memory_total: 0.8
+                memory_total: 800m
                 workpools:
                   - cores: 1
                     memory: 1
