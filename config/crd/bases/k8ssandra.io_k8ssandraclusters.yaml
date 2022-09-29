@@ -160,13 +160,17 @@ spec:
                       name.
                     type: string
                   config:
-                    description: CassandraConfig is configuration settings that are
-                      applied to cassandra.yaml and the various jvm*.options files.
+                    description: CassandraConfig contains configuration settings that
+                      are applied to cassandra.yaml, dse.yaml and the various jvm*.options
+                      files.
                     properties:
                       cassandraYaml:
                         description: 'CassandraYaml defines the contents of the cassandra.yaml
                           file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                         properties:
+                          additionalOptions:
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
                           allocate_tokens_for_keyspace:
                             description: Exists in 3.11, 4.0, trunk
                             type: string
@@ -1143,6 +1147,9 @@ spec:
                         type: object
                       dseYaml:
                         properties:
+                          additionalOptions:
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
                           advanced_replication_options:
                             description: Configure DSE Advanced Replication.
                             properties:
@@ -5042,14 +5049,17 @@ spec:
                           - pulsarServiceUrl
                           type: object
                         config:
-                          description: CassandraConfig is configuration settings that
-                            are applied to cassandra.yaml and the various jvm*.options
-                            files.
+                          description: CassandraConfig contains configuration settings
+                            that are applied to cassandra.yaml, dse.yaml and the various
+                            jvm*.options files.
                           properties:
                             cassandraYaml:
                               description: 'CassandraYaml defines the contents of
                                 the cassandra.yaml file. For more info see: https://cassandra.apache.org/doc/latest/cassandra/configuration/cass_yaml_file.html'
                               properties:
+                                additionalOptions:
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
                                 allocate_tokens_for_keyspace:
                                   description: Exists in 3.11, 4.0, trunk
                                   type: string
@@ -6026,6 +6036,9 @@ spec:
                               type: object
                             dseYaml:
                               properties:
+                                additionalOptions:
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
                                 advanced_replication_options:
                                   description: Configure DSE Advanced Replication.
                                   properties:
@@ -17400,7 +17413,6 @@ spec:
                       required:
                       - size
                       type: object
-                      x-kubernetes-preserve-unknown-fields: true
                     type: array
                   dseWorkloads:
                     properties:

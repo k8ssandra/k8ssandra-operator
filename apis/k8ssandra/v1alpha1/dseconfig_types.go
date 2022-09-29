@@ -165,6 +165,10 @@ type DseYaml struct {
 	// FIXME present in config-builder, apparently related to backup_service, but does not seem to be recognized by DSE
 	// +optional
 	// IndexOptions *IndexOptions `json:"index_options,omitempty" cass-config:"dse@*:index_options;recurse"`
+
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	AdditionalOptions *Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
 }
 
 type AuthenticationOptions struct {

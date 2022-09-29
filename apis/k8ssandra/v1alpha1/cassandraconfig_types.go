@@ -984,6 +984,10 @@ type CassandraYaml struct {
 	// Exists in 3.11, 4.0, trunk
 	// +optional
 	WriteRequestTimeoutInMs *int `json:"write_request_timeout_in_ms,omitempty" cass-config:"write_request_timeout_in_ms"`
+
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	AdditionalOptions *Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
 }
 
 type JvmOptions struct {

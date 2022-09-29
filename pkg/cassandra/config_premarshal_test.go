@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"github.com/Masterminds/semver/v3"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
@@ -61,6 +62,14 @@ func Test_preMarshalConfig(t *testing.T) {
 		Slice  []simple          `cass-config:"*:foo/bar/slice;recurse"`
 		Map    map[string]simple `cass-config:"*:foo/bar/map;recurse"`
 	}
+	type unstruct struct {
+		Unstruct api.Unstructured `cass-config:";recurse"`
+		Field3   string           `cass-config:"field3"`
+	}
+	ust := api.Unstructured{
+		"field1": "value1",
+		"field2": "value2",
+	}
 	tests := []struct {
 		name       string
 		val        reflect.Value
@@ -69,6 +78,17 @@ func Test_preMarshalConfig(t *testing.T) {
 		wantOut    map[string]interface{}
 		wantErr    assert.ErrorAssertionFunc
 	}{
+		{
+			"unstructured",
+			reflect.ValueOf(&unstruct{
+				Unstruct: ust,
+				Field3:   "value3",
+			}),
+			semver.MustParse("3.11.12"),
+			"cassandra",
+			map[string]interface{}{"field1": "value1", "field2": "value2", "field3": "value3"},
+			assert.NoError,
+		},
 		{
 			"nil simple",
 			reflect.ValueOf((*simple)(nil)),

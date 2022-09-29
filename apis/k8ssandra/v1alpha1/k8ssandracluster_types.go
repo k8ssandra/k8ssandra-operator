@@ -247,8 +247,6 @@ type CassandraClusterTemplate struct {
 	ServerType ServerDistribution `json:"serverType,omitempty"`
 }
 
-// +kubebuilder:pruning:PreserveUnknownFields
-
 type CassandraDatacenterTemplate struct {
 	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
 
@@ -289,8 +287,8 @@ type DatacenterOptions struct {
 	// +optional
 	ServerImage string `json:"serverImage,omitempty"`
 
-	// CassandraConfig is configuration settings that are applied to cassandra.yaml and
-	// the various jvm*.options files.
+	// CassandraConfig contains configuration settings that are applied to cassandra.yaml, dse.yaml
+	// and the various jvm*.options files.
 	// +optional
 	CassandraConfig *CassandraConfig `json:"config,omitempty"`
 

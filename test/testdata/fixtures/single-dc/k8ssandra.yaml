@@ -255,8 +255,6 @@ spec:
             vm_disable_perf_shared_mem: false
             vm_prefer_ipv4: true
             cassandra_available_processors: 2
-            cassandra_join_ring: true
-            cassandra_load_ring_state: true
             cassandra_ring_delay_ms: 100
             cassandra_write_survey: false
             cassandra_disable_auth_caches_remote_configuration: false
