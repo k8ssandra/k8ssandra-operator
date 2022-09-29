@@ -75,41 +75,6 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) checkSchemaAgreement(mgmtApi cassandra.ManagementApiFacade, logger logr.Logger) result.ReconcileResult {
-	versions, err := mgmtApi.GetSchemaVersions()
-	if err != nil {
-		return result.Error(err)
-	}
-
-	for uid := range versions {
-		// a key named UNREACHABLE may appear in the results when nodes are unreachable. The results
-		// from management-api will look like this:
-		//
-		//    {
-		//        "UNREACHABLE": [
-		//            "172.18.0.2"
-		//        ],
-		//        "aa573028-7c70-3b8f-a247-13bbca2011d2": [
-		//            "172.18.0.9",
-		//            "172.18.0.6"
-		//        ]
-		//    }
-		//
-		// We exclude these keys from the check.
-		if uid == "UNREACHABLE" {
-			delete(versions, uid)
-		}
-	}
-
-	if len(versions) == 1 {
-		return result.Continue()
-	}
-
-	logger.Info("There is schema disagreement", "versions", len(versions))
-
-	return result.RequeueSoon(r.DefaultDelay)
-}
-
 // checkInitialSystemReplication checks for the InitialSystemReplicationAnnotation on kc. If found, the
 // JSON value is unmarshalled and returned. If not found, the SystemReplication is computed
 // and is stored in the InitialSystemReplicationAnnotation on kc. The value is JSON-encoded.
@@ -162,8 +127,9 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 }
 
 // updateReplicationOfSystemKeyspaces ensures that the replication for the system_auth,
-// system_traces, and system_distributed keyspaces is up to date. It ensures that there are
-// replicas for each DC and that there is a max of 3 replicas per DC.
+// system_traces, and system_distributed keyspaces is up to date.
+// DSE has a few specific system keyspaces that need to be updated as well.
+// It ensures that there are replicas for each DC and that there is a max of 3 replicas per DC.
 func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -179,7 +145,13 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 
-	for _, ks := range api.SystemKeyspaces {
+	systemKeyspaces := append([]string{}, api.SystemKeyspaces...)
+	if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
+		// DSE has a few more system keyspaces
+		systemKeyspaces = append(systemKeyspaces, api.DseKeyspaces...)
+	}
+
+	for _, ks := range systemKeyspaces {
 		if err := mgmtApi.EnsureKeyspaceReplication(ks, replication); err != nil {
 			if kerrors.IsSchemaDisagreement(err) {
 				return result.RequeueSoon(r.DefaultDelay)

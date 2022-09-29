@@ -198,6 +198,10 @@ func TestOperator(t *testing.T) {
 		testFunc: createMultiDatacenterCluster,
 		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
 	}))
+	t.Run("CreateMultiDatacenterDseCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterDseCluster,
+		fixture:  framework.NewTestFixture("multi-dc-dse", controlPlane),
+	}))
 	t.Run("CreateMixedMultiDataCenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterClusterDifferentTopologies,
 		fixture:  framework.NewTestFixture("multi-dc-mixed", controlPlane),
@@ -1566,7 +1570,7 @@ func checkKeyspaceExists(
 	assert.Eventually(t, func() bool {
 		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
 		if err != nil {
-			t.Logf("failed to desctibe keyspaces: %v", err)
+			t.Logf("failed to describe keyspaces: %v", err)
 			return false
 		}
 		return strings.Contains(keyspaces, keyspace)

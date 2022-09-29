@@ -5,11 +5,12 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/pointer"
 
 	gremlingo "github.com/apache/tinkerpop/gremlin-go/driver"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -199,4 +200,43 @@ func testSolrEndpoint(t *testing.T, solrHostAndPort framework.HostAndPort, usern
 		t.Logf("search endpoint returned %d", resp.StatusCode)
 		return http.StatusOK == resp.StatusCode
 	}
+}
+
+// createMultiDatacenterDseCluster creates a K8ssandraCluster with two CassandraDatacenters,
+// one running locally and the other running in a remote cluster.
+// Each CassandraDatacenter is configured with a different DSE workload, with the second DC being
+// processed first due to the priority of its workload.
+func createMultiDatacenterDseCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cassandra"}}
+	checkDatacenterReady(t, ctx, dc2Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc2Key.Name)
+
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "search"}}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	pod := DcPrefix(t, f, dc1Key) + "-default-sts-0"
+	count := 2
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+
+	t.Log("check nodes in dc2 see nodes in dc1")
+	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 }

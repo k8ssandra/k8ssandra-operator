@@ -261,15 +261,13 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {
 		assert.Fail(t, "got error patching for telemetry", "error", err)
 	}
-	if err = f.SetDatacenterStatusReady(ctx, framework.ClusterKey{
-		NamespacedName: types.NamespacedName{
-			Name:      "dc1",
-			Namespace: namespace,
-		},
-		K8sContext: f.DataPlaneContexts[1],
-	}); err != nil {
+
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc1")
+
+	if err = f.SetDatacenterStatusReady(ctx, dc1Key); err != nil {
 		assert.Fail(t, "error setting status ready", err)
 	}
+
 	//	Check for presence of expected ServiceMonitor for Cassandra Datacenter
 	sm := &promapi.ServiceMonitor{}
 	smKey := framework.ClusterKey{

@@ -59,4 +59,5 @@ const (
 
 var (
 	SystemKeyspaces = []string{"system_traces", "system_distributed", "system_auth"}
+	DseKeyspaces    = []string{"dse_leases", "dse_perf", "dse_security"}
 )

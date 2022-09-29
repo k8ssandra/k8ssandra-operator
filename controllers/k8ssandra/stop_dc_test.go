@@ -102,7 +102,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	t.Log("wait for the CassandraInitialized condition to be set")
 	require.Eventually(t, func() bool {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) && assert.Equal(t, corev1.ConditionTrue, kc.Status.GetConditionStatus(api.CassandraInitialized))
+		require.NoError(t, err)
+		return corev1.ConditionTrue == kc.Status.GetConditionStatus(api.CassandraInitialized)
 	}, timeout, interval, "timed out waiting for CassandraInitialized condition check")
 
 	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
@@ -396,6 +397,11 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 
 	t.Log("check that reaper reaper2 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
+
+	t.Log("check that dc3 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
+	rebuildTaskKey = framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
 	t.Log("check that stargate sg3 was created")
 	require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)

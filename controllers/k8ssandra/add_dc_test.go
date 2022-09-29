@@ -88,13 +88,17 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dc1Key, dc)
-	require.NoError(err)
+	require.NoError(err, "failed to get CassandraDatacenter dc1")
 
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
-	require.NoError(err, "failed to set dc1 status ready")
+	require.NoError(err, "failed to set dc1 status to ready")
 
 	err = f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
 
 	t.Log("wait for the CassandraInitialized condition to be set")
 	require.Eventually(func() bool {
@@ -161,10 +165,10 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	err := f.Get(ctx, dc1Key, dc)
 	require.NoError(err)
 
-	err = f.SetDatacenterStatusReady(ctx, dc1Key)
-	require.NoError(err, "failed to set dc1 status ready")
-
 	createCassandraDatacenter(ctx, t, f, kc, 1)
+
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
+	require.NoError(err, "failed to set dc1 status to ready")
 
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	dc = &cassdcapi.CassandraDatacenter{}
@@ -172,10 +176,18 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	require.NoError(err)
 
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
-	require.NoError(err, "failed to set dc2 status ready")
+	require.NoError(err, "failed to set dc2 status to ready")
 
 	err = f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
+	}, timeout, interval, "failed to update dc2 generation")
 
 	t.Log("wait for the CassandraInitialized condition to be set")
 	require.Eventually(func() bool {
@@ -411,6 +423,8 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 
 	addStargateAndReaperToCluster(ctx, t, f, kc)
 
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
+
 	sg1Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[0],
 		NamespacedName: types.NamespacedName{
@@ -418,6 +432,10 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 			Name:      kc.Name + "-dc1-stargate",
 		},
 	}
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
 
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
@@ -455,8 +473,6 @@ func withStargateAndReaper(ctx context.Context, t *testing.T, f *framework.Frame
 	require.NoError(err, "failed to set dc2 status ready")
 
 	verifyReplicationOfInternalKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
-
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
 
@@ -533,6 +549,12 @@ func schemaDisagreementOnStargate(ctx context.Context, t *testing.T, f *framewor
 			Name:      kc.Name + "-dc1-stargate",
 		},
 	}
+
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
+	}, timeout, interval, "failed to update dc1 generation")
 
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
