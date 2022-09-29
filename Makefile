@@ -164,7 +164,7 @@ kind-single-e2e-test: single-create single-prepare e2e-test
 
 kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
-single-create: cleanup create-kind-cluster cert-manager traefik-kind
+single-create: cleanup create-kind-cluster cert-manager nginx-kind
 
 single-prepare: build manifests docker-build kind-load-image
 
@@ -185,7 +185,7 @@ ifeq ($(DEPLOYMENT), cass-operator-dev)
 	kubectl -n $(NS) rollout status deployment cass-operator-controller-manager
 endif
 
-multi-create: cleanup create-kind-multicluster cert-manager-multi traefik-kind-multi
+multi-create: cleanup create-kind-multicluster cert-manager-multi nginx-kind-multi
 
 multi-prepare: build manifests docker-build kind-load-image-multi
 
@@ -280,28 +280,28 @@ cert-manager-multi: ## Install cert-manager to the clusters
 		make cert-manager;  \
 	done
 
-# Install Traefik in the current Kind cluster using Helm and a values file that is suitable for
+# Install NGINX in the current Kind cluster using Helm and a values file that is suitable for
 # running e2e tests locally with a cluster created with setup-kind-multicluster.sh. Helm must be
 # pre-installed on the system.
-traefik-kind:
-	helm repo add traefik https://helm.traefik.io/traefik
+nginx-kind:
+	helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 	helm repo update
-	helm install traefik traefik/traefik --version v10.3.2 -f ./test/testdata/ingress/traefik.values.kind.yaml
+	helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --version 4.2.5 -f ./test/testdata/ingress/nginx.values.kind.yaml
 
-# Install Traefik in all local Kind clusters.
-traefik-kind-multi:
+# Install NGINX in all local Kind clusters.
+nginx-kind-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
 		kubectl config use-context kind-k8ssandra-$$i; \
-		make traefik-kind;  \
+		make nginx-kind;  \
 	done
 
-traefik-uninstall:
-	helm uninstall traefik
+nginx-uninstall:
+	helm uninstall ingress-nginx --namespace ingress-nginx
 
-traefik-uninstall-kind-multi:
+nginx-uninstall-kind-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
 		kubectl config use-context kind-k8ssandra-$$i; \
-		make traefik-uninstall;  \
+		make nginx-uninstall;  \
 	done
 
 # Installs Helm from an installation script. Note that on macOS it's better to install Helm with homebrew.

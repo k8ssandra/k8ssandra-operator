@@ -93,9 +93,6 @@ nodes:
   - containerPort: 30942
     hostPort: 3${cluster_id}942
     protocol: TCP
-  - containerPort: 30090
-    hostPort: 3${cluster_id}090
-    protocol: TCP
 $(for ((i=0; i<num_workers; i++)); do
 cat << EOF2
 - role: worker

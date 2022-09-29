@@ -1,0 +1,43 @@
+# Customizes the nginx-ingress Helm chart (see the `nginx-*` targets in Makefile).
+# https://github.com/kubernetes/ingress-nginx/blob/main/charts/ingress-nginx/values.yaml
+#
+# This Helm values file is suitable for local Kind clusters only. The NGINX service is of type NodePort, since Kind
+# doesn't support LoadBalancer service types. For this reason, the Kind cluster must be created with additional
+# configuration for NGINX to be able to handle incoming traffic, see script setup-kind-multicluster.sh.
+#
+
+controller:
+  service:
+    type: NodePort
+    # Note on ports:
+    #
+    # There is a double port indirection:
+    # outside world -> 3x080 -> kind docker container / worker node -> 30080 -> pod (container inside container)
+    #
+    # The port to use from the outside world depends on the context's zero-based index; e.g.
+    # kind-k8ssandra-0 = index 0 = 30080
+    # kind-k8ssandra-1 = index 1 = 31080
+    # etc.
+    #
+    # The first port mapping is defined when creating the Kind cluster, see setup-kind-multicluster.sh, and depends on
+    # the context index; this Helm file takes care of the second port mapping (from worker node to pod), which is
+    # invariable since it is context-specific.
+    #
+    # Stargate REST APIs will be accessible from outside at:
+    # kind-k8ssandra-0 = http://stargate.127.0.0.1.nip.io:30080
+    # kind-k8ssandra-1 = http://stargate.127.0.0.1.nip.io:31080
+    # etc.
+    #
+    # Stargate CQL native protocol will be accessible from outside, without TLS, at:
+    # kind-k8ssandra-0 = stargate.127.0.0.1.nip.io:30942
+    # kind-k8ssandra-1 = stargate.127.0.0.1.nip.io:31942
+    # etc.
+    nodePorts:
+      http: 30080
+      tcp:
+        9042: 30942
+
+# Ingress does not support TCP services, but ingress-nginx provides a workaround where the ports are configured in a
+# ConfigMap. See https://kubernetes.github.io/ingress-nginx/user-guide/exposing-tcp-udp-services/
+tcp:
+  9042: "k8ssandra/cluster1-dc1-stargate-service:9042"
