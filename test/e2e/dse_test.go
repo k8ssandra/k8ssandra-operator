@@ -9,13 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
-
 	gremlingo "github.com/apache/tinkerpop/gremlin-go/driver"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,7 +40,7 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].CassandraConfig.DseYaml.ServerId = pointer.String("modified")
+	kc.Spec.Cassandra.Datacenters[0].CassandraConfig.DseYaml["server_id"] = "modified"
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch K8ssandraCluster %v", kcKey)
 
