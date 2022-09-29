@@ -3,7 +3,6 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -136,7 +135,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, DCConfigIncomplete{"template.ServerType"}
 	}
 
-	if err := validateCassandraYaml(&template.CassandraConfig.CassandraYaml); err != nil {
+	if err := validateCassandraYaml(template.CassandraConfig.CassandraYaml); err != nil {
 		return nil, err
 	}
 
@@ -145,7 +144,11 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, err
 	}
 
-	rawConfig, err := CreateJsonConfig(template)
+	handleDeprecatedJvmOptions(&template.CassandraConfig.JvmOptions)
+	addNumTokens(template)
+	addStartRpc(template)
+
+	rawConfig, err := createJsonConfig(template.CassandraConfig, template.ServerVersion, template.ServerType)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // MergeMap will take two or more maps, merging the entries of the sources map into a destination map. If both maps
 // share the same key then destination's value for that key will be overwritten with what's in source.
@@ -19,6 +21,8 @@ func MergeMap(sources ...map[string]string) map[string]string {
 // MergeMapNested will take two or more maps, merging the entries of the sources map into a
 // destination map. If both maps share the same key then destination's value for that key will be
 // merged with what's in source. The source maps are not modified.
+// If allowOverwrite is false, an error is returned if the key already exists and its value is not
+// nil.
 func MergeMapNested(allowOverwrite bool, sources ...map[string]interface{}) (map[string]interface{}, error) {
 	destination := make(map[string]interface{}, 0)
 	for _, source := range sources {
@@ -34,7 +38,7 @@ func MergeMapNested(allowOverwrite bool, sources ...map[string]interface{}) (map
 						} else {
 							destination[k] = merged
 						}
-					} else if allowOverwrite {
+					} else if allowOverwrite || destVal == nil {
 						destination[k] = sourceVal
 					} else {
 						return nil, fmt.Errorf("key %v already exists", k)
@@ -66,23 +70,24 @@ func GetMapNested(m map[string]interface{}, key string, keys ...string) (interfa
 }
 
 // PutMapNested puts the given value in the given map at the given keys. When a key is not present,
-// the entry is created on the fly; created entries are always of type map[string]interface{} to
+// the entry is created on the fly; nested entries are always of type map[string]interface{} to
 // allow for nested entries to be further inserted.
+// If allowOverwrite is false, an error is returned if the key already exists and its value is not
+// nil.
 func PutMapNested(allowOverwrite bool, m map[string]interface{}, val interface{}, key string, keys ...string) error {
+	v, found := m[key]
 	if len(keys) == 0 {
-		_, found := m[key]
-		if found && !allowOverwrite {
+		if found && v != nil && !allowOverwrite {
 			return fmt.Errorf("key %v already exists", key)
 		}
 		m[key] = val
 		return nil
 	} else {
-		v, found := m[key]
 		if !found {
 			v = make(map[string]interface{})
 			m[key] = v
 		} else if _, ok := v.(map[string]interface{}); !ok {
-			if !allowOverwrite {
+			if v != nil && !allowOverwrite {
 				return fmt.Errorf("key %v already exists", key)
 			}
 			v = make(map[string]interface{})

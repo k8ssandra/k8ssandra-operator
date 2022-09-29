@@ -8258,7 +8258,9 @@ spec:
                           type: object
                         type: array
                       replaceNodes:
-                        description: A list of pod names that need to be replaced.
+                        description: DEPRECATED Use CassandraTask replacenode to achieve
+                          correct node replacement. A list of pod names that need
+                          to be replaced.
                         items:
                           type: string
                         type: array
@@ -8291,7 +8293,8 @@ spec:
                             type: object
                         type: object
                       rollingRestartRequested:
-                        description: Whether to do a rolling restart at the next opportunity.
+                        description: DEPRECATED. Use CassandraTask for rolling restarts.
+                          Whether to do a rolling restart at the next opportunity.
                           The operator will set this back to false once the restart
                           is in progress.
                         type: boolean
@@ -8310,7 +8313,7 @@ spec:
                       serverVersion:
                         description: Version string for config builder, used to generate
                           Cassandra server configuration
-                        pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.0\.\d+)
+                        pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)
                         type: string
                       serviceAccount:
                         description: The k8s service account to use for the server
@@ -8329,13 +8332,13 @@ spec:
                           workload is resumed.
                         type: boolean
                       storageConfig:
-                        description: Describes the persistent storage request of each
-                          server node
+                        description: StorageConfig describes the persistent storage
+                          request of each server node
                         properties:
                           additionalVolumes:
                             items:
-                              description: AdditionalVolumes StorageConfig defines
-                                additional storage configurations
+                              description: AdditionalVolumes defines additional storage
+                                configurations
                               properties:
                                 mountPath:
                                   description: Mount path into cassandra container
