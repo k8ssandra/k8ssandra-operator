@@ -164,7 +164,7 @@ Once the operator picks up on the CassandraRestore object creation, it will cont
 To monitor the restore completion, check if the `finishTime` value isn't empty in the CassandraRestore object status:
 
 ```sh
-% kubectl get cassandrarestore/restore-backup1 -o yaml
+% kubectl get -n k8ssandra-operator medusarestorejob/restore-backup1 -o yaml
 
 apiVersion: medusa.k8ssandra.io/v1alpha1
 kind: CassandraRestore
