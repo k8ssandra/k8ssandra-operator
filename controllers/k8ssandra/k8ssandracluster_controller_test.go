@@ -487,6 +487,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: api.CassandraYaml{
+									AdditionalOptions: &api.Unstructured{
+										"foo": "bar",
+										"bar": map[string]interface{}{
+											"baz": "qux",
+										},
+									},
 									ConcurrentReads:  pointer.Int(4),
 									ConcurrentWrites: pointer.Int(4),
 								},
@@ -520,6 +526,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: api.CassandraYaml{
+									AdditionalOptions: &api.Unstructured{
+										"foo": "bar",
+										"bar": map[string]interface{}{
+											"baz": "qux",
+										},
+									},
 									ConcurrentReads:  pointer.Int(4),
 									ConcurrentWrites: pointer.Int(12),
 								},
@@ -536,6 +548,10 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
+
+	// Check that the unstructured data in CassandraYaml.AdditionalOptions was preserved
+	assert.NotEmpty(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.CassandraConfig.CassandraYaml.AdditionalOptions)
+	assert.NotEmpty(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.CassandraConfig.CassandraYaml.AdditionalOptions)
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 

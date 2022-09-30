@@ -10,7 +10,7 @@ import (
 func TestUnstructured_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
-		u       *Unstructured
+		u       Unstructured
 		want    []byte
 		wantErr assert.ErrorAssertionFunc
 	}{
@@ -22,16 +22,26 @@ func TestUnstructured_MarshalJSON(t *testing.T) {
 		},
 		{
 			name:    "empty",
-			u:       &Unstructured{},
+			u:       Unstructured{},
 			want:    []byte(`{}`),
 			wantErr: assert.NoError,
 		},
 		{
 			name: "simple",
-			u: &Unstructured{
+			u: Unstructured{
 				"foo": "bar",
 			},
 			want:    []byte(`{"foo":"bar"}`),
+			wantErr: assert.NoError,
+		},
+		{
+			name: "complex",
+			u: Unstructured{
+				"foo": map[string]interface{}{
+					"bar": 123,
+				},
+			},
+			want:    []byte(`{"foo":{"bar":123}}`),
 			wantErr: assert.NoError,
 		},
 	}
@@ -53,7 +63,7 @@ func TestUnstructured_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *Unstructured
+		want    Unstructured
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
@@ -61,7 +71,7 @@ func TestUnstructured_UnmarshalJSON(t *testing.T) {
 			args: args{
 				b: []byte(`null`),
 			},
-			want:    &Unstructured{},
+			want:    Unstructured(nil),
 			wantErr: assert.NoError,
 		},
 		{
@@ -69,7 +79,7 @@ func TestUnstructured_UnmarshalJSON(t *testing.T) {
 			args: args{
 				b: []byte(`{}`),
 			},
-			want:    &Unstructured{},
+			want:    Unstructured{},
 			wantErr: assert.NoError,
 		},
 		{
@@ -77,16 +87,28 @@ func TestUnstructured_UnmarshalJSON(t *testing.T) {
 			args: args{
 				b: []byte(`{"foo":"bar"}`),
 			},
-			want: &Unstructured{
+			want: Unstructured{
 				"foo": "bar",
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "complex",
+			args: args{
+				b: []byte(`{"foo":{"bar":123}}`),
+			},
+			want: Unstructured{
+				"foo": map[string]interface{}{
+					"bar": 123.0, // float!
+				},
 			},
 			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Unstructured{}
-			if !tt.wantErr(t, json.Unmarshal(tt.args.b, v), fmt.Sprintf("UnmarshalJSON()")) {
+			v := Unstructured{}
+			if !tt.wantErr(t, json.Unmarshal(tt.args.b, &v), fmt.Sprintf("UnmarshalJSON()")) {
 				return
 			}
 			assert.Equalf(t, tt.want, v, fmt.Sprintf("UnmarshalJSON(%v)", tt.args.b))
@@ -98,13 +120,34 @@ func TestUnstructured_DeepCopy(t *testing.T) {
 	tests := []struct {
 		name string
 		u    Unstructured
-		want *Unstructured
 	}{
-		// TODO: Add test cases.
+		{
+			name: "nil",
+			u:    nil,
+		},
+		{
+			name: "empty",
+			u:    Unstructured{},
+		},
+		{
+			name: "simple",
+			u: Unstructured{
+				"foo": "bar",
+			},
+		},
+		{
+			name: "complex",
+			u: Unstructured{
+				"foo": map[string]interface{}{
+					"bar": 123.0,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, tt.u.DeepCopy(), "DeepCopy()")
+			assert.Equalf(t, tt.u, *tt.u.DeepCopy(), "DeepCopy()")
+			assert.NotSamef(t, tt.u, *tt.u.DeepCopy(), "DeepCopy()")
 		})
 	}
 }
