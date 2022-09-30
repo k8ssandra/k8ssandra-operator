@@ -2,17 +2,15 @@ package medusa
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"time"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util/hash"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -95,8 +93,8 @@ func (f *factory) NewRestoreRequest(ctx context.Context, restoreKey types.Namesp
 		"CassandraBackup", backupKey,
 		"CassandraDatacenter", dcKey)
 
-	restoreHash := deepHashString(restore.Status)
-	datacenterHash := deepHashString(dc.Spec)
+	restoreHash := utils.DeepHashString(restore.Status)
+	datacenterHash := utils.DeepHashString(dc.Spec)
 
 	req := RestoreRequest{
 		Log:             reqLogger,
@@ -145,8 +143,8 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 		"CassandraBackup", backupKey,
 		"CassandraDatacenter", dcKey)
 
-	restoreHash := deepHashString(restore.Status)
-	datacenterHash := deepHashString(dc.Spec)
+	restoreHash := utils.DeepHashString(restore.Status)
+	datacenterHash := utils.DeepHashString(dc.Spec)
 
 	req := RestoreRequest{
 		Log:             reqLogger,
@@ -164,12 +162,12 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 
 // RestoreModified returns true if the CassandraRestore.Status has been modified.
 func (r *RestoreRequest) RestoreModified() bool {
-	return deepHashString(r.Restore.Status) != r.restoreHash
+	return utils.DeepHashString(r.Restore.Status) != r.restoreHash
 }
 
 // DatacenterModified returns true if the CassandraDatacenter.Spec has been modified.
 func (r *RestoreRequest) DatacenterModified() bool {
-	return deepHashString(r.Datacenter.Spec) != r.datacenterHash
+	return utils.DeepHashString(r.Datacenter.Spec) != r.datacenterHash
 }
 
 // SetRestoreKey sets the key. Note that this function is idempotent.
@@ -188,7 +186,7 @@ func (r *RestoreRequest) SetRestoreStartTime(t metav1.Time) {
 
 // RestoreModified returns true if the CassandraRestore.Status has been modified.
 func (r *RestoreRequest) MedusaRestoreModified() bool {
-	return deepHashString(r.RestoreJob.Status) != r.restoreHash
+	return utils.DeepHashString(r.RestoreJob.Status) != r.restoreHash
 }
 
 // SetRestoreKey sets the key. Note that this function is idempotent.
@@ -242,12 +240,4 @@ func (r *RestoreRequest) GetRestorePatch() client.Patch {
 // CassandraDatacenter. The patch is created when the RestoreRequest is initialized.
 func (r *RestoreRequest) GetDatacenterPatch() client.Patch {
 	return r.datacenterPatch
-}
-
-func deepHashString(obj interface{}) string {
-	hasher := sha256.New()
-	hash.DeepHashObject(hasher, obj)
-	hashBytes := hasher.Sum([]byte{})
-	b64Hash := base64.StdEncoding.EncodeToString(hashBytes)
-	return b64Hash
 }
