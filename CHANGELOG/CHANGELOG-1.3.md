@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [FEATURE] [#657](https://github.com/k8ssandra/k8ssandra-operator/issues/657) Basic DSE Support
 * [FEATURE] [#661](https://github.com/k8ssandra/k8ssandra-operator/issues/661) Support all dse.yaml options
+* [ENHANCEMENT] [#681](https://github.com/k8ssandra/k8ssandra-operator/issues/681) Update to Go 1.18, Kubernetes 1.24, Operator SDK 1.23, controller-gen 0.9.2, Kustomize 4.5.7, controller-runtime 0.12.2
 * [ENHANCEMENT] [#699](https://github.com/k8ssandra/k8ssandra-operator/issues/699) Prevent DC decommission if user keyspaces are replicated to it
 * [ENHANCEMENT] [#695](https://github.com/k8ssandra/k8ssandra-operator/issues/695) Support DSE multi DC clusters
 * [ENHANCEMENT] [#669](https://github.com/k8ssandra/k8ssandra-operator/issues/669) Deterministic DSE upgrades
