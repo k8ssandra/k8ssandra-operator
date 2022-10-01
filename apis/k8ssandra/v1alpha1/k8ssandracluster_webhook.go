@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"fmt"
-
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -133,6 +132,10 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 		return ErrClusterName
 	}
 
+	if err := validateNoRackRenamed(oldCluster.Spec.Cassandra, r.Spec.Cassandra); err != nil {
+		return err
+	}
+
 	// Some of these could be extracted in the cass-operator to reusable methods, do not copy code here.
 	// Also, reusing methods from cass-operator allows to follow updates to features if they change in cass-operator,
 	// such as allowing rack modifications or expanding PVCs.
@@ -142,6 +145,56 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
 
 	return nil
+}
+
+func validateNoRackRenamed(oldCassandra, newCassandra *CassandraClusterTemplate) error {
+	oldDcs := collectRackNamesPerDc(oldCassandra)
+	newDcs := collectRackNamesPerDc(newCassandra)
+
+	for dc, oldRacks := range oldDcs {
+		if newRacks, ok := newDcs[dc]; ok {
+			if len(newRacks) < len(oldRacks) {
+				return fmt.Errorf("number of racks can't be lowered (DC %s, current=%d, desired=%d)",
+					dc, len(oldRacks), len(newRacks))
+			}
+			for i, oldRack := range oldRacks {
+				newRack := newRacks[i]
+				if newRack != oldRack {
+					return fmt.Errorf("racks can't be renamed (DC %s, index %d, current=%s, desired=%s)",
+						dc, i, oldRack, newRack)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func collectRackNamesPerDc(cassandra *CassandraClusterTemplate) map[string][]string {
+	if len(cassandra.Datacenters) == 0 {
+		// Unlikely but we allow it
+		return map[string][]string{}
+	}
+
+	// The top-level object can define default racks, to be inherited by DCs that don't declare them.
+	// If they aren't declared anywhere, there is a single rack named "default".
+	defaultNames := collectRackNames(cassandra.DatacenterOptions, []string{"default"})
+
+	m := make(map[string][]string, len(cassandra.Datacenters))
+	for _, dc := range cassandra.Datacenters {
+		m[dc.Meta.Name] = collectRackNames(dc.DatacenterOptions, defaultNames)
+	}
+	return m
+}
+
+func collectRackNames(dc DatacenterOptions, ifNoRacks []string) []string {
+	if len(dc.Racks) == 0 {
+		return ifNoRacks
+	}
+	names := make([]string, len(dc.Racks))
+	for i, rack := range dc.Racks {
+		names[i] = rack.Name
+	}
+	return names
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

@@ -532,6 +532,20 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 		return fmt.Errorf("tried to change num_tokens in an existing datacenter")
 	}
 
+	desiredRacks := desiredDc.GetRacks()
+	actualRacks := actualDc.GetRacks()
+	if len(desiredRacks) < len(actualRacks) {
+		return fmt.Errorf("number of racks can't be lowered (current=%d, desired=%d)",
+			len(actualRacks), len(desiredRacks))
+	}
+	for i, actualRack := range actualRacks {
+		desiredRack := desiredRacks[i]
+		if desiredRack.Name != actualRack.Name {
+			return fmt.Errorf("racks can't be renamed (index %d, current=%s, desired=%s)",
+				i, actualRack.Name, desiredRack.Name)
+		}
+	}
+
 	return nil
 }
 

@@ -100,8 +100,9 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
-	// If webhooks are installed, this testcase is handled by the webhook test
+	// If webhooks are installed, these test cases are handled by the webhook test
 	// t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
+	// t.Run("ChangeRackName", testEnv.ControllerTest(ctx, changeRackName))
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
@@ -1338,6 +1339,87 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Logf("dcConfigYaml num tokens: %v", dcConfigYaml["num_tokens"].(float64))
 	require.NotEqual(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", kc.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"]), "num_tokens should not be updated")
 	require.Equal(fmt.Sprintf("%v", dcConfigYaml["num_tokens"]), fmt.Sprintf("%d", initialNumTokens), "num_tokens should not be updated")
+
+	// Test cluster deletion
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
+// changeRackName creates a Datacenter and then changes the name of a rack
+// Such change is prohibited and should fail
+func changeRackName(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				ClusterName: "test",
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       1,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.10",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
+							},
+							Racks: []cassdcapi.Rack{
+								{
+									Name:               "rack1",
+									NodeAffinityLabels: map[string]string{"topology.kubernetes.io/zone": "region1-zone1"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	kcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}, K8sContext: f.ControlPlaneContext}
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
+
+	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("update datacenter status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dcKey)
+	require.NoError(err, "failed to set dc status ready")
+
+	// Update the datacenter with a different rack name and check that it failed
+	initialRackName := kc.Spec.Cassandra.Datacenters[0].Racks[0].Name
+	kcPatch := client.MergeFrom(kc.DeepCopy())
+	kc.Spec.Cassandra.Datacenters[0].Racks[0].Name = "rack2"
+	err = f.Patch(ctx, kc, kcPatch, kcKey)
+	require.NoError(err, "got error patching rack name")
+
+	err = f.Client.Get(ctx, kcKey.NamespacedName, kc)
+	require.NoError(err, "failed to get K8ssandraCluster")
+	dc := cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dcKey, &dc)
+	require.NoError(err, "failed to get CassandraDatacenter")
+	actualRackName := dc.Spec.Racks[0].Name
+
+	require.Equal(initialRackName, actualRackName, "rack name should not be updated")
 
 	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")

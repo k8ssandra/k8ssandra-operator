@@ -143,6 +143,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("ReaperKeyspaceValidation", testReaperKeyspaceValidation)
 	t.Run("StorageConfigValidation", testStorageConfigValidation)
 	t.Run("NumTokensValidation", testNumTokens)
+	t.Run("RackNameValidation", testRackNameValidation)
 }
 
 func testContextValidation(t *testing.T) {
@@ -317,6 +318,114 @@ func testNumTokens(t *testing.T) {
 	errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
 
+}
+
+func testRackNameValidation(t *testing.T) {
+	required := require.New(t)
+
+	createNamespace(required, "racknames-namespace")
+
+	createCluster := func(topLevelRacks, dcLevelRacks []string) *K8ssandraCluster {
+		cluster := createMinimalClusterObj("racknames-test", "racknames-namespace")
+		for _, rackName := range topLevelRacks {
+			cluster.Spec.Cassandra.Racks = append(
+				cluster.Spec.Cassandra.Racks, v1beta1.Rack{Name: rackName})
+		}
+		cluster.Spec.Cassandra.Datacenters[0].Meta = EmbeddedObjectMeta{Name: "dc1"}
+		for _, rackName := range dcLevelRacks {
+			cluster.Spec.Cassandra.Datacenters[0].Racks = append(
+				cluster.Spec.Cassandra.Datacenters[0].Racks, v1beta1.Rack{Name: rackName})
+		}
+		return cluster
+	}
+
+	var oldCluster, newCluster *K8ssandraCluster
+
+	// DC-level declaration
+	oldCluster = createCluster(nil, []string{"rack1", "rack2"})
+	newCluster = createCluster(nil, []string{"rack1", "rack2New"})
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 1, current=rack2, desired=rack2New)")
+
+	oldCluster = createCluster(nil, []string{"rack1", "rack2"})
+	newCluster = createCluster(nil, []string{"rack1"})
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"number of racks can't be lowered (DC dc1, current=2, desired=1)")
+
+	oldCluster = createCluster(nil, nil)
+	newCluster = createCluster(nil, []string{"rack1"})
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 0, current=default, desired=rack1)")
+
+	oldCluster = createCluster(nil, []string{"rack1"})
+	newCluster = createCluster(nil, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 0, current=rack1, desired=default)")
+
+	oldCluster = createCluster(nil, []string{"rack1"})
+	newCluster = createCluster(nil, []string{"rack1", "rack2"})
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	oldCluster = createCluster(nil, nil)
+	newCluster = createCluster(nil, []string{"default"})
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	// Same scenarios, but top-level declaration
+	oldCluster = createCluster([]string{"rack1", "rack2"}, nil)
+	newCluster = createCluster([]string{"rack1", "rack2New"}, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 1, current=rack2, desired=rack2New)")
+
+	oldCluster = createCluster([]string{"rack1", "rack2"}, nil)
+	newCluster = createCluster([]string{"rack1"}, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"number of racks can't be lowered (DC dc1, current=2, desired=1)")
+
+	oldCluster = createCluster(nil, nil)
+	newCluster = createCluster([]string{"rack1"}, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 0, current=default, desired=rack1)")
+
+	oldCluster = createCluster([]string{"rack1"}, nil)
+	newCluster = createCluster(nil, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 0, current=rack1, desired=default)")
+
+	oldCluster = createCluster([]string{"rack1"}, nil)
+	newCluster = createCluster([]string{"rack1", "rack2"}, nil)
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	oldCluster = createCluster(nil, nil)
+	newCluster = createCluster([]string{"default"}, nil)
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	// Mix of top-level/DC-level, error scenarios
+	oldCluster = createCluster([]string{"rack1", "rack2"}, nil)
+	newCluster = createCluster(nil, []string{"rack1", "rack2New"})
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 1, current=rack2, desired=rack2New)")
+
+	oldCluster = createCluster(nil, []string{"rack1", "rack2"})
+	newCluster = createCluster([]string{"rack1", "rack2New"}, nil)
+	required.EqualError(newCluster.ValidateUpdate(oldCluster),
+		"racks can't be renamed (DC dc1, index 1, current=rack2, desired=rack2New)")
+
+	// Mix of top-level/DC-level, valid scenarios
+	oldCluster = createCluster([]string{"rack1"}, nil)
+	newCluster = createCluster(nil, []string{"rack1"})
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	oldCluster = createCluster(nil, []string{"rack1"})
+	newCluster = createCluster([]string{"rack1"}, nil)
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	oldCluster = createCluster([]string{"rack1"}, nil)
+	newCluster = createCluster(nil, []string{"rack1", "rack2"})
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
+
+	oldCluster = createCluster(nil, []string{"rack1"})
+	newCluster = createCluster([]string{"rack1", "rack2"}, nil)
+	required.NoError(newCluster.ValidateUpdate(oldCluster))
 }
 
 func createNamespace(require *require.Assertions, namespace string) {
