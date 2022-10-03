@@ -33,11 +33,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 	// required (com.sun.management.jmxremote.authenticate=true). We need to change that here and enable/disable
 	// authentication based on what the user specified, not what the script infers.
 	jmxAuthenticateOpt := fmt.Sprintf("-Dcom.sun.management.jmxremote.authenticate=%v", authEnabled)
-	// prepend instead of append, so that user-specified options take precedence
-	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{jmxAuthenticateOpt},
-		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
-	)
+	addOptionIfMissing(dcConfig, jmxAuthenticateOpt)
 
 	// When auth is enabled in the cluster, tools that use JMX to communicate with Cassandra need to authenticate as
 	// well, e.g. Reaper or nodetool. Note that Reaper will use its own JMX user secret to authenticate, see

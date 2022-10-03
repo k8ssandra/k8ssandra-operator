@@ -136,10 +136,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, DCConfigIncomplete{"template.ServerType"}
 	}
 
-	if err := validateCassandraYaml(&template.CassandraConfig.CassandraYaml); err != nil {
-		return nil, err
-	}
-
 	// If client or server encryption is enabled, create the required volumes and mounts
 	if err := handleEncryptionOptions(template); err != nil {
 		return nil, err

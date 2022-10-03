@@ -1663,11 +1663,12 @@ func TestCreateJsonConfig(t *testing.T) {
 						CommitlogCompression: &api.ParameterizedClass{
 							ClassName: "FakeCommitlogCompression",
 						},
-						CommitlogMaxCompressionBuffersInPool:       pointer.Int(43),
-						CommitlogPeriodicQueueSize:                 pointer.Int(44),
-						CommitlogSegmentSizeInMb:                   pointer.Int(45),
-						CommitlogSync:                              pointer.String("periodic"),
-						CommitlogSyncBatchWindowInMs:               pointer.String("123"),
+						CommitlogMaxCompressionBuffersInPool: pointer.Int(43),
+						CommitlogPeriodicQueueSize:           pointer.Int(44),
+						CommitlogSegmentSizeInMb:             pointer.Int(45),
+						CommitlogSync:                        pointer.String("periodic"),
+						// Cannot be specified along with commitlog_sync_period_in_ms
+						// CommitlogSyncBatchWindowInMs:               pointer.String("123"),
 						CommitlogSyncGroupWindowInMs:               pointer.Int(1000_1),
 						CommitlogSyncPeriodInMs:                    pointer.Int(49),
 						CommitlogTotalSpaceInMb:                    pointer.Int(50),
@@ -2419,11 +2420,13 @@ func TestCreateJsonConfig(t *testing.T) {
 						"cipher_suites": ["cipherSuite1","cipherSuite2"],
 						"enabled": true,
 						"keystore": "/mnt/client-keystore/keystore",
+						"keystore_password": "",
 						"optional": true,
 						"protocol": "protocol1",
 						"require_client_auth": true,
 						"store_type": "storeType1",
-						"truststore": "/mnt/client-truststore/truststore"
+						"truststore": "/mnt/client-truststore/truststore",
+						"truststore_password": ""
 					},
 					"column_index_cache_size_in_kb": 38,
 					"column_index_size_in_kb": 39,
@@ -2432,7 +2435,6 @@ func TestCreateJsonConfig(t *testing.T) {
 					"commitlog_periodic_queue_size": 44,
 					"commitlog_segment_size_in_mb": 45,
 					"commitlog_sync": "periodic",
-					"commitlog_sync_batch_window_in_ms": "123",
         	        "commitlog_sync_group_window_in_ms": 10001,
 					"commitlog_sync_period_in_ms": 49,
 					"commitlog_total_space_in_mb": 50,
@@ -2572,11 +2574,13 @@ func TestCreateJsonConfig(t *testing.T) {
 						"algorithm": "algorithm1",
 						"cipher_suites": ["cipherSuite1","cipherSuite2"],
 						"keystore": "/mnt/server-keystore/keystore",
+						"keystore_password": "",
 						"optional": true,
 						"protocol": "protocol1",
 						"require_client_auth": true,
 						"store_type": "storeType1",
-						"truststore": "/mnt/server-truststore/truststore"
+						"truststore": "/mnt/server-truststore/truststore",
+						"truststore_password": ""
 					},
 					"slow_query_log_timeout_in_ms": 234,
 					"snapshot_before_compaction": false,
@@ -3703,8 +3707,12 @@ func TestCreateJsonConfig(t *testing.T) {
 		{
 			name: "[4.0.0] encryption",
 			config: DatacenterConfig{
-				ServerVersion: semver.MustParse("4.0.0"),
-				ServerType:    "cassandra",
+				ServerVersion:            semver.MustParse("4.0.0"),
+				ServerType:               "cassandra",
+				ClientKeystorePassword:   "s3cr3t",
+				ClientTruststorePassword: "s3cr3t",
+				ServerKeystorePassword:   "s3cr3t",
+				ServerTruststorePassword: "s3cr3t",
 				CassandraConfig: api.CassandraConfig{
 					CassandraYaml: api.CassandraYaml{
 						ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
@@ -3722,12 +3730,16 @@ func TestCreateJsonConfig(t *testing.T) {
                 "client_encryption_options": {
 					"enabled": true,
 					"keystore": "/mnt/client-keystore/keystore",
-					"truststore": "/mnt/client-truststore/truststore"
+					"truststore": "/mnt/client-truststore/truststore",
+                    "keystore_password": "s3cr3t",
+                    "truststore_password": "s3cr3t"
 				},
 				"server_encryption_options": {
 					"internode_encryption": "all",
 					"keystore": "/mnt/server-keystore/keystore",
-					"truststore": "/mnt/server-truststore/truststore"
+					"truststore": "/mnt/server-truststore/truststore",
+                    "keystore_password": "s3cr3t",
+                    "truststore_password": "s3cr3t"
 				}
               }
             }`,

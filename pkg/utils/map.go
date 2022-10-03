@@ -70,8 +70,8 @@ func GetMapNested(m map[string]interface{}, key string, keys ...string) (interfa
 // allow for nested entries to be further inserted.
 func PutMapNested(allowOverwrite bool, m map[string]interface{}, val interface{}, key string, keys ...string) error {
 	if len(keys) == 0 {
-		_, found := m[key]
-		if found && !allowOverwrite {
+		v, found := m[key]
+		if found && v != nil && !allowOverwrite {
 			return fmt.Errorf("key %v already exists", key)
 		}
 		m[key] = val
@@ -82,7 +82,7 @@ func PutMapNested(allowOverwrite bool, m map[string]interface{}, val interface{}
 			v = make(map[string]interface{})
 			m[key] = v
 		} else if _, ok := v.(map[string]interface{}); !ok {
-			if !allowOverwrite {
+			if v != nil && !allowOverwrite {
 				return fmt.Errorf("key %v already exists", key)
 			}
 			v = make(map[string]interface{})
