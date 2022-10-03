@@ -844,7 +844,7 @@ func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Fr
 		{
 			Name:      targetDcKey.Name + "-rebuild",
 			Command:   "rebuild",
-			Arguments: map[string]string{"source_datacenter": srcDcKey.Name},
+			Arguments: cassctlapi.JobArguments{SourceDatacenter: srcDcKey.Name},
 		},
 	}
 	require.Equal(expectedJobs, task.Spec.Jobs)

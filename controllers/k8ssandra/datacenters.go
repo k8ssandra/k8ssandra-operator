@@ -416,8 +416,8 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 				{
 					Name:    targetDc + "-rebuild",
 					Command: "rebuild",
-					Arguments: map[string]string{
-						"source_datacenter": srcDc,
+					Arguments: cassctlapi.JobArguments{
+						SourceDatacenter: srcDc,
 					},
 				},
 			},
