@@ -32,6 +32,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -487,7 +488,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: api.CassandraYaml{
-									AdditionalOptions: &api.Unstructured{
+									AdditionalOptions: unstructured.Unstructured{
 										"foo": "bar",
 										"bar": map[string]interface{}{
 											"baz": "qux",
@@ -526,7 +527,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: api.CassandraYaml{
-									AdditionalOptions: &api.Unstructured{
+									AdditionalOptions: unstructured.Unstructured{
 										"foo": "bar",
 										"bar": map[string]interface{}{
 											"baz": "qux",

@@ -69,15 +69,14 @@ func GetMapNested(m map[string]interface{}, key string, keys ...string) (interfa
 // the entry is created on the fly; created entries are always of type map[string]interface{} to
 // allow for nested entries to be further inserted.
 func PutMapNested(allowOverwrite bool, m map[string]interface{}, val interface{}, key string, keys ...string) error {
+	v, found := m[key]
 	if len(keys) == 0 {
-		v, found := m[key]
 		if found && v != nil && !allowOverwrite {
 			return fmt.Errorf("key %v already exists", key)
 		}
 		m[key] = val
 		return nil
 	} else {
-		v, found := m[key]
 		if !found {
 			v = make(map[string]interface{})
 			m[key] = v

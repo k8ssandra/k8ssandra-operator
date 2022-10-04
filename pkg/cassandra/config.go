@@ -10,6 +10,7 @@ import (
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 )
 
 const (
@@ -42,38 +43,38 @@ func CreateJsonConfig(apiConfig *DatacenterConfig) ([]byte, error) {
 	return json.Marshal(out)
 }
 
-func addNumTokens(template *DatacenterConfig, config api.Unstructured) {
+func addNumTokens(template *DatacenterConfig, config unstructured.Unstructured) {
 	// Even though we default to Cassandra's stock defaults for num_tokens, we need to
 	// explicitly set it because the config builder defaults to num_tokens: 1
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
-		config.PutIfAbsentNested("cassandra-yaml/num_tokens", 256)
+		config.PutNestedIfAbsent("cassandra-yaml/num_tokens", 256)
 	} else {
-		config.PutIfAbsentNested("cassandra-yaml/num_tokens", 16)
+		config.PutNestedIfAbsent("cassandra-yaml/num_tokens", 16)
 	}
 }
 
-func addStartRpc(template *DatacenterConfig, config api.Unstructured) {
+func addStartRpc(template *DatacenterConfig, config unstructured.Unstructured) {
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
-		config.PutIfAbsentNested("cassandra-yaml/start_rpc", false)
+		config.PutNestedIfAbsent("cassandra-yaml/start_rpc", false)
 	}
 }
 
-func addEncryptionOptions(template *DatacenterConfig, config api.Unstructured) {
+func addEncryptionOptions(template *DatacenterConfig, config unstructured.Unstructured) {
 	if ClientEncryptionEnabled(template) {
 		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
 		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		config.PutIfAbsentNested("cassandra-yaml/client_encryption_options/keystore", keystorePath)
-		config.PutIfAbsentNested("cassandra-yaml/client_encryption_options/truststore", truststorePath)
-		config.PutIfAbsentNested("cassandra-yaml/client_encryption_options/keystore_password", template.ClientKeystorePassword)
-		config.PutIfAbsentNested("cassandra-yaml/client_encryption_options/truststore_password", template.ClientTruststorePassword)
+		config.PutNestedIfAbsent("cassandra-yaml/client_encryption_options/keystore", keystorePath)
+		config.PutNestedIfAbsent("cassandra-yaml/client_encryption_options/truststore", truststorePath)
+		config.PutNestedIfAbsent("cassandra-yaml/client_encryption_options/keystore_password", template.ClientKeystorePassword)
+		config.PutNestedIfAbsent("cassandra-yaml/client_encryption_options/truststore_password", template.ClientTruststorePassword)
 	}
 	if ServerEncryptionEnabled(template) {
 		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
 		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		config.PutIfAbsentNested("cassandra-yaml/server_encryption_options/keystore", keystorePath)
-		config.PutIfAbsentNested("cassandra-yaml/server_encryption_options/truststore", truststorePath)
-		config.PutIfAbsentNested("cassandra-yaml/server_encryption_options/keystore_password", template.ServerKeystorePassword)
-		config.PutIfAbsentNested("cassandra-yaml/server_encryption_options/truststore_password", template.ServerTruststorePassword)
+		config.PutNestedIfAbsent("cassandra-yaml/server_encryption_options/keystore", keystorePath)
+		config.PutNestedIfAbsent("cassandra-yaml/server_encryption_options/truststore", truststorePath)
+		config.PutNestedIfAbsent("cassandra-yaml/server_encryption_options/keystore_password", template.ServerKeystorePassword)
+		config.PutNestedIfAbsent("cassandra-yaml/server_encryption_options/truststore_password", template.ServerTruststorePassword)
 	}
 }
 

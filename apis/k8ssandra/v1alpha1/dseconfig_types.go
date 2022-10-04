@@ -16,7 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-import "k8s.io/apimachinery/pkg/api/resource"
+import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
 
 type DseYaml struct {
 
@@ -168,7 +171,7 @@ type DseYaml struct {
 
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
-	AdditionalOptions *Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
+	AdditionalOptions unstructured.Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
 }
 
 type AuthenticationOptions struct {

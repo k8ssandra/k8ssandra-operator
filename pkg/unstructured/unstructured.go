@@ -1,4 +1,4 @@
-package v1alpha1
+package unstructured
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Unstructured is a map[string]interface{} that can be used to represent unstructured content.
+// Unstructured is a map[string]interface{} that can be used to represent unstructured JSON content.
 // +kubebuilder:validation:Type=object
 type Unstructured map[string]interface{}
 
@@ -20,9 +20,6 @@ func (in *Unstructured) MarshalJSON() ([]byte, error) {
 }
 
 func (in *Unstructured) UnmarshalJSON(b []byte) error {
-	if b == nil {
-		return nil
-	}
 	m := map[string]interface{}(*in)
 	err := json.Unmarshal(b, &m)
 	*in = m
@@ -34,20 +31,24 @@ func (in *Unstructured) DeepCopy() *Unstructured {
 		return nil
 	}
 	out := new(Unstructured)
-	*out = runtime.DeepCopyJSON(*in)
+	in.DeepCopyInto(out)
 	return out
 }
 
 func (in *Unstructured) DeepCopyInto(out *Unstructured) {
-	clone := in.DeepCopy()
-	*out = *clone
+	*out = runtime.DeepCopyJSON(*in)
 }
+
+const PathSeparator = "/"
 
 func (in *Unstructured) GetNested(path string) (interface{}, bool) {
 	if in == nil {
 		return nil, false
 	}
-	keys := strings.Split(path, "/")
+	if *in == nil {
+		return nil, false
+	}
+	keys := strings.Split(path, PathSeparator)
 	return utils.GetMapNested(*in, keys[0], keys[1:]...)
 }
 
@@ -58,17 +59,17 @@ func (in *Unstructured) PutNested(path string, v interface{}) {
 	if *in == nil {
 		*in = make(Unstructured)
 	}
-	keys := strings.Split(path, "/")
+	keys := strings.Split(path, PathSeparator)
 	_ = utils.PutMapNested(true, *in, v, keys[0], keys[1:]...)
 }
 
-func (in *Unstructured) PutIfAbsentNested(path string, v interface{}) {
+func (in *Unstructured) PutNestedIfAbsent(path string, v interface{}) {
 	if in == nil {
 		return
 	}
 	if *in == nil {
 		*in = make(Unstructured)
 	}
-	keys := strings.Split(path, "/")
+	keys := strings.Split(path, PathSeparator)
 	_ = utils.PutMapNested(false, *in, v, keys[0], keys[1:]...)
 }

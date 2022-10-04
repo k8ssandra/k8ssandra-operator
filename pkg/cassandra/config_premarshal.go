@@ -3,7 +3,7 @@ package cassandra
 import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"reflect"
@@ -73,8 +73,8 @@ func preMarshalConfig(val reflect.Value, version *semver.Version, serverType str
 	return out, nil
 }
 
-var typeOfUnstructured = reflect.TypeOf(v1alpha1.Unstructured{})
-var typeOfPointerToUnstructured = reflect.TypeOf(&v1alpha1.Unstructured{})
+var typeOfUnstructured = reflect.TypeOf(unstructured.Unstructured{})
+var typeOfPointerToUnstructured = reflect.TypeOf(&unstructured.Unstructured{})
 
 // getFieldValueRecursive returns the value of a complex field annotated with the "recurse" option,
 // converting it to a value that can be put in a map destined to be marshalled for cass-config.
@@ -88,11 +88,11 @@ func getFieldValueRecursive(
 	field reflect.StructField,
 ) (interface{}, error) {
 	if fieldVal.Type() == typeOfUnstructured {
-		u := fieldVal.Interface().(v1alpha1.Unstructured)
+		u := fieldVal.Interface().(unstructured.Unstructured)
 		return map[string]interface{}(u), nil
 	}
 	if fieldVal.Type() == typeOfPointerToUnstructured {
-		u := fieldVal.Interface().(*v1alpha1.Unstructured)
+		u := fieldVal.Interface().(*unstructured.Unstructured)
 		return map[string]interface{}(*u), nil
 	}
 	fieldKind := fieldVal.Kind()

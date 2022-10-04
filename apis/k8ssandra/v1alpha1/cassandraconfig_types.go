@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -987,7 +988,7 @@ type CassandraYaml struct {
 
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
-	AdditionalOptions *Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
+	AdditionalOptions unstructured.Unstructured `json:"additionalOptions,omitempty" cass-config:";recurse"`
 }
 
 type JvmOptions struct {
