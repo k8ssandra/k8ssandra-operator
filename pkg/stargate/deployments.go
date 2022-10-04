@@ -154,7 +154,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 								{ContainerPort: 8082, Name: "rest"},
 								{ContainerPort: 8084, Name: "health"},
 								{ContainerPort: 8085, Name: "metrics"},
-								{ContainerPort: 8090, Name: "http-schemaless"},
+								{ContainerPort: 8090, Name: "grpc"},
 								{ContainerPort: 9042, Name: "native"},
 								{ContainerPort: 8609, Name: "inter-node-msg"},
 								{ContainerPort: 7000, Name: "intra-node"},
