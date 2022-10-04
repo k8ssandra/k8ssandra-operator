@@ -28,12 +28,18 @@ controller:
     # kind-k8ssandra-1 = http://stargate.127.0.0.1.nip.io:31080
     # etc.
     #
+    # Stargate gRPC API will be accessible from outside at:
+    # kind-k8ssandra-0 = https://stargate.127.0.0.1.nip.io:30443
+    # kind-k8ssandra-1 = https://stargate.127.0.0.1.nip.io:31443
+    # etc.
+    #
     # Stargate CQL native protocol will be accessible from outside, without TLS, at:
     # kind-k8ssandra-0 = stargate.127.0.0.1.nip.io:30942
     # kind-k8ssandra-1 = stargate.127.0.0.1.nip.io:31942
     # etc.
     nodePorts:
       http: 30080
+      https: 30443
       tcp:
         9042: 30942
 

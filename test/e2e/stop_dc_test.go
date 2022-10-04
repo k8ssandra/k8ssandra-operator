@@ -50,12 +50,13 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[1])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", stargateRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
-	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	pod1Name := "cluster1-dc1-default-sts-0"
@@ -64,7 +65,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[1], namespace, pod2Name)
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
-		testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, map[string]int{"dc2": 1})
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, map[string]int{"dc2": 1})
 		uiKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
 		connectReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", uiUsername, uiPassword)
@@ -85,18 +86,19 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[0])
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
-	checkStargateApisReachable(t, stargateRestHostAndPort, stargateCqlHostAndPort, username, password)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name)
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
-		testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, map[string]int{"dc1": 1})
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, map[string]int{"dc1": 1})
 		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
 		connectReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", uiUsername, uiPassword)
@@ -110,8 +112,8 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperNotFound(t, f, ctx, reaper2Key)
 
 	t.Run("TestApisDcsRestarted", func(t *testing.T) {
-		testStargateApis(t, ctx, f.DataPlaneContexts[0], username, password, map[string]int{"dc1": 1, "dc2": 1})
-		testStargateApis(t, ctx, f.DataPlaneContexts[1], username, password, map[string]int{"dc1": 1, "dc2": 1})
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, map[string]int{"dc1": 1, "dc2": 1})
+		testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, map[string]int{"dc1": 1, "dc2": 1})
 		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
 		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
 		testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)

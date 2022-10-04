@@ -22,6 +22,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#695](https://github.com/k8ssandra/k8ssandra-operator/issues/695) Support DSE multi DC clusters
 * [ENHANCEMENT] [#669](https://github.com/k8ssandra/k8ssandra-operator/issues/669) Deterministic DSE upgrades
 * [ENHANCEMENT] [#704](https://github.com/k8ssandra/k8ssandra-operator/issues/704) Upgrade to cass-operator v1.13.0
+* [BUGFIX] [#648](https://github.com/k8ssandra/k8ssandra-operator/issues/648) Open gRPC port within the stargate deployment
 * [BUGFIX] [#696](https://github.com/k8ssandra/k8ssandra-operator/issues/696) Upgrade datacenters sequentially instead of concurrently
 * [BUGFIX] [#641](https://github.com/k8ssandra/k8ssandra-operator/issues/641) Reaper ServiceMonitor is not properly configured
 * [TESTING] [#687](https://github.com/k8ssandra/k8ssandra-operator/issues/687) Verify that modifications to dse.yaml are applied
