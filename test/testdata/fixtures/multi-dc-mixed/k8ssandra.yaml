@@ -23,7 +23,6 @@ spec:
         compaction_throughput_mb_per_sec: 0
         sstable_preemptive_open_interval_in_mb: 0
         key_cache_size_in_mb: 0
-        thrift_prepared_statements_cache_size_mb: 1
         prepared_statements_cache_size_mb: 1
         slow_query_log_timeout_in_ms: 0
         block_for_peers_timeout_in_secs: 10000
