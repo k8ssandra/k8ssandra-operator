@@ -14,6 +14,16 @@ func TestApplyAuthSettings(t *testing.T) {
 		want        unstructured.Unstructured
 	}{
 		{
+			"nil, auth enabled",
+			true,
+			nil,
+			unstructured.Unstructured{
+				"authenticator": "PasswordAuthenticator",
+				"authorizer":    "CassandraAuthorizer",
+				"role_manager":  "CassandraRoleManager",
+			},
+		},
+		{
 			"auth enabled",
 			true,
 			unstructured.Unstructured{},
@@ -64,8 +74,8 @@ func TestApplyAuthSettings(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ApplyAuthSettings(tt.input, tt.authEnabled)
-			assert.Equal(t, tt.want, tt.input)
+			actual := ApplyAuthSettings(tt.input, tt.authEnabled)
+			assert.Equal(t, tt.want, actual)
 		})
 	}
 }

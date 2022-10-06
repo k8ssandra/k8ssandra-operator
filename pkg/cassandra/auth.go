@@ -19,7 +19,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 		return errors.New("PodTemplateSpec was nil, cannot add auth settings")
 	}
 
-	ApplyAuthSettings(dcConfig.CassandraConfig.CassandraYaml, authEnabled)
+	dcConfig.CassandraConfig.CassandraYaml = ApplyAuthSettings(dcConfig.CassandraConfig.CassandraYaml, authEnabled)
 
 	// By default, the Cassandra process will be started with LOCAL_JMX=yes, see cassandra-env.sh. This means that the
 	// Cassandra process will only be accessible with JMX from localhost. This is the safest and preferred setup: you
@@ -81,17 +81,17 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 }
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,
-// depending on whether auth is enabled or not, and only if these settings are empty in the input config. It also
-// sets the com.sun.management.jmxremote.authenticate JVM option to the appropriate value.
-func ApplyAuthSettings(config unstructured.Unstructured, authEnabled bool) {
+// depending on whether auth is enabled or not, and only if these settings are empty in the input config.
+func ApplyAuthSettings(cassandraYaml unstructured.Unstructured, authEnabled bool) unstructured.Unstructured {
 	if authEnabled {
-		config.PutIfAbsent("authenticator", "PasswordAuthenticator")
-		config.PutIfAbsent("authorizer", "CassandraAuthorizer")
+		cassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
+		cassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
 	} else {
-		config.PutIfAbsent("authenticator", "AllowAllAuthenticator")
-		config.PutIfAbsent("authorizer", "AllowAllAuthorizer")
+		cassandraYaml.PutIfAbsent("authenticator", "AllowAllAuthenticator")
+		cassandraYaml.PutIfAbsent("authorizer", "AllowAllAuthorizer")
 	}
-	config.PutIfAbsent("role_manager", "CassandraRoleManager")
+	cassandraYaml.PutIfAbsent("role_manager", "CassandraRoleManager")
+	return cassandraYaml
 }
 
 // If auth is enabled in this cluster, we need to allow components to access the cluster through CQL. This is done by
