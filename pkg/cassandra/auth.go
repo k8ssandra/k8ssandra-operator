@@ -3,9 +3,9 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -19,7 +19,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 		return errors.New("PodTemplateSpec was nil, cannot add auth settings")
 	}
 
-	dcConfig.CassandraConfig.CassandraYaml = ApplyAuthSettings(dcConfig.CassandraConfig.CassandraYaml, authEnabled)
+	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled)
 
 	// By default, the Cassandra process will be started with LOCAL_JMX=yes, see cassandra-env.sh. This means that the
 	// Cassandra process will only be accessible with JMX from localhost. This is the safest and preferred setup: you
@@ -82,16 +82,16 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,
 // depending on whether auth is enabled or not, and only if these settings are empty in the input config.
-func ApplyAuthSettings(cassandraYaml unstructured.Unstructured, authEnabled bool) unstructured.Unstructured {
+func ApplyAuthSettings(config api.CassandraConfig, authEnabled bool) api.CassandraConfig {
 	if authEnabled {
-		cassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
-		cassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
+		config.CassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
+		config.CassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
 	} else {
-		cassandraYaml.PutIfAbsent("authenticator", "AllowAllAuthenticator")
-		cassandraYaml.PutIfAbsent("authorizer", "AllowAllAuthorizer")
+		config.CassandraYaml.PutIfAbsent("authenticator", "AllowAllAuthenticator")
+		config.CassandraYaml.PutIfAbsent("authorizer", "AllowAllAuthorizer")
 	}
-	cassandraYaml.PutIfAbsent("role_manager", "CassandraRoleManager")
-	return cassandraYaml
+	config.CassandraYaml.PutIfAbsent("role_manager", "CassandraRoleManager")
+	return config
 }
 
 // If auth is enabled in this cluster, we need to allow components to access the cluster through CQL. This is done by

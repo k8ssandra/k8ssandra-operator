@@ -19,9 +19,6 @@ const (
 // HandleEncryptionOptions sets up encryption in the datacenter config template.
 // The keystore and truststore config maps are mounted into the datacenter pod and the secrets are read to be set in the datacenter config template.
 func handleEncryptionOptions(template *DatacenterConfig) error {
-
-	cassandraYaml := template.CassandraConfig.CassandraYaml
-
 	if ClientEncryptionEnabled(template) {
 		if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
 			return err
@@ -33,10 +30,10 @@ func handleEncryptionOptions(template *DatacenterConfig) error {
 		}
 		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
 		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		cassandraYaml.PutIfAbsent("client_encryption_options/keystore", keystorePath)
-		cassandraYaml.PutIfAbsent("client_encryption_options/truststore", truststorePath)
-		cassandraYaml.PutIfAbsent("client_encryption_options/keystore_password", template.ClientKeystorePassword)
-		cassandraYaml.PutIfAbsent("client_encryption_options/truststore_password", template.ClientTruststorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore", keystorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore", truststorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore_password", template.ClientKeystorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore_password", template.ClientTruststorePassword)
 	}
 
 	if ServerEncryptionEnabled(template) {
@@ -48,10 +45,10 @@ func handleEncryptionOptions(template *DatacenterConfig) error {
 		}
 		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
 		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		cassandraYaml.PutIfAbsent("server_encryption_options/keystore", keystorePath)
-		cassandraYaml.PutIfAbsent("server_encryption_options/truststore", truststorePath)
-		cassandraYaml.PutIfAbsent("server_encryption_options/keystore_password", template.ServerKeystorePassword)
-		cassandraYaml.PutIfAbsent("server_encryption_options/truststore_password", template.ServerTruststorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore", keystorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore", truststorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore_password", template.ServerKeystorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore_password", template.ServerTruststorePassword)
 	}
 	return nil
 }

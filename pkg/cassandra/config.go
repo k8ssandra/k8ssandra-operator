@@ -3,13 +3,13 @@ package cassandra
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"reflect"
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 )
 
 const (
@@ -39,7 +39,7 @@ func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version,
 
 	// JvmOptions is a struct, we need to convert it to a map using preMarshalConfig
 	jvmOptionsVal := reflect.ValueOf(config.JvmOptions)
-	jvmOptionsOut, err := preMarshalConfig(jvmOptionsVal, serverVersion, serverType)
+	jvmOptionsOut, err := preMarshalConfig(jvmOptionsVal, serverVersion, string(serverType))
 	if err != nil {
 		return nil, err
 	}

@@ -3,8 +3,6 @@ package cassandra
 import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"reflect"
@@ -13,7 +11,7 @@ import (
 // preMarshalConfig expects val to be a struct, or a pointer thereto. It walks through the struct
 // fields and looks for cass-config tags; each field annotated with such tags will be processed and
 // included in the resulting map, which is then returned.
-func preMarshalConfig(val reflect.Value, version *semver.Version, serverType api.ServerDistribution) (map[string]interface{}, error) {
+func preMarshalConfig(val reflect.Value, version *semver.Version, serverType string) (map[string]interface{}, error) {
 	t := val.Type()
 	// if val is a pointer: if nil, return immediately; otherwise dereference it.
 	if t.Kind() == reflect.Ptr {
@@ -35,7 +33,7 @@ func preMarshalConfig(val reflect.Value, version *semver.Version, serverType api
 		if tagStr, tagFound := field.Tag.Lookup(cassConfigTagName); tagFound {
 			if tag, err := parseCassConfigTag(tagStr); err != nil {
 				return nil, fmt.Errorf("cannot parse %v tag on %v.%v: %w", cassConfigTagName, t.String(), field.Name, err)
-			} else if path := tag.pathForVersion(version, string(serverType)); path != nil {
+			} else if path := tag.pathForVersion(version, serverType); path != nil {
 				fieldVal := val.Field(i)
 				if !fieldVal.IsZero() || tag.retainZero {
 					if tag.recurse {
@@ -74,9 +72,6 @@ func preMarshalConfig(val reflect.Value, version *semver.Version, serverType api
 	return out, nil
 }
 
-var typeOfUnstructured = reflect.TypeOf(unstructured.Unstructured{})
-var typeOfPointerToUnstructured = reflect.TypeOf(&unstructured.Unstructured{})
-
 // getFieldValueRecursive returns the value of a complex field annotated with the "recurse" option,
 // converting it to a value that can be put in a map destined to be marshalled for cass-config.
 // Currently, it handles the following types: structs, slices of structs, maps of string keys and
@@ -84,18 +79,10 @@ var typeOfPointerToUnstructured = reflect.TypeOf(&unstructured.Unstructured{})
 func getFieldValueRecursive(
 	fieldVal reflect.Value,
 	version *semver.Version,
-	serverType api.ServerDistribution,
+	serverType string,
 	parentStructType reflect.Type,
 	field reflect.StructField,
 ) (interface{}, error) {
-	if fieldVal.Type() == typeOfUnstructured {
-		u := fieldVal.Interface().(unstructured.Unstructured)
-		return map[string]interface{}(u), nil
-	}
-	if fieldVal.Type() == typeOfPointerToUnstructured {
-		u := fieldVal.Interface().(*unstructured.Unstructured)
-		return map[string]interface{}(*u), nil
-	}
 	fieldKind := fieldVal.Kind()
 	if fieldKind == reflect.Ptr {
 		fieldKind = fieldVal.Type().Elem().Kind()
