@@ -8,6 +8,8 @@ import (
 )
 
 // Unstructured is a map[string]interface{} that can be used to represent unstructured JSON content.
+// This type is a simplified version of the Unstructured type from package
+// "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured".
 // +kubebuilder:validation:Type=object
 type Unstructured map[string]interface{}
 
