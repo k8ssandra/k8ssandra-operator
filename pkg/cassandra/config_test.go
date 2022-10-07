@@ -1,15 +1,17 @@
 package cassandra
 
 import (
-	"github.com/Jeffail/gabs"
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"testing"
+
+	"k8s.io/utils/pointer"
+
+	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
-	"testing"
 )
 
 func TestApplySystemReplication(t *testing.T) {

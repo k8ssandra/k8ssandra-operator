@@ -41,6 +41,10 @@ func (in *Unstructured) DeepCopyInto(out *Unstructured) {
 
 const PathSeparator = "/"
 
+// Get returns the value at the given path and a boolean indicating whether the path exists. Path
+// segments should be separated by slashes, as in: foo/bar/qix.  If this method is invoked on a nil
+// receiver, nil and false is returned. If the map is nil, or if the path does not exist, nil and
+// false is returned.
 func (in *Unstructured) Get(path string) (interface{}, bool) {
 	if in == nil {
 		return nil, false
@@ -52,6 +56,9 @@ func (in *Unstructured) Get(path string) (interface{}, bool) {
 	return utils.GetMapNested(*in, keys[0], keys[1:]...)
 }
 
+// Put puts the value at the given path. Path segments should be separated by slashes, as in:
+// foo/bar/qix. If this method is invoked on a nil receiver, it is a noop. If the map is nil, or if
+// any intermediary key does not exist, it is instantiated.
 func (in *Unstructured) Put(path string, v interface{}) {
 	if in == nil {
 		return
@@ -63,6 +70,10 @@ func (in *Unstructured) Put(path string, v interface{}) {
 	_ = utils.PutMapNested(true, *in, v, keys[0], keys[1:]...)
 }
 
+// PutIfAbsent puts the value at the given path, if and only if the path does not exist, or exists
+// but holds a nil value. Path segments should be separated by slashes, as in: foo/bar/qix. If this
+// method is invoked on a nil receiver, it is a noop. If the map is nil, or if any intermediary key
+// does not exist, it is instantiated.
 func (in *Unstructured) PutIfAbsent(path string, v interface{}) {
 	if in == nil {
 		return
@@ -74,6 +85,8 @@ func (in *Unstructured) PutIfAbsent(path string, v interface{}) {
 	_ = utils.PutMapNested(false, *in, v, keys[0], keys[1:]...)
 }
 
+// PutAll puts the given map in this map, recursively. If this method is invoked on a nil receiver,
+// it is a noop. If the map is nil, or if any intermediary key does not exist, it is instantiated.
 func (in *Unstructured) PutAll(m map[string]interface{}) {
 	if in == nil {
 		return

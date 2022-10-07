@@ -1,8 +1,6 @@
 package utils
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // MergeMap will take two or more maps, merging the entries of the sources map into a destination map. If both maps
 // share the same key then destination's value for that key will be overwritten with what's in source.
@@ -53,7 +51,7 @@ func MergeMapNested(allowOverwrite bool, sources ...map[string]interface{}) (map
 }
 
 // GetMapNested gets the value at the given keys in the given map. It returns nil and false if the
-// map does not contain any of the keys.
+// map does not contain all the keys.
 func GetMapNested(m map[string]interface{}, key string, keys ...string) (interface{}, bool) {
 	if len(keys) == 0 {
 		val, found := m[key]
