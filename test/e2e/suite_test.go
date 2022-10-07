@@ -715,9 +715,10 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
-	t.Log("delete Stargate in k8ssandracluster CRD")
+	t.Log("delete Stargate in k8ssandracluster resource")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	dcLastRestart := k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart
 	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
@@ -741,6 +742,11 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		}
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
+	t.Log("check that Cassandra DC was not restarted")
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	require.Equal(dcLastRestart, k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart)
+
 	t.Log("re-create Stargate in k8ssandracluster resource")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
@@ -749,6 +755,11 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err = f.Client.Patch(ctx, k8ssandra, patch)
 	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
+
+	t.Log("check that Cassandra DC was not restarted")
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	require.Equal(dcLastRestart, k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
