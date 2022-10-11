@@ -8,7 +8,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 )
 
 const JmxInitContainer = "jmx-credentials"
@@ -33,11 +32,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 	// required (com.sun.management.jmxremote.authenticate=true). We need to change that here and enable/disable
 	// authentication based on what the user specified, not what the script infers.
 	jmxAuthenticateOpt := fmt.Sprintf("-Dcom.sun.management.jmxremote.authenticate=%v", authEnabled)
-	// prepend instead of append, so that user-specified options take precedence
-	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{jmxAuthenticateOpt},
-		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
-	)
+	addOptionIfMissing(dcConfig, jmxAuthenticateOpt)
 
 	// When auth is enabled in the cluster, tools that use JMX to communicate with Cassandra need to authenticate as
 	// well, e.g. Reaper or nodetool. Note that Reaper will use its own JMX user secret to authenticate, see
@@ -86,27 +81,16 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 }
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,
-// depending on whether auth is enabled or not, and only if these settings are empty in the input config. It also
-// sets the com.sun.management.jmxremote.authenticate JVM option to the appropriate value.
+// depending on whether auth is enabled or not, and only if these settings are empty in the input config.
 func ApplyAuthSettings(config api.CassandraConfig, authEnabled bool) api.CassandraConfig {
 	if authEnabled {
-		if config.CassandraYaml.Authenticator == nil {
-			config.CassandraYaml.Authenticator = pointer.String("PasswordAuthenticator")
-		}
-		if config.CassandraYaml.Authorizer == nil {
-			config.CassandraYaml.Authorizer = pointer.String("CassandraAuthorizer")
-		}
+		config.CassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
+		config.CassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
 	} else {
-		if config.CassandraYaml.Authenticator == nil {
-			config.CassandraYaml.Authenticator = pointer.String("AllowAllAuthenticator")
-		}
-		if config.CassandraYaml.Authorizer == nil {
-			config.CassandraYaml.Authorizer = pointer.String("AllowAllAuthorizer")
-		}
+		config.CassandraYaml.PutIfAbsent("authenticator", "AllowAllAuthenticator")
+		config.CassandraYaml.PutIfAbsent("authorizer", "AllowAllAuthorizer")
 	}
-	if config.CassandraYaml.RoleManager == nil {
-		config.CassandraYaml.RoleManager = pointer.String("CassandraRoleManager")
-	}
+	config.CassandraYaml.PutIfAbsent("role_manager", "CassandraRoleManager")
 	return config
 }
 

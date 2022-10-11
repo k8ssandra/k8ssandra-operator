@@ -56,6 +56,13 @@ func TestMergeMapNested(t *testing.T) {
 			assert.Error,
 		},
 		{
+			"simple merge overlapping no overwrite nil value",
+			false,
+			[]map[string]interface{}{{"foo": nil}, {"foo": "bar"}},
+			map[string]interface{}{"foo": "bar"},
+			assert.NoError,
+		},
+		{
 			"simple merge overlapping overwrite",
 			true,
 			[]map[string]interface{}{{"foo": 42}, {"foo": "bar"}},
@@ -77,6 +84,13 @@ func TestMergeMapNested(t *testing.T) {
 			assert.Error,
 		},
 		{
+			"nested merge overlapping no overwrite nil value",
+			false,
+			[]map[string]interface{}{{"foo": map[string]interface{}{"a": 123, "b": nil}}, {"foo": map[string]interface{}{"b": 123, "c": 456}}},
+			map[string]interface{}{"foo": map[string]interface{}{"a": 123, "b": 123, "c": 456}},
+			assert.NoError,
+		},
+		{
 			"nested merge overlapping overwrite",
 			true,
 			[]map[string]interface{}{{"foo": map[string]interface{}{"a": 123, "b": 456}}, {"foo": map[string]interface{}{"b": 123, "c": 456}}},
@@ -96,6 +110,13 @@ func TestMergeMapNested(t *testing.T) {
 			[]map[string]interface{}{{"foo": map[string]interface{}{"bar": 42}}, {"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}}},
 			nil,
 			assert.Error,
+		},
+		{
+			"nested merge overlapping non-map vs map no overwrite nil intermediary value",
+			false,
+			[]map[string]interface{}{{"foo": map[string]interface{}{"bar": nil}}, {"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}}},
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}},
+			assert.NoError,
 		},
 		{
 			"nested merge overlapping map vs non-map overwrite",
@@ -216,6 +237,14 @@ func TestPutMapNested(t *testing.T) {
 			assert.Error,
 		},
 		{
+			"existing keys overlap no overwrite nil value",
+			false,
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": nil}}},
+			[]string{"foo", "bar", "qix"},
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}},
+			assert.NoError,
+		},
+		{
 			"existing keys overlap overwrite",
 			true,
 			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 41}}},
@@ -232,6 +261,14 @@ func TestPutMapNested(t *testing.T) {
 			assert.Error,
 		},
 		{
+			"intermediary key nil overlap no overwrite",
+			false,
+			map[string]interface{}{"foo": nil},
+			[]string{"foo", "bar", "qix"},
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}},
+			assert.NoError,
+		},
+		{
 			"intermediary key wrong type overlap overwrite",
 			true,
 			map[string]interface{}{"foo": []int{41, 42}},
@@ -246,6 +283,14 @@ func TestPutMapNested(t *testing.T) {
 			[]string{"foo", "bar", "qix"},
 			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": "41"}}},
 			assert.Error,
+		},
+		{
+			"last key nil overlap no overwrite",
+			false,
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": nil}}},
+			[]string{"foo", "bar", "qix"},
+			map[string]interface{}{"foo": map[string]interface{}{"bar": map[string]interface{}{"qix": 42}}},
+			assert.NoError,
 		},
 		{
 			"last key wrong type overlap overwrite",

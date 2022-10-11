@@ -25,7 +25,6 @@ spec:
         thrift_prepared_statements_cache_size_mb: 1
         prepared_statements_cache_size_mb: 1
         slow_query_log_timeout_in_ms: 0
-        block_for_peers_timeout_in_secs: 10000
         cas_contention_timeout_in_ms: 10000
         counter_write_request_timeout_in_ms: 10000
         range_request_timeout_in_ms: 10000
