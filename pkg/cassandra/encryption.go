@@ -28,6 +28,12 @@ func handleEncryptionOptions(template *DatacenterConfig) error {
 			// Add JMX encryption jvm options
 			addJmxEncryptionOptions(template)
 		}
+		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore", keystorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore", truststorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore_password", template.ClientKeystorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore_password", template.ClientTruststorePassword)
 	}
 
 	if ServerEncryptionEnabled(template) {
@@ -37,6 +43,12 @@ func handleEncryptionOptions(template *DatacenterConfig) error {
 			// Create the volume and mount for the keystore
 			addVolumesForEncryption(template, encryption.StoreTypeServer, *template.ServerEncryptionStores)
 		}
+		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore", keystorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore", truststorePath)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore_password", template.ServerKeystorePassword)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore_password", template.ServerTruststorePassword)
 	}
 	return nil
 }
@@ -139,11 +151,13 @@ func StoreMountFullPath(storeType encryption.StoreType, storeName encryption.Sto
 }
 
 func ClientEncryptionEnabled(template *DatacenterConfig) bool {
-	return template.CassandraConfig.CassandraYaml.ClientEncryptionOptions != nil && template.CassandraConfig.CassandraYaml.ClientEncryptionOptions.Enabled
+	enabled, _ := template.CassandraConfig.CassandraYaml.Get("client_encryption_options/enabled")
+	return enabled == true
 }
 
 func ServerEncryptionEnabled(template *DatacenterConfig) bool {
-	return template.CassandraConfig.CassandraYaml.ServerEncryptionOptions != nil && template.CassandraConfig.CassandraYaml.ServerEncryptionOptions.InternodeEncryption != "none"
+	internodeEncryption, _ := template.CassandraConfig.CassandraYaml.Get("server_encryption_options/internode_encryption")
+	return internodeEncryption != nil && internodeEncryption != "none"
 }
 
 func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.NamespacedName, template *DatacenterConfig, remoteClient client.Client, logger logr.Logger) error {

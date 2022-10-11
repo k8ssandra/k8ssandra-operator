@@ -16,14 +16,6 @@ resources:
 - bases/medusa.k8ssandra.io_medusabackupschedules.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
-patches:
-- path: patches/remove_config_validation.json
-  target:
-    group: apiextensions.k8s.io
-    version: v1
-    kind: CustomResourceDefinition
-    name: k8ssandraclusters.k8ssandra.io
-
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD

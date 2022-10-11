@@ -5,13 +5,11 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
-	"k8s.io/utils/pointer"
-
+	"github.com/Masterminds/semver/v3"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 )
 
 const (
@@ -19,137 +17,85 @@ const (
 	allowAlterRf                    = "-Dcassandra.allow_alter_rf_during_range_movement=true"
 )
 
-// CreateJsonConfig parses a DatacenterConfig into a raw JSON base64-encoded string as required by
-// the CassandraDatacenter.Spec.Config field, which is processed by cass-config-builder.
-func CreateJsonConfig(apiConfig *DatacenterConfig) ([]byte, error) {
-	cfg := &cassConfig{
-		CassandraConfig: apiConfig.CassandraConfig.DeepCopy(),
+// createJsonConfig parses a CassandraConfig into raw JSON bytes as required by the
+// CassandraDatacenter.Spec.Config field, which is processed by cass-config-builder.
+func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version, serverType api.ServerDistribution) ([]byte, error) {
+
+	out := make(unstructured.Unstructured)
+
+	// cassandra.yaml is an unstructured map, we simply append it to the output
+	// TODO validate cassandra.yaml settings with JSON schemas
+	// TODO postprocess cassandra.yaml settings, e.g. mountable volumes or resource.Quantity syntax
+	if len(config.CassandraYaml) > 0 {
+		out["cassandra-yaml"] = config.CassandraYaml
 	}
-	addNumTokens(apiConfig, cfg)
-	addEncryptionOptions(apiConfig, cfg)
-	handleDeprecatedJvmOptions(cfg)
-	if out, err := preMarshalConfig(reflect.ValueOf(cfg), apiConfig.ServerVersion, string(apiConfig.ServerType)); err != nil {
+
+	// dse.yaml is an unstructured map, we simply append it to the output
+	// TODO validate dse.yaml settings with JSON schemas
+	// TODO postprocess dse.yaml settings, e.g. mountable volumes or resource.Quantity syntax
+	if len(config.DseYaml) > 0 {
+		out["dse-yaml"] = config.DseYaml
+	}
+
+	// JvmOptions is a struct, we need to convert it to a map using preMarshalConfig
+	jvmOptionsVal := reflect.ValueOf(config.JvmOptions)
+	jvmOptionsOut, err := preMarshalConfig(jvmOptionsVal, serverVersion, string(serverType))
+	if err != nil {
 		return nil, err
-	} else {
-		return json.Marshal(out)
 	}
+	out.PutAll(jvmOptionsOut)
+
+	return json.Marshal(out)
 }
 
-// cassConfig is an internal type that is semantically equivalent to an api.CassandraConfig object,
-// with the addition of a few hidden fields that the user cannot set directly.
-type cassConfig struct {
-	*api.CassandraConfig   `cass-config:";recurse"`
-	StartRpc               bool              `cass-config:"^3.11.x:cassandra-yaml/start_rpc;retainzero"`
-	ServerEncryptionStores *encryptionStores `cass-config:"cassandra-yaml/server_encryption_options;recurse"`
-	ClientEncryptionStores *encryptionStores `cass-config:"cassandra-yaml/client_encryption_options;recurse"`
-}
-
-type encryptionStores struct {
-	Keystore           string `cass-config:"keystore"`
-	KeystorePassword   string `cass-config:"keystore_password"`
-	Truststore         string `cass-config:"truststore"`
-	TruststorePassword string `cass-config:"truststore_password"`
-}
-
-func addNumTokens(template *DatacenterConfig, cfg *cassConfig) {
+func addNumTokens(template *DatacenterConfig) {
 	// Even though we default to Cassandra's stock defaults for num_tokens, we need to
 	// explicitly set it because the config builder defaults to num_tokens: 1
-	if cfg.CassandraYaml.NumTokens == nil {
-		version := template.ServerVersion
-		if template.ServerType == api.ServerDistributionCassandra && version.Major() == 3 {
-			cfg.CassandraYaml.NumTokens = pointer.Int(256)
-		} else {
-			cfg.CassandraYaml.NumTokens = pointer.Int(16)
-		}
+	// FIXME when importing existing clusters, we should not override the user's num_tokens setting – even if it's unset (1)
+	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", 256)
+	} else {
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", 16)
 	}
 }
 
-func addEncryptionOptions(template *DatacenterConfig, cfg *cassConfig) {
-	if ClientEncryptionEnabled(template) {
-		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
-		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		cfg.ClientEncryptionStores = &encryptionStores{
-			Keystore:           keystorePath,
-			Truststore:         truststorePath,
-			KeystorePassword:   template.ClientKeystorePassword,
-			TruststorePassword: template.ClientTruststorePassword,
-		}
-	}
-	if ServerEncryptionEnabled(template) {
-		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
-		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		cfg.ServerEncryptionStores = &encryptionStores{
-			Keystore:           keystorePath,
-			Truststore:         truststorePath,
-			KeystorePassword:   template.ServerKeystorePassword,
-			TruststorePassword: template.ServerTruststorePassword,
-		}
+func addStartRpc(template *DatacenterConfig) {
+	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("start_rpc", false)
 	}
 }
 
 // Handles the deprecated settings: HeapSize and HeapNewGenSize by copying their values, if any,
 // to the appropriate destination settings, iif these are nil.
 //goland:noinspection GoDeprecation
-func handleDeprecatedJvmOptions(cfg *cassConfig) {
+func handleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
 	// Transfer the global heap size to specific keys
-	if cfg.JvmOptions.HeapSize != nil {
-		if cfg.JvmOptions.InitialHeapSize == nil {
-			cfg.JvmOptions.InitialHeapSize = cfg.JvmOptions.HeapSize
+	if jvmOptions.HeapSize != nil {
+		if jvmOptions.InitialHeapSize == nil {
+			jvmOptions.InitialHeapSize = jvmOptions.HeapSize
 		}
-		if cfg.JvmOptions.MaxHeapSize == nil {
-			cfg.JvmOptions.MaxHeapSize = cfg.JvmOptions.HeapSize
+		if jvmOptions.MaxHeapSize == nil {
+			jvmOptions.MaxHeapSize = jvmOptions.HeapSize
 		}
 	}
 	// Transfer HeapNewGenSize
-	if cfg.JvmOptions.HeapNewGenSize != nil {
-		if cfg.JvmOptions.CmsHeapSizeYoungGeneration == nil {
-			cfg.JvmOptions.CmsHeapSizeYoungGeneration = cfg.JvmOptions.HeapNewGenSize
+	if jvmOptions.HeapNewGenSize != nil {
+		if jvmOptions.CmsHeapSizeYoungGeneration == nil {
+			jvmOptions.CmsHeapSizeYoungGeneration = jvmOptions.HeapNewGenSize
 		}
 	}
 }
 
-// Some settings in Cassandra are using a float type, which isn't supported for CRDs.
-// They were changed to use a string type, and we validate here that if set they can parse correctly to float.
-// FIXME turn these validations into kubebuilder markup and enforce a pattern for floating point numbers and/or use int or resource.Quantity
-func validateCassandraYaml(cassandraYaml *api.CassandraYaml) error {
-	if cassandraYaml.CommitlogSyncBatchWindowInMs != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.CommitlogSyncBatchWindowInMs, 64); err != nil {
-			return fmt.Errorf("CommitlogSyncBatchWindowInMs must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.DiskOptimizationEstimatePercentile != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.DiskOptimizationEstimatePercentile, 64); err != nil {
-			return fmt.Errorf("DiskOptimizationEstimatePercentile must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.DynamicSnitchBadnessThreshold != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.DynamicSnitchBadnessThreshold, 64); err != nil {
-			return fmt.Errorf("DynamicSnitchBadnessThreshold must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.MemtableCleanupThreshold != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.MemtableCleanupThreshold, 64); err != nil {
-			return fmt.Errorf("MemtableCleanupThreshold must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.PhiConvictThreshold != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.PhiConvictThreshold, 64); err != nil {
-			return fmt.Errorf("PhiConvictThreshold must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.RangeTombstoneListGrowthFactor != nil {
-		if _, err := strconv.ParseFloat(*cassandraYaml.RangeTombstoneListGrowthFactor, 64); err != nil {
-			return fmt.Errorf("RangeTombstoneListGrowthFactor must be a valid float: %v", err)
-		}
-	}
-
-	if cassandraYaml.CommitlogSyncPeriodInMs != nil && cassandraYaml.CommitlogSyncBatchWindowInMs != nil {
-		return fmt.Errorf("CommitlogSyncPeriodInMs and CommitlogSyncBatchWindowInMs are mutually exclusive")
+// validateCassandraYaml provides semantic validation for cassandra.yaml settings.
+// TODO this is a relic of the structured YAML approach. Only the bits that are still relevant were ported over.
+// From now on, all syntactic validation is expected to happen externally using JSON schemas.
+// Do not use this function to validate the syntax of cassandra.yaml settings. Use ONLY to validate
+// any semantics that cannot be validated with JSON schemas.
+func validateCassandraYaml(cassandraYaml unstructured.Unstructured) error {
+	commitLogSync := cassandraYaml["commitlog_sync_period_in_ms"]
+	commitLogSyncBatch := cassandraYaml["commitlog_sync_batch_window_in_ms"]
+	if commitLogSync != nil && commitLogSyncBatch != nil {
+		return fmt.Errorf("commitlog_sync_period_in_ms and commitlog_sync_batch_window_in_ms are mutually exclusive")
 	}
 	return nil
 }
@@ -170,18 +116,9 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 		replicationFactors = append(replicationFactors, fmt.Sprintf("%s:%d", dc, replication[dc]))
 	}
 	replicationStrategy := SystemReplicationFactorStrategy + "=" + strings.Join(replicationFactors, ",")
-
-	// prepend instead of append, so that user-specified options take precedence
-	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{replicationStrategy},
-		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
-	)
+	addOptionIfMissing(dcConfig, replicationStrategy)
 }
 
 func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
-	// prepend instead of append, so that user-specified options take precedence
-	dcConfig.CassandraConfig.JvmOptions.AdditionalOptions = append(
-		[]string{allowAlterRf},
-		dcConfig.CassandraConfig.JvmOptions.AdditionalOptions...,
-	)
+	addOptionIfMissing(dcConfig, allowAlterRf)
 }

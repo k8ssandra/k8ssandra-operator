@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"k8s.io/utils/pointer"
 
 	"github.com/stretchr/testify/assert"
@@ -199,8 +200,8 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					CassandraConfig: &api.CassandraConfig{
-						CassandraYaml: api.CassandraYaml{
-							ConcurrentReads: pointer.Int(8),
+						CassandraYaml: unstructured.Unstructured{
+							"concurrent_reads": 8,
 						},
 					},
 				},
@@ -208,8 +209,8 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					CassandraConfig: &api.CassandraConfig{
-						CassandraYaml: api.CassandraYaml{
-							ConcurrentWrites: pointer.Int(8),
+						CassandraYaml: unstructured.Unstructured{
+							"concurrent_writes": 8,
 						},
 						JvmOptions: api.JvmOptions{
 							MaxHeapSize: parseQuantity("1024Mi"),
@@ -219,8 +220,8 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
-					CassandraYaml: api.CassandraYaml{
-						ConcurrentWrites: pointer.Int(8),
+					CassandraYaml: unstructured.Unstructured{
+						"concurrent_writes": 8,
 					},
 					JvmOptions: api.JvmOptions{
 						MaxHeapSize: parseQuantity("1024Mi"),

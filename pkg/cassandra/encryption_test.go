@@ -6,6 +6,7 @@ import (
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,12 +16,12 @@ import (
 func TestCheckMandatoryEncryptionFields(t *testing.T) {
 	dcConfig := &DatacenterConfig{
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},
@@ -52,12 +53,12 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 			Spec: corev1.PodSpec{},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},
@@ -142,12 +143,12 @@ func TestAddVolumesForEncryption(t *testing.T) {
 			Spec: corev1.PodSpec{},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},
@@ -191,12 +192,12 @@ func TestHandleEncryptionOptions(t *testing.T) {
 			Spec: corev1.PodSpec{},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},
@@ -218,6 +219,8 @@ func TestHandleEncryptionOptions(t *testing.T) {
 		},
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
+		ServerKeystorePassword:   "test",
+		ServerTruststorePassword: "test",
 	}
 
 	err := handleEncryptionOptions(dcConfig)
@@ -236,9 +239,33 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	assert.Equal(t, "client-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[1].Name)
 	assert.Equal(t, "server-keystore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[2].Name)
 	assert.Equal(t, "server-truststore", dcConfig.PodTemplateSpec.Spec.Containers[0].VolumeMounts[3].Name)
-	for _, jvmOption := range []string{"-Dcom.sun.management.jmxremote.ssl=true", "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true", fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)), fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)), fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", dcConfig.ClientKeystorePassword), fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", dcConfig.ClientTruststorePassword)} {
+	for _, jvmOption := range []string{
+		"-Dcom.sun.management.jmxremote.ssl=true",
+		"-Dcom.sun.management.jmxremote.ssl.need.client.auth=true",
+		fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)),
+		fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)),
+		fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", dcConfig.ClientKeystorePassword),
+		fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", dcConfig.ClientTruststorePassword),
+	} {
 		assert.True(t, utils.SliceContains(dcConfig.CassandraConfig.JvmOptions.AdditionalOptions, jvmOption), fmt.Sprintf("JVM option %s not found", jvmOption))
 	}
+	expectedCassandraYaml := unstructured.Unstructured{
+		"client_encryption_options": map[string]interface{}{
+			"enabled":             true,
+			"keystore":            "/mnt/client-keystore/keystore",
+			"keystore_password":   "test",
+			"truststore":          "/mnt/client-truststore/truststore",
+			"truststore_password": "test",
+		},
+		"server_encryption_options": map[string]interface{}{
+			"internode_encryption": "all",
+			"keystore":             "/mnt/server-keystore/keystore",
+			"keystore_password":    "test",
+			"truststore":           "/mnt/server-truststore/truststore",
+			"truststore_password":  "test",
+		},
+	}
+	assert.Equal(t, expectedCassandraYaml, dcConfig.CassandraConfig.CassandraYaml)
 }
 
 func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
@@ -257,12 +284,12 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},
@@ -314,12 +341,12 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 			Spec: corev1.PodSpec{},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: false,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": false,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "none",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "none",
 				},
 			},
 		},
@@ -331,6 +358,15 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Containers))
+	expectedCassandraYaml := unstructured.Unstructured{
+		"client_encryption_options": map[string]interface{}{
+			"enabled": false,
+		},
+		"server_encryption_options": map[string]interface{}{
+			"internode_encryption": "none",
+		},
+	}
+	assert.Equal(t, expectedCassandraYaml, dcConfig.CassandraConfig.CassandraYaml)
 }
 
 func TestHandleFailedEncryptionOptions(t *testing.T) {
@@ -340,12 +376,12 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 			Spec: corev1.PodSpec{},
 		},
 		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: api.CassandraYaml{
-				ClientEncryptionOptions: &encryption.ClientEncryptionOptions{
-					Enabled: true,
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
 				},
-				ServerEncryptionOptions: &encryption.ServerEncryptionOptions{
-					InternodeEncryption: "all",
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
 				},
 			},
 		},

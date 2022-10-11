@@ -136,7 +136,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, DCConfigIncomplete{"template.ServerType"}
 	}
 
-	if err := validateCassandraYaml(&template.CassandraConfig.CassandraYaml); err != nil {
+	if err := validateCassandraYaml(template.CassandraConfig.CassandraYaml); err != nil {
 		return nil, err
 	}
 
@@ -145,7 +145,11 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		return nil, err
 	}
 
-	rawConfig, err := CreateJsonConfig(template)
+	handleDeprecatedJvmOptions(&template.CassandraConfig.JvmOptions)
+	addNumTokens(template)
+	addStartRpc(template)
+
+	rawConfig, err := createJsonConfig(template.CassandraConfig, template.ServerVersion, template.ServerType)
 	if err != nil {
 		return nil, err
 	}
