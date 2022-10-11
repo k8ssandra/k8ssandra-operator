@@ -718,7 +718,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("delete Stargate in k8ssandracluster resource")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	dcLastRestart := k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart
+	dcGeneration := k8ssandra.Status.Datacenters["dc1"].Cassandra.ObservedGeneration
 	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	stargateTemplate := k8ssandra.Spec.Cassandra.Datacenters[0].Stargate
 	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate = nil
@@ -745,7 +745,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("check that Cassandra DC was not restarted")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	require.Equal(dcLastRestart, k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart)
+	require.Equal(dcGeneration, k8ssandra.Status.Datacenters["dc1"].Cassandra.ObservedGeneration)
 
 	t.Log("re-create Stargate in k8ssandracluster resource")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
@@ -759,7 +759,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	t.Log("check that Cassandra DC was not restarted")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-	require.Equal(dcLastRestart, k8ssandra.Status.Datacenters["dc1"].Cassandra.LastRollingRestart)
+	require.Equal(dcGeneration, k8ssandra.Status.Datacenters["dc1"].Cassandra.ObservedGeneration)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
