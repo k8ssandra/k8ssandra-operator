@@ -35,7 +35,7 @@ Create a PR for the k8ssandra repo that includes the following changes:
 * Empty the `charts/k8ssandra-operator/crds` directory in k8ssandra repo and move `/tmp/k8ssandra-operator-crds.yaml` in it.
 * Generate RBAC manifests by running `kustomize build config/rbac > /tmp/k8ssandra-operator-rbac.yaml` in k8ssandra-operator repo
     * Make sure to do this from the release tag
-* Apply RBAC changes in `charts/k8ssandra-operator/templates` in k8ssandra repo by extracting the rules section from the k8ssandra-operator Role from `/tmp/k8ssandra-operator-rbac.yaml` and overwriting it in `charts/k8ssandra-operator/templates/role.yaml`. Then copy the rules section from the generated rbac file to overwrite the corresponding section in `charts/k8ssandra-operator/templates/leader-role.yaml`.
+* Apply RBAC changes in `charts/k8ssandra-operator/templates` in k8ssandra repo by extracting the rules section from the k8ssandra-operator Role from `/tmp/k8ssandra-operator-rbac.yaml` and overwriting it in both `charts/k8ssandra-operator/templates/role.yaml` and `charts/k8ssandra-operator/templates/clusterrole.yaml`. Then copy the rules section from the generated rbac file to overwrite the corresponding section in `charts/k8ssandra-operator/templates/leader-role.yaml`.
 * Update the `image.tag` property in `charts/k8ssandra-operator/values.yaml`, e.g., `v1.0.0`
 * Update the `version` and `appVersion` properties in `charts/k8ssandra-operator/Chart.yaml`
 
