@@ -6,7 +6,6 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -34,48 +33,12 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets 
 	jmxAuthenticateOpt := fmt.Sprintf("-Dcom.sun.management.jmxremote.authenticate=%v", authEnabled)
 	addOptionIfMissing(dcConfig, jmxAuthenticateOpt)
 
-	// When auth is enabled in the cluster, tools that use JMX to communicate with Cassandra need to authenticate as
-	// well, e.g. Reaper or nodetool. Note that Reaper will use its own JMX user secret to authenticate, see
-	// pkg/reaper/datacenter.go. However, we need to take care of nodetool and other generic JMX clients as well. This
-	// is done by adding an init container that injects the cluster superuser credentials into the jmxremote.password
-	// file in each Cassandra pod. This means that it will be possible to use the superuser credentials to authenticate
-	// any JMX client.
-	// TODO use Cassandra internals for JMX authentication, see https://github.com/k8ssandra/k8ssandra/issues/323
+	// Use Cassandra internals for JMX authentication and authorization. This allows JMX clients to connect with the
+	// superuser secret.
 	if authEnabled && !useExternalSecrets {
-		image := dcConfig.JmxInitContainerImage.ApplyDefaults(DefaultJmxInitImage)
-		dcConfig.PodTemplateSpec.Spec.ImagePullSecrets = images.CollectPullSecrets(image)
-		UpdateInitContainer(dcConfig.PodTemplateSpec, JmxInitContainer, func(c *corev1.Container) {
-			c.Image = image.String()
-			c.ImagePullPolicy = image.PullPolicy
-			c.Env = append(c.Env,
-				corev1.EnvVar{
-					Name: "SUPERUSER_JMX_USERNAME",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: dcConfig.SuperuserSecretRef,
-							Key:                  "username",
-						},
-					},
-				},
-				corev1.EnvVar{
-					Name: "SUPERUSER_JMX_PASSWORD",
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: dcConfig.SuperuserSecretRef,
-							Key:                  "password",
-						},
-					},
-				})
-			c.VolumeMounts = []corev1.VolumeMount{{
-				Name:      "server-config",
-				MountPath: "/config",
-			}}
-			c.Args = []string{
-				"/bin/sh",
-				"-c",
-				"echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password",
-			}
-		})
+		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.remote.login.config=CassandraLogin")
+		addOptionIfMissing(dcConfig, "-Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config")
+		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy")
 	}
 	return nil
 }
