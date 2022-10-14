@@ -66,10 +66,10 @@ func TestSecretController(t *testing.T) {
 }
 
 // copySecretsFromClusterToCluster Tests:
-// 	* Copy secret to another cluster (not existing one)
-// 	* Modify the secret in main cluster - see that it is updated to slave cluster also
-// 	* Modify the secret in the slave cluster - see that it is replaced by the main cluster data
-//	* Verify the status has been updated
+//   - Copy secret to another cluster (not existing one)
+//   - Modify the secret in main cluster - see that it is updated to slave cluster also
+//   - Modify the secret in the slave cluster - see that it is replaced by the main cluster data
+//   - Verify the status has been updated
 func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	// assert := assert.New(t)
@@ -195,10 +195,10 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 }
 
 // verifySecretIsDeleted checks that the finalizer functionality works
-// 	* Create secret and ReplicatedSecret
-//	* Verify it is copied to another cluster
-//  * Delete ReplicatedSecret from main cluster
-//  * Verify the secrets are deleted from the remote cluster (but not local)
+//   - Create secret and ReplicatedSecret
+//   - Verify it is copied to another cluster
+//   - Delete ReplicatedSecret from main cluster
+//   - Verify the secrets are deleted from the remote cluster (but not local)
 func verifySecretIsDeleted(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	var empty struct{}

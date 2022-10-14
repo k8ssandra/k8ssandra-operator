@@ -10,7 +10,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-//Test_InjectCassandraTelemetryFilters tests that metrics filters from the CRD are correctly injected.
+// Test_InjectCassandraTelemetryFilters tests that metrics filters from the CRD are correctly injected.
 func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
 		PodTemplateSpec: &v1.PodTemplateSpec{
@@ -43,7 +43,7 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 	assert.Equal(t, cassandraEnvVariables[0].Value, "deny:org.apache.cassandra.metrics.Table deny:org.apache.cassandra.metrics.table", "Expected METRIC_FILTERS env variable to be injected")
 }
 
-//Test_InjectCassandraTelemetryFiltersDefaults tests that default metrics filters are injected when no custom ones are defined.
+// Test_InjectCassandraTelemetryFiltersDefaults tests that default metrics filters are injected when no custom ones are defined.
 func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
 		PodTemplateSpec: &v1.PodTemplateSpec{
