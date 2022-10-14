@@ -1,5 +1,5 @@
 // package v1alpha1: Types in this package are instantiated in the other types in k8ssandra-operator, especially Stargate types and Cassandra types.
-// +kubebuilder:object:generate=true
+//+kubebuilder:object:generate=true
 package v1alpha1
 
 type TelemetrySpec struct {
