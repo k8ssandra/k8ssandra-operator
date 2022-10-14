@@ -380,7 +380,6 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 	t.Log("create the Reaper object and modify it")
 	rpr := newReaper(testNamespace)
 	rpr.Spec.CassandraUserSecretRef.Name = "top-secret-cass"
-	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx"
 	rpr.Spec.UiUserSecretRef.Name = "top-secret-ui"
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)
@@ -408,11 +407,11 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 	assert.True(t, envVarHasValue(envVars, "REAPER_CASS_AUTH_ENABLED", "true"), "Cassandra auth enabled env var is not set to true")
 
 	assert.True(t, envVarExists(envVars, "REAPER_JMX_AUTH_USERNAME"), "Cassandra auth username env var not found")
-	assert.True(t, envVarSecretHasName(envVars, "REAPER_JMX_AUTH_USERNAME", "top-secret-jmx"), "Cassandra jmx username env var secret name not found")
+	assert.True(t, envVarSecretHasName(envVars, "REAPER_JMX_AUTH_USERNAME", "top-secret-cass"), "Cassandra jmx username env var secret name not found")
 	assert.True(t, envVarSecretHasKey(envVars, "REAPER_JMX_AUTH_USERNAME", "username"), "Cassandra jmx username env var secret key not found")
 
 	assert.True(t, envVarExists(envVars, "REAPER_JMX_AUTH_PASSWORD"), "Cassandra auth password env var not found")
-	assert.True(t, envVarSecretHasName(envVars, "REAPER_JMX_AUTH_PASSWORD", "top-secret-jmx"), "Cassandra jmx password env var secret name not found")
+	assert.True(t, envVarSecretHasName(envVars, "REAPER_JMX_AUTH_PASSWORD", "top-secret-cass"), "Cassandra jmx password env var secret name not found")
 	assert.True(t, envVarSecretHasKey(envVars, "REAPER_JMX_AUTH_PASSWORD", "password"), "Cassandra jmx password env var secret key not found")
 
 	assert.True(t, envVarExists(envVars, "REAPER_AUTH_ENABLED"), "Reaper auth enabled env var not found")

@@ -62,7 +62,6 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.SanitizedName()))
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.SanitizedName()))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
@@ -129,8 +128,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	t.Log("check that authentication is disabled in Reaper CRD")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
-		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{} &&
-			r.Spec.JmxUserSecretRef == corev1.LocalObjectReference{}
+		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{}
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")
@@ -182,7 +180,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
-	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
@@ -258,8 +255,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 
 	t.Log("check that authentication is enabled in Reaper CRD")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
-		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")} &&
-			r.Spec.JmxUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultJmxUserSecretName("cluster1")}
+		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")}
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")

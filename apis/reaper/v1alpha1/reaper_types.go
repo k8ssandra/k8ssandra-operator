@@ -49,11 +49,8 @@ type ReaperTemplate struct {
 	// +optional
 	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
 
-	// Defines the username and password that Reaper will use to authenticate JMX connections to Cassandra clusters.
-	// These credentials will be automatically passed to each Cassandra node in the datacenter, as well as to the Reaper
-	// instance, so that the latter can authenticate against the former. If JMX authentication is not required, leave
-	// this field empty. The secret must be in the same namespace as Reaper itself and must contain two keys: "username"
-	// and "password".
+	// Deprecated: JMX security is now based on CQL roles. Reaper will use cassandraUsefSecretRef for authentication,
+	// this field is ignored.
 	// +optional
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
 

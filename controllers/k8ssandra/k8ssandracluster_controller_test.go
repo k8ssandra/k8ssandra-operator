@@ -2571,10 +2571,6 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	require.True(foundInit, "failed to find injected-init-container")
 	require.Equal(2, posInit, "injected-init-container should be the third init container")
 
-	posJmxInit, foundJmxInit := cassandra.FindInitContainer(dc.Spec.PodTemplateSpec, "jmx-credentials")
-	require.True(foundJmxInit, "failed to find jmx-credentials init container")
-	require.Equal(3, posJmxInit, "jmx-credentials should be the fourth init container")
-
 	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
 

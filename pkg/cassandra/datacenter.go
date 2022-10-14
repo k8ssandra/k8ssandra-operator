@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// TODO remove
 var DefaultJmxInitImage = images.Image{
 	Registry:   images.DefaultRegistry,
 	Repository: images.DockerOfficialRepository,

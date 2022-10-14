@@ -50,16 +50,14 @@ func NewReaper(
 	}
 	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
-		// Reaper: one for CQL connections, one for JMX connections. Here we assume that these secrets exist. If the
+		// Reaper: one for CQL and JMX connections, one for the UI. Here we assume that these secrets exist. If the
 		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
 		// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
 		// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
 		if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
 			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.SanitizedName())
 		}
-		if desiredReaper.Spec.JmxUserSecretRef.Name == "" {
-			desiredReaper.Spec.JmxUserSecretRef.Name = DefaultJmxUserSecretName(kc.SanitizedName())
-		}
+		// Note: deliberately skip JmxUserSecretRef, which is deprecated.
 		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
 			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
 		}

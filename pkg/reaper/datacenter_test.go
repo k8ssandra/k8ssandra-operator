@@ -29,40 +29,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Cluster: "cluster1",
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{{
-							Name:            cassandra.JmxInitContainer,
-							Image:           "docker.io/library/busybox:1.34.1",
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env: []corev1.EnvVar{
-								{
-									Name: "SUPERUSER_JMX_USERNAME",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-superuser"},
-											Key:                  "username",
-										},
-									},
-								},
-								{
-									Name: "SUPERUSER_JMX_PASSWORD",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-superuser"},
-											Key:                  "password",
-										},
-									},
-								},
-							},
-							Args: []string{
-								"/bin/sh",
-								"-c",
-								"echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password",
-							},
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      "server-config",
-								MountPath: "/config",
-							}},
-						}},
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
 						}},
@@ -75,58 +41,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Users:   []cassdcapi.CassandraUser{{SecretName: "cluster1-reaper", Superuser: true}},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{{
-							Name:            "jmx-credentials",
-							Image:           "docker.io/library/busybox:1.34.1",
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Env: []corev1.EnvVar{
-								{
-									Name: "SUPERUSER_JMX_USERNAME",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-superuser"},
-											Key:                  "username",
-										},
-									},
-								},
-								{
-									Name: "SUPERUSER_JMX_PASSWORD",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-superuser"},
-											Key:                  "password",
-										},
-									},
-								},
-								{
-									Name: "REAPER_JMX_USERNAME",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-reaper-jmx"},
-											Key:                  "username",
-										},
-									},
-								},
-								{
-									Name: "REAPER_JMX_PASSWORD",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: "cluster1-reaper-jmx"},
-											Key:                  "password",
-										},
-									},
-								},
-							},
-							Args: []string{
-								"/bin/sh",
-								"-c",
-								"echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password && echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" >> /config/jmxremote.password",
-							},
-							VolumeMounts: []corev1.VolumeMount{{
-								Name:      "server-config",
-								MountPath: "/config",
-							}},
-						}},
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
 							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
@@ -164,7 +78,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 			&reaperapi.ReaperClusterTemplate{
 				ReaperTemplate: reaperapi.ReaperTemplate{
 					CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
-					JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
 				},
 			},
 			&cassandra.DatacenterConfig{
@@ -174,45 +87,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Users:              []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{
-							{
-								Name: "another-init-container",
-							},
-							{
-								Name:            cassandra.JmxInitContainer,
-								Image:           "docker.io/library/busybox:1.34.1",
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Env: []corev1.EnvVar{
-									{
-										Name: "SUPERUSER_JMX_USERNAME",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "k8c-superuser"},
-												Key:                  "username",
-											},
-										},
-									},
-									{
-										Name: "SUPERUSER_JMX_PASSWORD",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "k8c-superuser"},
-												Key:                  "password",
-											},
-										},
-									},
-								},
-								Args: []string{
-									"/bin/sh",
-									"-c",
-									"echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password",
-								},
-								VolumeMounts: []corev1.VolumeMount{{
-									Name:      "server-config",
-									MountPath: "/config",
-								}},
-							},
-						},
 						Containers: []corev1.Container{
 							{
 								Name: reconciliation.CassandraContainerName,
@@ -237,60 +111,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{
-							{Name: "another-init-container"},
-							{
-								Name:            cassandra.JmxInitContainer,
-								Image:           "docker.io/library/busybox:1.34.1",
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								Env: []corev1.EnvVar{
-									{
-										Name: "SUPERUSER_JMX_USERNAME",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "k8c-superuser"},
-												Key:                  "username",
-											},
-										},
-									},
-									{
-										Name: "SUPERUSER_JMX_PASSWORD",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "k8c-superuser"},
-												Key:                  "password",
-											},
-										},
-									},
-									{
-										Name: "REAPER_JMX_USERNAME",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "jmx-user"},
-												Key:                  "username",
-											},
-										},
-									},
-									{
-										Name: "REAPER_JMX_PASSWORD",
-										ValueFrom: &corev1.EnvVarSource{
-											SecretKeyRef: &corev1.SecretKeySelector{
-												LocalObjectReference: corev1.LocalObjectReference{Name: "jmx-user"},
-												Key:                  "password",
-											},
-										},
-									},
-								},
-								Args: []string{
-									"/bin/sh",
-									"-c",
-									"echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password && echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" >> /config/jmxremote.password",
-								},
-								VolumeMounts: []corev1.VolumeMount{{
-									Name:      "server-config",
-									MountPath: "/config",
-								}},
-							}},
 						Containers: []corev1.Container{
 							{
 								Name: reconciliation.CassandraContainerName,
@@ -315,7 +135,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				ReaperTemplate: reaperapi.ReaperTemplate{
 					// should be ignored
 					CassandraUserSecretRef: corev1.LocalObjectReference{Name: "cass-user"},
-					JmxUserSecretRef:       corev1.LocalObjectReference{Name: "jmx-user"},
 				},
 			},
 			&cassandra.DatacenterConfig{
@@ -324,9 +143,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Users:   []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{{
-							Name: "another-init-container",
-						}},
 						Containers: []corev1.Container{
 							{
 								Name: reconciliation.CassandraContainerName,
@@ -345,9 +161,6 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Users:   []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						InitContainers: []corev1.Container{{
-							Name: "another-init-container",
-						}},
 						Containers: []corev1.Container{
 							{
 								Name: reconciliation.CassandraContainerName,
