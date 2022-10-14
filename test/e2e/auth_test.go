@@ -214,28 +214,28 @@ func testAuthenticationEnabled(
 func checkLocalJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod)
 	if assert.Error(t, err, "expected unauthenticated local JMX connection on pod %v to fail", pod) {
-		assert.Contains(t, err.Error(), "Credentials required")
+		assert.Contains(t, err.Error(), "Required key 'username' is missing")
 	}
 }
 
 func checkLocalJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant")
 	if assert.Error(t, err, "expected local JMX connection with wrong credentials on pod %v to fail", pod) {
-		assert.Contains(t, err.Error(), "Invalid username or password")
+		assert.Contains(t, err.Error(), "Provided username nonexistent and/or password are incorrect")
 	}
 }
 
 func checkRemoteJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod, host string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-h", host)
 	if assert.Error(t, err, "expected unauthenticated remote JMX connection from pod %v to host %v to fail", pod, host) {
-		assert.Contains(t, err.Error(), "Credentials required")
+		assert.Contains(t, err.Error(), "Required key 'username' is missing")
 	}
 }
 
 func checkRemoteJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod, host string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod, "-u", "nonexistent", "-pw", "irrelevant", "-h", host)
 	if assert.Error(t, err, "expected remote JMX connection with wrong credentials from pod %v to host %v to fail", pod) {
-		assert.Contains(t, err.Error(), "Invalid username or password")
+		assert.Contains(t, err.Error(), "Provided username nonexistent and/or password are incorrect")
 	}
 }
 
