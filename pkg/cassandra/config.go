@@ -67,6 +67,7 @@ func addStartRpc(template *DatacenterConfig) {
 
 // Handles the deprecated settings: HeapSize and HeapNewGenSize by copying their values, if any,
 // to the appropriate destination settings, iif these are nil.
+//
 //goland:noinspection GoDeprecation
 func handleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
 	// Transfer the global heap size to specific keys

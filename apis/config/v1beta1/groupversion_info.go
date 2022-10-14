@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1beta contains API Schema definitions for the config v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=config.k8ssandra.io
+// +kubebuilder:object:generate=true
+// +groupName=config.k8ssandra.io
 package v1beta1
 
 import (

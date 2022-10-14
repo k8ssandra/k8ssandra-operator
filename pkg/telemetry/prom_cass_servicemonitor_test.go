@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-//Test_NewCassServiceMonitor_SUCCESS tests that a new service monitor is successfully returned.
+// Test_NewCassServiceMonitor_SUCCESS tests that a new service monitor is successfully returned.
 func Test_NewCassServiceMonitor_SUCCESS(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
 	cfg := PrometheusResourcer{

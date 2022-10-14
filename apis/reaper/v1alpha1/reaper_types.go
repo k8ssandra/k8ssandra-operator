@@ -61,6 +61,14 @@ type ReaperTemplate struct {
 	// +optional
 	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
+	// SecretsProvider defines whether the secrets used for credentials and certs will be backed
+	// by an external secret backend. This moves the responsibility of generating and storing
+	// secrets from the operators to the user and will rely on a mutating webhook to inject
+	// the secrets into the necessary resources
+	// +kubebuilder:validation:Enum=internal;external
+	// +kubebuilder:default=internal
+	SecretsProvider string `json:"secretsProvider,omitempty"`
+
 	// The image to use for the Reaper pod main container.
 	// The default is "thelastpickle/cassandra-reaper:3.2.0".
 	// +optional
