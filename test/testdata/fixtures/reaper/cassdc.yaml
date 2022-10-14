@@ -20,12 +20,21 @@ spec:
       slow_query_log_timeout_in_ms: 0
       sstable_preemptive_open_interval_in_mb: 0
       thrift_prepared_statements_cache_size_mb: 1
+      authenticator: PasswordAuthenticator
+      authorizer: CassandraAuthorizer
+      role_manager: CassandraRoleManager
     jvm-options:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
+        - -Dcassandra.jmx.remote.login.config=CassandraLogin
+        - -Djava.security.auth.login.config=/etc/cassandra/cassandra-jaas.config
+        - -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy
       initial_heap_size: 512m
       max_heap_size: 512m
+  users:
+    - secretName: reaper-cql-secret
+      superuser: true
   serverType: cassandra
   serverVersion: 3.11.11
   networking:
@@ -51,27 +60,6 @@ spec:
       storageClassName: standard
   podTemplateSpec:
     spec:
-      initContainers:
-        - name: reaper-jmx-credentials
-          image: "docker.io/busybox:1.33.1"
-          env:
-            - name: "REAPER_JMX_USERNAME"
-              valueFrom:
-                secretKeyRef:
-                  name: reaper-jmx-secret
-                  key: "username"
-            - name: "REAPER_JMX_PASSWORD"
-              valueFrom:
-                secretKeyRef:
-                  name: reaper-jmx-secret
-                  key: "password"
-          args:
-            - "/bin/sh"
-            - "-c"
-            - "echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" > /config/jmxremote.password"
-          volumeMounts:
-            - name: "server-config"
-              mountPath: "/config"
       containers:
         - name: cassandra
           env:
