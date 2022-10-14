@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the medusa v1alpha1 API group
-// +kubebuilder:object:generate=true
-// +groupName=medusa.k8ssandra.io
+//+kubebuilder:object:generate=true
+//+groupName=medusa.k8ssandra.io
 package v1alpha1
 
 import (
