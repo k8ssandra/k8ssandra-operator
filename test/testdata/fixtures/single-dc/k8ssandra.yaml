@@ -20,7 +20,6 @@ spec:
               requests:
                 storage: 5Gi
         initContainers:
-          - name: "jmx-credentials"
           - name: "server-config-init"
           - name: init-busybox
             image: busybox
