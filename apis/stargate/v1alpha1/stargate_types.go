@@ -112,6 +112,14 @@ type StargateTemplate struct {
 	// Authentication options.
 	// +optional
 	AuthOptions *AuthOptions `json:"authOptions,omitempty"`
+
+	// SecretsProvider defines whether the secrets used for credentials and certs will be backed
+	// by an external secret backend. This moves the responsibility of generating and storing
+	// secrets from the operators to the user and will rely on a mutating webhook to inject
+	// the secrets into the necessary resources
+	// +kubebuilder:validation:Enum=internal;external
+	// +kubebuilder:default=internal
+	SecretsProvider string `json:"secretsProvider,omitempty"`
 }
 
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.

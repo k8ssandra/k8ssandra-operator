@@ -33,7 +33,7 @@ var DefaultJmxInitImage = images.Image{
 // is configured per DC.
 type SystemReplication map[string]int
 
-//// Replication provides a mapping of DCs to a mapping of keyspaces and their
+// // Replication provides a mapping of DCs to a mapping of keyspaces and their
 // replica counts. NetworkTopologyStrategy is assumed for all keyspaces.
 type Replication struct {
 	datacenters map[string]keyspacesReplication

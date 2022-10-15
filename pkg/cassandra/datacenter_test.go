@@ -653,6 +653,7 @@ func TestDatacentersReplication(t *testing.T) {
 }
 
 // GetDatacenterConfig returns a minimum viable DataCenterConfig.
+//
 //goland:noinspection GoDeprecation
 func GetDatacenterConfig() DatacenterConfig {
 	storageClass := "default"

@@ -67,6 +67,14 @@ type K8ssandraClusterSpec struct {
 	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db and data_endpoint_auth (Stargate).
 	// +optional
 	ExternalDatacenters []string `json:"externalDatacenters,omitempty"`
+
+	// SecretsProvider defines whether the secrets used for credentials and certs will be backed
+	// by an external secret backend (e.g. vault). This moves the responsibility of generating and
+	// storing secrets from the operators to the user and will rely on a mutating webhook to inject
+	// the secrets into the necessary resources
+	// +kubebuilder:validation:Enum=internal;external
+	// +kubebuilder:default=internal
+	SecretsProvider string `json:"secretsProvider,omitempty"`
 }
 
 func (in K8ssandraClusterSpec) IsAuthEnabled() bool {
