@@ -10,11 +10,11 @@ type Partitioner struct {
 	RingRange  *big.Int
 }
 
-var one = bigInt(1)
+var one = newBigInt(1)
 
 var Murmur3Partitioner = Partitioner{
-	RingOffset: new(big.Int).Lsh(bigInt(-1), 63), // -1<<63
-	RingRange:  new(big.Int).Lsh(one, 64),        // 1<<64
+	RingOffset: new(big.Int).Lsh(newBigInt(-1), 63), // -1<<63
+	RingRange:  new(big.Int).Lsh(one, 64),           // 1<<64
 }
 
 var RandomPartitioner = Partitioner{
@@ -28,12 +28,12 @@ func ComputeTokens(dcCounts []int, partitioner Partitioner) [][]string {
 	dcOffset := computeDcOffset(dcCounts, partitioner)
 	tokensPerDc := make([][]string, len(dcCounts))
 	for dc, dcCount := range dcCounts {
-		start := new(big.Int).Mul(dcOffset, bigInt(dc))
-		increment := new(big.Int).Div(partitioner.RingRange, bigInt(dcCount))
+		start := new(big.Int).Mul(dcOffset, newBigInt(dc))
+		increment := new(big.Int).Div(partitioner.RingRange, newBigInt(dcCount))
 		tokens := make([]*big.Int, dcCount)
 		for i := 0; i < dcCount; i++ {
 			// token := i*increment + start + ringOffset
-			token := bigInt(i)
+			token := newBigInt(i)
 			token = token.Mul(token, increment)
 			token = token.Add(token, start)
 			token = token.Add(token, partitioner.RingOffset)
@@ -81,9 +81,9 @@ func computeDcOffset(dcCounts []int, partitioner Partitioner) *big.Int {
 	}
 
 	result := new(big.Int).Neg(partitioner.RingRange)
-	return result.Div(result, bigInt(divisor))
+	return result.Div(result, newBigInt(divisor))
 }
 
-func bigInt(i int) *big.Int {
-	return new(big.Int).SetInt64(int64(i))
+func newBigInt(i int) *big.Int {
+	return big.NewInt(int64(i))
 }
