@@ -123,11 +123,16 @@ const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
+func DatacenterNamespace(klusterKey types.NamespacedName, template *DatacenterConfig) string {
 	namespace := template.Meta.Namespace
 	if len(namespace) == 0 {
 		namespace = klusterKey.Namespace
 	}
+	return namespace
+}
+
+func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
+	namespace := DatacenterNamespace(klusterKey, template)
 
 	if template.ServerVersion == nil {
 		return nil, DCConfigIncomplete{"template.ServerVersion"}
@@ -396,7 +401,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	return dcConfig
 }
 
-func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers []corev1.Container) error {
+func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) error {
 	if dcConfig.PodTemplateSpec == nil {
 		return errors.New("PodTemplateSpec was nil, cannot add containers")
 	} else {
@@ -405,7 +410,7 @@ func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers []cor
 	}
 }
 
-func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers []corev1.Container) error {
+func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers ...corev1.Container) error {
 	if dcConfig.PodTemplateSpec == nil {
 		return errors.New("PodTemplateSpec was nil, cannot add init containers")
 	} else {
@@ -414,7 +419,7 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 	}
 }
 
-func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
+func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
 	// Add and mount additional volumes that need to be managed by the statefulset
 	if len(extraVolumes.PVCs) > 0 {
 		if dcConfig.StorageConfig == nil {
@@ -428,15 +433,19 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8
 
 	// Add extra volumes that do not need to be managed by the statefulset
 	for _, volume := range extraVolumes.Volumes {
-		if dcConfig.PodTemplateSpec == nil {
-			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Volumes: []corev1.Volume{volume},
-				},
-			}
-		} else {
-			dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+		AddVolumesToPodTemplateSpec(dcConfig, volume)
+	}
+}
+
+func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volume) {
+	if dcConfig.PodTemplateSpec == nil {
+		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Volumes: []corev1.Volume{volume},
+			},
 		}
+	} else {
+		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
 	}
 }
 
