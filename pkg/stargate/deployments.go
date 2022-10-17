@@ -312,12 +312,11 @@ func computeJvmOptions(template *api.StargateTemplate) string {
 	heapSize := computeHeapSize(template)
 	heapSizeInBytes := heapSize.Value()
 	jvmOptions := fmt.Sprintf("-XX:+CrashOnOutOfMemoryError -Xms%v -Xmx%v", heapSizeInBytes, heapSizeInBytes)
-	if template.CassandraConfigMapRef != nil {
-		jvmOptions += fmt.Sprintf(
-			" -Dstargate.unsafe.cassandra_config_path=%s",
-			cassandraConfigPath,
-		)
-	}
+	jvmOptions += fmt.Sprintf(
+		" -Dstargate.unsafe.cassandra_config_path=%s",
+		cassandraConfigPath,
+	)
+
 	return jvmOptions
 }
 
