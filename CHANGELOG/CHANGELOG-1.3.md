@@ -15,7 +15,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## v1.3.0 - 2022-10-12
 
-* [FEATURE] Add token computation function
 * [FEATURE] [#657](https://github.com/k8ssandra/k8ssandra-operator/issues/657) Basic DSE Support
 * [FEATURE] [#661](https://github.com/k8ssandra/k8ssandra-operator/issues/661) Support all dse.yaml options
 * [FEATURE] [#710](https://github.com/k8ssandra/k8ssandra-operator/issues/710) Implement unstructured cassandra and dse yaml configuration
