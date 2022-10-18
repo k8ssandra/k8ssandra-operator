@@ -130,11 +130,47 @@ spec:
                     description: Client encryption stores which are used by Cassandra
                       and Reaper.
                     properties:
+                      keystorePasswordSecretRef:
+                        description: ref to the secret that contains the keystore
+                          password if password stored in different secret than keystoreSecretRef
+                          if not specified key explicitly "keystore-password" entry
+                          will be used
+                        properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
                       keystoreSecretRef:
                         description: ref to the secret that contains the keystore
-                          and its password the expected format of the secret is a
-                          "keystore" entry and a "keystore-password" entry
+                          and its can contain password if not used keystorePasswordSecretRef
+                          if not specified key explicitly "keystore" entry and a "keystore-password"
+                          entry will be used
                         properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      truststorePasswordSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password if not specified key explicitly "truststore-password"
+                          entry will be used
+                        properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
@@ -142,9 +178,14 @@ spec:
                         type: object
                       truststoreSecretRef:
                         description: ref to the secret that contains the truststore
-                          and its password the expected format of the secret is a
-                          "truststore" entry and a "truststore-password" entry
+                          and can its contain password if not used truststoreSecretRef
+                          if not specified key explicitly "keystore" entry and a "keystore-password"
+                          entry will be used
                         properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
@@ -14396,11 +14437,47 @@ spec:
                     description: Internode encryption stores which are used by Cassandra
                       and Stargate.
                     properties:
+                      keystorePasswordSecretRef:
+                        description: ref to the secret that contains the keystore
+                          password if password stored in different secret than keystoreSecretRef
+                          if not specified key explicitly "keystore-password" entry
+                          will be used
+                        properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
                       keystoreSecretRef:
                         description: ref to the secret that contains the keystore
-                          and its password the expected format of the secret is a
-                          "keystore" entry and a "keystore-password" entry
+                          and its can contain password if not used keystorePasswordSecretRef
+                          if not specified key explicitly "keystore" entry and a "keystore-password"
+                          entry will be used
                         properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      truststorePasswordSecretRef:
+                        description: ref to the secret that contains the keystore
+                          and its password if not specified key explicitly "truststore-password"
+                          entry will be used
+                        properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'
@@ -14408,9 +14485,14 @@ spec:
                         type: object
                       truststoreSecretRef:
                         description: ref to the secret that contains the truststore
-                          and its password the expected format of the secret is a
-                          "truststore" entry and a "truststore-password" entry
+                          and can its contain password if not used truststoreSecretRef
+                          if not specified key explicitly "keystore" entry and a "keystore-password"
+                          entry will be used
                         properties:
+                          key:
+                            description: The key of the entry in the Secret resource's
+                              `data` field to be used.
+                            type: string
                           name:
                             description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               TODO: Add other useful fields. apiVersion, kind, uid?'

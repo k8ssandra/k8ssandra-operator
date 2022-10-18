@@ -1446,20 +1446,20 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 					},
 				},
 				ServerEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
-					},
+					}},
 				},
 				ClientEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
-					},
+					}},
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
@@ -1690,12 +1690,12 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 					},
 				},
 				ServerEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
-					},
+					}},
 				},
 			},
 		},
@@ -1989,12 +1989,12 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 					},
 				},
 				ServerEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "server-truststore-secret",
-					},
+					}},
 				},
 			},
 		},

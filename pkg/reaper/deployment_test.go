@@ -26,12 +26,12 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
 	reaper.Spec.ClientEncryptionStores = &encryption.Stores{
-		KeystoreSecretRef: corev1.LocalObjectReference{
+		KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "keystore-secret",
-		},
-		TruststoreSecretRef: corev1.LocalObjectReference{
+		}},
+		TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "truststore-secret",
-		},
+		}},
 	}
 
 	labels := createServiceAndDeploymentLabels(reaper)
