@@ -133,7 +133,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// if a configmap is specified, we need to read its content to merge it with the generated one
-	userConfigMapContent := ""
+	userStargateCassandraYaml := ""
+	userStargateCqlYaml := ""
 	if stargate.Spec.CassandraConfigMapRef != nil {
 		userConfigMap := &corev1.ConfigMap{}
 		configMapKey := types.NamespacedName{Namespace: req.Namespace, Name: stargate.Spec.CassandraConfigMapRef.Name}
@@ -141,7 +142,8 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		userConfigMapContent = userConfigMap.Data["cassandra.yaml"]
+		userStargateCassandraYaml = userConfigMap.Data["cassandra.yaml"]
+		userStargateCqlYaml = userConfigMap.Data[stargateutil.CqlConfigName]
 	}
 
 	logger.Info("Reconciling Stargate configmap")
@@ -154,7 +156,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userConfigMapContent, req.Namespace, *actualDc, logger); err != nil {
+	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userStargateCassandraYaml, userStargateCqlYaml, req.Namespace, *actualDc, logger); err != nil {
 		return ctrl.Result{}, err
 	} else {
 		if stargateConfigResult.Requeue {
@@ -398,29 +400,26 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 func (r *StargateReconciler) reconcileStargateConfigMap(
 	ctx context.Context,
 	stargateObject *api.Stargate,
-	desiredConfig map[string]interface{},
-	userConfigMapContent string,
+	dcConfig map[string]interface{},
+	userCassandraYaml, userCqlYaml string,
 	namespace string,
 	dc cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 ) (ctrl.Result, error) {
 	logger.Info(fmt.Sprintf("Reconciling Stargate Cassandra yaml configMap on namespace %s for cluster %s and dc %s", namespace, dc.Spec.ClusterName, dc.Name))
-	var filteredCassandraConfig map[string]interface{}
-	desiredCassandraYaml, exists := desiredConfig["cassandra-yaml"]
-	if exists {
-		filteredCassandraConfig = stargate.FilterYamlConfig(desiredCassandraYaml.(map[string]interface{}))
-	}
 
-	configYamlString := ""
-	if len(filteredCassandraConfig) > 0 {
-		if configYaml, err := yaml.Marshal(filteredCassandraConfig); err != nil {
-			return ctrl.Result{}, err
-		} else {
-			configYamlString = string(configYaml)
-		}
+	var cassandraYaml, cqlYaml string
+	var err error
+	if cassandraYaml, err = reconcileStargateConfigFile(userCassandraYaml, dcConfig, stargate.CassandraYamlRetainedSettings); err != nil {
+		return ctrl.Result{}, err
 	}
-
-	mergedConfigMap := stargate.MergeConfigMaps(userConfigMapContent, configYamlString)
+	if cqlYaml, err = reconcileStargateConfigFile(userCqlYaml, dcConfig, stargate.CqlYamlRetainedSettings); err != nil {
+		return ctrl.Result{}, err
+	}
+	if len(cqlYaml) == 0 {
+		// The Stargate code fails on an empty file. Replace with this which is valid YAML:
+		cqlYaml = "{}"
+	}
 
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
@@ -428,12 +427,12 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 	}
 
 	logger = logger.WithValues("StargateConfigMap", configMapKey)
-	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, mergedConfigMap, dc)
+	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, cassandraYaml, cqlYaml, dc)
 	// Compute a hash which will allow to compare desired and actual configMaps
 	annotations.AddHashAnnotation(desiredConfigMap)
 	actualConfigMap := &corev1.ConfigMap{}
 
-	if err := r.Get(ctx, configMapKey, actualConfigMap); err != nil {
+	if err = r.Get(ctx, configMapKey, actualConfigMap); err != nil {
 		if errors.IsNotFound(err) {
 			if err = controllerutil.SetControllerReference(stargateObject, desiredConfigMap, r.Scheme); err != nil {
 				return ctrl.Result{}, err
@@ -454,7 +453,7 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 		resourceVersion := actualConfigMap.GetResourceVersion()
 		desiredConfigMap.DeepCopyInto(actualConfigMap)
 		actualConfigMap.SetResourceVersion(resourceVersion)
-		if err := r.Update(ctx, actualConfigMap); err != nil {
+		if err = r.Update(ctx, actualConfigMap); err != nil {
 			logger.Error(err, "Failed to update Stargate ConfigMap resource")
 			return ctrl.Result{}, err
 		}
@@ -462,6 +461,28 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 	}
 	logger.Info("Stargate ConfigMap successfully reconciled")
 	return ctrl.Result{}, nil
+}
+
+// reconcileStargateConfigFile builds a Stargate config file from two different sources: userConfig is the user-provided
+// config passed via cassandraConfigMapRef in the Stargate spec; dcConfig is the DC-level config from the
+// CassandraDatacenter spec, of which we'll only keep retainedOptions.
+func reconcileStargateConfigFile(
+	userConfig string, dcConfig map[string]interface{}, retainedOptions []string,
+) (string, error) {
+	var dcYaml map[string]interface{}
+	dcFullYaml, exists := dcConfig["cassandra-yaml"]
+	if exists {
+		dcYaml = stargate.FilterConfig(dcFullYaml.(map[string]interface{}), retainedOptions)
+	}
+	dcYamlString := ""
+	if len(dcYaml) > 0 {
+		if out, err := yaml.Marshal(dcYaml); err != nil {
+			return "", err
+		} else {
+			dcYamlString = string(out)
+		}
+	}
+	return stargate.MergeYamlString(userConfig, dcYamlString), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

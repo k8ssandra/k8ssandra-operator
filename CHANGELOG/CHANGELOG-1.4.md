@@ -19,3 +19,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#728](https://github.com/k8ssandra/k8ssandra-operator/issues/728) Add token generation utility
 * [FEATURE] [#724](https://github.com/k8ssandra/k8ssandra-operator/issues/724) Ability to provide per-node configuration
   [FEATURE] [#718](https://github.com/k8ssandra/k8ssandra-operator/issues/718) Make keystore-password, keystore, truststore keys in secret configurable
+* [BUGFIX] [#722](https://github.com/k8ssandra/k8ssandra-operator/issues/722) Enable client-side CQL encryption in Stargate if it is configured on the cluster

@@ -33,12 +33,13 @@ func testStargateApis(
 	f *framework.E2eFramework,
 	ctx context.Context,
 	k8sContext, namespace, clusterName, username, password string,
+	sslCql bool,
 	replication map[string]int,
 ) {
 	t.Run(fmt.Sprintf("TestStargateApis[%s]", k8sContext), func(t *testing.T) {
 		t.Run("TestStargateNativeApi", func(t *testing.T) {
 			t.Log("test Stargate native API in context " + k8sContext)
-			testStargateNativeApi(t, ctx, k8sContext, username, password, replication)
+			testStargateNativeApi(t, f, ctx, k8sContext, namespace, username, password, sslCql, replication)
 		})
 		t.Run("TestStargateRestApi", func(t *testing.T) {
 			t.Log("test Stargate REST API in context " + k8sContext)
@@ -62,8 +63,8 @@ func testStargateRestApis(t *testing.T, k8sContext, username, password string, r
 	})
 }
 
-func testStargateNativeApi(t *testing.T, ctx context.Context, k8sContext, username, password string, replication map[string]int) {
-	connection := openCqlClientConnection(t, ctx, k8sContext, username, password)
+func testStargateNativeApi(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, username, password string, ssl bool, replication map[string]int) {
+	connection := openCqlClientConnection(t, f, ctx, k8sContext, namespace, username, password, ssl)
 	defer connection.Close()
 	tableName := fmt.Sprintf("table_%s", rand.String(6))
 	keyspaceName := fmt.Sprintf("ks_%s", rand.String(6))
@@ -292,7 +293,8 @@ func authenticate(t *testing.T, restClient *resty.Client, k8sContext, username, 
 	return tokenStr
 }
 
-func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContext, username, password string) *client.CqlClientConnection {
+func openCqlClientConnection(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, username, password string, ssl bool) *client.CqlClientConnection {
+
 	contactPoint := ingressConfigs[k8sContext].StargateCql
 	var credentials *client.AuthCredentials
 	if username != "" {
@@ -305,7 +307,7 @@ func openCqlClientConnection(t *testing.T, ctx context.Context, k8sContext, user
 	var err error
 	var connection *client.CqlClientConnection
 	require.Eventually(t, func() bool {
-		connection, err = cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, client.ManagedStreamId)
+		connection, err = f.GetCqlClientConnection(ctx, k8sContext, namespace, ingressConfigs[k8sContext].StargateCql, username, password, ssl)
 		return err == nil
 	}, time.Minute, 10*time.Second, "Connecting to Stargate CQL failed")
 

@@ -43,7 +43,7 @@ type StargateTemplate struct {
 	// ContainerImage is the image characteristics to use for Stargate containers. Leave nil
 	// to use a default image.
 	// +optional
-	// +kubebuilder:default={repository:"stargateio", tag:"v1.0.45"}
+	// +kubebuilder:default={repository:"stargateio", tag:"v1.0.66"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// ServiceAccount is the service account name to use for Stargate pods.

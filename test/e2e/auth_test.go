@@ -48,7 +48,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
 	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", f)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
@@ -57,7 +57,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
 	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", f)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
@@ -146,8 +146,8 @@ func testAuthenticationDisabled(
 			// token, the username will be checked against the system_auth.roles table directly.
 			// Therefore, we only test the CQL API here.
 			// See https://github.com/stargate/stargate/issues/792
-			testStargateNativeApi(t, ctx, f.DataPlaneContexts[0], "", "", replication)
-			testStargateNativeApi(t, ctx, f.DataPlaneContexts[1], "", "", replication)
+			testStargateNativeApi(t, nil, ctx, f.DataPlaneContexts[0], namespace, "", "", false, replication)
+			testStargateNativeApi(t, nil, ctx, f.DataPlaneContexts[1], namespace, "", "", false, replication)
 		})
 		t.Run("Reaper", func(t *testing.T) {
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, "", "")
@@ -191,8 +191,8 @@ func testAuthenticationEnabled(
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
 		t.Run("Stargate", func(t *testing.T) {
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, replication)
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, false, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, false, replication)
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
 			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])
