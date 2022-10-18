@@ -18,7 +18,7 @@ func perNodeConfigTest(t *testing.T, ctx context.Context, namespace string, f *f
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dcKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
@@ -28,22 +28,22 @@ func perNodeConfigTest(t *testing.T, ctx context.Context, namespace string, f *f
 
 	output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod1, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
-	assert.Contains(t, "'-9223372036854775808'", output)
-	assert.Contains(t, "'-4611686018427387905'", output)
-	assert.Contains(t, "'-2'", output)
-	assert.Contains(t, "'4611686018427387901'", output)
+	assert.Contains(t, output, "'-9223372036854775808'")
+	assert.Contains(t, output, "'-4611686018427387905'")
+	assert.Contains(t, output, "'-2'")
+	assert.Contains(t, output, "'4611686018427387901'")
 
 	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod2, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
-	assert.Contains(t, "'-7686143364045646507'", output)
-	assert.Contains(t, "'-3074457345618258604'", output)
-	assert.Contains(t, "'1537228672809129299'", output)
-	assert.Contains(t, "'6148914691236517202'", output)
+	assert.Contains(t, output, "'-7686143364045646507'")
+	assert.Contains(t, output, "'-3074457345618258604'")
+	assert.Contains(t, output, "'1537228672809129299'")
+	assert.Contains(t, output, "'6148914691236517202'")
 
 	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod3, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
-	assert.Contains(t, "'-6148914691236517206'", output)
-	assert.Contains(t, "'-1537228672809129303'", output)
-	assert.Contains(t, "'3074457345618258600'", output)
-	assert.Contains(t, "'7686143364045646503'", output)
+	assert.Contains(t, output, "'-6148914691236517206'")
+	assert.Contains(t, output, "'-1537228672809129303'")
+	assert.Contains(t, output, "'3074457345618258600'")
+	assert.Contains(t, output, "'7686143364045646503'")
 }
