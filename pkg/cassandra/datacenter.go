@@ -398,12 +398,6 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
 	}
 
-	if dcTemplate.DatacenterOptions.ConfigBuilderResources != nil {
-		dcConfig.ConfigBuilderResources = dcTemplate.DatacenterOptions.ConfigBuilderResources
-	} else if clusterTemplate.DatacenterOptions.ConfigBuilderResources != nil {
-		dcConfig.ConfigBuilderResources = clusterTemplate.DatacenterOptions.ConfigBuilderResources
-	}
-
 	return dcConfig
 }
 
@@ -421,6 +415,10 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 		return errors.New("PodTemplateSpec was nil, cannot add init containers")
 	} else {
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+		position, found := FindInitContainer(dcConfig.PodTemplateSpec, "server-config-init")
+		if found && (dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Limits != nil || dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Requests != nil) {
+			dcConfig.ConfigBuilderResources = &dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources
+		}
 		return nil
 	}
 }

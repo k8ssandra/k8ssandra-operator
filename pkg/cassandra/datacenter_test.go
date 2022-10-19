@@ -508,49 +508,6 @@ func TestCoalesce(t *testing.T) {
 				DseWorkloads: &cassdcapi.DseWorkloads{GraphEnabled: true},
 			},
 		},
-		{
-			name: "Override ConfigBuilderResources",
-			clusterTemplate: &api.CassandraClusterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					ConfigBuilderResources: &corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("2"),
-							corev1.ResourceMemory: resource.MustParse("2Gi"),
-						},
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1"),
-							corev1.ResourceMemory: resource.MustParse("1Gi"),
-						},
-					},
-				},
-			},
-			dcTemplate: &api.CassandraDatacenterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					ConfigBuilderResources: &corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("4"),
-							corev1.ResourceMemory: resource.MustParse("4Gi"),
-						},
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("3"),
-							corev1.ResourceMemory: resource.MustParse("3Gi"),
-						},
-					},
-				},
-			},
-			want: &DatacenterConfig{
-				ConfigBuilderResources: &corev1.ResourceRequirements{
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("4"),
-						corev1.ResourceMemory: resource.MustParse("4Gi"),
-					},
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("3"),
-						corev1.ResourceMemory: resource.MustParse("3Gi"),
-					},
-				},
-			},
-		},
 	}
 
 	for _, tc := range tests {

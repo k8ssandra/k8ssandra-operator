@@ -383,11 +383,6 @@ type DatacenterOptions struct {
 
 	// +optional
 	DseWorkloads *cassdcapi.DseWorkloads `json:"dseWorkloads,omitempty"`
-
-	// Kubernetes resource requests and limits for the server-config-init init-container that is created by cass-operator to write the Cassandra config files.
-	// The default memory limit of 256Mi is sufficient for most use cases, but there are reports of OOM Kills which require to make this configurable.
-	// +optional
-	ConfigBuilderResources *corev1.ResourceRequirements `json:"configBuilderResources,omitempty"`
 }
 
 type K8ssandraVolumes struct {

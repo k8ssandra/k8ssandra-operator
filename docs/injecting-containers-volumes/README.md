@@ -73,11 +73,7 @@ spec:
 ```
 
 In the above example, the `init-busybox` container will be injected right after the `server-config-init` init-container.
-
-
 The order of the main containers doesn't have any impact as they all start concurrently.
-
-**Note:** The `server-config-init` init-container resource requests and limits defaults cannot be overridden by setting them in the `initContainers` field. If you need to override them, you can do so by setting the `.spec.cassandra.configBuilderResources` field.
 
 K8ssandra-operator is likely to generate the following init-containers in this order:
 
