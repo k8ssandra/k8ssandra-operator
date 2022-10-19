@@ -65,20 +65,23 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// references that would lead to unexpected and incorrect values.
 		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 
+		dcKey := types.NamespacedName{Namespace: cassandra.DatacenterNamespace(kcKey, dcConfig), Name: dcConfig.Meta.Name}
+		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
+
 		// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 		if dcConfig.PodTemplateSpec == nil {
 			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 		}
 		// Create additional init containers if requested
 		if len(dcConfig.InitContainers) > 0 {
-			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers)
+			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers...)
 			if err != nil {
 				return result.Error(err), actualDcs
 			}
 		}
 		// Create additional containers if requested
 		if len(dcConfig.Containers) > 0 {
-			err := cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers)
+			err := cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers...)
 			if err != nil {
 				return result.Error(err), actualDcs
 			}
@@ -86,13 +89,13 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 		if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
-			logger.Info("No containers defined in podTemplateSpec, creating a default cassandra container")
+			dcLogger.Info("No containers defined in podTemplateSpec, creating a default cassandra container")
 			cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 		}
 
 		// Create additional volumes if requested
 		if dcConfig.ExtraVolumes != nil {
-			cassandra.AddVolumesToPodTemplateSpec(dcConfig, *dcConfig.ExtraVolumes)
+			cassandra.AddK8ssandraVolumesToPodTemplateSpec(dcConfig, *dcConfig.ExtraVolumes)
 		}
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
 
@@ -112,7 +115,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())
 		}
 		// Create Medusa related objects
-		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, logger); medusaResult.Completed() {
+		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, dcLogger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
 
@@ -124,18 +127,23 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
-			logger.Error(err, "Failed to get remote client")
+			dcLogger.Error(err, "Failed to get remote client")
 			return result.Error(err), actualDcs
 		}
 
-		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, logger)
+		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, dcLogger)
 		if err != nil {
-			logger.Error(err, "Failed to read encryption secrets")
+			dcLogger.Error(err, "Failed to read encryption secrets")
 			return result.Error(err), actualDcs
 		}
+
+		if recResult := r.reconcilePerNodeConfiguration(ctx, kcKey, dcConfig, remoteClient, dcLogger); recResult.Completed() {
+			return recResult, actualDcs
+		}
+
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		if err != nil {
-			logger.Error(err, "Failed to create new CassandraDatacenter")
+			dcLogger.Error(err, "Failed to create new CassandraDatacenter")
 			return result.Error(err), actualDcs
 		}
 		if idx > 0 {
@@ -145,16 +153,13 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
 
-		dcKey := types.NamespacedName{Namespace: desiredDc.Namespace, Name: desiredDc.Name}
-		logger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
-
 		if recResult := r.checkRebuildAnnotation(ctx, kc, dcKey.Name); recResult.Completed() {
 			return recResult, actualDcs
 		}
 
 		actualDc := &cassdcapi.CassandraDatacenter{}
 
-		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, dcConfig.AdditionalSeeds, remoteClient, logger); recResult.Completed() {
+		if recResult := r.reconcileSeedsEndpoints(ctx, desiredDc, seeds, dcConfig.AdditionalSeeds, remoteClient, dcLogger); recResult.Completed() {
 			return recResult, actualDcs
 		}
 
@@ -167,19 +172,19 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			r.setStatusForDatacenter(kc, actualDc)
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
-				logger.Info("Updating datacenter")
+				dcLogger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
 					// If actualDc is created with SuperuserSecretName, it can't be changed anymore. We should reject all changes coming from K8ssandraCluster
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
 					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
-					logger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
+					dcLogger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
 				}
 
 				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
 					desiredDc.Spec.Stopped = false
 					err = fmt.Errorf("tried to stop a datacenter that is being rebuilt")
-					logger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
+					dcLogger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
 				}
 
 				if err := cassandra.ValidateConfig(desiredDc, actualDc); err != nil {
@@ -191,41 +196,41 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				desiredDc.DeepCopyInto(actualDc)
 				actualDc.SetResourceVersion(resourceVersion)
 				if err = remoteClient.Update(ctx, actualDc); err != nil {
-					logger.Error(err, "Failed to update datacenter")
+					dcLogger.Error(err, "Failed to update datacenter")
 					return result.Error(err), actualDcs
 				}
 			}
 
 			if actualDc.Spec.Stopped {
 				if !cassandra.DatacenterStopped(actualDc) {
-					logger.Info("Waiting for datacenter to satisfy Stopped condition")
+					dcLogger.Info("Waiting for datacenter to satisfy Stopped condition")
 					return result.Done(), actualDcs
 				}
 			} else {
 				if !cassandra.DatacenterReady(actualDc) {
-					logger.Info("Waiting for datacenter to satisfy Ready condition")
+					dcLogger.Info("Waiting for datacenter to satisfy Ready condition")
 					return result.Done(), actualDcs
 				}
 			}
 
 			// DC is in the process of being upgraded but hasn't completed yet. Let's wait for it to go through.
 			if actualDc.GetGeneration() != actualDc.Status.ObservedGeneration {
-				logger.Info("CassandraDatacenter is being updated. Requeuing the reconcile.", "Generation", actualDc.GetGeneration(), "ObservedGeneration", actualDc.Status.ObservedGeneration)
+				dcLogger.Info("CassandraDatacenter is being updated. Requeuing the reconcile.", "Generation", actualDc.GetGeneration(), "ObservedGeneration", actualDc.Status.ObservedGeneration)
 				return result.Done(), actualDcs
 			}
 
-			logger.Info("The datacenter is reconciled")
+			dcLogger.Info("The datacenter is reconciled")
 
 			actualDcs = append(actualDcs, actualDc)
 
 			if !actualDc.Spec.Stopped {
 
-				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
+				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 					return recResult, actualDcs
 				}
 
 				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
-					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, logger); recResult.Completed() {
+					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 						return recResult, actualDcs
 					}
 				}
@@ -238,12 +243,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				}
 				// cassdc doesn't exist, we'll create it
 				if err = remoteClient.Create(ctx, desiredDc); err != nil {
-					logger.Error(err, "Failed to create datacenter")
+					dcLogger.Error(err, "Failed to create datacenter")
 					return result.Error(err), actualDcs
 				}
 				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			} else {
-				logger.Error(err, "Failed to get datacenter")
+				dcLogger.Error(err, "Failed to get datacenter")
 				return result.Error(err), actualDcs
 			}
 		}

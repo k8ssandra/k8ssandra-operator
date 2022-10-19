@@ -331,6 +331,10 @@ func TestOperator(t *testing.T) {
 		testFunc: stargateJwt,
 		fixture:  framework.NewTestFixture("stargate-jwt", controlPlane),
 	}))
+	t.Run("PerNodeConfig", e2eTest(ctx, &e2eTestOpts{
+		testFunc: perNodeConfigTest,
+		fixture:  framework.NewTestFixture("single-dc-per-node-config", controlPlane),
+	}))
 }
 
 func beforeSuite(t *testing.T) {
