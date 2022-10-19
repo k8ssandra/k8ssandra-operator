@@ -475,6 +475,16 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 									MaxHeapSize: parseQuantity("1024Mi"),
 								},
 							},
+							ConfigBuilderResources: &corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    *parseQuantity("1"),
+									corev1.ResourceMemory: *parseQuantity("1Gi"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    *parseQuantity("1"),
+									corev1.ResourceMemory: *parseQuantity("1Gi"),
+								},
+							},
 						},
 					},
 					{
@@ -540,6 +550,10 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking, dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.ConfigBuilderResources.Limits.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.ConfigBuilderResources.Limits.Memory())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Cpu(), kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.ConfigBuilderResources.Requests.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Memory(), kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.ConfigBuilderResources.Requests.Memory())
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)

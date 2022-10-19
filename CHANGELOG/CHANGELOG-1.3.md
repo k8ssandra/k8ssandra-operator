@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+* [BUGFIX] [#723](https://github.com/k8ssandra/k8ssandra-operator/issues/723) Allow setting resource limits for the server-config-init container
 * [BUGFIX] [#683](https://github.com/k8ssandra/k8ssandra-operator/issues/683) Fix Stargate not working when encryption is enabled but no cassandra.yaml config map is provided
 
 ## v1.3.0 - 2022-10-12

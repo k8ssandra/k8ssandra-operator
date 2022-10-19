@@ -117,6 +117,7 @@ type DatacenterConfig struct {
 	ExtraVolumes             *api.K8ssandraVolumes
 	CDC                      *cassdcapi.CDCConfiguration
 	DseWorkloads             *cassdcapi.DseWorkloads
+	ConfigBuilderResources   *corev1.ResourceRequirements
 }
 
 const (
@@ -201,6 +202,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.SoftPodAntiAffinity != nil {
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
+	}
+
+	if template.ConfigBuilderResources != nil {
+		dc.Spec.ConfigBuilderResources = *template.ConfigBuilderResources
 	}
 
 	dc.Spec.Tolerations = template.Tolerations
@@ -391,6 +396,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.DseWorkloads = dcTemplate.DatacenterOptions.DseWorkloads
 	} else if clusterTemplate.DatacenterOptions.DseWorkloads != nil {
 		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
+	}
+
+	if dcTemplate.DatacenterOptions.ConfigBuilderResources != nil {
+		dcConfig.ConfigBuilderResources = dcTemplate.DatacenterOptions.ConfigBuilderResources
+	} else if clusterTemplate.DatacenterOptions.ConfigBuilderResources != nil {
+		dcConfig.ConfigBuilderResources = clusterTemplate.DatacenterOptions.ConfigBuilderResources
 	}
 
 	return dcConfig
