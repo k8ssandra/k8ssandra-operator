@@ -312,12 +312,13 @@ func computeJvmOptions(template *api.StargateTemplate) string {
 	heapSize := computeHeapSize(template)
 	heapSizeInBytes := heapSize.Value()
 	jvmOptions := fmt.Sprintf("-XX:+CrashOnOutOfMemoryError -Xms%v -Xmx%v", heapSizeInBytes, heapSizeInBytes)
-	if template.CassandraConfigMapRef != nil {
-		jvmOptions += fmt.Sprintf(
-			" -Dstargate.unsafe.cassandra_config_path=%s",
-			cassandraConfigPath,
-		)
-	}
+	// The config map with the cassandra.yaml will always be created, even if it's empty.
+	// We then can always set the jvm option pointing to it.
+	jvmOptions += fmt.Sprintf(
+		" -Dstargate.unsafe.cassandra_config_path=%s",
+		cassandraConfigPath,
+	)
+
 	return jvmOptions
 }
 
