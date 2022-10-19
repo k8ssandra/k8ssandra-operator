@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## Unreleased
+
+* [BUGFIX] [#683](https://github.com/k8ssandra/k8ssandra-operator/issues/683) Fix Stargate not working when encryption is enabled but no cassandra.yaml config map is provided
+
 ## v1.3.0 - 2022-10-12
 
 * [FEATURE] [#657](https://github.com/k8ssandra/k8ssandra-operator/issues/657) Basic DSE Support
