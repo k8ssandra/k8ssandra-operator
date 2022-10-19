@@ -9,6 +9,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,7 +36,6 @@ func (r *K8ssandraClusterReconciler) reconcilePerNodeConfiguration(
 		return result.Error(err)
 	}
 
-	// TODO do we need to own the cm and add a hash annotation?
 	logger.Info("Found per-node ConfigMap, mounting")
 
 	// if the config-builder init container isn't found, declare a placeholder now to guarantee order of execution
@@ -55,6 +55,16 @@ const perNodeConfigVolumeName = "per-node-config"
 var perNodeConfigInitContainer = &corev1.Container{
 	Name:  "per-node-config",
 	Image: "mikefarah/yq:4",
+	Resources: corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			"cpu":    resource.MustParse("10m"),
+			"memory": resource.MustParse("16Mi"),
+		},
+		Limits: corev1.ResourceList{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("64Mi"),
+		},
+	},
 	Env: []corev1.EnvVar{
 		{
 			Name: "POD_NAME",
