@@ -2,118 +2,199 @@ package k8ssandra
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/nodeconfig"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var perNodeConfigNotOwnedByK8ssandraOperator = errors.New("per-node configuration already exists and is not owned by k8ssandra-operator")
+
 func (r *K8ssandraClusterReconciler) reconcilePerNodeConfiguration(
 	ctx context.Context,
-	kcKey types.NamespacedName,
+	kc *k8ssandraapi.K8ssandraCluster,
 	dcConfig *cassandra.DatacenterConfig,
 	remoteClient client.Client,
-	logger logr.Logger,
+	dcLogger logr.Logger,
+) result.ReconcileResult {
+	if dcConfig.PerNodeConfigMapRef.Name == "" {
+		return r.reconcileDefaultPerNodeConfiguration(ctx, kc, dcConfig, remoteClient, dcLogger)
+	} else {
+		return r.reconcileUserProvidedPerNodeConfiguration(ctx, kc, dcConfig, remoteClient, dcLogger)
+	}
+}
+
+func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcConfig *cassandra.DatacenterConfig,
+	remoteClient client.Client,
+	dcLogger logr.Logger,
 ) result.ReconcileResult {
 
-	perNodeConfigKey := newPerNodeConfigKey(kcKey, dcConfig)
-	logger = logger.WithValues("PerNodeConfigMap", perNodeConfigKey)
+	kcKey := utils.GetKey(kc)
 
-	logger.V(1).Info("Probing for per-node ConfigMap")
-	perNodeConfig := &corev1.ConfigMap{}
-	if err := remoteClient.Get(ctx, perNodeConfigKey, perNodeConfig); err != nil {
-		if errors.IsNotFound(err) {
-			logger.V(1).Info("Per-node ConfigMap not found")
-			return result.Continue()
-		}
-		logger.Error(err, "Failed to get per-node ConfigMap")
-		return result.Error(err)
+	perNodeConfigKey := nodeconfig.NewDefaultPerNodeConfigMapKey(kcKey, dcConfig)
+	dcLogger = dcLogger.WithValues("PerNodeConfigMap", perNodeConfigKey)
+
+	desiredPerNodeConfig := nodeconfig.NewDefaultPerNodeConfigMap(kcKey, dcConfig)
+	if desiredPerNodeConfig != nil {
+		annotations.AddHashAnnotation(desiredPerNodeConfig)
 	}
 
-	logger.Info("Found per-node ConfigMap, mounting")
+	actualPerNodeConfig := &corev1.ConfigMap{}
+	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
 
-	// if the config-builder init container isn't found, declare a placeholder now to guarantee order of execution
-	cassandra.UpdateInitContainer(dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(container *corev1.Container) {})
+	if err != nil {
 
-	// add per-node-config init container
-	_ = cassandra.AddInitContainersToPodTemplateSpec(dcConfig, *perNodeConfigInitContainer)
+		if !apierrors.IsNotFound(err) {
+			dcLogger.Error(err, "Failed to get per-node configuration")
+			return result.Error(err)
+		}
 
-	// add per-node config volume to pod spec
-	cassandra.AddVolumesToPodTemplateSpec(dcConfig, newPerNodeConfigVolume(perNodeConfigKey.Name))
+		// Create
+		if desiredPerNodeConfig != nil {
+			if err = remoteClient.Create(ctx, desiredPerNodeConfig); err != nil {
+				dcLogger.Error(err, "Failed to create per-node configuration")
+			}
+			dcLogger.Info("Created per-node configuration")
+		}
+
+	} else if desiredPerNodeConfig != nil {
+
+		// Update
+		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
+			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to update per-node configuration")
+			return result.Error(err)
+
+		} else if !annotations.CompareHashAnnotations(actualPerNodeConfig, desiredPerNodeConfig) {
+			resourceVersion := actualPerNodeConfig.GetResourceVersion()
+			desiredPerNodeConfig.DeepCopyInto(actualPerNodeConfig)
+			actualPerNodeConfig.SetResourceVersion(resourceVersion)
+			if err := ctrl.SetControllerReference(kc, actualPerNodeConfig, r.Scheme); err != nil {
+				dcLogger.Error(err, "Failed to set controller reference on updated per-node configuration")
+				return result.Error(err)
+			} else if err = remoteClient.Update(ctx, actualPerNodeConfig); err != nil {
+				dcLogger.Error(err, "Failed to update per-node configuration")
+				return result.Error(err)
+			}
+			dcLogger.Info("Updated per-node configuration")
+		}
+
+	} else {
+
+		// Delete
+		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
+			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to delete per-node configuration")
+			return result.Error(err)
+
+		} else if err = remoteClient.Delete(ctx, actualPerNodeConfig); err != nil {
+			dcLogger.Error(err, "Failed to delete per-node configuration")
+			return result.Error(err)
+		}
+		dcLogger.Info("Deleted per-node configuration")
+	}
+
+	if desiredPerNodeConfig != nil {
+		dcConfig.PerNodeConfigMapRef.Name = desiredPerNodeConfig.Name
+		perNodeConfigMapHash := annotations.GetAnnotation(desiredPerNodeConfig, k8ssandraapi.ResourceHashAnnotation)
+		annotations.AddAnnotation(dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
+		nodeconfig.MountPerNodeConfig(dcConfig)
+		dcLogger.Info("Mounted per-node configuration")
+	}
 
 	return result.Continue()
 }
 
-const perNodeConfigVolumeName = "per-node-config"
+func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcConfig *cassandra.DatacenterConfig,
+	remoteClient client.Client,
+	dcLogger logr.Logger,
+) result.ReconcileResult {
 
-var perNodeConfigInitContainer = &corev1.Container{
-	Name:  "per-node-config",
-	Image: "mikefarah/yq:4",
-	Resources: corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			"cpu":    resource.MustParse("10m"),
-			"memory": resource.MustParse("16Mi"),
-		},
-		Limits: corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("64Mi"),
-		},
-	},
-	Env: []corev1.EnvVar{
-		{
-			Name: "POD_NAME",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.name",
-				},
-			},
-		},
-	},
-	VolumeMounts: []corev1.VolumeMount{
-		{
-			Name:      "server-config", // volume will be created by cass-operator
-			MountPath: "/config",
-		},
-		{
-			Name:      perNodeConfigVolumeName,
-			MountPath: "/per-node-config",
-		},
-	},
-	Command: []string{
-		"sh",
-		"-c",
-		"for src in /per-node-config/${POD_NAME}_*; do " +
-			"dest=/config/`echo $src | cut -d \"_\" -f2`; " +
-			"touch $dest; " +
-			"yq ea '. as $item ireduce ({}; . * $item)' -i $dest $src; " +
-			"echo merged $src into $dest; " +
-			"done; " +
-			"echo done",
-	},
+	kcKey := utils.GetKey(kc)
+
+	perNodeConfigKey := types.NamespacedName{
+		Name:      dcConfig.PerNodeConfigMapRef.Name,
+		Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace),
+	}
+	dcLogger = dcLogger.WithValues("PerNodeConfigMap", perNodeConfigKey)
+
+	actualPerNodeConfig := &corev1.ConfigMap{}
+	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
+
+	if err == nil {
+
+		if !k8ssandralabels.IsManagedBy(actualPerNodeConfig, kcKey) {
+
+			// We set the configmap as managed by the operator so that we are notified of changes to
+			// its contents. Note that we do NOT set the configmap as owned by the operator, nor do
+			// we set our controller reference on it.
+			patch := client.MergeFromWithOptions(actualPerNodeConfig.DeepCopy())
+			k8ssandralabels.SetManagedBy(actualPerNodeConfig, kcKey)
+			if err = remoteClient.Patch(ctx, actualPerNodeConfig, patch); err != nil {
+				dcLogger.Error(err, "Failed to set user-provided per-node config managed by k8ssandra-operator")
+				return result.Error(err)
+			}
+		}
+
+		// Note: when the per-node config is user-provided, we don't check its contents, we just
+		// mount it as is. Also, we don't manage its full lifecycle.
+
+		perNodeConfigMapHash := utils.DeepHashString(actualPerNodeConfig)
+		annotations.AddAnnotation(dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
+		nodeconfig.MountPerNodeConfig(dcConfig)
+		dcLogger.Info("Mounted per-node configuration")
+
+	} else {
+
+		dcLogger.Error(err, "Failed to retrieve user-provided per-node config")
+		return result.Error(err)
+	}
+
+	return result.Continue()
 }
 
-func newPerNodeConfigKey(kcKey types.NamespacedName, dcConfig *cassandra.DatacenterConfig) types.NamespacedName {
-	return types.NamespacedName{
-		Namespace: cassandra.DatacenterNamespace(kcKey, dcConfig),
-		Name:      fmt.Sprintf("%s-%s-per-node-config", kcKey.Name, dcConfig.Meta.Name),
+func (r *K8ssandraClusterReconciler) deletePerNodeConfigurations(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	kcLogger logr.Logger,
+) (hasErrors bool) {
+	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	perNodeConfigs := &corev1.ConfigMapList{}
+	options := client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selector),
 	}
-}
-
-func newPerNodeConfigVolume(perNodeConfigName string) corev1.Volume {
-	return corev1.Volume{
-		Name: perNodeConfigVolumeName,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: perNodeConfigName,
-				},
-			},
-		},
+	if err := remoteClient.List(ctx, perNodeConfigs, &options); err != nil {
+		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
+		return true
 	}
+	for _, rp := range perNodeConfigs.Items {
+		if err := remoteClient.Delete(ctx, &rp); err != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
+			if !apierrors.IsNotFound(err) {
+				kcLogger.Error(err, "Failed to delete Reaper", "Reaper", key,
+					"Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+		}
+	}
+	return
 }

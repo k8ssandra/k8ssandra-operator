@@ -1,13 +1,16 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-dc1-per-node-config
+  name: custom-per-node-config
 data:
   test-dc1-default-sts-0_cassandra.yaml: |
+    num_tokens: 4
     initial_token: -9223372036854775808,-4611686018427387905,-2,4611686018427387901
   test-dc1-default-sts-1_cassandra.yaml: |
+    num_tokens: 4
     initial_token: -7686143364045646507,-3074457345618258604,1537228672809129299,6148914691236517202
   test-dc1-default-sts-2_cassandra.yaml: |
+    num_tokens: 4
     initial_token: -6148914691236517206,-1537228672809129303,3074457345618258600,7686143364045646503
 ---
 apiVersion: k8ssandra.io/v1alpha1
@@ -22,6 +25,8 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 3
+        perNodeConfigMapRef:
+          name: custom-per-node-config
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -31,8 +36,6 @@ spec:
               requests:
                 storage: 5Gi
         config:
-          cassandraYaml:
-            num_tokens: 4
           jvmOptions:
             heap_initial_size: 512Mi
             heap_max_size: 512Mi

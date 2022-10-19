@@ -39,10 +39,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 	hasErrors := false
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		namespace := dcTemplate.Meta.Namespace
-		if namespace == "" {
-			namespace = kc.Namespace
-		}
+		namespace := utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace)
 
 		dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
 
@@ -92,6 +89,10 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 		}
 
 		if r.deleteReapers(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
+			hasErrors = true
+		}
+
+		if r.deletePerNodeConfigurations(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 	}

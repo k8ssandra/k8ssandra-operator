@@ -21,7 +21,7 @@ import (
 func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 	ctx context.Context,
 	dcConfig *cassandra.DatacenterConfig,
-	dcTemplate api.CassandraDatacenterTemplate,
+	dcTemplate *cassandra.DatacenterConfig,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger,
 ) result.ReconcileResult {
@@ -29,10 +29,7 @@ func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 	if err != nil {
 		return result.Error(err)
 	}
-	namespace := dcTemplate.Meta.Namespace
-	if namespace == "" {
-		namespace = kc.Namespace
-	}
+	namespace := utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {

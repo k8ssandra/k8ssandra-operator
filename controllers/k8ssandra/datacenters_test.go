@@ -1,74 +1,65 @@
 package k8ssandra
 
 import (
-	"testing"
-
+	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 var (
-	analyticsWorkloadDc = api.CassandraDatacenterTemplate{
+	analyticsWorkloadDc = &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "analytics",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "6.8.17",
-			DseWorkloads: &cassdcapi.DseWorkloads{
-				AnalyticsEnabled: true,
-			},
+		ServerVersion: semver.MustParse("6.8.17"),
+		DseWorkloads: &cassdcapi.DseWorkloads{
+			AnalyticsEnabled: true,
 		},
 	}
 
-	searchWorkloadDc = api.CassandraDatacenterTemplate{
+	searchWorkloadDc = &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "search",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "6.8.17",
-			DseWorkloads: &cassdcapi.DseWorkloads{
-				SearchEnabled: true,
-			},
+		ServerVersion: semver.MustParse("6.8.17"),
+		DseWorkloads: &cassdcapi.DseWorkloads{
+			SearchEnabled: true,
 		},
 	}
 
-	graphWorkloadDc = api.CassandraDatacenterTemplate{
+	graphWorkloadDc = &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "graph",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "6.8.17",
-			DseWorkloads: &cassdcapi.DseWorkloads{
-				GraphEnabled: true,
-			},
+		ServerVersion: semver.MustParse("6.8.17"),
+		DseWorkloads: &cassdcapi.DseWorkloads{
+			GraphEnabled: true,
 		},
 	}
 
-	mixedWorkloadDc = api.CassandraDatacenterTemplate{
+	mixedWorkloadDc = &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "mixed",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "6.8.17",
-			DseWorkloads: &cassdcapi.DseWorkloads{
-				GraphEnabled:     true,
-				AnalyticsEnabled: true,
-			},
+		ServerVersion: semver.MustParse("6.8.17"),
+		DseWorkloads: &cassdcapi.DseWorkloads{
+			GraphEnabled:     true,
+			AnalyticsEnabled: true,
 		},
 	}
 
-	cassandraWorkloadDc = api.CassandraDatacenterTemplate{
+	cassandraWorkloadDc = &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "cassandra",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "6.8.17",
-			DseWorkloads: &cassdcapi.DseWorkloads{
-				GraphEnabled:     false,
-				AnalyticsEnabled: false,
-				SearchEnabled:    false,
-			},
+		ServerVersion: semver.MustParse("6.8.17"),
+		DseWorkloads: &cassdcapi.DseWorkloads{
+			GraphEnabled:     false,
+			AnalyticsEnabled: false,
+			SearchEnabled:    false,
 		},
 	}
 )
@@ -92,7 +83,7 @@ func dcUpgradePriorityTest(t *testing.T) {
 func sortDatacentersForUpgradeTest(t *testing.T) {
 	assert := assert.New(t)
 
-	datacenters := []api.CassandraDatacenterTemplate{}
+	var datacenters []*cassandra.DatacenterConfig
 	datacenters = append(datacenters, cassandraWorkloadDc)
 	datacenters = append(datacenters, analyticsWorkloadDc)
 	datacenters = append(datacenters, searchWorkloadDc)
@@ -113,34 +104,28 @@ func sortDatacentersForUpgradeTest(t *testing.T) {
 func sortNoChangeTest(t *testing.T) {
 	assert := assert.New(t)
 
-	cassandraDc1 := api.CassandraDatacenterTemplate{
+	cassandraDc1 := &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc1",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "4.0.0",
-		},
+		ServerVersion: semver.MustParse("4.0.0"),
 	}
 
-	cassandraDc2 := api.CassandraDatacenterTemplate{
+	cassandraDc2 := &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc2",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "4.0.0",
-		},
+		ServerVersion: semver.MustParse("4.0.0"),
 	}
 
-	cassandraDc3 := api.CassandraDatacenterTemplate{
+	cassandraDc3 := &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc3",
 		},
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "4.0.0",
-		},
+		ServerVersion: semver.MustParse("4.0.0"),
 	}
 
-	datacenters := []api.CassandraDatacenterTemplate{}
+	var datacenters []*cassandra.DatacenterConfig
 	datacenters = append(datacenters, cassandraDc1)
 	datacenters = append(datacenters, cassandraDc2)
 	datacenters = append(datacenters, cassandraDc3)

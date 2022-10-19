@@ -3,9 +3,7 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
-
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
@@ -86,6 +84,7 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
 	Meta                     api.EmbeddedObjectMeta
+	K8sContext               string
 	Cluster                  string
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
@@ -120,50 +119,25 @@ type DatacenterConfig struct {
 	ConfigBuilderResources   *corev1.ResourceRequirements
 	PodSecurityContext       *corev1.PodSecurityContext
 	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef      corev1.LocalObjectReference
+
+	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
+	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
+	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
+	// presence affects the PodTemplateSpec.
+	InitialTokensByPodName map[string][]string
 }
 
 const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func DatacenterNamespace(klusterKey types.NamespacedName, template *DatacenterConfig) string {
-	namespace := template.Meta.Namespace
-	if len(namespace) == 0 {
-		namespace = klusterKey.Namespace
-	}
-	return namespace
-}
-
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
-	namespace := DatacenterNamespace(klusterKey, template)
-
-	if template.ServerVersion == nil {
-		return nil, DCConfigIncomplete{"template.ServerVersion"}
-	}
-	if template.ServerType == "" {
-		return nil, DCConfigIncomplete{"template.ServerType"}
-	}
-
-	if err := validateCassandraYaml(template.CassandraConfig.CassandraYaml); err != nil {
-		return nil, err
-	}
-
-	// If client or server encryption is enabled, create the required volumes and mounts
-	if err := handleEncryptionOptions(template); err != nil {
-		return nil, err
-	}
-
-	handleDeprecatedJvmOptions(&template.CassandraConfig.JvmOptions)
-	addNumTokens(template)
-	addStartRpc(template)
+	namespace := utils.FirstNonEmptyString(template.Meta.Namespace, klusterKey.Namespace)
 
 	rawConfig, err := createJsonConfig(template.CassandraConfig, template.ServerVersion, template.ServerType)
 	if err != nil {
 		return nil, err
-	}
-
-	if template.StorageConfig == nil {
-		return nil, DCConfigIncomplete{"template.StorageConfig"}
 	}
 
 	dc := &cassdcapi.CassandraDatacenter{
@@ -304,9 +278,11 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ServerType = clusterTemplate.ServerType
 
 	// DC-level settings
+	dcConfig.K8sContext = dcTemplate.K8sContext // can be empty
 	dcConfig.Meta = dcTemplate.Meta
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
+	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 
 	if len(dcTemplate.DatacenterOptions.ServerVersion) > 0 {
 		dcConfig.ServerVersion = semver.MustParse(dcTemplate.DatacenterOptions.ServerVersion)
@@ -421,7 +397,37 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.ManagementApiAuth = clusterTemplate.DatacenterOptions.ManagementApiAuth
 	}
 
+	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
+	// FIXME if we are doing this, then we should remove the pointer
+	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
+	UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+
 	return dcConfig
+}
+
+// ValidateCoalesced checks the coalesced DC config for missing fields, enriches the cassandra.yaml
+// config with mandatory options and then validates it.
+func ValidateCoalesced(dcConfig *DatacenterConfig) error {
+	if dcConfig.ServerVersion == nil {
+		return DCConfigIncomplete{"template.ServerVersion"}
+	}
+	if dcConfig.ServerType == "" {
+		return DCConfigIncomplete{"template.ServerType"}
+	}
+	if dcConfig.StorageConfig == nil {
+		return DCConfigIncomplete{"template.StorageConfig"}
+	}
+	addNumTokens(dcConfig)
+	addStartRpc(dcConfig)
+	handleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
+	if err := handleEncryptionOptions(dcConfig); err != nil {
+		return err
+	}
+	if err := validateCassandraYaml(dcConfig.CassandraConfig.CassandraYaml); err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) error {
