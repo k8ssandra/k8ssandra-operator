@@ -415,7 +415,7 @@ func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContaine
 		return errors.New("PodTemplateSpec was nil, cannot add init containers")
 	} else {
 		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
-		position, found := FindInitContainer(dcConfig.PodTemplateSpec, "server-config-init")
+		position, found := FindInitContainer(dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName)
 		if found && (dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Limits != nil || dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Requests != nil) {
 			dcConfig.ConfigBuilderResources = &dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources
 		}
