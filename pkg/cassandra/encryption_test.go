@@ -1,7 +1,9 @@
 package cassandra
 
 import (
+	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -11,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestCheckMandatoryEncryptionFields(t *testing.T) {
@@ -26,17 +29,17 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 			},
 		},
 		ClientEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
-			},
+			}},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
-			},
+			}},
 		},
 	}
 
@@ -63,20 +66,20 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 			},
 		},
 		ClientEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
-			},
+			}},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
-			},
+			}},
 		},
 	}
 
@@ -153,20 +156,20 @@ func TestAddVolumesForEncryption(t *testing.T) {
 			},
 		},
 		ClientEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
-			},
+			}},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}, Key: "specific-key-from-keystoresecret"},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
-			},
+			}, Key: "specific-key-from-truststoresecret"},
 		},
 	}
 
@@ -176,6 +179,8 @@ func TestAddVolumesForEncryption(t *testing.T) {
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore", "client-truststore-secret"))
+	assert.True(t, keyToPathElemVolumeExist(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", string(encryption.StoreNameKeystore)))
+	assert.True(t, keyToPathElemVolumeExist(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore", string(encryption.StoreNameTruststore)))
 
 	addVolumesForEncryption(dcConfig, encryption.StoreTypeServer, *dcConfig.ServerEncryptionStores)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
@@ -183,6 +188,9 @@ func TestAddVolumesForEncryption(t *testing.T) {
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore", "server-truststore-secret"))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore", "server-keystore-secret"))
+	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore", "server-keystore-secret"))
+	assert.True(t, keyToPathElemVolumeExist(dcConfig.PodTemplateSpec.Spec.Volumes, "server-keystore", "specific-key-from-keystoresecret"))
+	assert.True(t, keyToPathElemVolumeExist(dcConfig.PodTemplateSpec.Spec.Volumes, "server-truststore", "specific-key-from-truststoresecret"))
 }
 
 func TestHandleEncryptionOptions(t *testing.T) {
@@ -202,20 +210,20 @@ func TestHandleEncryptionOptions(t *testing.T) {
 			},
 		},
 		ClientEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
-			},
+			}},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
-			},
+			}},
 		},
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
@@ -294,20 +302,20 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 			},
 		},
 		ClientEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "client-truststore-secret",
-			},
+			}},
 		},
 		ServerEncryptionStores: &encryption.Stores{
-			KeystoreSecretRef: corev1.LocalObjectReference{
+			KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-keystore-secret",
-			},
-			TruststoreSecretRef: corev1.LocalObjectReference{
+			}},
+			TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 				Name: "server-truststore-secret",
-			},
+			}},
 		},
 		ClientKeystorePassword:   "test",
 		ClientTruststorePassword: "test",
@@ -413,4 +421,60 @@ func volumeHasSecretSource(volumes []corev1.Volume, name, secretName string) boo
 		}
 	}
 	return false
+}
+
+func keyToPathElemVolumeExist(volumes []corev1.Volume, name, key string) bool {
+	for _, volume := range volumes {
+		if volume.Name == name {
+			if volume.VolumeSource.Secret != nil {
+				for _, mapping := range volume.VolumeSource.Secret.Items {
+					if mapping.Key == key {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func TestReadEncryptionStorePassword(t *testing.T) {
+	// Test case when KeystorePasswordRef,TruststorePasswordSecretRef is configured
+	keystoreSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-keystore-password-secret",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{"client-keystore-password-key": []byte("test-keystore-password")},
+	}
+	truststoreSecret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		}, ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-truststore-secret",
+			Namespace: "default",
+		}, Data: map[string][]byte{"client-truststore-password-key": []byte("test-truststore-password")},
+	}
+
+	client := fake.NewClientBuilder().WithObjects(keystoreSecret, truststoreSecret).Build()
+	ClientEncryptionStores := &encryption.Stores{
+		KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+			Name: "client-keystore-secret",
+		}},
+		KeystorePasswordRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+			Name: "client-keystore-password-secret",
+		}, Key: "client-keystore-password-key"},
+		TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+			Name: "client-truststore-secret",
+		}, Key: "client-truststore-password-key"},
+	}
+	keyStorePassword, _ := ReadEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameKeystore)
+	assert.Equal(t, "test-keystore-password", keyStorePassword)
+	trustStorePassword, _ := ReadEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameTruststore)
+	assert.Equal(t, "test-truststore-password", trustStorePassword)
 }

@@ -583,20 +583,20 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 			DatacenterRef: corev1.LocalObjectReference{Name: "dc3"},
 			CassandraEncryption: &api.CassandraEncryption{
 				ClientEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
-					},
+					}},
 				},
 				ServerEncryptionStores: &encryption.Stores{
-					KeystoreSecretRef: corev1.LocalObjectReference{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-keystore-secret",
-					},
-					TruststoreSecretRef: corev1.LocalObjectReference{
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 						Name: "client-truststore-secret",
-					},
+					}},
 				},
 			},
 		},

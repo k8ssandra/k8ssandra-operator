@@ -170,13 +170,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 	var truststorePassword *string
 
 	if actualReaper.Spec.ClientEncryptionStores != nil {
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.KeystoreSecretRef.Name, encryption.StoreNameKeystore); err != nil {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameKeystore); err != nil {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		} else {
 			keystorePassword = pointer.String(password)
 		}
 
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores.TruststoreSecretRef.Name, encryption.StoreNameTruststore); err != nil {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameTruststore); err != nil {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		} else {
 			truststorePassword = pointer.String(password)
