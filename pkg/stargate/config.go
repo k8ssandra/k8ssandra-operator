@@ -13,7 +13,18 @@ import (
 const CqlConfigName = "stargate-cql.yaml"
 
 var CassandraYamlRetainedSettings = []string{"server_encryption_options"}
-var CqlYamlRetainedSettings = []string{"client_encryption_options"}
+var CqlYamlRetainedSettings = []string{
+	"rpc_keepalive",
+	"native_transport_max_frame_size_in_mb",
+	"native_transport_max_concurrent_connections",
+	"native_transport_max_concurrent_connections_per_ip",
+	"native_transport_flush_in_batches_legacy",
+	"native_transport_allow_older_protocols",
+	"native_transport_max_concurrent_requests_in_bytes_per_ip",
+	"native_transport_max_concurrent_requests_in_bytes",
+	"native_transport_idle_timeout_in_ms",
+	"client_encryption_options",
+}
 
 func FilterConfig(config map[string]interface{}, retainedSettings []string) map[string]interface{} {
 	filteredConfig := make(map[string]interface{})
