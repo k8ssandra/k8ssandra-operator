@@ -201,3 +201,43 @@ medusa:
 ...
 ```
 
+## Using separate secrets and keys for the stores and their passwords
+In the special cases like using cert-manager, helpful option is to specify explicitly different secrets and keys for each EncryptionStores.
+
+```
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+   ...
+    config:
+      cassandraYaml:
+        client_encryption_options:
+            enabled: true
+            require_client_auth: true
+            ...
+            ...
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 3
+  ...
+  ...
+    clientEncryptionStores:
+      keystoreSecretRef:
+        name: special-secret-for-keystore
+        key: special-key
+      keystorePasswordSecretRef:
+        name: special-secret-for-keystore-password
+        key: special-key
+      truststoreSecretRef:
+        name: special-secret-for-truststore
+        key: special-key
+      truststorePasswordSecretRef:
+        name: special-secret-for-truststore-password
+        key: special-key
+  ...
+  ...
+```

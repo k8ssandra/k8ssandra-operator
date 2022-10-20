@@ -6,23 +6,25 @@ import (
 
 // +kubebuilder:object:generate=true
 type Stores struct {
-	// ref to the secret that contains the keystore and its can contain password if not used keystorePasswordSecretRef
-	// if not specified key explicitly "keystore" entry and a "keystore-password" entry will be used
+	// ref to the secret that contains the keystore and optionally its password (which can also be specified through
+	//the keystorePasswordSecretRef field)
+	// if keys are not specified, "keystore" entry and a "keystore-password" entry will be used
 	// +kubebuilder:validation:Required
 	KeystoreSecretRef *SecretKeySelector `json:"keystoreSecretRef"`
 
-	// ref to the secret that contains the truststore and can its contain password if not used truststoreSecretRef
-	// if not specified key explicitly "keystore" entry and a "keystore-password" entry will be used
+	// ref to the secret that contains the truststore and optionally its password (which can also be specified through
+	//the truststorePasswordSecretRef field)
+	// if keys are not specified explicitly, "keystore" entry and a "keystore-password" entry will be used
 	// +kubebuilder:validation:Required
 	TruststoreSecretRef *SecretKeySelector `json:"truststoreSecretRef"`
 
 	// ref to the secret that contains the keystore password if password stored in different secret than keystoreSecretRef
-	// if not specified key explicitly "keystore-password" entry will be used
+	// if key isn't specified explicitly, "keystore-password" entry will be used
 	// +kubebuilder:validation:Optional
 	KeystorePasswordRef *SecretKeySelector `json:"keystorePasswordSecretRef"`
 
-	// ref to the secret that contains the keystore and its password
-	// if not specified key explicitly "truststore-password" entry will be used
+	// ref to the secret that contains the truststore password if password stored in different secret than keystoreSecretRef
+	// if key isn't specified  explicitly, "truststore-password" entry will be used
 	// +kubebuilder:validation:Optional
 	TruststorePasswordSecretRef *SecretKeySelector `json:"truststorePasswordSecretRef"`
 }

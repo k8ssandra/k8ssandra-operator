@@ -204,29 +204,29 @@ func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.Namespace
 }
 
 func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteClient client.Client, stores *encryption.Stores, storeName encryption.StoreName) (string, error) {
-	var general, specific *encryption.SecretKeySelector
+	var storeSecretRef, storePasswordSecretRef *encryption.SecretKeySelector
 	var secretName, secretKey string
 
 	switch storeName {
 	case encryption.StoreNameKeystore:
-		general = stores.KeystoreSecretRef
-		specific = stores.KeystorePasswordRef
+		storeSecretRef = stores.KeystoreSecretRef
+		storePasswordSecretRef = stores.KeystorePasswordRef
 	case encryption.StoreNameTruststore:
-		general = stores.TruststoreSecretRef
-		specific = stores.TruststorePasswordSecretRef
+		storeSecretRef = stores.TruststoreSecretRef
+		storePasswordSecretRef = stores.TruststorePasswordSecretRef
 	default:
-		return "", fmt.Errorf("reading secret for storeName %s doesn't supported", storeName)
+		return "", fmt.Errorf("reading secret for storeName %s isn't supported", storeName)
 	}
 
-	if specific != nil {
-		secretName = specific.Name
-		if specific.Key != "" {
-			secretKey = specific.Key
+	if storePasswordSecretRef != nil {
+		secretName = storePasswordSecretRef.Name
+		if storePasswordSecretRef.Key != "" {
+			secretKey = storePasswordSecretRef.Key
 		} else {
 			secretKey = fmt.Sprintf("%s-password", storeName)
 		}
 	} else {
-		secretName, secretKey = general.Name, general.GetSpecificKeyOrDefault(fmt.Sprintf("%s-password", storeName))
+		secretName, secretKey = storeSecretRef.Name, storeSecretRef.GetSpecificKeyOrDefault(fmt.Sprintf("%s-password", storeName))
 
 	}
 
