@@ -146,8 +146,8 @@ func testAuthenticationDisabled(
 			// token, the username will be checked against the system_auth.roles table directly.
 			// Therefore, we only test the CQL API here.
 			// See https://github.com/stargate/stargate/issues/792
-			testStargateNativeApi(t, nil, ctx, f.DataPlaneContexts[0], namespace, "", "", false, replication)
-			testStargateNativeApi(t, nil, ctx, f.DataPlaneContexts[1], namespace, "", "", false, replication)
+			testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[0], namespace, "", "", false, replication)
+			testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[1], namespace, "", "", false, replication)
 		})
 		t.Run("Reaper", func(t *testing.T) {
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, "", "")
