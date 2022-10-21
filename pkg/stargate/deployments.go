@@ -23,6 +23,7 @@ import (
 const (
 	cassandraConfigDir  = "/config"
 	cassandraConfigPath = "/config/cassandra.yaml"
+	cqlConfigPath       = "/config/" + CqlConfigName
 	cassandraConfigMap  = "cassandra-config"
 
 	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
@@ -34,7 +35,7 @@ const (
 	DefaultImageRepository = "stargateio"
 	DefaultImageName3      = "stargate-3_11"
 	DefaultImageName4      = "stargate-4_0"
-	DefaultVersion         = "1.0.45"
+	DefaultVersion         = "1.0.66"
 	// When changing the default version above, please also change the kubebuilder marker in
 	// apis/stargate/v1alpha1/stargate_types.go accordingly.
 )
@@ -317,6 +318,10 @@ func computeJvmOptions(template *api.StargateTemplate) string {
 	jvmOptions += fmt.Sprintf(
 		" -Dstargate.unsafe.cassandra_config_path=%s",
 		cassandraConfigPath,
+	)
+	jvmOptions += fmt.Sprintf(
+		" -Dstargate.cql.config_path=%s",
+		cqlConfigPath,
 	)
 
 	return jvmOptions

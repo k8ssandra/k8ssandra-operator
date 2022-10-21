@@ -1104,7 +1104,7 @@ spec:
               containerImage:
                 default:
                   repository: stargateio
-                  tag: v1.0.45
+                  tag: v1.0.66
                 description: ContainerImage is the image characteristics to use for
                   Stargate containers. Leave nil to use a default image.
                 properties:
@@ -2265,7 +2265,7 @@ spec:
                     containerImage:
                       default:
                         repository: stargateio
-                        tag: v1.0.45
+                        tag: v1.0.66
                       description: ContainerImage is the image characteristics to
                         use for Stargate containers. Leave nil to use a default image.
                       properties:
