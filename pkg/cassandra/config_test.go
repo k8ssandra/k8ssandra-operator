@@ -1,9 +1,10 @@
 package cassandra
 
 import (
+	"testing"
+
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"testing"
 
 	"k8s.io/utils/pointer"
 
@@ -198,7 +199,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionDse,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector: pointer.String("ZGC"),
+					GarbageCollector:             pointer.String("ZGC"),
+					AdditionalJvm11ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
 				},
 				DseYaml: unstructured.Unstructured{
 					"authentication_options": map[string]interface{}{
@@ -208,11 +210,47 @@ func TestCreateJsonConfig(t *testing.T) {
 			},
 			want: `{
              "jvm11-server-options": {
-               "garbage_collector": "ZGC"
+               "garbage_collector": "ZGC",
+							 "additional-jvm-opts": ["-XX:+UseConcMarkSweepGC"]
              },
              "dse-yaml": {
                "authentication_options": {
 				  "enabled": true
+               }
+             }
+           }`,
+		},
+		{
+			name:          "[DSE 6.8.25] multiple jvm-option files",
+			serverVersion: semver.MustParse("6.8.25"),
+			serverType:    api.ServerDistributionDse,
+			cassandraConfig: api.CassandraConfig{
+				JvmOptions: api.JvmOptions{
+					GarbageCollector:             pointer.String("ZGC"),
+					AdditionalJvm11ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
+					AdditionalJvm8ServerOptions:  []string{"-XX:ThreadPriorityPolicy=42"},
+					AdditionalJvmServerOptions:   []string{"-Dio.netty.maxDirectMemory=0"},
+				},
+				DseYaml: unstructured.Unstructured{
+					"authentication_options": map[string]interface{}{
+						"enabled": true,
+					},
+				},
+			},
+			want: `{
+				    "jvm-server-options": {
+							"additional-jvm-opts": ["-Dio.netty.maxDirectMemory=0"]
+						},
+						 "jvm8-server-options": {
+							"additional-jvm-opts": ["-XX:ThreadPriorityPolicy=42"]
+						},
+            "jvm11-server-options": {
+              "garbage_collector": "ZGC",
+							"additional-jvm-opts": ["-XX:+UseConcMarkSweepGC"]
+            },
+            "dse-yaml": {
+              "authentication_options": {
+				        "enabled": true
                }
              }
            }`,

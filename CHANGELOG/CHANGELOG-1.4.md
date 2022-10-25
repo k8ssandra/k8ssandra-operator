@@ -15,5 +15,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [ENHANCEMENT] [#737](https://github.com/k8ssandra/k8ssandra-operator/issues/737) Support additional jvm options for the various options files 
 * [FEATURE] [#599](https://github.com/k8ssandra/k8ssandra-operator/issues/599) Introduce a secrets provider setting in the CRD
 * [FEATURE] [#728](https://github.com/k8ssandra/k8ssandra-operator/issues/728) Add token generation utility

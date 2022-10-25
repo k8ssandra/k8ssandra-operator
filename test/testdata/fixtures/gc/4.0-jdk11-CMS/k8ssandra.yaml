@@ -31,6 +31,7 @@ spec:
               - -XX:+CMSParallelInitialMarkEnabled
               - -XX:+CMSEdenChunksRecordAlways
               - -XX:+CMSClassUnloadingEnabled
+            additionalJvm11ServerOptions:
               # user settings
               - -XX:SurvivorRatio=4
               - -XX:MaxTenuringThreshold=2
