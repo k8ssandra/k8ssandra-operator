@@ -72,6 +72,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if dcConfig.PodTemplateSpec == nil {
 			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 		}
+
+		// Add the SecurityContext to the PodTemplateSpec if it's defined
+		if dcConfig.PodSecurityContext != nil {
+			dcConfig.PodTemplateSpec.Spec.SecurityContext = dcConfig.PodSecurityContext
+		}
+
 		// Create additional init containers if requested
 		if len(dcConfig.InitContainers) > 0 {
 			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers...)

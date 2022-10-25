@@ -383,6 +383,14 @@ type DatacenterOptions struct {
 
 	// +optional
 	DseWorkloads *cassdcapi.DseWorkloads `json:"dseWorkloads,omitempty"`
+
+	// PodSecurityContext defines the security context for the Cassandra pods.
+	// +optional
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+
+	// ManagementApiAuth defines the authentication settings for the management API in the Cassandra pods.
+	// +optional
+	ManagementApiAuth *cassdcapi.ManagementApiAuthConfig `json:"managementApiAuth,omitempty"`
 }
 
 type K8ssandraVolumes struct {

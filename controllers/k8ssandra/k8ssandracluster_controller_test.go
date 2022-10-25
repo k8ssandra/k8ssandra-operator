@@ -138,6 +138,12 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 									StorageClassName: &defaultStorageClass,
 								},
 							},
+							PodSecurityContext: &corev1.PodSecurityContext{
+								RunAsUser: pointer.Int64(999),
+							},
+							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
+								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
+							},
 						},
 					},
 				},
@@ -159,6 +165,13 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("check the pod SecurityContext was set in the CassandraDatacenter")
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dcKey, dc)
+	require.NoError(err, "failed to get CassandraDatacenter")
+	require.True(dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser != nil && *dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser == 999, "pod security context was not properly set")
+	require.True(dc.Spec.ManagementApiAuth.Insecure != nil, "management api auth was not properly set")
 
 	lastTransitionTime := metav1.Now()
 
