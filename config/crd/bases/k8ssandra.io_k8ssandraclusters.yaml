@@ -218,8 +218,27 @@ spec:
                         x-kubernetes-preserve-unknown-fields: true
                       jvmOptions:
                         properties:
+                          additionalJvm8ServerOptions:
+                            description: Jvm8ServerOptions are additional options
+                              that will be passed on to the jvm8-server-options file.
+                            items:
+                              type: string
+                            type: array
+                          additionalJvm11ServerOptions:
+                            description: Jvm11ServerOptions are additional options
+                              that will be passed on to the jvm11-server-options file.
+                            items:
+                              type: string
+                            type: array
+                          additionalJvmServerOptions:
+                            description: JvmServerOptions are additional options that
+                              will be passed on to the jvm-server-options file.
+                            items:
+                              type: string
+                            type: array
                           additionalOptions:
-                            description: Additional, arbitrary JVM options (advanced).
+                            description: Additional, arbitrary JVM options which are
+                              written into the cassandra-env.sh file.
                             items:
                               type: string
                             type: array
@@ -2041,8 +2060,30 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                             jvmOptions:
                               properties:
+                                additionalJvm8ServerOptions:
+                                  description: Jvm8ServerOptions are additional options
+                                    that will be passed on to the jvm8-server-options
+                                    file.
+                                  items:
+                                    type: string
+                                  type: array
+                                additionalJvm11ServerOptions:
+                                  description: Jvm11ServerOptions are additional options
+                                    that will be passed on to the jvm11-server-options
+                                    file.
+                                  items:
+                                    type: string
+                                  type: array
+                                additionalJvmServerOptions:
+                                  description: JvmServerOptions are additional options
+                                    that will be passed on to the jvm-server-options
+                                    file.
+                                  items:
+                                    type: string
+                                  type: array
                                 additionalOptions:
-                                  description: Additional, arbitrary JVM options (advanced).
+                                  description: Additional, arbitrary JVM options which
+                                    are written into the cassandra-env.sh file.
                                   items:
                                     type: string
                                   type: array

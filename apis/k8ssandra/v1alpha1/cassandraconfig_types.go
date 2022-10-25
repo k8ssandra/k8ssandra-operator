@@ -572,9 +572,21 @@ type JvmOptions struct {
 	// +optional
 	PreserveFramePointer *bool `json:"debug_preserve_frame_pointer,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/preserve-frame-pointer"`
 
-	// Additional, arbitrary JVM options (advanced).
+	// Additional, arbitrary JVM options which are written into the cassandra-env.sh file.
 	// +optional
 	AdditionalOptions []string `json:"additionalOptions,omitempty" cass-config:"cassandra-env-sh/additional-jvm-opts"`
+
+	// Jvm11ServerOptions are additional options that will be passed on to the jvm11-server-options file.
+	// +optional
+	AdditionalJvm11ServerOptions []string `json:"additionalJvm11ServerOptions,omitempty" cass-config:"jvm11-server-options/additional-jvm-opts"`
+
+	// Jvm8ServerOptions are additional options that will be passed on to the jvm8-server-options file.
+	// +optional
+	AdditionalJvm8ServerOptions []string `json:"additionalJvm8ServerOptions,omitempty" cass-config:"jvm8-server-options/additional-jvm-opts"`
+
+	// JvmServerOptions are additional options that will be passed on to the jvm-server-options file.
+	// +optional
+	AdditionalJvmServerOptions []string `json:"additionalJvmServerOptions,omitempty" cass-config:"jvm-server-options/additional-jvm-opts"`
 }
 
 type ParameterizedClass struct {
