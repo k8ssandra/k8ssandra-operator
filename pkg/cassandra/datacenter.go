@@ -118,6 +118,8 @@ type DatacenterConfig struct {
 	CDC                      *cassdcapi.CDCConfiguration
 	DseWorkloads             *cassdcapi.DseWorkloads
 	ConfigBuilderResources   *corev1.ResourceRequirements
+	PodSecurityContext       *corev1.PodSecurityContext
+	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
 }
 
 const (
@@ -211,6 +213,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.ConfigBuilderResources != nil {
 		dc.Spec.ConfigBuilderResources = *template.ConfigBuilderResources
+	}
+
+	if template.ManagementApiAuth != nil {
+		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
 	}
 
 	dc.Spec.Tolerations = template.Tolerations
@@ -401,6 +407,18 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.DseWorkloads = dcTemplate.DatacenterOptions.DseWorkloads
 	} else if clusterTemplate.DatacenterOptions.DseWorkloads != nil {
 		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
+	}
+
+	if dcTemplate.DatacenterOptions.PodSecurityContext != nil {
+		dcConfig.PodSecurityContext = dcTemplate.DatacenterOptions.PodSecurityContext
+	} else if clusterTemplate.DatacenterOptions.PodSecurityContext != nil {
+		dcConfig.PodSecurityContext = clusterTemplate.DatacenterOptions.PodSecurityContext
+	}
+
+	if dcTemplate.DatacenterOptions.ManagementApiAuth != nil {
+		dcConfig.ManagementApiAuth = dcTemplate.DatacenterOptions.ManagementApiAuth
+	} else if clusterTemplate.DatacenterOptions.ManagementApiAuth != nil {
+		dcConfig.ManagementApiAuth = clusterTemplate.DatacenterOptions.ManagementApiAuth
 	}
 
 	return dcConfig
