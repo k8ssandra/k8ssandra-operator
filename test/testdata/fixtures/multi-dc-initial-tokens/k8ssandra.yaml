@@ -10,6 +10,8 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 3
+        networking:
+          hostNetwork: true
         racks:
           - name: rack1
             nodeAffinityLabels:
@@ -38,6 +40,8 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 3
+        networking:
+          hostNetwork: true
         racks:
           - name: rack1
             nodeAffinityLabels:
