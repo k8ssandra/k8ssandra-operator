@@ -61,6 +61,16 @@ func (c *ClientCache) GetRemoteClients() map[string]client.Client {
 	return c.remoteClients
 }
 
+// GetAllClients returns all the remote clients, plus the local one.
+func (c *ClientCache) GetAllClients() []client.Client {
+	clients := make([]client.Client, 0, len(c.remoteClients)+1)
+	for _, remoteClient := range c.remoteClients {
+		clients = append(clients, remoteClient)
+	}
+	clients = append(clients, c.localClient)
+	return clients
+}
+
 // AddClient adds a new remoteClient with the name k8sContextName
 func (c *ClientCache) AddClient(k8sContextName string, cli client.Client) {
 	c.remoteClients[k8sContextName] = cli
