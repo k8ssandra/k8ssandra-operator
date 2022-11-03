@@ -16,7 +16,10 @@ const (
 	StoresMountPath = "/mnt"
 )
 
-func handleEncryptionOptions(template *DatacenterConfig) error {
+// HandleEncryptionOptions sets up encryption in the datacenter config template. The keystore and
+// truststore config maps are mounted into the datacenter pod and the secrets are read to be set in
+// the datacenter config template.
+func HandleEncryptionOptions(template *DatacenterConfig) error {
 	if ClientEncryptionEnabled(template) {
 		if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
 			return err

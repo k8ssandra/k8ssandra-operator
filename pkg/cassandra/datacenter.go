@@ -408,9 +408,9 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	return dcConfig
 }
 
-// ValidateCoalesced checks the coalesced DC config for missing fields, enriches the cassandra.yaml
-// config with mandatory options and then validates it.
-func ValidateCoalesced(dcConfig *DatacenterConfig) error {
+// ValidateDatacenterConfig checks the coalesced DC config for missing fields and mandatory options,
+// and then validates the cassandra.yaml file.
+func ValidateDatacenterConfig(dcConfig *DatacenterConfig) error {
 	if dcConfig.ServerVersion == nil {
 		return DCConfigIncomplete{"template.ServerVersion"}
 	}
@@ -419,12 +419,6 @@ func ValidateCoalesced(dcConfig *DatacenterConfig) error {
 	}
 	if dcConfig.StorageConfig == nil {
 		return DCConfigIncomplete{"template.StorageConfig"}
-	}
-	addNumTokens(dcConfig)
-	addStartRpc(dcConfig)
-	handleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
-	if err := handleEncryptionOptions(dcConfig); err != nil {
-		return err
 	}
 	if err := validateCassandraYaml(dcConfig.CassandraConfig.CassandraYaml); err != nil {
 		return err

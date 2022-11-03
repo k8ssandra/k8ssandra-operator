@@ -656,18 +656,18 @@ func TestNewDatacenter_Tolerations(t *testing.T) {
 }
 
 // TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
-func TestValidateCoalesced_Fail_NoStorageConfig(t *testing.T) {
+func TestValidateDatacenterConfig_Fail_NoStorageConfig(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.StorageConfig = nil
-	err := ValidateCoalesced(&template)
+	err := ValidateDatacenterConfig(&template)
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 
 // TestValidateCoalesced_Fail_NoServerVersion tests that NewDatacenter fails when no server version is provided.
-func TestValidateCoalesced_Fail_NoServerVersion(t *testing.T) {
+func TestValidateDatacenterConfig_Fail_NoServerVersion(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.ServerVersion = nil
-	err := ValidateCoalesced(&template)
+	err := ValidateDatacenterConfig(&template)
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 

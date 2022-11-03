@@ -15,7 +15,7 @@ import (
 //
 // In the unlikely case we get here with something invalid in the cassandra.yaml configuration, and
 // the token computation cannot be carried out, this function simply skips token assignment but
-// doesn't fail the reconciliation loop, since the configuration is already being validated
+// doesn't return any errors nor panics, since the configuration is already being validated
 // elsewhere.
 func ComputeInitialTokens(dcConfigs []*DatacenterConfig) {
 	infos := collectTokenAllocationInfos(dcConfigs)

@@ -42,7 +42,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		return result.Error(err), nil
 	}
 
-	dcConfigs, err := coalesceAndValidateDatacenterConfigs(kc)
+	dcConfigs, err := r.coalesceAndValidateDatacenterConfigs(ctx, kc, logger)
 	if err != nil {
 		return result.Error(err), nil
 	}
@@ -128,12 +128,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcConfig.K8sContext)
 		if err != nil {
 			dcLogger.Error(err, "Failed to get remote client")
-			return result.Error(err), actualDcs
-		}
-
-		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, dcLogger)
-		if err != nil {
-			dcLogger.Error(err, "Failed to read encryption secrets")
 			return result.Error(err), actualDcs
 		}
 
@@ -270,6 +264,46 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	return result.Continue(), actualDcs
 }
 
+func (r *K8ssandraClusterReconciler) coalesceAndValidateDatacenterConfigs(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) ([]*cassandra.DatacenterConfig, error) {
+
+	kcKey := utils.GetKey(kc)
+	var coalescedDcConfigs []*cassandra.DatacenterConfig
+
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+
+		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+
+		dcKey := types.NamespacedName{Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace), Name: dcConfig.Meta.Name}
+		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcConfig.K8sContext)
+
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcConfig.K8sContext)
+		if err != nil {
+			dcLogger.Error(err, "Failed to get remote client")
+			return nil, err
+		}
+
+		if err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, dcLogger); err != nil {
+			dcLogger.Error(err, "Failed to read encryption secrets")
+			return nil, err
+		}
+
+		if err := cassandra.HandleEncryptionOptions(dcConfig); err != nil {
+			return nil, err
+		}
+
+		cassandra.AddNumTokens(dcConfig)
+		cassandra.AddStartRpc(dcConfig)
+		cassandra.HandleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
+
+		if err := cassandra.ValidateDatacenterConfig(dcConfig); err != nil {
+			return nil, err
+		}
+
+		coalescedDcConfigs = append(coalescedDcConfigs, dcConfig)
+	}
+	return coalescedDcConfigs, nil
+}
+
 func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
@@ -284,18 +318,6 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 			Cassandra: dc.Status.DeepCopy(),
 		}
 	}
-}
-
-func coalesceAndValidateDatacenterConfigs(kc *api.K8ssandraCluster) ([]*cassandra.DatacenterConfig, error) {
-	var coalescedDcConfigs []*cassandra.DatacenterConfig
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		coalesced := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
-		if err := cassandra.ValidateCoalesced(coalesced); err != nil {
-			return nil, err
-		}
-		coalescedDcConfigs = append(coalescedDcConfigs, coalesced)
-	}
-	return coalescedDcConfigs, nil
 }
 
 func datacenterAddedToExistingCluster(kc *api.K8ssandraCluster, dcName string) bool {

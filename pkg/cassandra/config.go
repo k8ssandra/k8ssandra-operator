@@ -48,7 +48,9 @@ func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version,
 	return json.Marshal(out)
 }
 
-func addNumTokens(template *DatacenterConfig) {
+// AddNumTokens adds the num_tokens option to cassandra.yaml if it is not already present, because
+// otherwise Cassandra defaults to num_tokens: 1, which is not recommended.
+func AddNumTokens(template *DatacenterConfig) {
 	// Note: we put int64 values because even if int values can be marshaled just fine,
 	// Unstructured.DeepCopy() would reject them since int is not a supported json type.
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
@@ -58,17 +60,18 @@ func addNumTokens(template *DatacenterConfig) {
 	}
 }
 
-func addStartRpc(template *DatacenterConfig) {
+// AddStartRpc adds the start_rpc option to cassandra.yaml, but only if Cassandra is 3.x.
+func AddStartRpc(template *DatacenterConfig) {
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
 		template.CassandraConfig.CassandraYaml.PutIfAbsent("start_rpc", false)
 	}
 }
 
-// Handles the deprecated settings: HeapSize and HeapNewGenSize by copying their values, if any,
-// to the appropriate destination settings, iif these are nil.
+// HandleDeprecatedJvmOptions handles the deprecated settings: HeapSize and HeapNewGenSize by
+// copying their values, if any, to the appropriate destination settings, iif these are nil.
 //
 //goland:noinspection GoDeprecation
-func handleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
+func HandleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
 	// Transfer the global heap size to specific keys
 	if jvmOptions.HeapSize != nil {
 		if jvmOptions.InitialHeapSize == nil {
