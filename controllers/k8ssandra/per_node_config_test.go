@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
@@ -125,7 +125,10 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &K8ssandraClusterReconciler{}
+			framework.Init(t)
+			r := &K8ssandraClusterReconciler{
+				Scheme: scheme.Scheme,
+			}
 			testLogger := testr.New(t)
 			kc := &api.K8ssandraCluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -215,15 +218,6 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 		if err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval); err != nil {
 			t.Fatalf("failed to delete k8ssandracluster: %v", err)
 		}
-		t.Log("check that the per-node configs were deleted")
-		assert.Eventually(t, func() bool {
-			perNodeConfigKey := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "test1-dc1-per-node-config")
-			return errors.IsNotFound(f.Get(ctx, perNodeConfigKey, &corev1.ConfigMap{}))
-		}, timeout, interval)
-		assert.Eventually(t, func() bool {
-			perNodeConfigKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "test1-dc2-per-node-config")
-			return errors.IsNotFound(f.Get(ctx, perNodeConfigKey, &corev1.ConfigMap{}))
-		}, timeout, interval)
 	}()
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
@@ -339,10 +333,6 @@ func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *frame
 		if err := f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval); err != nil {
 			t.Fatalf("failed to delete k8ssandracluster: %v", err)
 		}
-		t.Log("check that the per-node config wasn't deleted")
-		assert.Never(t, func() bool {
-			return errors.IsNotFound(f.Get(ctx, perNodeConfigKey, &corev1.ConfigMap{}))
-		}, timeout, interval)
 	}()
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})

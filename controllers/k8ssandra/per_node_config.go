@@ -15,7 +15,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,7 +65,14 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 		// Create
 		if desiredPerNodeConfig != nil {
 			if err = remoteClient.Create(ctx, desiredPerNodeConfig); err != nil {
-				dcLogger.Error(err, "Failed to create per-node configuration")
+				if apierrors.IsAlreadyExists(err) {
+					// the read from the local cache didn't catch that the resource was created
+					// already; simply requeue until the cache is up-to-date
+					return result.RequeueSoon(r.DefaultDelay)
+				} else {
+					dcLogger.Error(err, "Failed to create per-node configuration")
+					return result.Error(err)
+				}
 			}
 			dcLogger.Info("Created per-node configuration")
 		}
@@ -82,10 +88,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 			resourceVersion := actualPerNodeConfig.GetResourceVersion()
 			desiredPerNodeConfig.DeepCopyInto(actualPerNodeConfig)
 			actualPerNodeConfig.SetResourceVersion(resourceVersion)
-			if err := ctrl.SetControllerReference(kc, actualPerNodeConfig, r.Scheme); err != nil {
-				dcLogger.Error(err, "Failed to set controller reference on updated per-node configuration")
-				return result.Error(err)
-			} else if err = remoteClient.Update(ctx, actualPerNodeConfig); err != nil {
+			if err = remoteClient.Update(ctx, actualPerNodeConfig); err != nil {
 				dcLogger.Error(err, "Failed to update per-node configuration")
 				return result.Error(err)
 			}

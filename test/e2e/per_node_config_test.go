@@ -6,8 +6,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"testing"
+	"time"
 )
 
 func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -92,6 +95,25 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'4533189235135006821'")
 	assert.Contains(t, output, "'6839032244348700771'")
 	assert.Contains(t, output, "'9144875253562394737'")
+
+	t.Log("check that if K8ssandraCluster is deleted, the ConfigMap is also deleted")
+	err = f.DeleteK8ssandraClusters(namespace, time.Minute, time.Second)
+	require.NoError(t, err, "failed to delete K8ssandraCluster")
+
+	assert.Eventually(t, func() bool {
+		perNodeConfigMapKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test1-dc1-per-node-config")
+		perNodeConfigMap := &corev1.ConfigMap{}
+		err := f.Get(ctx, perNodeConfigMapKey, perNodeConfigMap)
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
+	assert.Eventually(t, func() bool {
+		perNodeConfigMapKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test1-dc2-per-node-config")
+		perNodeConfigMap := &corev1.ConfigMap{}
+		err := f.Get(ctx, perNodeConfigMapKey, perNodeConfigMap)
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
 }
 
 func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -122,4 +144,15 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 	assert.Contains(t, output, "'-3074457345618258604'")
 	assert.Contains(t, output, "'1537228672809129299'")
 	assert.Contains(t, output, "'6148914691236517202'")
+
+	t.Log("check that if K8ssandraCluster is deleted, the ConfigMap is not deleted")
+	err = f.DeleteK8ssandraClusters(namespace, time.Minute, time.Second)
+	require.NoError(t, err, "failed to delete K8ssandraCluster")
+
+	assert.Never(t, func() bool {
+		perNodeConfigMapKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "custom-per-node-config")
+		perNodeConfigMap := &corev1.ConfigMap{}
+		err := f.Get(ctx, perNodeConfigMapKey, perNodeConfigMap)
+		return errors.IsNotFound(err)
+	}, time.Second*15, time.Second)
 }
