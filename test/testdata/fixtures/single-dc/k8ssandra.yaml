@@ -50,9 +50,12 @@ spec:
                   - ReadWriteOnce
                 resources:
                   requests:
-                    storage: 10Mi
+                    storage: 1Gi
         config:
-          cassandraYaml: {}
+          cassandraYaml:
+            data_file_directories:
+              - /var/lib/cassandra/data
+              - /etc/extra/data
           jvmOptions:
             heap_initial_size: 512Mi
             heap_max_size: 512Mi
