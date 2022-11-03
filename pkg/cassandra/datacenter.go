@@ -3,7 +3,9 @@ package cassandra
 import (
 	"errors"
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
+
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
