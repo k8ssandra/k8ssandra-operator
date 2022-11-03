@@ -60,12 +60,15 @@ var perNodeConfigInitContainer = v1.Container{
 	Command: []string{
 		"sh",
 		"-c",
-		"for src in /per-node-config/${POD_NAME}_*; do " +
+		"if [ -e /per-node-config/${POD_NAME}_* ]; then " +
+			"for src in /per-node-config/${POD_NAME}_*; do " +
 			"dest=/config/`echo $src | cut -d \"_\" -f2`; " +
-			"touch $dest; " +
 			"yq ea '. as $item ireduce ({}; . * $item)' -i $dest $src && echo merged $src into $dest || exit 1; " +
 			"done; " +
-			"echo done",
+			"echo done merging per-node config for pod $POD_NAME; " +
+			"else " +
+			"echo no per-node config found for pod $POD_NAME; " +
+			"fi",
 	},
 }
 
