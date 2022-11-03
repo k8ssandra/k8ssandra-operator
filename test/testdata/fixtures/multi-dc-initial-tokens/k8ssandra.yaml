@@ -45,13 +45,13 @@ spec:
         racks:
           - name: rack1
             nodeAffinityLabels:
-              "topology.kubernetes.io/zone": region1-zone1
+              "topology.kubernetes.io/zone": region2-zone1
           - name: rack2
             nodeAffinityLabels:
-              "topology.kubernetes.io/zone": region1-zone2
+              "topology.kubernetes.io/zone": region2-zone2
           - name: rack3
             nodeAffinityLabels:
-              "topology.kubernetes.io/zone": region1-zone3
+              "topology.kubernetes.io/zone": region2-zone3
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
