@@ -60,7 +60,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	//dc 2 num_tokens 8
 
-	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc2Pod1, "SELECT tokens FROM system.local")
+	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod1, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-8533254483742592229'")
 	assert.Contains(t, output, "'-6227411474528898279'")
@@ -71,7 +71,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'5301803571539571471'")
 	assert.Contains(t, output, "'7607646580753265421'")
 
-	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc2Pod2, "SELECT tokens FROM system.local")
+	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod2, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-7764640147338027579'")
 	assert.Contains(t, output, "'-5458797138124333629'")
@@ -82,7 +82,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'6070417907944136121'")
 	assert.Contains(t, output, "'8376260917157830071'")
 
-	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc2Pod3, "SELECT tokens FROM system.local")
+	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod3, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-6996025810933462929'")
 	assert.Contains(t, output, "'-4690182801719768979'")
