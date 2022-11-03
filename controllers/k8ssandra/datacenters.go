@@ -115,7 +115,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())
 		}
 		// Create Medusa related objects
-		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcConfig, kc, dcLogger); medusaResult.Completed() {
+		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, kc, dcLogger); medusaResult.Completed() {
 			return medusaResult, actualDcs
 		}
 

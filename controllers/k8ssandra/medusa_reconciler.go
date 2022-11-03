@@ -21,15 +21,14 @@ import (
 func (r *K8ssandraClusterReconciler) ReconcileMedusa(
 	ctx context.Context,
 	dcConfig *cassandra.DatacenterConfig,
-	dcTemplate *cassandra.DatacenterConfig,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger,
 ) result.ReconcileResult {
-	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+	remoteClient, err := r.ClientCache.GetRemoteClient(dcConfig.K8sContext)
 	if err != nil {
 		return result.Error(err)
 	}
-	namespace := utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace)
+	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {
