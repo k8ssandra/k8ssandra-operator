@@ -108,7 +108,6 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 
 	pod1 := DcPrefix(t, f, dcKey) + "-default-sts-0"
 	pod2 := DcPrefix(t, f, dcKey) + "-default-sts-1"
-	pod3 := DcPrefix(t, f, dcKey) + "-default-sts-2"
 
 	output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod1, "SELECT tokens FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query")
@@ -123,11 +122,4 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 	assert.Contains(t, output, "'-3074457345618258604'")
 	assert.Contains(t, output, "'1537228672809129299'")
 	assert.Contains(t, output, "'6148914691236517202'")
-
-	output, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod3, "SELECT tokens FROM system.local")
-	require.NoError(t, err, "failed to execute CQL query")
-	assert.Contains(t, output, "'-6148914691236517206'")
-	assert.Contains(t, output, "'-1537228672809129303'")
-	assert.Contains(t, output, "'3074457345618258600'")
-	assert.Contains(t, output, "'7686143364045646503'")
 }

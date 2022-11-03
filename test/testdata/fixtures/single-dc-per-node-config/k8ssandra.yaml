@@ -9,9 +9,6 @@ data:
   test-dc1-default-sts-1_cassandra.yaml: |
     num_tokens: 4
     initial_token: -7686143364045646507,-3074457345618258604,1537228672809129299,6148914691236517202
-  test-dc1-default-sts-2_cassandra.yaml: |
-    num_tokens: 4
-    initial_token: -6148914691236517206,-1537228672809129303,3074457345618258600,7686143364045646503
 ---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
