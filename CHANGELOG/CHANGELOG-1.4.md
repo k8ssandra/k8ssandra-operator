@@ -23,3 +23,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
   [FEATURE] [#718](https://github.com/k8ssandra/k8ssandra-operator/issues/718) Make keystore-password, keystore, truststore keys in secret configurable
 * [BUGFIX] [#722](https://github.com/k8ssandra/k8ssandra-operator/issues/722) Enable client-side CQL encryption in Stargate if it is configured on the cluster
 * [BUGFIX] [#714](https://github.com/k8ssandra/k8ssandra-operator/issues/714) Don't restart whole Cassandra 4 DC when Stargate is added or removed
+* [TESTING] [#747](https://github.com/k8ssandra/k8ssandra-operator/issues/747) Add e2e test and docs for JBOD support
