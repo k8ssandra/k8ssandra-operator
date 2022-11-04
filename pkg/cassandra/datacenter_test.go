@@ -435,15 +435,17 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				Containers: []corev1.Container{
-					{
-						Name:  "test-container",
-						Image: "test-image",
-					},
-				},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{{Name: "cassandra"}},
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+							{
+								Name: "cassandra",
+							},
+						},
 					},
 				},
 			},
@@ -474,27 +476,29 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				InitContainers: []corev1.Container{
-					{
-						Name: "server-config-init",
-					},
-					{
-						Name: "medusa-restore",
-					},
-					{
-						Name:  "test-init-container",
-						Image: "test-image",
-					},
-				},
-				Containers: []corev1.Container{
-					{
-						Name:  "test-container",
-						Image: "test-image",
-					},
-				},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{{Name: "cassandra"}},
+						InitContainers: []corev1.Container{
+							{
+								Name: "server-config-init",
+							},
+							{
+								Name: "medusa-restore",
+							},
+							{
+								Name:  "test-init-container",
+								Image: "test-image",
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+							{
+								Name: "cassandra",
+							},
+						},
 					},
 				},
 			},
@@ -515,8 +519,8 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: []cassdcapi.AdditionalVolumes{
+				StorageConfig: &cassdcapi.StorageConfig{
+					AdditionalVolumes: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume",
 							MountPath: "/test",
@@ -557,8 +561,8 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: []cassdcapi.AdditionalVolumes{
+				StorageConfig: &cassdcapi.StorageConfig{
+					AdditionalVolumes: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume-dc",
 							MountPath: "/test-dc",

@@ -40,15 +40,8 @@ func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcC
 	if dcConfig.PodTemplateSpec == nil {
 		return errors.New("no PodTemplateSpec in dcConfig to inject telemetry filtering env vars into")
 	}
-	containerIndex, containerFound := cassandra.FindContainer(dcConfig.PodTemplateSpec, "cassandra")
-	if containerFound {
-		dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env = append(dcConfig.PodTemplateSpec.Spec.Containers[containerIndex].Env,
-			filtersEnvVar)
-	} else {
-		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, v1.Container{
-			Name: "cassandra",
-			Env:  []v1.EnvVar{filtersEnvVar},
-		})
-	}
+	cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(container *v1.Container) {
+		container.Env = append(container.Env, filtersEnvVar)
+	})
 	return nil
 }
