@@ -700,7 +700,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	dcPrefix := DcPrefix(t, f, dcKey)
 	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
-	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey))
+	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -1825,7 +1825,7 @@ func checkInjectedContainersPresence(t *testing.T, ctx context.Context, f *frame
 	return nil
 }
 
-func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
+func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, nbVolumes int) error {
 	t.Logf("check that volumes were injected in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, cassdc)
@@ -1833,7 +1833,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 		return err
 	}
 
-	require.Equal(t, 1, len(cassdc.Spec.StorageConfig.AdditionalVolumes), "expected 1 additional volume")
+	require.Equal(t, nbVolumes, len(cassdc.Spec.StorageConfig.AdditionalVolumes), "expected a different number of additional volume")
 	require.Equal(t, "/etc/extra", cassdc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected busybox-vol mount path")
 
 	_, found := cassandra.FindVolume(cassdc.Spec.PodTemplateSpec, "busybox-vol")
