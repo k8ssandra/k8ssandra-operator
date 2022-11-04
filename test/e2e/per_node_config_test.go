@@ -96,8 +96,8 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'6839032244348700771'")
 	assert.Contains(t, output, "'9144875253562394737'")
 
-	t.Log("check that if K8ssandraCluster is deleted, the ConfigMap is also deleted")
-	err = f.DeleteK8ssandraClusters(namespace, time.Minute, time.Second)
+	t.Log("check that if the K8ssandraCluster object is deleted, the ConfigMap is also deleted")
+	err = f.DeleteK8ssandraCluster(ctx, kcKey, time.Minute, time.Second)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 
 	assert.Eventually(t, func() bool {

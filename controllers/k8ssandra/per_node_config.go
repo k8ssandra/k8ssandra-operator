@@ -64,10 +64,12 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 
 		// Create
 		if desiredPerNodeConfig != nil {
+			// Note: cannot set controller reference on remote objects
 			if err = remoteClient.Create(ctx, desiredPerNodeConfig); err != nil {
 				if apierrors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created
 					// already; simply requeue until the cache is up-to-date
+					dcLogger.Info("Per-node configuration already exists, requeueing")
 					return result.RequeueSoon(r.DefaultDelay)
 				} else {
 					dcLogger.Error(err, "Failed to create per-node configuration")
