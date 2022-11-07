@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## Unreleased
 
+* [ENHANCEMENT] [#753](https://github.com/k8ssandra/k8ssandra-operator/issues/753) Upgrade Stargate to v1.0.67
 * [BUGFIX] [#723](https://github.com/k8ssandra/k8ssandra-operator/issues/723) Allow setting resource limits for the server-config-init container
 * [BUGFIX] [#683](https://github.com/k8ssandra/k8ssandra-operator/issues/683) Fix Stargate not working when encryption is enabled but no cassandra.yaml config map is provided
 

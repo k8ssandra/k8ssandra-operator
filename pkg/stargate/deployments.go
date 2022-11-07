@@ -35,7 +35,7 @@ const (
 	DefaultImageRepository = "stargateio"
 	DefaultImageName3      = "stargate-3_11"
 	DefaultImageName4      = "stargate-4_0"
-	DefaultVersion         = "1.0.66"
+	DefaultVersion         = "1.0.67"
 	// When changing the default version above, please also change the kubebuilder marker in
 	// apis/stargate/v1alpha1/stargate_types.go accordingly.
 )
