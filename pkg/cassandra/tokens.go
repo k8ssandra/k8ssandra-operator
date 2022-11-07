@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"errors"
 	"fmt"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -9,22 +10,19 @@ import (
 )
 
 // ComputeInitialTokens computes initial tokens for each DC, assign those tokens to the first RF
-// pods in the DC, and stores the result in the DC config for later retrieval. This is only done for
-// clusters where all DCs have num_tokens < 16, and where the partitioner is either Murmur3 or
-// Random. For all other cases, no initial tokens are assigned by the operator.
+// pods in the DC, and stores the result in the DC config for later retrieval.
 //
-// In the unlikely case we get here with something invalid in the cassandra.yaml configuration, and
-// the token computation cannot be carried out, this function simply skips token assignment but
-// doesn't return any errors nor panics, since the configuration is already being validated
-// elsewhere.
-func ComputeInitialTokens(dcConfigs []*DatacenterConfig) {
-	infos := collectTokenAllocationInfos(dcConfigs)
-	if infos == nil {
-		return
+// If any DC has num_tokens >= 16, or if the partitioner is not Murmur3 nor Random, or if there is
+// something invalid in the cassandra.yaml configuration, then this function skips computing initial
+// tokens, does not modify the DC configs, and returns an error.
+func ComputeInitialTokens(dcConfigs []*DatacenterConfig) error {
+	infos, err := collectTokenAllocationInfos(dcConfigs)
+	if err != nil {
+		return err
 	}
-	partitioner := checkPartitioner(infos)
-	if partitioner == nil {
-		return
+	partitioner, err := checkPartitioner(infos)
+	if err != nil {
+		return err
 	}
 	var nodesPerDc []int
 	for _, info := range infos {
@@ -32,7 +30,17 @@ func ComputeInitialTokens(dcConfigs []*DatacenterConfig) {
 	}
 	allInitialTokens := utils.ComputeTokens(nodesPerDc, *partitioner)
 	assignInitialTokens(dcConfigs, infos, allInitialTokens)
+	return nil
 }
+
+var (
+	ErrInitialTokensDCHasUserProvidedConfig = errors.New("cannot compute initial tokens: at least one DC has a user-provided per-node config")
+	ErrInitialTokensInvalidNumTokens        = errors.New("cannot compute initial tokens: invalid num_tokens")
+	ErrInitialTokensNumTokensTooHigh        = errors.New("cannot compute initial tokens: at least one DC has num_tokens >= 16")
+	ErrInitialTokensInvalidAllocateTokens   = errors.New("cannot compute initial tokens: invalid allocate_tokens_for_local_replication_factor")
+	ErrInitialTokensInvalidPartitioner      = errors.New("cannot compute initial tokens: invalid or unsupported partitioner")
+	ErrInitialTokensPartitionerMismatch     = errors.New("cannot compute initial tokens: partitioner mismatch")
+)
 
 type tokenAllocationInfo struct {
 	numTokens   int
@@ -40,52 +48,59 @@ type tokenAllocationInfo struct {
 	partitioner *utils.Partitioner
 }
 
-func collectTokenAllocationInfos(dcConfigs []*DatacenterConfig) []*tokenAllocationInfo {
+func collectTokenAllocationInfos(dcConfigs []*DatacenterConfig) ([]*tokenAllocationInfo, error) {
 	var infos []*tokenAllocationInfo
 	for _, dcConfig := range dcConfigs {
 		if dcConfig.PerNodeConfigMapRef.Name != "" {
-			// We don't compute initial tokens when there is a user-provided per-node config map
-			return nil
+			return nil, ErrInitialTokensDCHasUserProvidedConfig
+		}
+		numTokens, err := computeDcNumTokens(dcConfig)
+		if err != nil {
+			return nil, err
+		}
+		rf, err := computeDcReplicationFactor(dcConfig)
+		if err != nil {
+			return nil, err
+		}
+		partitioner, err := computeDcPartitioner(dcConfig)
+		if err != nil {
+			return nil, err
 		}
 		info := &tokenAllocationInfo{
-			numTokens:   computeDcNumTokens(dcConfig),
-			rf:          computeDcReplicationFactor(dcConfig),
-			partitioner: computeDcPartitioner(dcConfig),
-		}
-		if info.numTokens == -1 || info.rf == -1 || info.partitioner == nil {
-			// cannot compute initial tokens for this DC, so abort
-			return nil
+			numTokens:   numTokens,
+			rf:          rf,
+			partitioner: partitioner,
 		}
 		infos = append(infos, info)
 	}
-	return infos
+	return infos, nil
 }
 
-func computeDcNumTokens(dc *DatacenterConfig) int {
+func computeDcNumTokens(dc *DatacenterConfig) (int, error) {
 	numTokens, hasNumTokens := dc.CassandraConfig.CassandraYaml["num_tokens"]
 	if hasNumTokens {
 		// convert interface{} -> string -> int to account for all possible numeric types
 		numTokensInt, err := strconv.Atoi(fmt.Sprintf("%v", numTokens))
 		if err != nil {
-			return -1
+			return -1, ErrInitialTokensInvalidNumTokens
 		}
 		// We only compute initial tokens for clusters where all DCs have num_tokens < 16
 		if numTokensInt >= 16 {
-			return -1
+			return -1, ErrInitialTokensNumTokensTooHigh
 		}
-		return numTokensInt
+		return numTokensInt, nil
 	}
-	return 1 // default num_tokens
+	return 1, nil // default num_tokens
 }
 
-func computeDcReplicationFactor(dc *DatacenterConfig) int {
+func computeDcReplicationFactor(dc *DatacenterConfig) (int, error) {
 	rf := 3 // default RF
 	allocateTokens, hasAllocateTokens := dc.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
 	if hasAllocateTokens {
 		// convert interface{} -> string -> int to account for all possible numeric types
 		allocateTokensInt, err := strconv.Atoi(fmt.Sprintf("%v", allocateTokens))
 		if err != nil {
-			return -1
+			return -1, ErrInitialTokensInvalidAllocateTokens
 		}
 		rf = allocateTokensInt
 	}
@@ -93,35 +108,33 @@ func computeDcReplicationFactor(dc *DatacenterConfig) int {
 	if int(dc.Size) < rf {
 		rf = int(dc.Size)
 	}
-	return rf
+	return rf, nil
 }
 
-func computeDcPartitioner(dc *DatacenterConfig) *utils.Partitioner {
-	var partitioner *utils.Partitioner
+func computeDcPartitioner(dc *DatacenterConfig) (*utils.Partitioner, error) {
 	partitionerName, hasPartitioner := dc.CassandraConfig.CassandraYaml["partitioner"]
 	if hasPartitioner {
 		partitionerNameStr, ok := partitionerName.(string)
 		if ok {
 			if strings.Contains(partitionerNameStr, "Murmur3Partitioner") {
-				partitioner = &utils.Murmur3Partitioner
+				return &utils.Murmur3Partitioner, nil
 			} else if strings.Contains(partitionerNameStr, "RandomPartitioner") {
-				partitioner = &utils.RandomPartitioner
+				return &utils.RandomPartitioner, nil
 			}
 		}
-	} else {
-		partitioner = &utils.Murmur3Partitioner // default partitioner
+		return nil, ErrInitialTokensInvalidPartitioner
 	}
-	return partitioner
+	return &utils.Murmur3Partitioner, nil // default partitioner
 }
 
-func checkPartitioner(infos []*tokenAllocationInfo) *utils.Partitioner {
+func checkPartitioner(infos []*tokenAllocationInfo) (*utils.Partitioner, error) {
 	partitioner := infos[0].partitioner
 	for _, info := range infos {
 		if info.partitioner != partitioner {
-			return nil // partitioner mismatch
+			return nil, ErrInitialTokensPartitionerMismatch // partitioner mismatch
 		}
 	}
-	return partitioner
+	return partitioner, nil
 }
 
 func assignInitialTokens(dcConfigs []*DatacenterConfig, infos []*tokenAllocationInfo, allInitialTokens [][]string) {

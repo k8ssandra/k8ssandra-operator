@@ -86,7 +86,10 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		dcConfigs = append(dcConfigs, dcConfig)
 	}
 
-	cassandra.ComputeInitialTokens(dcConfigs)
+	err := cassandra.ComputeInitialTokens(dcConfigs)
+	if err != nil {
+		logger.Info("Initial token computation could not be performed or is not required in this cluster", "error", err)
+	}
 
 	return dcConfigs, nil
 }

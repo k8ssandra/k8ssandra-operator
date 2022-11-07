@@ -14,6 +14,7 @@ func TestComputeInitialTokens(t *testing.T) {
 		name      string
 		dcConfigs []*DatacenterConfig
 		want      []map[string][]string
+		wantErr   assert.ErrorAssertionFunc
 	}{
 		{
 			name: "single dc num_tokens < 16",
@@ -36,6 +37,7 @@ func TestComputeInitialTokens(t *testing.T) {
 					"cluster1-dc1-default-sts-2": {"3074457345618258602"},
 				},
 			},
+			wantErr: assert.NoError,
 		},
 		{
 			name: "single dc num_tokens >= 16",
@@ -54,6 +56,7 @@ func TestComputeInitialTokens(t *testing.T) {
 			want: []map[string][]string{
 				nil,
 			},
+			wantErr: assert.Error,
 		},
 		{
 			name: "multi dc num_tokens < 16",
@@ -98,11 +101,13 @@ func TestComputeInitialTokens(t *testing.T) {
 					"cluster1-dc2-rack2-sts-1": {"-6996025810933462929", "-4690182801719768979", "-2384339792506075029", "-78496783292381079", "2227346225921312871", "4533189235135006821", "6839032244348700771", "9144875253562394737"},
 				},
 			},
+			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ComputeInitialTokens(tt.dcConfigs)
+			err := ComputeInitialTokens(tt.dcConfigs)
+			tt.wantErr(t, err)
 			for i, dcConfig := range tt.dcConfigs {
 				assert.Equal(t, tt.want[i], dcConfig.InitialTokensByPodName)
 			}
@@ -237,7 +242,7 @@ func Test_collectTokenAllocationInfos(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotInfos := collectTokenAllocationInfos(tt.dcConfigs)
+			gotInfos, _ := collectTokenAllocationInfos(tt.dcConfigs)
 			assert.Equal(t, tt.wantInfos, gotInfos)
 		})
 	}
@@ -291,7 +296,7 @@ func Test_computeDcNumTokens(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := computeDcNumTokens(tt.dc)
+			got, _ := computeDcNumTokens(tt.dc)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -379,7 +384,7 @@ func Test_computeDcPartitioner(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPartitioner := computeDcPartitioner(tt.dc)
+			gotPartitioner, _ := computeDcPartitioner(tt.dc)
 			assert.Equal(t, tt.wantPartitioner, gotPartitioner)
 		})
 	}
@@ -387,9 +392,10 @@ func Test_computeDcPartitioner(t *testing.T) {
 
 func Test_computeDcReplicationFactor(t *testing.T) {
 	tests := []struct {
-		name string
-		dc   *DatacenterConfig
-		want int
+		name    string
+		dc      *DatacenterConfig
+		want    int
+		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "default rf <= dc size",
@@ -398,7 +404,8 @@ func Test_computeDcReplicationFactor(t *testing.T) {
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Size:    3,
 			},
-			want: 3,
+			want:    3,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "default rf > dc size",
@@ -407,7 +414,8 @@ func Test_computeDcReplicationFactor(t *testing.T) {
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Size:    2,
 			},
-			want: 2,
+			want:    2,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "custom rf <= dc size",
@@ -421,7 +429,8 @@ func Test_computeDcReplicationFactor(t *testing.T) {
 					},
 				},
 			},
-			want: 5,
+			want:    5,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "custom rf > dc size",
@@ -435,7 +444,8 @@ func Test_computeDcReplicationFactor(t *testing.T) {
 					},
 				},
 			},
-			want: 3,
+			want:    3,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "invalid num_tokens",
@@ -449,22 +459,25 @@ func Test_computeDcReplicationFactor(t *testing.T) {
 					},
 				},
 			},
-			want: -1,
+			want:    -1,
+			wantErr: assert.Error,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := computeDcReplicationFactor(tt.dc)
+			got, gotErr := computeDcReplicationFactor(tt.dc)
 			assert.Equal(t, tt.want, got)
+			tt.wantErr(t, gotErr)
 		})
 	}
 }
 
 func Test_checkPartitioner(t *testing.T) {
 	tests := []struct {
-		name  string
-		infos []*tokenAllocationInfo
-		want  *utils.Partitioner
+		name    string
+		infos   []*tokenAllocationInfo
+		want    *utils.Partitioner
+		wantErr assert.ErrorAssertionFunc
 	}{
 		{
 			name: "no mismatch",
@@ -472,7 +485,8 @@ func Test_checkPartitioner(t *testing.T) {
 				{partitioner: &utils.Murmur3Partitioner},
 				{partitioner: &utils.Murmur3Partitioner},
 			},
-			want: &utils.Murmur3Partitioner,
+			want:    &utils.Murmur3Partitioner,
+			wantErr: assert.NoError,
 		},
 		{
 			name: "mismatch",
@@ -481,13 +495,15 @@ func Test_checkPartitioner(t *testing.T) {
 				{partitioner: &utils.Murmur3Partitioner},
 				{partitioner: &utils.RandomPartitioner},
 			},
-			want: nil,
+			want:    nil,
+			wantErr: assert.Error,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := checkPartitioner(tt.infos)
+			got, gotErr := checkPartitioner(tt.infos)
 			assert.Equal(t, tt.want, got)
+			tt.wantErr(t, gotErr)
 		})
 	}
 }
