@@ -30,6 +30,21 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc2Key.Name)
 
+	t.Log("check that the ConfigMaps were created")
+
+	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test1-dc1-per-node-config")
+	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test1-dc2-per-node-config")
+
+	assert.Eventually(t, func() bool {
+		perNodeConfigMap := &corev1.ConfigMap{}
+		return f.Get(ctx, perNodeConfigMapKey1, perNodeConfigMap) == nil
+	}, time.Minute, time.Second)
+
+	assert.Eventually(t, func() bool {
+		perNodeConfigMap := &corev1.ConfigMap{}
+		return f.Get(ctx, perNodeConfigMapKey2, perNodeConfigMap) == nil
+	}, time.Minute, time.Second)
+
 	dc1Pod1 := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
 	dc1Pod2 := DcPrefix(t, f, dc1Key) + "-rack2-sts-0"
 	dc1Pod3 := DcPrefix(t, f, dc1Key) + "-rack3-sts-0"
@@ -100,16 +115,14 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 
 	assert.Eventually(t, func() bool {
-		perNodeConfigMapKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test1-dc1-per-node-config")
 		perNodeConfigMap := &corev1.ConfigMap{}
-		err := f.Get(ctx, perNodeConfigMapKey, perNodeConfigMap)
+		err := f.Get(ctx, perNodeConfigMapKey1, perNodeConfigMap)
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
 	assert.Eventually(t, func() bool {
-		perNodeConfigMapKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test1-dc2-per-node-config")
 		perNodeConfigMap := &corev1.ConfigMap{}
-		err := f.Get(ctx, perNodeConfigMapKey, perNodeConfigMap)
+		err := f.Get(ctx, perNodeConfigMapKey2, perNodeConfigMap)
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
@@ -143,7 +156,7 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 	assert.Contains(t, output, "'6148914691236517202'")
 
 	t.Log("check that if K8ssandraCluster is deleted, the ConfigMap is not deleted")
-	err = f.DeleteK8ssandraClusters(namespace, time.Minute, time.Second)
+	err = f.DeleteK8ssandraCluster(ctx, kcKey, time.Minute, time.Second)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 
 	assert.Never(t, func() bool {
