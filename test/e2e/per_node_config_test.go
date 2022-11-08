@@ -32,17 +32,12 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	t.Log("check that the ConfigMaps were created")
 
-	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test1-dc1-per-node-config")
-	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test1-dc2-per-node-config")
+	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test-dc1-per-node-config")
+	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test-dc2-per-node-config")
 
 	assert.Eventually(t, func() bool {
-		perNodeConfigMap := &corev1.ConfigMap{}
-		return f.Get(ctx, perNodeConfigMapKey1, perNodeConfigMap) == nil
-	}, time.Minute, time.Second)
-
-	assert.Eventually(t, func() bool {
-		perNodeConfigMap := &corev1.ConfigMap{}
-		return f.Get(ctx, perNodeConfigMapKey2, perNodeConfigMap) == nil
+		return f.Get(ctx, perNodeConfigMapKey1, &corev1.ConfigMap{}) == nil &&
+			f.Get(ctx, perNodeConfigMapKey2, &corev1.ConfigMap{}) == nil
 	}, time.Minute, time.Second)
 
 	dc1Pod1 := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
