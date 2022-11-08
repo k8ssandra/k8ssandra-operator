@@ -200,7 +200,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Dio.netty.tryReflectionSetAccessible=true.
 	// +optional
-	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm11-server-options/io_netty_try_reflection_set_accessible"`
+	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x:jvm11-server-options/io_netty_try_reflection_set_accessible;dse@>=6.8.x:jvm8-server-options/io_netty_try_reflection_set_accessible"`
 
 	// Defaults to 1048576.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
@@ -220,7 +220,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Djdk.attach.allowAttachSelf=true.
 	// +optional
-	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm11-server-options/jdk_attach_allow_attach_self"`
+	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x:jvm11-server-options/jdk_attach_allow_attach_self;dse@>=6.8.x:jvm8-server-options/jdk_attach_allow_attach_self"`
 
 	// CASSANDRA STARTUP OPTIONS
 
@@ -316,7 +316,7 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Enum=G1GC;CMS;ZGC;Shenandoah;Graal;Custom
 	// +kubebuilder:default=G1GC
 	// +optional
-	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x,dse@>=6.8.x:jvm11-server-options/garbage_collector"`
+	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x:jvm11-server-options/garbage_collector;dse@>=6.8.x:jvm8-server-options/garbage_collector"`
 
 	// CMS
 
@@ -366,14 +366,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent;>=4.x,dse@>=6.8.x:jvm11-server-options/g1r_set_updating_pause_time_percent"`
+	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent;>=4.x:jvm11-server-options/g1r_set_updating_pause_time_percent;dse@>=6.8.x:jvm8-server-options/g1r_set_updating_pause_time_percent"`
 
 	// G1GC Max GC Pause in milliseconds. Defaults to 500. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:MaxGCPauseMillis.
 	// +optional
-	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis;>=4.x,dse@>=6.8.x:jvm11-server-options/max_gc_pause_millis"`
+	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis;>=4.x:jvm11-server-options/max_gc_pause_millis;dse@>=6.8.x:jvm8-server-options/max_gc_pause_millis"`
 
 	// Initiating Heap Occupancy Percentage. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
@@ -382,14 +382,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent;>=4.x,dse@>=6.8.x:jvm11-server-options/initiating_heap_occupancy_percent"`
+	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent;>=4.x:jvm11-server-options/initiating_heap_occupancy_percent;dse@>=6.8.x:jvm8-server-options/initiating_heap_occupancy_percent"`
 
 	// Parallel GC Threads. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ParallelGCThreads.
 	// +optional
-	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads;>=4.x,dse@>=6.8.x:jvm11-server-options/parallel_gc_threads"`
+	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads;>=4.x:jvm11-server-options/parallel_gc_threads;dse@>=6.8.x:jvm8-server-options/parallel_gc_threads"`
 
 	// Concurrent GC Threads. Can only be used when G1 garbage collector is used.
 	// Disabled by default.
@@ -397,7 +397,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ConcGCThreads.
 	// +optional
-	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads;>=4.x,dse@>=6.8.x:jvm11-server-options/conc_gc_threads"`
+	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads;>=4.x:jvm11-server-options/conc_gc_threads;dse@>=6.8.x:jvm8-server-options/conc_gc_threads"`
 
 	// GC LOGGING OPTIONS (currently only available for Cassandra 3.11)
 

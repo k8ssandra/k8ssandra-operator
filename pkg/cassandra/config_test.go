@@ -199,8 +199,8 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionDse,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector:             pointer.String("ZGC"),
-					AdditionalJvm11ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
+					GarbageCollector:            pointer.String("ZGC"),
+					AdditionalJvm8ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
 				},
 				DseYaml: unstructured.Unstructured{
 					"authentication_options": map[string]interface{}{
@@ -209,7 +209,7 @@ func TestCreateJsonConfig(t *testing.T) {
 				},
 			},
 			want: `{
-             "jvm11-server-options": {
+             "jvm8-server-options": {
                "garbage_collector": "ZGC",
 							 "additional-jvm-opts": ["-XX:+UseConcMarkSweepGC"]
              },
@@ -226,10 +226,9 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionDse,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector:             pointer.String("ZGC"),
-					AdditionalJvm11ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
-					AdditionalJvm8ServerOptions:  []string{"-XX:ThreadPriorityPolicy=42"},
-					AdditionalJvmServerOptions:   []string{"-Dio.netty.maxDirectMemory=0"},
+					GarbageCollector:            pointer.String("ZGC"),
+					AdditionalJvm8ServerOptions: []string{"-XX:ThreadPriorityPolicy=42", "-XX:+UseConcMarkSweepGC"},
+					AdditionalJvmServerOptions:  []string{"-Dio.netty.maxDirectMemory=0"},
 				},
 				DseYaml: unstructured.Unstructured{
 					"authentication_options": map[string]interface{}{
@@ -242,12 +241,9 @@ func TestCreateJsonConfig(t *testing.T) {
 							"additional-jvm-opts": ["-Dio.netty.maxDirectMemory=0"]
 						},
 						 "jvm8-server-options": {
-							"additional-jvm-opts": ["-XX:ThreadPriorityPolicy=42"]
+							"garbage_collector": "ZGC",
+							"additional-jvm-opts": ["-XX:ThreadPriorityPolicy=42", "-XX:+UseConcMarkSweepGC"]
 						},
-            "jvm11-server-options": {
-              "garbage_collector": "ZGC",
-							"additional-jvm-opts": ["-XX:+UseConcMarkSweepGC"]
-            },
             "dse-yaml": {
               "authentication_options": {
 				        "enabled": true
