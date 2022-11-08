@@ -279,6 +279,16 @@ type CassandraDatacenterTemplate struct {
 	// deploying Stargate in this datacenter.
 	// +optional
 	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
+
+	// PerNodeConfigMapRef is a reference to a ConfigMap that contains per-node configuration for
+	// this DC. The ConfigMap is expected to have entries in the following form:
+	// <pod-name>_<file-name>.yaml, where <pod-name> is the name of the pod and <file-name> is the
+	// name of a configuration file (typically, cassandra.yaml). The value of the entry is expected
+	// to be a YAML fragment that contains the per-node configuration for each pod. When the pod is
+	// started, the per-node ConfigMap is mounted and the contents of each entry corresponding to
+	// the pod are merged into their respective configuration files.
+	// +optional
+	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
 }
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
@@ -415,6 +425,22 @@ type EmbeddedObjectMeta struct {
 
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+func (in *EmbeddedObjectMeta) GetAnnotations() map[string]string {
+	return in.Annotations
+}
+
+func (in *EmbeddedObjectMeta) SetAnnotations(annotations map[string]string) {
+	in.Annotations = annotations
+}
+
+func (in *EmbeddedObjectMeta) GetLabels() map[string]string {
+	return in.Labels
+}
+
+func (in *EmbeddedObjectMeta) SetLabels(labels map[string]string) {
+	in.Labels = labels
 }
 
 func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {

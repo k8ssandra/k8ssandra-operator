@@ -3,6 +3,12 @@ package v1alpha1
 const (
 	ResourceHashAnnotation = "k8ssandra.io/resource-hash"
 
+	// PerNodeConfigHashAnnotation is the annotation used to store the hash of the per-node
+	// ConfigMap into the PodTemplateSpec of the CassandraDatacenter resource. By storing the
+	// ConfigMap hash, the PodTemplateSpec changes when the ConfigMap changes, thus allowing the
+	// changes to the ConfigMap to be properly detected and applied.
+	PerNodeConfigHashAnnotation = "k8ssandra.io/per-node-config-hash"
+
 	// InitialSystemReplicationAnnotation provides the initial replication of system keyspaces
 	// (system_auth, system_distributed, system_traces) encoded as JSON. This annotation
 	// is set on a K8ssandraCluster when it is first created. The value does not change

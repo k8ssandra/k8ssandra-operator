@@ -84,6 +84,7 @@ jobs:
           - MultiDcEncryptionWithReaper
           - StopAndRestartDc
           - CreateMultiDatacenterDseCluster
+          - PerNodeConfig/InitialTokens
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

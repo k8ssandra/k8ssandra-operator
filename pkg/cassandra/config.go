@@ -48,28 +48,30 @@ func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version,
 	return json.Marshal(out)
 }
 
-func addNumTokens(template *DatacenterConfig) {
-	// Even though we default to Cassandra's stock defaults for num_tokens, we need to
-	// explicitly set it because the config builder defaults to num_tokens: 1
-	// FIXME when importing existing clusters, we should not override the user's num_tokens setting – even if it's unset (1)
+// AddNumTokens adds the num_tokens option to cassandra.yaml if it is not already present, because
+// otherwise Cassandra defaults to num_tokens: 1, which is not recommended.
+func AddNumTokens(template *DatacenterConfig) {
+	// Note: we put int64 values because even if int values can be marshaled just fine,
+	// Unstructured.DeepCopy() would reject them since int is not a supported json type.
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", 256)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(256))
 	} else {
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", 16)
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(16))
 	}
 }
 
-func addStartRpc(template *DatacenterConfig) {
+// AddStartRpc adds the start_rpc option to cassandra.yaml, but only if Cassandra is 3.x.
+func AddStartRpc(template *DatacenterConfig) {
 	if template.ServerType == api.ServerDistributionCassandra && template.ServerVersion.Major() == 3 {
 		template.CassandraConfig.CassandraYaml.PutIfAbsent("start_rpc", false)
 	}
 }
 
-// Handles the deprecated settings: HeapSize and HeapNewGenSize by copying their values, if any,
-// to the appropriate destination settings, iif these are nil.
+// HandleDeprecatedJvmOptions handles the deprecated settings: HeapSize and HeapNewGenSize by
+// copying their values, if any, to the appropriate destination settings, iif these are nil.
 //
 //goland:noinspection GoDeprecation
-func handleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
+func HandleDeprecatedJvmOptions(jvmOptions *api.JvmOptions) {
 	// Transfer the global heap size to specific keys
 	if jvmOptions.HeapSize != nil {
 		if jvmOptions.InitialHeapSize == nil {

@@ -7400,6 +7400,25 @@ spec:
                                   type: integer
                               type: object
                           type: object
+                        perNodeConfigMapRef:
+                          description: 'PerNodeConfigMapRef is a reference to a ConfigMap
+                            that contains per-node configuration for this DC. The
+                            ConfigMap is expected to have entries in the following
+                            form: <pod-name>_<file-name>.yaml, where <pod-name> is
+                            the name of the pod and <file-name> is the name of a configuration
+                            file (typically, cassandra.yaml). The value of the entry
+                            is expected to be a YAML fragment that contains the per-node
+                            configuration for each pod. When the pod is started, the
+                            per-node ConfigMap is mounted and the contents of each
+                            entry corresponding to the pod are merged into their respective
+                            configuration files.'
+                          properties:
+                            name:
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
                         podSecurityContext:
                           description: PodSecurityContext defines the security context
                             for the Cassandra pods.

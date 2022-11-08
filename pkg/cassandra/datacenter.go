@@ -86,6 +86,7 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
 	Meta                     api.EmbeddedObjectMeta
+	K8sContext               string
 	Cluster                  string
 	SuperuserSecretRef       corev1.LocalObjectReference
 	ServerImage              string
@@ -112,58 +113,29 @@ type DatacenterConfig struct {
 	ClientTruststorePassword string
 	ServerKeystorePassword   string
 	ServerTruststorePassword string
-	Containers               []corev1.Container
-	InitContainers           []corev1.Container
-	ExtraVolumes             *api.K8ssandraVolumes
 	CDC                      *cassdcapi.CDCConfiguration
 	DseWorkloads             *cassdcapi.DseWorkloads
 	ConfigBuilderResources   *corev1.ResourceRequirements
-	PodSecurityContext       *corev1.PodSecurityContext
 	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef      corev1.LocalObjectReference
+
+	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
+	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
+	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
+	// presence affects the PodTemplateSpec.
+	InitialTokensByPodName map[string][]string
 }
 
 const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
 )
 
-func DatacenterNamespace(klusterKey types.NamespacedName, template *DatacenterConfig) string {
-	namespace := template.Meta.Namespace
-	if len(namespace) == 0 {
-		namespace = klusterKey.Namespace
-	}
-	return namespace
-}
-
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
-	namespace := DatacenterNamespace(klusterKey, template)
-
-	if template.ServerVersion == nil {
-		return nil, DCConfigIncomplete{"template.ServerVersion"}
-	}
-	if template.ServerType == "" {
-		return nil, DCConfigIncomplete{"template.ServerType"}
-	}
-
-	if err := validateCassandraYaml(template.CassandraConfig.CassandraYaml); err != nil {
-		return nil, err
-	}
-
-	// If client or server encryption is enabled, create the required volumes and mounts
-	if err := handleEncryptionOptions(template); err != nil {
-		return nil, err
-	}
-
-	handleDeprecatedJvmOptions(&template.CassandraConfig.JvmOptions)
-	addNumTokens(template)
-	addStartRpc(template)
+	namespace := utils.FirstNonEmptyString(template.Meta.Namespace, klusterKey.Namespace)
 
 	rawConfig, err := createJsonConfig(template.CassandraConfig, template.ServerVersion, template.ServerType)
 	if err != nil {
 		return nil, err
-	}
-
-	if template.StorageConfig == nil {
-		return nil, DCConfigIncomplete{"template.StorageConfig"}
 	}
 
 	dc := &cassdcapi.CassandraDatacenter{
@@ -304,9 +276,11 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ServerType = clusterTemplate.ServerType
 
 	// DC-level settings
+	dcConfig.K8sContext = dcTemplate.K8sContext // can be empty
 	dcConfig.Meta = dcTemplate.Meta
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
+	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 
 	if len(dcTemplate.DatacenterOptions.ServerVersion) > 0 {
 		dcConfig.ServerVersion = semver.MustParse(dcTemplate.DatacenterOptions.ServerVersion)
@@ -385,34 +359,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
 	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
 
-	if len(dcTemplate.DatacenterOptions.Containers) > 0 {
-		dcConfig.Containers = dcTemplate.DatacenterOptions.Containers
-	} else if len(clusterTemplate.DatacenterOptions.Containers) > 0 {
-		dcConfig.Containers = clusterTemplate.DatacenterOptions.Containers
-	}
-
-	if len(dcTemplate.DatacenterOptions.InitContainers) > 0 {
-		dcConfig.InitContainers = dcTemplate.DatacenterOptions.InitContainers
-	} else if len(clusterTemplate.DatacenterOptions.InitContainers) > 0 {
-		dcConfig.InitContainers = clusterTemplate.DatacenterOptions.InitContainers
-	}
-
-	if dcTemplate.DatacenterOptions.ExtraVolumes != nil {
-		dcConfig.ExtraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
-	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
-		dcConfig.ExtraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
-	}
-
 	if dcTemplate.DatacenterOptions.DseWorkloads != nil {
 		dcConfig.DseWorkloads = dcTemplate.DatacenterOptions.DseWorkloads
 	} else if clusterTemplate.DatacenterOptions.DseWorkloads != nil {
 		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
-	}
-
-	if dcTemplate.DatacenterOptions.PodSecurityContext != nil {
-		dcConfig.PodSecurityContext = dcTemplate.DatacenterOptions.PodSecurityContext
-	} else if clusterTemplate.DatacenterOptions.PodSecurityContext != nil {
-		dcConfig.PodSecurityContext = clusterTemplate.DatacenterOptions.PodSecurityContext
 	}
 
 	if dcTemplate.DatacenterOptions.ManagementApiAuth != nil {
@@ -421,7 +371,76 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.ManagementApiAuth = clusterTemplate.DatacenterOptions.ManagementApiAuth
 	}
 
+	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
+	// FIXME if we are doing this, then we should remove the pointer
+	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
+
+	var podSecurityContext *corev1.PodSecurityContext
+	if dcTemplate.DatacenterOptions.PodSecurityContext != nil {
+		podSecurityContext = dcTemplate.DatacenterOptions.PodSecurityContext
+	} else if clusterTemplate.DatacenterOptions.PodSecurityContext != nil {
+		podSecurityContext = clusterTemplate.DatacenterOptions.PodSecurityContext
+	}
+	// Add the SecurityContext to the PodTemplateSpec if it's defined
+	if podSecurityContext != nil {
+		dcConfig.PodTemplateSpec.Spec.SecurityContext = podSecurityContext
+	}
+
+	// Create additional containers if requested
+	var containers []corev1.Container
+	if len(dcTemplate.DatacenterOptions.Containers) > 0 {
+		containers = dcTemplate.DatacenterOptions.Containers
+	} else if len(clusterTemplate.DatacenterOptions.Containers) > 0 {
+		containers = clusterTemplate.DatacenterOptions.Containers
+	}
+	if len(containers) > 0 {
+		_ = AddContainersToPodTemplateSpec(dcConfig, containers...)
+	}
+
+	// Create additional init containers if requested
+	var initContainers []corev1.Container
+	if len(dcTemplate.DatacenterOptions.InitContainers) > 0 {
+		initContainers = dcTemplate.DatacenterOptions.InitContainers
+	} else if len(clusterTemplate.DatacenterOptions.InitContainers) > 0 {
+		initContainers = clusterTemplate.DatacenterOptions.InitContainers
+	}
+	if len(initContainers) > 0 {
+		_ = AddInitContainersToPodTemplateSpec(dcConfig, initContainers...)
+	}
+
+	// Create additional volumes if requested
+	var extraVolumes *api.K8ssandraVolumes
+	if dcTemplate.DatacenterOptions.ExtraVolumes != nil {
+		extraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
+	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
+		extraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
+	}
+	if extraVolumes != nil {
+		AddK8ssandraVolumesToPodTemplateSpec(dcConfig, *extraVolumes)
+	}
+
+	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
+	UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+
 	return dcConfig
+}
+
+// ValidateDatacenterConfig checks the coalesced DC config for missing fields and mandatory options,
+// and then validates the cassandra.yaml file.
+func ValidateDatacenterConfig(dcConfig *DatacenterConfig) error {
+	if dcConfig.ServerVersion == nil {
+		return DCConfigIncomplete{"template.ServerVersion"}
+	}
+	if dcConfig.ServerType == "" {
+		return DCConfigIncomplete{"template.ServerType"}
+	}
+	if dcConfig.StorageConfig == nil {
+		return DCConfigIncomplete{"template.StorageConfig"}
+	}
+	if err := validateCassandraYaml(dcConfig.CassandraConfig.CassandraYaml); err != nil {
+		return err
+	}
+	return nil
 }
 
 func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) error {

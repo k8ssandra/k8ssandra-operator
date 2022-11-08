@@ -231,7 +231,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 		ServerTruststorePassword: "test",
 	}
 
-	err := handleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
@@ -321,7 +321,7 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 		ClientTruststorePassword: "test",
 	}
 
-	err := handleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 
@@ -362,7 +362,7 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 		ClientTruststorePassword: "test",
 	}
 
-	err := handleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig)
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -397,7 +397,7 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 		ClientTruststorePassword: "test",
 	}
 
-	err := handleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig)
 	assert.Error(t, err)
 }
 

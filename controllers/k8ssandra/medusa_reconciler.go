@@ -18,21 +18,14 @@ import (
 )
 
 // Create all things Medusa related in the cassdc podTemplateSpec
-func (r *K8ssandraClusterReconciler) ReconcileMedusa(
+func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	ctx context.Context,
-	dcConfig *cassandra.DatacenterConfig,
-	dcTemplate api.CassandraDatacenterTemplate,
 	kc *api.K8ssandraCluster,
+	dcConfig *cassandra.DatacenterConfig,
+	remoteClient client.Client,
 	logger logr.Logger,
 ) result.ReconcileResult {
-	remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
-	if err != nil {
-		return result.Error(err)
-	}
-	namespace := dcTemplate.Meta.Namespace
-	if namespace == "" {
-		namespace = kc.Namespace
-	}
+	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {

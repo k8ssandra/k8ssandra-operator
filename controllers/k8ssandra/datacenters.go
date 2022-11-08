@@ -13,10 +13,8 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -42,6 +40,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		return result.Error(err), nil
 	}
 
+	dcConfigs, err := r.createDatacenterConfigs(ctx, kc, logger, systemReplication)
+	if err != nil {
+		return result.Error(err), nil
+	}
+
 	actualDcs := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
 
 	cassClusterName := kc.CassClusterName()
@@ -53,100 +56,30 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	// Reconcile CassandraDatacenter objects only
-	for idx, dcTemplate := range sortDatacentersByPriority(kc.Spec.Cassandra.Datacenters) {
-		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcTemplate.K8sContext) {
+	for idx, dcConfig := range sortDatacentersByPriority(dcConfigs) {
+
+		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcConfig.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
 			return result.RequeueSoon(r.DefaultDelay), actualDcs
 		}
 
-		// Note that it is necessary to use a copy of the CassandraClusterTemplate because
-		// its fields are pointers, and without the copy we could end of with shared
-		// references that would lead to unexpected and incorrect values.
-		dcConfig := cassandra.Coalesce(cassClusterName, kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		dcKey := types.NamespacedName{Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace), Name: dcConfig.Meta.Name}
+		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcConfig.K8sContext)
 
-		dcKey := types.NamespacedName{Namespace: cassandra.DatacenterNamespace(kcKey, dcConfig), Name: dcConfig.Meta.Name}
-		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcTemplate.K8sContext)
-
-		// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
-		if dcConfig.PodTemplateSpec == nil {
-			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-		}
-
-		// Add the SecurityContext to the PodTemplateSpec if it's defined
-		if dcConfig.PodSecurityContext != nil {
-			dcConfig.PodTemplateSpec.Spec.SecurityContext = dcConfig.PodSecurityContext
-		}
-
-		// Create additional init containers if requested
-		if len(dcConfig.InitContainers) > 0 {
-			err := cassandra.AddInitContainersToPodTemplateSpec(dcConfig, dcConfig.InitContainers...)
-			if err != nil {
-				return result.Error(err), actualDcs
-			}
-		}
-		// Create additional containers if requested
-		if len(dcConfig.Containers) > 0 {
-			err := cassandra.AddContainersToPodTemplateSpec(dcConfig, dcConfig.Containers...)
-			if err != nil {
-				return result.Error(err), actualDcs
-			}
-		}
-
-		// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
-		if len(dcConfig.PodTemplateSpec.Spec.Containers) == 0 {
-			dcLogger.Info("No containers defined in podTemplateSpec, creating a default cassandra container")
-			cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
-		}
-
-		// Create additional volumes if requested
-		if dcConfig.ExtraVolumes != nil {
-			cassandra.AddK8ssandraVolumesToPodTemplateSpec(dcConfig, *dcConfig.ExtraVolumes)
-		}
-		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
-
-		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
-		// unauthenticated clusters.
-		// DSE doesn't support replicating to unexisting datacenters, even through the system property,
-		// which is why we're doing this for Cassandra only.
-		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
-			cassandra.ApplySystemReplication(dcConfig, systemReplication)
-		}
-
-		// Stargate has a bug when backed by Cassandra 4, unless `cassandra.allow_alter_rf_during_range_movement` is
-		// set (see https://github.com/stargate/stargate/issues/1274).
-		// Set the option preemptively (we don't check `kc.HasStargates()` explicitly, because that causes the operator
-		// to restart the whole DC whenever Stargate is added or removed).
-		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra && dcConfig.ServerVersion.Major() != 3 {
-			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
-		}
-		if kc.Spec.Reaper != nil {
-			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())
-		}
-		// Create Medusa related objects
-		if medusaResult := r.ReconcileMedusa(ctx, dcConfig, dcTemplate, kc, dcLogger); medusaResult.Completed() {
-			return medusaResult, actualDcs
-		}
-
-		// Inject MCAC metrics filters
-		err := telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
-		if err != nil {
-			return result.Error(err), actualDcs
-		}
-
-		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
+		remoteClient, err := r.ClientCache.GetRemoteClient(dcConfig.K8sContext)
 		if err != nil {
 			dcLogger.Error(err, "Failed to get remote client")
 			return result.Error(err), actualDcs
 		}
 
-		err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, dcLogger)
-		if err != nil {
-			dcLogger.Error(err, "Failed to read encryption secrets")
-			return result.Error(err), actualDcs
+		// Create Medusa related objects
+		if medusaResult := r.reconcileMedusa(ctx, kc, dcConfig, remoteClient, dcLogger); medusaResult.Completed() {
+			return medusaResult, actualDcs
 		}
 
-		if recResult := r.reconcilePerNodeConfiguration(ctx, kcKey, dcConfig, remoteClient, dcLogger); recResult.Completed() {
+		// Create per-node configuration ConfigMap
+		if recResult := r.reconcilePerNodeConfiguration(ctx, kc, dcConfig, remoteClient, dcLogger); recResult.Completed() {
 			return recResult, actualDcs
 		}
 
@@ -447,8 +380,8 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 // The datacenters are sorted in descending order of priority.
 // The datacenters with the highest priority are first in the list.
 // The datacenters with the lowest priority are last in the list.
-func sortDatacentersByPriority(datacenters []api.CassandraDatacenterTemplate) []api.CassandraDatacenterTemplate {
-	sortedDatacenters := make([]api.CassandraDatacenterTemplate, len(datacenters))
+func sortDatacentersByPriority(datacenters []*cassandra.DatacenterConfig) []*cassandra.DatacenterConfig {
+	sortedDatacenters := make([]*cassandra.DatacenterConfig, len(datacenters))
 	copy(sortedDatacenters, datacenters)
 	sort.Slice(sortedDatacenters, func(i, j int) bool {
 		return dcUpgradePriority(sortedDatacenters[i]) > dcUpgradePriority(sortedDatacenters[j])
@@ -457,7 +390,7 @@ func sortDatacentersByPriority(datacenters []api.CassandraDatacenterTemplate) []
 }
 
 // dcUpgradePriority returns the upgrade priority for the given datacenter.
-func dcUpgradePriority(dc api.CassandraDatacenterTemplate) int {
+func dcUpgradePriority(dc *cassandra.DatacenterConfig) int {
 	if dc.DseWorkloads == nil {
 		// Cassandra workload
 		return 2

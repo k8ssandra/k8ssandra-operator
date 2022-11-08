@@ -65,6 +65,11 @@ func TestCoalesce(t *testing.T) {
 				Size:               3,
 				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
 				ServerType:         "dse",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -81,6 +86,11 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerVersion: semver.MustParse("4.0.1"),
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -97,6 +107,11 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerImage: "k8ssandra/cass-operator:dev",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -126,6 +141,11 @@ func TestCoalesce(t *testing.T) {
 					Limits: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("1500m"),
 						corev1.ResourceMemory: resource.MustParse("2048Mi"),
+					},
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
 				},
 			},
@@ -171,6 +191,11 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -192,6 +217,11 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				Networking: &cassdcapi.NetworkingConfig{
 					HostNetwork: true,
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
 				},
 			},
 		},
@@ -225,6 +255,11 @@ func TestCoalesce(t *testing.T) {
 					},
 					JvmOptions: api.JvmOptions{
 						MaxHeapSize: parseQuantity("1024Mi"),
+					},
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
 				},
 			},
@@ -267,6 +302,11 @@ func TestCoalesce(t *testing.T) {
 						Name: "rack3",
 					},
 				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -300,6 +340,11 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -333,6 +378,11 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -349,6 +399,11 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				JmxInitContainerImage: &images.Image{Name: "dc-image"},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -359,6 +414,11 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				Stopped: true,
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 		{
@@ -375,10 +435,17 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				Containers: []corev1.Container{
-					{
-						Name:  "test-container",
-						Image: "test-image",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+							{
+								Name: "cassandra",
+							},
+						},
 					},
 				},
 			},
@@ -409,22 +476,29 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				InitContainers: []corev1.Container{
-					{
-						Name: "server-config-init",
-					},
-					{
-						Name: "medusa-restore",
-					},
-					{
-						Name:  "test-init-container",
-						Image: "test-image",
-					},
-				},
-				Containers: []corev1.Container{
-					{
-						Name:  "test-container",
-						Image: "test-image",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{
+							{
+								Name: "server-config-init",
+							},
+							{
+								Name: "medusa-restore",
+							},
+							{
+								Name:  "test-init-container",
+								Image: "test-image",
+							},
+						},
+						Containers: []corev1.Container{
+							{
+								Name:  "test-container",
+								Image: "test-image",
+							},
+							{
+								Name: "cassandra",
+							},
+						},
 					},
 				},
 			},
@@ -445,12 +519,17 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: []cassdcapi.AdditionalVolumes{
+				StorageConfig: &cassdcapi.StorageConfig{
+					AdditionalVolumes: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume",
 							MountPath: "/test",
 						},
+					},
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
 				},
 			},
@@ -482,12 +561,17 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				ExtraVolumes: &api.K8ssandraVolumes{
-					PVCs: []cassdcapi.AdditionalVolumes{
+				StorageConfig: &cassdcapi.StorageConfig{
+					AdditionalVolumes: []cassdcapi.AdditionalVolumes{
 						{
 							Name:      "test-volume-dc",
 							MountPath: "/test-dc",
 						},
+					},
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
 				},
 			},
@@ -506,6 +590,11 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				DseWorkloads: &cassdcapi.DseWorkloads{GraphEnabled: true},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
 			},
 		},
 	}
@@ -570,25 +659,19 @@ func TestNewDatacenter_Tolerations(t *testing.T) {
 	assert.Equal(t, template.Tolerations, dc.Spec.Tolerations)
 }
 
-// TestNewDatacenter_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
-func TestNewDatacenter_Fail_NoStorageConfig(t *testing.T) {
+// TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
+func TestValidateDatacenterConfig_Fail_NoStorageConfig(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.StorageConfig = nil
-	_, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
+	err := ValidateDatacenterConfig(&template)
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 
-// TestNewDatacenter_Fail_NoServerVersion tests that NewDatacenter fails when no server version is provided.
-func TestNewDatacenter_Fail_NoServerVersion(t *testing.T) {
+// TestValidateCoalesced_Fail_NoServerVersion tests that NewDatacenter fails when no server version is provided.
+func TestValidateDatacenterConfig_Fail_NoServerVersion(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.ServerVersion = nil
-	_, err := NewDatacenter(
-		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
-		&template,
-	)
+	err := ValidateDatacenterConfig(&template)
 	assert.IsType(t, DCConfigIncomplete{}, err)
 }
 

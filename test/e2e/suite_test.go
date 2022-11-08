@@ -328,10 +328,16 @@ func TestOperator(t *testing.T) {
 		testFunc: stargateJwt,
 		fixture:  framework.NewTestFixture("stargate-jwt", controlPlane),
 	}))
-	t.Run("PerNodeConfig", e2eTest(ctx, &e2eTestOpts{
-		testFunc: perNodeConfigTest,
-		fixture:  framework.NewTestFixture("single-dc-per-node-config", controlPlane),
-	}))
+	t.Run("PerNodeConfig", func(t *testing.T) {
+		t.Run("InitialTokens", e2eTest(ctx, &e2eTestOpts{
+			testFunc: multiDcInitialTokens,
+			fixture:  framework.NewTestFixture("multi-dc-initial-tokens", controlPlane),
+		}))
+		t.Run("UserDefined", e2eTest(ctx, &e2eTestOpts{
+			testFunc: userDefinedPerNodeConfig,
+			fixture:  framework.NewTestFixture("single-dc-per-node-config", controlPlane),
+		}))
+	})
 }
 
 func beforeSuite(t *testing.T) {
