@@ -52,6 +52,10 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 		"SELECT server_id FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 	assert.Contains(t, output, "modified", "expected server_id to be modified")
+
+	output, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-default-sts-0",
+		"SELECT server_id FROM system.local")
+	require.Error(t, err, "expected CQL query without auth to fail")
 }
 
 // createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled

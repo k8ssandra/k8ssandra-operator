@@ -50,3 +50,12 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 		query,
 	)
 }
+
+func (f *E2eFramework) ExecuteCqlNoAuth(k8sContext, namespace, pod, query string) (string, error) {
+	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
+	return kubectl.Exec(options, pod,
+		f.cqlshBin,
+		"-e",
+		query,
+	)
+}

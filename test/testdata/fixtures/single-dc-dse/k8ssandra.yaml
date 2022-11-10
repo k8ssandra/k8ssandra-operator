@@ -3,6 +3,7 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  auth: true
   cassandra:
     serverVersion: 6.8.26
     serverType: dse
@@ -25,15 +26,7 @@ spec:
               requests:
                 storage: 5Gi
         config:
-          cassandraYaml:
-            authenticator: com.datastax.bdp.cassandra.auth.DseAuthenticator
-            authorizer: com.datastax.bdp.cassandra.auth.DseAuthorizer
-            role_manager: com.datastax.bdp.cassandra.auth.DseRoleManager
           dseYaml:
-            authentication_options:
-              enabled: true
-            authorization_options:
-              enabled: true
             server_id: server-id
           jvmOptions:
             heap_initial_size: 512Mi

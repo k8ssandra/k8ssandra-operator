@@ -19,7 +19,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 		return errors.New("PodTemplateSpec was nil, cannot add auth settings")
 	}
 
-	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled)
+	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled, dcConfig.ServerType)
 
 	// By default, the Cassandra process will be started with LOCAL_JMX=yes, see cassandra-env.sh. This means that the
 	// Cassandra process will only be accessible with JMX from localhost. This is the safest and preferred setup: you
@@ -82,10 +82,20 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool) error {
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,
 // depending on whether auth is enabled or not, and only if these settings are empty in the input config.
-func ApplyAuthSettings(config api.CassandraConfig, authEnabled bool) api.CassandraConfig {
+func ApplyAuthSettings(config api.CassandraConfig, authEnabled bool, serverType api.ServerDistribution) api.CassandraConfig {
 	if authEnabled {
-		config.CassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
-		config.CassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
+		if serverType == api.ServerDistributionDse {
+			config.CassandraYaml.PutIfAbsent("authenticator", "com.datastax.bdp.cassandra.auth.DseAuthenticator")
+			config.CassandraYaml.PutIfAbsent("authorizer", "com.datastax.bdp.cassandra.auth.DseAuthorizer")
+			config.CassandraYaml.PutIfAbsent("role_manager", "com.datastax.bdp.cassandra.auth.DseRoleManager")
+
+			config.DseYaml.PutIfAbsent("authentication_options/enabled", "true")
+			config.DseYaml.PutIfAbsent("authorization_options/enabled", "true")
+			config.DseYaml.PutIfAbsent("role_management_options/mode", "internal")
+		} else {
+			config.CassandraYaml.PutIfAbsent("authenticator", "PasswordAuthenticator")
+			config.CassandraYaml.PutIfAbsent("authorizer", "CassandraAuthorizer")
+		}
 	} else {
 		config.CassandraYaml.PutIfAbsent("authenticator", "AllowAllAuthenticator")
 		config.CassandraYaml.PutIfAbsent("authorizer", "AllowAllAuthorizer")
