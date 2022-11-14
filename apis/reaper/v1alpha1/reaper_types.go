@@ -49,8 +49,8 @@ type ReaperTemplate struct {
 	// +optional
 	CassandraUserSecretRef corev1.LocalObjectReference `json:"cassandraUserSecretRef,omitempty"`
 
-	// Deprecated: JMX security is now based on CQL roles. Reaper will use cassandraUsefSecretRef for authentication,
-	// this field is ignored.
+	// +kubebuilder:deprecatedversion:warning="JMX security is now based on CQL roles. Reaper will use
+	// cassandraUsefSecretRef for authentication, JmxUserSecretRef is now ignored."
 	// +optional
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
 

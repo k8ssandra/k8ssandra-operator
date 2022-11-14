@@ -20,16 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// TODO remove
-var DefaultJmxInitImage = images.Image{
-	Registry:   images.DefaultRegistry,
-	Repository: images.DockerOfficialRepository,
-	Name:       "busybox",
-	Tag:        "1.34.1",
-	// When changing the default version above, please also change the kubebuilder marker in
-	// apis/reaper/v1alpha1/reaper_types.go accordingly.
-}
-
 // SystemReplication represents the replication factor of the system_auth, system_traces,
 // and system_distributed keyspaces. This is applied to each datacenter. The replication
 // is configured per DC.

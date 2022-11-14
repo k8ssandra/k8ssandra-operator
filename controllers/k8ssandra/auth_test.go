@@ -9,7 +9,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -90,14 +89,6 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	t.Log("check that authentication is disabled in DC")
 	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-		// there should be no JMX init container
-		if dc.Spec.PodTemplateSpec != nil {
-			for _, container := range dc.Spec.PodTemplateSpec.Spec.InitContainers {
-				if container.Name == cassandra.JmxInitContainer {
-					return false
-				}
-			}
-		}
 		// the config should have JMX auth disabled
 		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=false")
 	}), timeout, interval)
@@ -210,19 +201,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
 		// there should be a JMX init container with 4 env vars
 		if dc.Spec.PodTemplateSpec != nil {
-			for _, container := range dc.Spec.PodTemplateSpec.Spec.InitContainers {
-				if container.Name == cassandra.JmxInitContainer {
-					if container.Env[0].Name == "SUPERUSER_JMX_USERNAME" &&
-						container.Env[1].Name == "SUPERUSER_JMX_PASSWORD" &&
-						container.Env[2].Name == "REAPER_JMX_USERNAME" &&
-						container.Env[3].Name == "REAPER_JMX_PASSWORD" &&
-						container.Args[2] == "echo \"$SUPERUSER_JMX_USERNAME $SUPERUSER_JMX_PASSWORD\" >> /config/jmxremote.password && "+
-							"echo \"$REAPER_JMX_USERNAME $REAPER_JMX_PASSWORD\" >> /config/jmxremote.password" {
-						break
-					}
-				}
-				return false
-			}
 			// the config should have JMX auth enabled
 			return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
 		}

@@ -9,8 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const JmxInitContainer = "jmx-credentials"
-
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
 func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool) error {
 
