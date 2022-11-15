@@ -28,3 +28,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [TESTING] [#749](https://github.com/k8ssandra/k8ssandra-operator/issues/749) Add e2e test for distinct commit log and data volumes
 * [TESTING] [#747](https://github.com/k8ssandra/k8ssandra-operator/issues/747) Add e2e test and docs for JBOD support
 * [BUGFIX] [#755](https://github.com/k8ssandra/k8ssandra-operator/issues/755) Move jvm11 options to jvm8 for DSE
+* [BUGFIX] [#746](https://github.com/k8ssandra/k8ssandra-operator/issues/746) Fix DC decommission when racks are used, upgrade to cass-operator v1.13.1
