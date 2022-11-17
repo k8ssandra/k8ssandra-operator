@@ -222,7 +222,7 @@ func (r *K8ssandraClusterReconciler) findStargateForDeletion(
 	stargateName := kcKey.Name + "-" + dcName + "-stargate"
 
 	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetRemoteClients() {
+		for _, remoteClient := range r.ClientCache.GetAllClients() {
 			err := remoteClient.List(ctx, stargateList, options)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
@@ -261,7 +261,7 @@ func (r *K8ssandraClusterReconciler) findReaperForDeletion(
 	reaperName := kcKey.Name + "-" + dcName + "-reaper"
 
 	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetRemoteClients() {
+		for _, remoteClient := range r.ClientCache.GetAllClients() {
 			err := remoteClient.List(ctx, reaperList, options)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
@@ -298,7 +298,7 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	dcList := &cassdcapi.CassandraDatacenterList{}
 
 	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetRemoteClients() {
+		for _, remoteClient := range r.ClientCache.GetAllClients() {
 			err := remoteClient.List(ctx, dcList, options)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
@@ -310,16 +310,14 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 			}
 		}
 	} else {
-		for _, remoteClient := range r.ClientCache.GetRemoteClients() {
-			err := remoteClient.List(ctx, dcList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
-			}
+		err := remoteClient.List(ctx, dcList, options)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
+		}
 
-			for _, dc := range dcList.Items {
-				if dc.Name == dcName {
-					return &dc, remoteClient, nil
-				}
+		for _, dc := range dcList.Items {
+			if dc.Name == dcName {
+				return &dc, remoteClient, nil
 			}
 		}
 	}

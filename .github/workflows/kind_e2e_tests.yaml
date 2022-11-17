@@ -89,6 +89,7 @@ jobs:
           - CreateSingleDseGraphDatacenterCluster
           - ChangeDseWorkload
           - PerNodeConfig/UserDefined
+          - RemoveLocalDcFromCluster
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
