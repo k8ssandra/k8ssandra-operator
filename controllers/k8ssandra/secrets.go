@@ -54,7 +54,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
 	if kc.Spec.Reaper != nil {
 		// Reaper secrets are only required when authentication is enabled on the cluster
-		if kc.Spec.IsAuthEnabled() && !kc.Spec.Reaper.UseExternalSecrets() {
+		if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 			logger.Info("Reconciling Reaper user secrets")
 			var cassandraUserSecretRef corev1.LocalObjectReference
 			var jmxUserSecretRef corev1.LocalObjectReference
@@ -87,7 +87,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				return result.Error(err)
 			}
 			logger.Info("Reaper user secrets successfully reconciled")
-		} else if kc.Spec.IsAuthEnabled() && kc.Spec.Reaper.UseExternalSecrets() {
+		} else if kc.Spec.IsAuthEnabled() && kc.Spec.UseExternalSecrets() {
 			// Auth is enabled in the cluster, but the SecretsProvider is set to external, so no secret need to
 			// be reconciled. Secrets will be injected into the Reaper pod by the mutating webhook configured by
 			// the user to retrieve secrets from the external secret store of their choice.

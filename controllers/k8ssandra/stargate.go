@@ -43,6 +43,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 
 	if stargateTemplate != nil {
 		logger.Info("Reconcile Stargate")
+		stargateTemplate.SecretsProvider = kc.Spec.SecretsProvider
 		desiredStargate := stargate.NewStargate(stargateKey, kc, stargateTemplate, actualDc, dcTemplate, logger)
 		annotations.AddHashAnnotation(desiredStargate)
 

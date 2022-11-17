@@ -296,15 +296,11 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 				}},
 			},
 			Stargate: &stargateapi.StargateClusterTemplate{
-				StargateTemplate: stargateapi.StargateTemplate{
-					SecretsProvider: "external",
-				},
-				Size: 1,
+				StargateTemplate: stargateapi.StargateTemplate{},
+				Size:             1,
 			},
 			Reaper: &reaperapi.ReaperClusterTemplate{
-				ReaperTemplate: reaperapi.ReaperTemplate{
-					SecretsProvider: "external",
-				},
+				ReaperTemplate: reaperapi.ReaperTemplate{},
 			},
 			SecretsProvider: "external",
 		},

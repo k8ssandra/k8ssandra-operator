@@ -23,7 +23,7 @@ func HandleEncryptionOptions(template *DatacenterConfig) error {
 	if ClientEncryptionEnabled(template) {
 		if template.ExternalSecrets {
 			// enables encryption options, but doesn't set keystore/trustore path and passwords
-			enableEncyptionOptions(template)
+			enableEncryptionOptions(template)
 		} else {
 			if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
 				return err
@@ -255,14 +255,14 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 
 // Add JVM options required for turning on encryption
 func addJmxEncryptionOptions(template *DatacenterConfig) {
-	enableEncyptionOptions(template)
+	enableEncryptionOptions(template)
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", template.ClientKeystorePassword))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", template.ClientTruststorePassword))
 }
 
-func enableEncyptionOptions(template *DatacenterConfig) {
+func enableEncryptionOptions(template *DatacenterConfig) {
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
 	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
 }

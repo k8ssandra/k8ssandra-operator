@@ -369,17 +369,17 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 		{
 			"default auth, external secrets",
 			&reaperapi.ReaperClusterTemplate{
-				ReaperTemplate: reaperapi.ReaperTemplate{
-					SecretsProvider: "external",
-				},
+				ReaperTemplate: reaperapi.ReaperTemplate{},
 			},
 			&cassandra.DatacenterConfig{
-				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
-				Cluster: "cluster1",
+				Meta:            api.EmbeddedObjectMeta{Name: "dc1"},
+				Cluster:         "cluster1",
+				ExternalSecrets: true,
 			},
 			&cassandra.DatacenterConfig{
-				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
-				Cluster: "cluster1",
+				Meta:            api.EmbeddedObjectMeta{Name: "dc1"},
+				Cluster:         "cluster1",
+				ExternalSecrets: true,
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
