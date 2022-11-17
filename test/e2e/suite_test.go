@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	"net/http"
 	"net/url"
 	"os"
@@ -211,6 +212,10 @@ func TestOperator(t *testing.T) {
 	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-dc", controlPlane),
+	}))
+	t.Run("RemoveLocalDcFromCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: removeLocalDcFromCluster,
+		fixture:  framework.NewTestFixture("remove-local-dc", controlPlane),
 	}))
 	t.Run("CreateMultiStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -1274,6 +1279,56 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	pod = DcPrefix(t, f, dc1Key) + "-default-sts-0"
 	count = 1
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
+}
+
+// removeLocalDcFromCluster removes a DC that was deployed in the same context as the control plane.
+// This was broken in #642.
+func removeLocalDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	// Our test infrastructure creates a ClientConfig in the control plane pointing to itself. This would mask the issue
+	// because ClientCache.getRemoteClients() will then contain a corresponding client, unlike a regular production
+	// environment where ClientCache.GetLocalClient() is the only way to get to the control plane.
+	// Remove the resource for a more realistic setup.
+	t.Log("delete local ClientConfig")
+	clientConfig := &v1beta1.ClientConfig{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: f.ControlPlaneContext}, clientConfig)
+	require.NoError(err, "failed to get ClientConfig in namespace %s", namespace)
+	err = f.Client.Delete(ctx, clientConfig)
+	require.NoError(err, "failed to delete ClientConfig in namespace %s", namespace)
+
+	t.Log("check that the K8ssandraCluster was created")
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dc1Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc1",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+
+	dc2Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc2",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	t.Log("remove dc2 from cluster")
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
+	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+	err = f.Client.Update(ctx, kc)
+	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
 }
 
 func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
