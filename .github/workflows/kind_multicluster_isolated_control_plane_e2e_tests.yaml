@@ -118,13 +118,17 @@ jobs:
       - name: Setup kind clusters
         run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" NUM_CLUSTERS=3 NUM_WORKER_NODES=1,2,2 create-kind-multicluster kind-load-image-multi cert-manager-multi nginx-kind-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
-        run: |
-          e2e_test="TestOperator/${{ matrix.e2e_test }}"
-          args="-kubeconfigFile '${{ env.KUBECONFIG_FILE }}'"
-          args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
-          args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
-          args="$args -imageTag ${{ needs.build_image.outputs.image_tag }}"
-          make E2E_TEST="$e2e_test" TEST_ARGS="$args" e2e-test
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 3
+          timeout_minutes: 60
+          command: |
+            e2e_test="TestOperator/${{ matrix.e2e_test }}"
+            args="-kubeconfigFile '${{ env.KUBECONFIG_FILE }}'"
+            args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
+            args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
+            args="$args -imageTag ${{ needs.build_image.outputs.image_tag }}"
+            make E2E_TEST="$e2e_test" TEST_ARGS="$args" e2e-test
       - name: Get artefact upload directory
         if: ${{ failure() }}
         run: |
