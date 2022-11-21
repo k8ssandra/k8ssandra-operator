@@ -17,25 +17,32 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // K8ssandraTaskSpec defines the desired state of K8ssandraTask
 type K8ssandraTaskSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of K8ssandraTask. Edit k8ssandratask_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Which K8ssandraCluster this task is operating on.
+	Cluster corev1.ObjectReference `json:"cluster,omitempty"`
+
+	// The names of the targeted datacenters. If omitted, will default to all DCs in spec order.
+	Datacenters []string `json:"datacenters,omitempty"`
+
+	// TODO replace with CassandraTaskTemplate (once k8ssandra/cass-operator#458 merged)
+	Template v1alpha1.CassandraTask `json:"template,omitempty"`
 }
 
 // K8ssandraTaskStatus defines the observed state of K8ssandraTask
 type K8ssandraTaskStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+
+	// The overall progress across all datacenters.
+	Global v1alpha1.CassandraTaskStatus `json:"global,omitempty"`
+
+	// The individual progress of the CassandraTask in each datacenter.
+	Datacenters map[string]v1alpha1.CassandraTaskStatus `json:"datacenters,omitempty"`
 }
 
 //+kubebuilder:object:root=true
