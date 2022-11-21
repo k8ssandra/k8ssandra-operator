@@ -140,7 +140,7 @@ func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, k8cName stri
 	return medusaSpec.CassandraUserSecretRef.Name
 }
 
-func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) {
+func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) {
 	restoreContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
 	restoreContainer := &corev1.Container{Name: "medusa-restore"}
 	if found {
@@ -150,7 +150,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
-	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, logger, "RESTORE")
+	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, logger, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
@@ -187,7 +187,7 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 	}
 }
 
-func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) {
+func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) {
 	medusaContainerIndex, found := cassandra.FindContainer(dcConfig.PodTemplateSpec, "medusa")
 	medusaContainer := &corev1.Container{Name: "medusa"}
 	if found {
@@ -197,7 +197,7 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
-	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, logger, "GRPC")
+	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, logger, "GRPC")
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{ContainerPort: 50051, Name: "grpc"},
 	}
@@ -284,8 +284,8 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string, l
 	return volumeMounts
 }
 
-func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger, mode string) []corev1.EnvVar {
-	return []corev1.EnvVar{
+func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExternalSecrets bool, logger logr.Logger, mode string) []corev1.EnvVar {
+	envVars := []corev1.EnvVar{
 		{
 			Name:  "MEDUSA_MODE",
 			Value: mode,
@@ -294,7 +294,15 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger
 			Name:  "MEDUSA_TMP_DIR",
 			Value: "/var/lib/cassandra",
 		},
-		{Name: "CQL_USERNAME",
+	}
+
+	if useExternalSecrets {
+		return envVars
+	}
+
+	secretRefs := []corev1.EnvVar{
+		{
+			Name: "CQL_USERNAME",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -304,7 +312,8 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger
 				},
 			},
 		},
-		{Name: "CQL_PASSWORD",
+		{
+			Name: "CQL_PASSWORD",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
@@ -315,6 +324,8 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger
 			},
 		},
 	}
+
+	return append(envVars, secretRefs...)
 }
 
 // Create or update volumes for medusa

@@ -58,7 +58,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	// Reconcile CassandraDatacenter objects only
 	for idx, dcConfig := range sortDatacentersByPriority(dcConfigs) {
 
-		if !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcConfig.K8sContext) {
+		if !kc.Spec.UseExternalSecrets() && !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcConfig.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
 			return result.RequeueSoon(r.DefaultDelay), actualDcs

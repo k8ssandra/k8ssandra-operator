@@ -77,8 +77,16 @@ type K8ssandraClusterSpec struct {
 	SecretsProvider string `json:"secretsProvider,omitempty"`
 }
 
+// IsAuthEnabled returns true if auth is not specified by the user (auth by default)
+// or if the user has explicilty set Auth to true in the cluster spec
 func (in K8ssandraClusterSpec) IsAuthEnabled() bool {
 	return in.Auth == nil || *in.Auth
+}
+
+// UseExternalSecrets defines whether the user has specified if credentials and
+// certs will be backed by an external secrets store
+func (in K8ssandraClusterSpec) UseExternalSecrets() bool {
+	return in.SecretsProvider != "" && in.SecretsProvider == "external"
 }
 
 // K8ssandraClusterStatus defines the observed state of K8ssandraCluster

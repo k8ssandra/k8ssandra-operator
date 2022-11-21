@@ -357,8 +357,8 @@ func TestInitContainerDefaultResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
-	UpdateMedusaInitContainer(&dcConfig, medusaSpec, "test", logger)
-	UpdateMedusaMainContainer(&dcConfig, medusaSpec, "test", logger)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
@@ -422,8 +422,8 @@ func TestInitContainerCustomResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
-	UpdateMedusaInitContainer(&dcConfig, medusaSpec, "test", logger)
-	UpdateMedusaMainContainer(&dcConfig, medusaSpec, "test", logger)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
@@ -442,4 +442,44 @@ func TestInitContainerCustomResources(t *testing.T) {
 	assert.Equal(t, resource.MustParse("40Gi"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
 	assert.Equal(t, resource.MustParse("40"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu(), "expected main container cpu limit to be set")
 
+}
+
+func TestExternalSecretsFlag(t *testing.T) {
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "secret",
+			},
+			BucketName: "bucket",
+		},
+		CassandraUserSecretRef: corev1.LocalObjectReference{
+			Name: "test-superuser",
+		},
+	}
+
+	dcConfig := cassandra.DatacenterConfig{
+		PodTemplateSpec: &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers:     []corev1.Container{},
+				InitContainers: []corev1.Container{},
+			},
+		},
+	}
+
+	logger := logr.New(logr.Discard().GetSink())
+
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, true, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
+
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	assert.True(t, found, "Couldn't find medusa-restore init container")
+
+	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Containers[0].Env))
+	assert.Equal(t, "MEDUSA_MODE", dcConfig.PodTemplateSpec.Spec.Containers[0].Env[0].Name)
+	assert.Equal(t, "MEDUSA_TMP_DIR", dcConfig.PodTemplateSpec.Spec.Containers[0].Env[1].Name)
+
+	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env))
+	assert.Equal(t, "MEDUSA_MODE", dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env[0].Name)
+	assert.Equal(t, "MEDUSA_TMP_DIR", dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env[1].Name)
 }

@@ -35,12 +35,12 @@ func NewStargate(
 	cassandraEncryption := stargateapi.CassandraEncryption{}
 	dcConfig := cassandra.Coalesce(kc.SanitizedName(), kc.Spec.Cassandra, &dcTemplate)
 
-	if cassandra.ClientEncryptionEnabled(dcConfig) {
+	if cassandra.ClientEncryptionEnabled(dcConfig) && !stargateTemplate.UseExternalSecrets() {
 		logger.Info("Client encryption enabled, setting it up in Stargate")
 		cassandraEncryption.ClientEncryptionStores = kc.Spec.Cassandra.ClientEncryptionStores
 	}
 
-	if cassandra.ServerEncryptionEnabled(dcConfig) {
+	if cassandra.ServerEncryptionEnabled(dcConfig) && !stargateTemplate.UseExternalSecrets() {
 		logger.Info("Server encryption enabled, setting it up in Stargate")
 		cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
 	}

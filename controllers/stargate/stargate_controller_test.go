@@ -66,6 +66,11 @@ func TestStargate(t *testing.T) {
 		managementApiFactory.UseDefaultAdapter()
 		testCreateStargateEncryption(t, ctx, testEnv.TestClient)
 	})
+	t.Run("testCreateStargateEncryptionExternalSecrets", func(t *testing.T) {
+		managementApiFactory.SetT(t)
+		managementApiFactory.UseDefaultAdapter()
+		testCreateStargateEncryptionExternalSecrets(t, ctx, testEnv.TestClient)
+	})
 	t.Run("CreateStargateMultiRack", func(t *testing.T) {
 		managementApiFactory.SetT(t)
 		managementApiFactory.UseDefaultAdapter()
@@ -658,6 +663,283 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 	require.NoError(t, err, "failed to update deployment")
 
 	serviceKey := types.NamespacedName{Namespace: namespace, Name: "test-dc3-stargate-service"}
+	service := &corev1.Service{}
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, serviceKey, service)
+		return err == nil
+	}, timeout, interval)
+
+	t.Log("check that the Stargate resource is fully reconciled")
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, stargateKey, sg)
+		return err == nil && sg.Status.Progress == api.StargateProgressRunning
+	}, timeout, interval)
+
+	t.Log("check Stargate status")
+	assert.EqualValues(t, 1, sg.Status.Replicas, "expected to find 1 replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.ReadyReplicas, "expected to find 1 ready replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.AvailableReplicas, "expected to find 1 available replica for Stargate")
+	assert.EqualValues(t, 1, sg.Status.UpdatedReplicas, "expected to find 1 updated replica for Stargate")
+	assert.Equal(t, "1/1", *sg.Status.ReadyReplicasRatio)
+	assert.Len(t, sg.Status.DeploymentRefs, 1)
+	assert.NotNil(t, sg.Status.ServiceRef)
+
+	sgConfigMap := corev1.ConfigMap{}
+	sgConfigMapKey := client.ObjectKey{Namespace: namespace, Name: stargate.GeneratedConfigMapName(dc.Spec.ClusterName, dc.ObjectMeta.Name)}
+	err = testClient.Get(ctx, sgConfigMapKey, &sgConfigMap)
+	assert.NoError(t, err, "failed to get stargate cassandra yaml config map")
+
+	t.Log("check Stargate condition")
+	assert.Len(t, sg.Status.Conditions, 1, "expected to find 1 condition for Stargate")
+	assert.Equal(t, api.StargateReady, sg.Status.Conditions[0].Type)
+	assert.Equal(t, corev1.ConditionTrue, sg.Status.Conditions[0].Status)
+
+	smKey := types.NamespacedName{Name: sg.Name + "-" + "stargate-servicemonitor", Namespace: "default"}
+	//	Check for presence of expected ServiceMonitor
+	sm := &promapi.ServiceMonitor{}
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, smKey, sm)
+		return err == nil
+	}, timeout, interval)
+	assert.NotNil(t, sm.Spec.Endpoints)
+
+	// Ensure that removing the telemetry spec does delete the ServiceMonitor
+	sgPatch := client.MergeFrom(sg.DeepCopy())
+	sg.Spec.Telemetry = nil
+	if err := testClient.Patch(ctx, sg, sgPatch); err != nil {
+		assert.Fail(t, "failed to patch stargate", "error", err)
+	}
+	assert.Eventually(t, func() bool {
+		err := testClient.Get(ctx, smKey, sm)
+		if err != nil {
+			return k8serrors.IsNotFound(err)
+		}
+		return false
+	}, timeout, interval)
+
+	// Delete the dc and verify it is deleted
+	err = testClient.Delete(ctx, dc)
+	require.NoError(t, err, "failed to delete dc")
+
+	assert.Eventually(t, func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := testClient.Get(ctx, dcKey, dc)
+		return err != nil && k8serrors.IsNotFound(err)
+	}, timeout, interval, "dc was never deleted")
+
+	// Delete stargate and verify it is deleted
+	err = testClient.Delete(ctx, sg)
+	require.NoError(t, err, "failed to delete stargate")
+
+	assert.Eventually(t, func() bool {
+		sg := &api.Stargate{}
+		err := testClient.Get(ctx, stargateKey, sg)
+		return err != nil && k8serrors.IsNotFound(err)
+	}, timeout, interval, "stargate was never deleted")
+
+}
+
+func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Context, testClient client.Client) {
+
+	namespace := "default"
+
+	// Create the client keystore and truststore secrets
+	clientKeystore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-keystore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"keystore":          []byte("keystore content"),
+			"keystore-password": []byte("keystore password"),
+		},
+	}
+
+	clientTruststore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-truststore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"truststore":          []byte("truststore content"),
+			"truststore-password": []byte("truststore password"),
+		},
+	}
+
+	// Create the server keystore and truststore configmaps
+	serverKeystore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-keystore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"keystore":          []byte("keystore content"),
+			"keystore-password": []byte("keystore password"),
+		},
+	}
+
+	serverTruststore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-truststore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"truststore":          []byte("truststore content"),
+			"truststore-password": []byte("truststore password"),
+		},
+	}
+
+	// Loop over the secrets and create them
+	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
+		testClient.Create(ctx, secret)
+	}
+
+	serverEncryption := map[string]interface{}{
+		"internode_encryption": "all",
+	}
+
+	clientEncryption := map[string]interface{}{
+		"enabled": true,
+	}
+	// Create the cassdc config json object
+	cassDcConfig := make(map[string]interface{})
+	cassDcConfig["cassandra-yaml"] = map[string]interface{}{
+		"server_encryption_options": serverEncryption,
+		"client_encryption_options": clientEncryption,
+	}
+
+	// Marshal the cassdc config json object
+	cassDcConfigBytes, err := json.Marshal(cassDcConfig)
+
+	require.NoError(t, err, "failed to marshal cassdc config")
+
+	dc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "dc4",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			Size:          1,
+			ServerVersion: "3.11.10",
+			ServerType:    "cassandra",
+			ClusterName:   "test",
+			StorageConfig: cassdcapi.StorageConfig{
+				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				},
+			},
+			Config: cassDcConfigBytes,
+		},
+	}
+
+	err = testClient.Create(ctx, dc)
+	require.NoError(t, err, "failed to create CassandraDatacenter")
+
+	t.Log("check that the datacenter was created")
+	dcKey := types.NamespacedName{Namespace: namespace, Name: "dc4"}
+
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, dcKey, dc)
+		return err == nil
+	}, timeout, interval)
+
+	sg := &api.Stargate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "dc4-stargate",
+		},
+		Spec: api.StargateSpec{
+			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
+				StargateClusterTemplate: api.StargateClusterTemplate{
+					Size: 1,
+					StargateTemplate: api.StargateTemplate{
+						SecretsProvider: "external",
+						Telemetry: &telemetryapi.TelemetrySpec{
+							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+								Enabled: true,
+							},
+						},
+					},
+				},
+			},
+			DatacenterRef: corev1.LocalObjectReference{Name: "dc4"},
+			CassandraEncryption: &api.CassandraEncryption{
+				ClientEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+						Name: "client-keystore-secret",
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+						Name: "client-truststore-secret",
+					}},
+				},
+				ServerEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+						Name: "client-keystore-secret",
+					}},
+					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+						Name: "client-truststore-secret",
+					}},
+				},
+			},
+		},
+	}
+
+	// artificially put the DC in a ready state
+	dc.SetCondition(cassdcapi.DatacenterCondition{
+		Type:               cassdcapi.DatacenterReady,
+		Status:             corev1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
+	})
+	dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+	dc.Status.LastServerNodeStarted = metav1.Now()
+	dc.Status.NodeStatuses = cassdcapi.CassandraStatusMap{"node1": cassdcapi.CassandraNodeStatus{HostID: "irrelevant"}}
+	dc.Status.NodeReplacements = []string{}
+	dc.Status.LastRollingRestart = metav1.Now()
+	dc.Status.QuietPeriod = metav1.Now()
+	//goland:noinspection GoDeprecation
+	dc.Status.SuperUserUpserted = metav1.Now()
+	dc.Status.UsersUpserted = metav1.Now()
+
+	err = testClient.Status().Update(ctx, dc)
+	require.NoError(t, err, "failed to update dc")
+
+	err = testClient.Create(ctx, sg)
+	require.NoError(t, err, "failed to create Stargate")
+
+	t.Log("check that the Stargate resource was created")
+	stargateKey := types.NamespacedName{Namespace: namespace, Name: "dc4-stargate"}
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, stargateKey, sg)
+		return err == nil && sg.Status.Progress == api.StargateProgressDeploying
+	}, timeout, interval)
+
+	deploymentKey := types.NamespacedName{Namespace: namespace, Name: "test-dc4-default-stargate-deployment"}
+	deployment := &appsv1.Deployment{}
+	require.Eventually(t, func() bool {
+		err := testClient.Get(ctx, deploymentKey, deployment)
+		return err == nil
+	}, timeout, interval)
+
+	t.Log("check that the owner reference is set on the Stargate deployment")
+	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
+	assert.Equal(t, sg.UID, deployment.OwnerReferences[0].UID)
+
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+
+	t.Log("check that authentication is enabled on the Stargate deployment")
+	envVars := deployment.Spec.Template.Spec.Containers[0].Env
+	assert.Equal(t, "ENABLE_AUTH", envVars[len(envVars)-1].Name)
+	assert.Equal(t, "true", envVars[len(envVars)-1].Value)
+
+	deployment.Status.Replicas = 1
+	deployment.Status.ReadyReplicas = 1
+	deployment.Status.AvailableReplicas = 1
+	deployment.Status.UpdatedReplicas = 1
+	err = testClient.Status().Update(ctx, deployment)
+	require.NoError(t, err, "failed to update deployment")
+
+	serviceKey := types.NamespacedName{Namespace: namespace, Name: "test-dc4-stargate-service"}
 	service := &corev1.Service{}
 	require.Eventually(t, func() bool {
 		err := testClient.Get(ctx, serviceKey, service)

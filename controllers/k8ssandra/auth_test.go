@@ -269,3 +269,137 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
+
+// createSingleDcClusterAuthExternalSecrets verifies that kubernetes secrets for credentials are not created when
+// SecretsProvider is specified as external
+func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "cluster1",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Auth: pointer.BoolPtr(true),
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{{
+					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
+					K8sContext: f.DataPlaneContexts[1],
+					Size:       1,
+					DatacenterOptions: api.DatacenterOptions{
+						ServerVersion: "3.11.10",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
+					},
+				}},
+			},
+			Stargate: &stargateapi.StargateClusterTemplate{
+				StargateTemplate: stargateapi.StargateTemplate{
+					SecretsProvider: "external",
+				},
+				Size: 1,
+			},
+			Reaper: &reaperapi.ReaperClusterTemplate{
+				ReaperTemplate: reaperapi.ReaperTemplate{
+					SecretsProvider: "external",
+				},
+			},
+			SecretsProvider: "external",
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(t, err, "failed to create K8ssandraCluster")
+
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+
+	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifySuperuserSecretNotCreated(ctx, t, f, kc)
+
+	// verify not created
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
+	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
+	verifyReplicatedSecretNotReconciled(ctx, t, f, kc)
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	require.Eventually(t, f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("update dc status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dcKey)
+	require.NoError(t, err, "failed to set dc status ready")
+
+	t.Log("check that stargate is created")
+	require.Eventually(t, f.StargateExists(ctx, stargateKey), timeout, interval)
+
+	t.Log("update stargate status to ready")
+	err = f.SetStargateStatusReady(ctx, stargateKey)
+	require.NoError(t, err, "failed to set stargate status ready")
+
+	t.Log("check that reaper is created")
+	require.Eventually(t, f.ReaperExists(ctx, reaperKey), timeout, interval)
+
+	t.Log("update reaper status to ready")
+	err = f.SetReaperStatusReady(ctx, reaperKey)
+	require.NoError(t, err, "failed to set Stargate status ready")
+
+	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+
+	t.Log("check that authentication is enabled in DC")
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		// the config should have JMX auth enabled
+		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
+	}), timeout, interval)
+
+	t.Log("check that remote JMX is enabled")
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		if dc.Spec.PodTemplateSpec != nil {
+			for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
+				if container.Name == reconciliation.CassandraContainerName {
+					for _, envVar := range container.Env {
+						if envVar.Name == "LOCAL_JMX" {
+							return envVar.Value == "no"
+						}
+					}
+				}
+			}
+		}
+		return false
+	}), timeout, interval)
+
+	withStargate := f.NewWithStargate(ctx, stargateKey)
+	withReaper := f.NewWithReaper(ctx, reaperKey)
+
+	t.Log("check that secrets are external in Reaper CRD")
+	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
+		return r.Spec.UseExternalSecrets()
+	}), timeout, interval)
+
+	t.Log("check that authentication is enabled in Stargate CRD")
+	require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
+		return sg.Spec.IsAuthEnabled()
+	}), timeout, interval)
+
+	t.Log("check that external secrets option specified")
+	require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
+		return sg.Spec.UseExternalSecrets()
+	}), timeout, interval)
+
+	t.Log("check that authentication is enabled in Reaper CRD")
+	require.Never(t, withReaper(func(r *reaperapi.Reaper) bool {
+		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")} ||
+			r.Spec.JmxUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultJmxUserSecretName("cluster1")}
+	}), timeout, interval)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(t, err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
+}

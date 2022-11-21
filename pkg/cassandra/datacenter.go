@@ -118,6 +118,7 @@ type DatacenterConfig struct {
 	ConfigBuilderResources   *corev1.ResourceRequirements
 	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
 	PerNodeConfigMapRef      corev1.LocalObjectReference
+	ExternalSecrets          bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -136,6 +137,12 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	rawConfig, err := createJsonConfig(template.CassandraConfig, template.ServerVersion, template.ServerType)
 	if err != nil {
 		return nil, err
+	}
+
+	// if using external secrets, make sure superUserSecretName is empty
+	superUserSecretName := template.SuperuserSecretRef.Name
+	if template.ExternalSecrets {
+		superUserSecretName = ""
 	}
 
 	dc := &cassdcapi.CassandraDatacenter{
@@ -162,7 +169,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Racks:               template.Racks,
 			StorageConfig:       *template.StorageConfig,
 			ClusterName:         template.Cluster,
-			SuperuserSecretName: template.SuperuserSecretRef.Name,
+			SuperuserSecretName: superUserSecretName,
 			Users:               template.Users,
 			Networking:          template.Networking,
 			PodTemplateSpec:     template.PodTemplateSpec,

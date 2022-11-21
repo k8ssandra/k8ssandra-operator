@@ -366,6 +366,32 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 			client.ObjectKey{Namespace: "ns1", Name: "k8c"},
 			false,
 		},
+		{
+			"default auth, external secrets",
+			&reaperapi.ReaperClusterTemplate{
+				ReaperTemplate: reaperapi.ReaperTemplate{
+					SecretsProvider: "external",
+				},
+			},
+			&cassandra.DatacenterConfig{
+				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
+				Cluster: "cluster1",
+			},
+			&cassandra.DatacenterConfig{
+				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
+				Cluster: "cluster1",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name: reconciliation.CassandraContainerName,
+							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+						}},
+					},
+				},
+			},
+			client.ObjectKey{Namespace: "ns1", Name: "k8c"},
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
