@@ -297,9 +297,9 @@ func TestLivenessProbe(t *testing.T) {
 func TestEnableCors(t *testing.T) {
 	reaper := newTestReaper()
 
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
-	podSpec = deployment.Spec.Template.Spec
-	container = podSpec.Containers[0]
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	podSpec := deployment.Spec.Template.Spec
+	container := podSpec.Containers[0]
 	envVar := utils.FindEnvVar(container.Env, "REAPER_ENABLE_CROSS_ORIGIN")
 	assert.Nil(t, envVar)
 
@@ -307,7 +307,7 @@ func TestEnableCors(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	envVar := utils.FindEnvVar(container.Env, "REAPER_ENABLE_CROSS_ORIGIN")
+	envVar = utils.FindEnvVar(container.Env, "REAPER_ENABLE_CROSS_ORIGIN")
 	assert.Nil(t, envVar)
 
 	reaper.Spec.EnableCors = true
