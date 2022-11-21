@@ -151,6 +151,13 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
+	if reaper.Spec.EnableCors {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_ENABLE_CROSS_ORIGIN",
+			Value: "true",
+		})
+	}
+
 	volumeMounts := []corev1.VolumeMount{}
 	volumes := []corev1.Volume{}
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes

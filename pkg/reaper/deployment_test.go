@@ -294,6 +294,32 @@ func TestLivenessProbe(t *testing.T) {
 	assert.Equal(t, expected, deployment.Spec.Template.Spec.Containers[0].LivenessProbe)
 }
 
+func TestEnableCors(t *testing.T) {
+	reaper := newTestReaper()
+
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	podSpec = deployment.Spec.Template.Spec
+	container = podSpec.Containers[0]
+	envVar := utils.FindEnvVar(container.Env, "REAPER_ENABLE_CROSS_ORIGIN")
+	assert.Nil(t, envVar)
+
+	reaper.Spec.EnableCors = false
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	podSpec = deployment.Spec.Template.Spec
+	container = podSpec.Containers[0]
+	envVar := utils.FindEnvVar(container.Env, "REAPER_ENABLE_CROSS_ORIGIN")
+	assert.Nil(t, envVar)
+
+	reaper.Spec.EnableCors = true
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	podSpec = deployment.Spec.Template.Spec
+	container = podSpec.Containers[0]
+	assert.Contains(t, container.Env, corev1.EnvVar{
+		Name:  "REAPER_ENABLE_CROSS_ORIGIN",
+		Value: "true",
+	})
+}
+
 func TestImages(t *testing.T) {
 	// Note: nil images are normally not possible due to the kubebuilder markers on the CRD spec
 	t.Run("nil images", func(t *testing.T) {
