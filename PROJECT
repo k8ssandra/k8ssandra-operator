@@ -121,4 +121,13 @@ resources:
   webhooks:
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8ssandra.io
+  group: control
+  kind: K8ssandraTask
+  path: github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1
+  version: v1alpha1
 version: "3"
