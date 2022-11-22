@@ -17,9 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // K8ssandraTaskSpec defines the desired state of K8ssandraTask
@@ -32,22 +34,24 @@ type K8ssandraTaskSpec struct {
 	Datacenters []string `json:"datacenters,omitempty"`
 
 	// TODO replace with CassandraTaskTemplate (once k8ssandra/cass-operator#458 merged)
-	Template v1alpha1.CassandraTask `json:"template,omitempty"`
+	Template cassapi.CassandraTaskSpec `json:"template,omitempty"`
 }
 
 // K8ssandraTaskStatus defines the observed state of K8ssandraTask
 type K8ssandraTaskStatus struct {
-
-	// The overall progress across all datacenters.
-	Global v1alpha1.CassandraTaskStatus `json:"global,omitempty"`
+	cassapi.CassandraTaskStatus `json:",inline"`
 
 	// The individual progress of the CassandraTask in each datacenter.
-	Datacenters map[string]v1alpha1.CassandraTaskStatus `json:"datacenters,omitempty"`
+	Datacenters map[string]cassapi.CassandraTaskStatus `json:"datacenters,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
+// +kubebuilder:printcolumn:name="Job",type=string,JSONPath=".spec.template.jobs[0].command",description="The job that is executed"
+// +kubebuilder:printcolumn:name="Scheduled",type="date",JSONPath=".spec.template.scheduledTime",description="When the execution of the task is allowed at earliest"
+// +kubebuilder:printcolumn:name="Started",type="date",JSONPath=".status.startTime",description="When the execution of the task started"
+// +kubebuilder:printcolumn:name="Completed",type="date",JSONPath=".status.completionTime",description="When the execution of the task finished"
 // K8ssandraTask is the Schema for the k8ssandratasks API
 type K8ssandraTask struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -64,6 +68,73 @@ type K8ssandraTaskList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []K8ssandraTask `json:"items"`
+}
+
+func (t *K8ssandraTask) GetClusterKey() client.ObjectKey {
+	return client.ObjectKey{
+		Namespace: utils.FirstNonEmptyString(t.Spec.Cluster.Namespace, t.Namespace),
+		Name:      t.Spec.Cluster.Name,
+	}
+}
+
+func (t *K8ssandraTask) BuildGlobalStatus() {
+	t.Status.Active = 0
+	t.Status.Succeeded = 0
+	t.Status.Failed = 0
+
+	for _, dcStatus := range t.Status.Datacenters {
+		if t.Status.StartTime.IsZero() || dcStatus.StartTime.Before(t.Status.StartTime) {
+			t.Status.StartTime = dcStatus.StartTime
+		}
+		if t.Status.CompletionTime.IsZero() || t.Status.CompletionTime.Before(dcStatus.CompletionTime) {
+			t.Status.CompletionTime = dcStatus.CompletionTime
+		}
+		t.Status.Active += dcStatus.Active
+		t.Status.Succeeded += dcStatus.Succeeded
+		t.Status.Failed += dcStatus.Failed
+	}
+
+	if t.Status.Active > 0 {
+		t.setCondition(cassapi.JobRunning, corev1.ConditionTrue)
+	} else {
+		t.setCondition(cassapi.JobRunning, corev1.ConditionFalse)
+	}
+
+	if t.Status.Failed > 0 {
+		t.setCondition(cassapi.JobFailed, corev1.ConditionTrue)
+	}
+
+	// TODO revisit this, based on actual number of DCs
+	if t.Status.Active == 0 && t.Status.Failed == 0 && t.Status.Succeeded > 0 {
+		t.setCondition(cassapi.JobComplete, corev1.ConditionTrue)
+	}
+}
+
+func (t *K8ssandraTask) setCondition(condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
+	existing := false
+	for _, cond := range t.Status.Conditions {
+		if cond.Type == condition {
+			if cond.Status == status {
+				// Already correct status
+				return false
+			}
+			cond.Status = status
+			cond.LastTransitionTime = metav1.Now()
+			existing = true
+			break
+		}
+	}
+
+	if !existing {
+		cond := cassapi.JobCondition{
+			Type:               condition,
+			Status:             status,
+			LastTransitionTime: metav1.Now(),
+		}
+		t.Status.Conditions = append(t.Status.Conditions, cond)
+	}
+
+	return true
 }
 
 func init() {

@@ -1,38 +1,5 @@
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  creationTimestamp: null
-  name: k8ssandra-operator
-rules:
-- apiGroups:
-  - control.k8ssandra.io
-  resources:
-  - k8ssandratasks
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - control.k8ssandra.io
-  resources:
-  - k8ssandratasks/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - control.k8ssandra.io
-  resources:
-  - k8ssandratasks/status
-  verbs:
-  - get
-  - patch
-  - update
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
@@ -110,6 +77,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
+  - k8ssandratasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
+  - k8ssandratasks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
+  - k8ssandratasks/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:

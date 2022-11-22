@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	controlcontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/control"
 	"os"
 	"strings"
 
@@ -56,7 +57,6 @@ import (
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	configctrl "github.com/k8ssandra/k8ssandra-operator/controllers/config"
-	controlcontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/control"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
@@ -191,6 +191,16 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)
 		}
+
+		if err = (&controlcontrollers.K8ssandraTaskReconciler{
+			ReconcilerConfig: reconcilerConfig,
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			ClientCache:      clientCache,
+		}).SetupWithManager(mgr, additionalClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&stargatectrl.StargateReconciler{
@@ -267,13 +277,6 @@ func main() {
 	}
 	if err = (&medusav1alpha1.MedusaBackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "MedusaBackupSchedule")
-		os.Exit(1)
-	}
-	if err = (&controlcontrollers.K8ssandraTaskReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
