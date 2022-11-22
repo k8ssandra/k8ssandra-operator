@@ -136,6 +136,11 @@ type ReaperTemplate struct {
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
+	// If Cross-origin requests should be properly supported by the server when made via a browser.
+	// +optional
+	// +kubebuilder:default=false
+	EnableCors bool `json:"enableCors,omitempty"`
+
 	// labels and annotations for Reaper resources
 	// +optional
 	ResourceMeta *meta.ResourceMeta `json:"metadata,omitempty"`
@@ -264,11 +269,6 @@ type ReaperSpec struct {
 	// +optional
 	// +kubebuilder:default=false
 	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
-
-	// If Cross-origin requests should be properly supported by the server when made via a browser.
-	// +optional
-	// +kubebuilder:default=false
-	EnableCors bool `json:"enableCors,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

@@ -27175,6 +27175,11 @@ spec:
                     - PER_DC
                     - SINGLE
                     type: string
+                  enableCors:
+                    default: false
+                    description: If Cross-origin requests should be properly supported
+                      by the server when made via a browser.
+                    type: boolean
                   heapSize:
                     anyOf:
                     - type: integer
