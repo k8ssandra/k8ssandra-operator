@@ -101,10 +101,13 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
+	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
+
 	// If webhooks are installed, this testcase is handled by the webhook test
 	// t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
+	t.Run("ApplyClusterWithEncryptionOptionsExternalSecrets", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsExternalSecrets))
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
 	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
@@ -1904,9 +1907,246 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
+// Create a cluster with encryption options and Stargate.
+// Verify that volumes, mounts and config maps are correctly created.
+func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	clusterName := "cluster-with-encryption"
+	serverVersion := "4.0.0"
+	dc1Size := int32(3)
+
+	// Create the client keystore and truststore secrets
+	clientKeystore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-keystore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"keystore":          []byte("keystore content"),
+			"keystore-password": []byte("keystore password"),
+		},
+	}
+
+	clientTruststore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-truststore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"truststore":          []byte("truststore content"),
+			"truststore-password": []byte("truststore password"),
+		},
+	}
+
+	// Create the server keystore and truststore configmaps
+	serverKeystore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-keystore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"keystore":          []byte("keystore content"),
+			"keystore-password": []byte("keystore password"),
+		},
+	}
+
+	serverTruststore := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "server-truststore-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"truststore":          []byte("truststore content"),
+			"truststore-password": []byte("truststore password"),
+		},
+	}
+
+	// Create the client keystore and truststore secrets
+	clientCertificates := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-certificates",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"rootca.crt": []byte("Root CA content"),
+			"client.crt": []byte("Client certificate content"),
+			"client.key": []byte("Client key content"),
+		},
+	}
+
+	// Loop over the secrets and create them
+	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, clientCertificates} {
+		secretKey := utils.GetKey(secret)
+		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
+		f.Create(ctx, secretClusterKey0, secret)
+	}
+
+	// Create the cluster template with encryption enabled
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      clusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			SecretsProvider: "external",
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: serverVersion,
+					StorageConfig: &cassdcapi.StorageConfig{
+						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+							StorageClassName: &defaultStorageClass,
+						},
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+						DatacenterOptions: api.DatacenterOptions{
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: unstructured.Unstructured{
+									"client_encryption_options": map[string]interface{}{
+										"enabled": true,
+									},
+									"server_encryption_options": map[string]interface{}{
+										"internode_encryption": "all",
+									},
+								},
+							},
+						},
+						Stargate: &stargateapi.StargateDatacenterTemplate{
+							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
+								Size: 1,
+							},
+						},
+					},
+				},
+			},
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				ContainerImage: &images.Image{
+					Repository: medusaImageRepo,
+				},
+				StorageProperties: medusaapi.Storage{
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: cassandraUserSecret,
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+
+	t.Log("check that dc1 was created")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	t.Log("verify configuration of dc1")
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(err, "failed to get dc1")
+	cassContainerIdx, foundCassandra := cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "cassandra")
+	require.True(foundCassandra, "failed to find cassandra container in dc1")
+	cassContainer := dc1.Spec.PodTemplateSpec.Spec.Containers[cassContainerIdx]
+	// Get the cassandra container's volume mounts
+	var clientKeystoreMount *corev1.VolumeMount
+	var clientTruststoreMount *corev1.VolumeMount
+	var serverKeystoreMount *corev1.VolumeMount
+	var serverTruststoreMount *corev1.VolumeMount
+	for _, mount := range cassContainer.VolumeMounts {
+		if mount.Name == "client-keystore" {
+			clientKeystoreMount = &mount
+			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
+		} else if mount.Name == "client-truststore" {
+			clientTruststoreMount = &mount
+			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
+		} else if mount.Name == "server-keystore" {
+			serverKeystoreMount = &mount
+			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
+		} else if mount.Name == "server-truststore" {
+			serverTruststoreMount = &mount
+			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
+		}
+	}
+
+	assert.Nil(clientKeystoreMount, "client-keystore volume mount not found")
+	assert.Nil(clientTruststoreMount, "client-truststore volume mount not found")
+	assert.Nil(serverKeystoreMount, "server-keystore volume mount not found")
+	assert.Nil(serverTruststoreMount, "server-truststore volume mount not found")
+
+	_, foundClientKeystore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "client-keystore")
+	assert.False(foundClientKeystore, "failed to find client-keystore volume in dc1")
+	_, foundClientTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "client-truststore")
+	assert.False(foundClientTruststore, "failed to find client-truststore volume in dc1")
+	_, foundServerKeystore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-keystore")
+	assert.False(foundServerKeystore, "failed to find server-keystore volume in dc1")
+	_, foundServerTruststore := cassandra.FindVolume(dc1.Spec.PodTemplateSpec, "server-truststore")
+	assert.False(foundServerTruststore, "failed to find server-truststore volume in dc1")
+
+	dcConfig, err := utils.UnmarshalToMap(dc1.Spec.Config)
+	require.NoError(err, "failed to unmarshal dc1 config")
+
+	cassYaml, foundYaml := dcConfig["cassandra-yaml"].(map[string]interface{})
+
+	assert.True(foundYaml, "failed to find cassandra-yaml in dcConfig")
+
+	serverEncryptionOptions := cassYaml["server_encryption_options"].(map[string]interface{})
+
+	assert.NotEqual("none", serverEncryptionOptions["internode_encryption"].(string), "server_encryption_options is not enabled")
+
+	t.Log("update dc1 status to ready")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to update dc1 status to ready")
+
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
+	require.NoError(err, "failed to set dc1 status ready")
+
+	sg1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1-stargate", dc1.Spec.ClusterName)}, K8sContext: f.DataPlaneContexts[0]}
+	t.Log("check that stargate sg1 is created")
+	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
+
+	t.Logf("update stargate sg1 status to ready")
+	err = f.SetStargateStatusReady(ctx, sg1Key)
+	require.NoError(err, "failed to patch stargate status")
+
+	t.Log("verify configuration of stargate in dc1")
+	sg1 := &stargateapi.Stargate{}
+	err = f.Get(ctx, sg1Key, sg1)
+	require.NoError(err, "failed to get stargate in dc1")
+
+	stargateEncryptionSettings := sg1.Spec.CassandraEncryption
+	require.NotNil(stargateEncryptionSettings, "stargate encryption settings are not set")
+	t.Logf("stargate encryption settings: %+v", stargateEncryptionSettings)
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
 func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
 	t.Logf("check that the default superuser secret is created")
 	assert.Eventually(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")
+}
+
+func verifySuperuserSecretNotCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
+	t.Logf("check that the default superuser secret is not created")
+	assert.Never(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")
 }
 
 func superuserSecretExists(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) func() bool {
@@ -1923,7 +2163,7 @@ func verifySecretCreated(ctx context.Context, t *testing.T, f *framework.Framewo
 }
 
 func verifySecretNotCreated(ctx context.Context, t *testing.T, f *framework.Framework, namespace, secretName string) {
-	t.Logf("check that the default superuser secret is created")
+	t.Logf("check that the default superuser secret is not created")
 	assert.Never(t, secretExists(f, ctx, namespace, secretName), timeout, interval, "failed to verify that the secret %s was not created", secretName)
 }
 
@@ -2018,6 +2258,18 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	err := f.Client.Status().Update(ctx, rsec)
 
 	require.NoError(t, err, "Failed to update ReplicationSecret status")
+}
+
+func verifyReplicatedSecretNotReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Log("check ReplicatedSecret not reconciled")
+
+	rsec := &replicationapi.ReplicatedSecret{}
+	replSecretKey := types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}
+
+	assert.Never(t, func() bool {
+		err := f.Client.Get(ctx, replSecretKey, rsec)
+		return err == nil
+	}, timeout, interval, "ReplicatedSecret exists when it should not have been created")
 }
 
 func FindDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {

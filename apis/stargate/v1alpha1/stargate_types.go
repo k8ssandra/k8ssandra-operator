@@ -122,6 +122,12 @@ type StargateTemplate struct {
 	SecretsProvider string `json:"secretsProvider,omitempty"`
 }
 
+// UseExternalSecrets defines whether the user has specified if credentials and
+// certs will be backed by an external secrets store
+func (in StargateTemplate) UseExternalSecrets() bool {
+	return in.SecretsProvider != "" && in.SecretsProvider == "external"
+}
+
 // StargateClusterTemplate defines global rules to apply to all Stargate pods in all datacenters in the cluster.
 // These rules will be merged with rules defined at datacenter level in a StargateDatacenterTemplate; dc-level rules
 // have precedence over cluster-level ones.

@@ -28,6 +28,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
 		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
+		dcConfig.ExternalSecrets = kc.Spec.UseExternalSecrets()
 
 		dcKey := types.NamespacedName{Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace), Name: dcConfig.Meta.Name}
 		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcConfig.K8sContext)
@@ -47,7 +48,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			return nil, err
 		}
 
-		_ = cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled())
+		_ = cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
 		// unauthenticated clusters.

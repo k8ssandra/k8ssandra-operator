@@ -41,7 +41,9 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Check that certificates are provided if client encryption is enabled
 		if cassandra.ClientEncryptionEnabled(dcConfig) {
-			if medusaSpec.CertificatesSecretRef.Name == "" {
+			if kc.Spec.UseExternalSecrets() {
+				medusaSpec.CertificatesSecretRef.Name = ""
+			} else if medusaSpec.CertificatesSecretRef.Name == "" {
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}
 		}
@@ -51,10 +53,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
 		}
-		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.SanitizedName(), logger)
-		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.SanitizedName(), logger)
+
+		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
+		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
 		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName(), logger)
-		cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName()))
+		if !kc.Spec.UseExternalSecrets() {
+			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName()))
+		}
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
@@ -69,7 +74,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 	logger logr.Logger,
 ) result.ReconcileResult {
 	logger.Info("Reconciling Medusa user secrets")
-	if kc.Spec.Medusa != nil {
+	if kc.Spec.Medusa != nil && !kc.Spec.UseExternalSecrets() {
 		cassandraUserSecretRef := kc.Spec.Medusa.CassandraUserSecretRef
 		if cassandraUserSecretRef.Name == "" {
 			cassandraUserSecretRef.Name = medusa.CassandraUserSecretName(kc.Spec.Medusa, kc.SanitizedName())

@@ -21,35 +21,43 @@ const (
 // the datacenter config template.
 func HandleEncryptionOptions(template *DatacenterConfig) error {
 	if ClientEncryptionEnabled(template) {
-		if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
-			return err
+		if template.ExternalSecrets {
+			// enables encryption options, but doesn't set keystore/trustore path and passwords
+			enableEncryptionOptions(template)
 		} else {
+			if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
+				return err
+			}
 			// Create the volume and mount for the keystore
 			addVolumesForEncryption(template, encryption.StoreTypeClient, *template.ClientEncryptionStores)
 			// Add JMX encryption jvm options
 			addJmxEncryptionOptions(template)
+
+			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore", keystorePath)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore", truststorePath)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore_password", template.ClientKeystorePassword)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore_password", template.ClientTruststorePassword)
 		}
-		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
-		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore", keystorePath)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore", truststorePath)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/keystore_password", template.ClientKeystorePassword)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("client_encryption_options/truststore_password", template.ClientTruststorePassword)
 	}
 
 	if ServerEncryptionEnabled(template) {
-		if err := checkMandatoryEncryptionFields(template.ServerEncryptionStores); err != nil {
-			return err
-		} else {
+		if !template.ExternalSecrets {
+			if err := checkMandatoryEncryptionFields(template.ServerEncryptionStores); err != nil {
+				return err
+			}
+
 			// Create the volume and mount for the keystore
 			addVolumesForEncryption(template, encryption.StoreTypeServer, *template.ServerEncryptionStores)
+
+			keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
+			truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore", keystorePath)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore", truststorePath)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore_password", template.ServerKeystorePassword)
+			template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore_password", template.ServerTruststorePassword)
 		}
-		keystorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameKeystore), encryption.StoreNameKeystore)
-		truststorePath := fmt.Sprintf("%s/%s", StoreMountFullPath(encryption.StoreTypeServer, encryption.StoreNameTruststore), encryption.StoreNameTruststore)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore", keystorePath)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore", truststorePath)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/keystore_password", template.ServerKeystorePassword)
-		template.CassandraConfig.CassandraYaml.PutIfAbsent("server_encryption_options/truststore_password", template.ServerTruststorePassword)
 	}
 	return nil
 }
@@ -161,6 +169,11 @@ func ServerEncryptionEnabled(template *DatacenterConfig) bool {
 }
 
 func ReadEncryptionStoresSecrets(ctx context.Context, klusterKey types.NamespacedName, template *DatacenterConfig, remoteClient client.Client, logger logr.Logger) error {
+	if template.ExternalSecrets {
+		logger.Info("ExternalSecrets enabled, operator will not verify existence of encryption stores secrets")
+		return nil
+	}
+
 	if ClientEncryptionEnabled(template) {
 		if err := checkMandatoryEncryptionFields(template.ClientEncryptionStores); err != nil {
 			return err
@@ -242,12 +255,16 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 
 // Add JVM options required for turning on encryption
 func addJmxEncryptionOptions(template *DatacenterConfig) {
-	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
-	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
+	enableEncryptionOptions(template)
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore), encryption.StoreNameKeystore))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/%s", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore), encryption.StoreNameTruststore))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", template.ClientKeystorePassword))
 	addOptionIfMissing(template, fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", template.ClientTruststorePassword))
+}
+
+func enableEncryptionOptions(template *DatacenterConfig) {
+	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl=true")
+	addOptionIfMissing(template, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true")
 }
 
 func addOptionIfMissing(template *DatacenterConfig, option string) {

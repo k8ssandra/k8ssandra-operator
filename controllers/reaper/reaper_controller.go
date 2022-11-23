@@ -169,7 +169,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	var keystorePassword *string
 	var truststorePassword *string
 
-	if actualReaper.Spec.ClientEncryptionStores != nil {
+	if actualReaper.Spec.ClientEncryptionStores != nil && !actualReaper.Spec.UseExternalSecrets() {
 		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameKeystore); err != nil {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		} else {
@@ -377,7 +377,7 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 		envVars = []*corev1.EnvVar{reaper.EnableAuthVar}
 	}
 
-	if len(secretRef.Name) > 0 {
+	if len(secretRef.Name) > 0 && !actualReaper.Spec.UseExternalSecrets() {
 		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: secretRef.Name}
 		if secret, err := r.getSecret(ctx, secretKey); err != nil {
 			logger.Error(err, "Failed to get Cassandra authentication secret", authType, secretKey)

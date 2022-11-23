@@ -48,7 +48,7 @@ func NewReaper(
 			ClientEncryptionStores: kc.Spec.Cassandra.ClientEncryptionStores,
 		},
 	}
-	if kc.Spec.IsAuthEnabled() {
+	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
 		// Reaper: one for CQL connections, one for JMX connections. Here we assume that these secrets exist. If the
 		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume

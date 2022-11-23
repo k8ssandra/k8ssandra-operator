@@ -100,6 +100,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	actualReaper := &reaperapi.Reaper{}
 
 	if reaperTemplate != nil {
+		reaperTemplate.SecretsProvider = kc.Spec.SecretsProvider
 
 		logger.Info("Reaper present for DC " + actualDc.Name)
 
