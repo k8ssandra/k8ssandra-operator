@@ -112,7 +112,8 @@ func (t *K8ssandraTask) BuildGlobalStatus() {
 
 func (t *K8ssandraTask) setCondition(condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
 	existing := false
-	for _, cond := range t.Status.Conditions {
+	for i := 0; i < len(t.Status.Conditions); i++ {
+		cond := t.Status.Conditions[i]
 		if cond.Type == condition {
 			if cond.Status == status {
 				// Already correct status
@@ -121,6 +122,7 @@ func (t *K8ssandraTask) setCondition(condition cassapi.JobConditionType, status 
 			cond.Status = status
 			cond.LastTransitionTime = metav1.Now()
 			existing = true
+			t.Status.Conditions[i] = cond
 			break
 		}
 	}

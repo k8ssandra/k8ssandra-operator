@@ -20,17 +20,19 @@ import (
 	"context"
 	"fmt"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
-	k8sapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -59,14 +61,9 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	logger.Info("Fetching task", "K8ssandraTask", req.NamespacedName)
 	k8Task := &api.K8ssandraTask{}
-	err := r.Get(ctx, req.NamespacedName, k8Task)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
+	if err := r.Get(ctx, req.NamespacedName, k8Task); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	// TODO k8Task.DeepCopy()? why?
 
 	if k8Task.DeletionTimestamp != nil {
 		// TODO delete dependent objects?
@@ -75,78 +72,78 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	kcKey := k8Task.GetClusterKey()
 	logger.Info("Fetching cluster", "K8ssandraCluster", kcKey)
-	kc := &k8sapi.K8ssandraCluster{}
-	err = r.Get(ctx, kcKey, kc)
-	if err != nil {
+	kc := &k8capi.K8ssandraCluster{}
+	if err := r.Get(ctx, kcKey, kc); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	dcs, err := filterDcs(kc, k8Task.Spec.Datacenters)
-	if err != nil {
+	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
 		return ctrl.Result{}, err
-	}
+	} else {
+		newDcTasks := make([]*cassapi.CassandraTask, 0, len(dcs))
+		for _, dc := range dcs {
+			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
 
-	for _, dc := range dcs {
-		dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
+			desiredDcTask := newDcTask(k8Task, dcNamespace, dc.Meta.Name)
 
-		desiredDcTask := newDcTask(k8Task, dcNamespace, dc.Meta.Name)
+			remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 
-		remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		dcTaskKey := client.ObjectKey{
-			Namespace: desiredDcTask.Namespace,
-			Name:      desiredDcTask.Name,
-		}
-		actualDcTask := &cassapi.CassandraTask{}
-		err = remoteClient.Get(ctx, dcTaskKey, actualDcTask)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				logger.Info("Creating DC task", "CassandraTask", dcTaskKey)
-				err = remoteClient.Create(ctx, desiredDcTask)
-				if err != nil {
+			dcTaskKey := client.ObjectKey{
+				Namespace: desiredDcTask.Namespace,
+				Name:      desiredDcTask.Name,
+			}
+			actualDcTask := &cassapi.CassandraTask{}
+			if err = remoteClient.Get(ctx, dcTaskKey, actualDcTask); err != nil {
+				if errors.IsNotFound(err) {
+					logger.Info("Creating DC task", "CassandraTask", dcTaskKey)
+					newDcTasks = append(newDcTasks, desiredDcTask)
+					if err = remoteClient.Create(ctx, desiredDcTask); err != nil {
+						return ctrl.Result{}, err
+					}
+				} else {
 					return ctrl.Result{}, err
 				}
 			} else {
+				logger.Info("DC task already exists, updating status", "CassandraTask", dcTaskKey)
+				if k8Task.Status.Datacenters == nil {
+					k8Task.Status.Datacenters = make(map[string]cassapi.CassandraTaskStatus)
+				}
+				k8Task.Status.Datacenters[dc.Meta.Name] = actualDcTask.Status
+			}
+		}
+		k8Task.BuildGlobalStatus()
+		if err = r.Status().Update(ctx, k8Task); err != nil {
+			if errors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			} else {
 				return ctrl.Result{}, err
 			}
-		} else {
-			if k8Task.Status.Datacenters == nil {
-				k8Task.Status.Datacenters = make(map[string]cassapi.CassandraTaskStatus)
-			}
-			k8Task.Status.Datacenters[dc.Meta.Name] = actualDcTask.Status
 		}
 
-		k8Task.BuildGlobalStatus()
-		err = r.Status().Update(ctx, k8Task)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		return ctrl.Result{}, nil
 	}
-
-	return ctrl.Result{}, nil
 }
 
-func filterDcs(kc *k8sapi.K8ssandraCluster, dcNames []string) ([]k8sapi.CassandraDatacenterTemplate, error) {
+func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.CassandraDatacenterTemplate, error) {
 
 	if len(dcNames) == 0 {
 		return kc.Spec.Cassandra.Datacenters, nil
 	}
 
-	dcs := make([]k8sapi.CassandraDatacenterTemplate, 0, len(dcNames))
+	dcs := make([]k8capi.CassandraDatacenterTemplate, 0, len(dcNames))
 	for _, dcName := range dcNames {
 		found := false
 		for _, dc := range kc.Spec.Cassandra.Datacenters {
 			if dc.Meta.Name == dcName {
-				dcs = append([]k8sapi.CassandraDatacenterTemplate{dc}, dcs...)
+				dcs = append([]k8capi.CassandraDatacenterTemplate{dc}, dcs...)
 				found = true
 				break
 			}
 		}
 		if !found {
-			// TODO ignore instead? could be a race maybe
 			return nil, fmt.Errorf("unknown DC %s", dcName)
 		}
 	}
@@ -160,17 +157,17 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 			Name:        k8Task.Name + "-" + dcName,
 			Annotations: map[string]string{},
 			Labels: map[string]string{
-				k8sapi.NameLabel:                k8sapi.NameLabelValue,
-				k8sapi.PartOfLabel:              k8sapi.PartOfLabelValue,
-				k8sapi.ComponentLabel:           k8sapi.ComponentLabelValueCassandra,
-				k8sapi.CreatedByLabel:           k8sapi.CreatedByLabelValueK8ssandraTaskController,
+				k8capi.NameLabel:                k8capi.NameLabelValue,
+				k8capi.PartOfLabel:              k8capi.PartOfLabelValue,
+				k8capi.ComponentLabel:           k8capi.ComponentLabelValueCassandra,
+				k8capi.CreatedByLabel:           k8capi.CreatedByLabelValueK8ssandraTaskController,
 				api.K8ssandraTaskNameLabel:      k8Task.Name,
 				api.K8ssandraTaskNamespaceLabel: k8Task.Namespace,
 			},
 		},
 
 		Spec: cassapi.CassandraTaskSpec{
-			Datacenter: v1.ObjectReference{Namespace: namespace, Name: dcName},
+			Datacenter: corev1.ObjectReference{Namespace: namespace, Name: dcName},
 
 			// TODO revisit this once k8ssandra/cass-operator#458 merged
 			ScheduledTime:           k8Task.Spec.Template.ScheduledTime,
@@ -186,7 +183,7 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraTask{})
+		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
