@@ -86,7 +86,7 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
 
-	replication := map[string]int{"dc1": 3}
+	replication := map[string]int{"dc1": 3, "dc2": 3}
 	updatedReplication := map[string]int{"dc1": 3}
 
 	// We need a version of the map with string values because GetKeyspaceReplication returns
