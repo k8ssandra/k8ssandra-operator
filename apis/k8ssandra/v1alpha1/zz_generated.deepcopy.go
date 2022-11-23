@@ -125,6 +125,13 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.AdditionalPodAnnotations != nil {
+		in, out := &in.AdditionalPodAnnotations, &out.AdditionalPodAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.AdditionalSeeds != nil {
 		in, out := &in.AdditionalSeeds, &out.AdditionalSeeds
 		*out = make([]string, len(*in))
@@ -267,6 +274,13 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 		*out = make([]v1.Container, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.AdditionalPodAnnotations != nil {
+		in, out := &in.AdditionalPodAnnotations, &out.AdditionalPodAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 	if in.ExtraVolumes != nil {

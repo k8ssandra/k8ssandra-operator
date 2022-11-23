@@ -59,6 +59,11 @@ spec:
                   cluster where each DC should be deployed, node affinity (via racks),
                   individual C* node settings, JVM settings, and more.
                 properties:
+                  additionalPodAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: Add annotations to generated pod spec.
+                    type: object
                   additionalSeeds:
                     description: AdditionalSeeds specifies Cassandra node IPs for
                       an existing datacenter. This is primarily intended for migrations
@@ -1993,6 +1998,11 @@ spec:
                     description: Datacenters a list of the DCs in the cluster.
                     items:
                       properties:
+                        additionalPodAnnotations:
+                          additionalProperties:
+                            type: string
+                          description: Add annotations to generated pod spec.
+                          type: object
                         cdc:
                           description: CDC defines the desired state for CDC integrations.
                             It can be used to feed mutation events from Cassandra

@@ -235,6 +235,10 @@ type CassandraClusterTemplate struct {
 	// +optional
 	Datacenters []CassandraDatacenterTemplate `json:"datacenters,omitempty"`
 
+	// Add annotations to generated pod spec.
+	// +optional
+	AdditionalPodAnnotations map[string]string `json:"additionalPodAnnotations,omitempty"`
+
 	// AdditionalSeeds specifies Cassandra node IPs for an existing datacenter. This is
 	// primarily intended for migrations from an existing Cassandra cluster that is not
 	// managed by k8ssandra-operator. Note that this property should NOT be used to set
@@ -393,6 +397,10 @@ type DatacenterOptions struct {
 	// Otherwise init-containers referenced here will be injected in first position
 	// +optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+
+	// Add annotations to generated pod spec.
+	// +optional
+	AdditionalPodAnnotations map[string]string `json:"additionalPodAnnotations,omitempty"`
 
 	// Volumes defines additional volumes to be added to each Cassandra pod.
 	// If the volume uses a PersistentVolumeClaim, the PVC will be managed by the statefulset.

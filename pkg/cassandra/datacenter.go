@@ -382,6 +382,16 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// FIXME if we are doing this, then we should remove the pointer
 	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 
+	if dcTemplate.AdditionalPodAnnotations != nil && clusterTemplate.AdditionalPodAnnotations != nil {
+		podAnnotations := clusterTemplate.AdditionalPodAnnotations
+		for k, v := range dcTemplate.AdditionalPodAnnotations {
+			podAnnotations[k] = v
+		}
+		dcConfig.PodTemplateSpec.Annotations = podAnnotations
+	} else if clusterTemplate.AdditionalPodAnnotations != nil {
+		dcConfig.PodTemplateSpec.Annotations = clusterTemplate.AdditionalPodAnnotations
+	}
+
 	var podSecurityContext *corev1.PodSecurityContext
 	if dcTemplate.DatacenterOptions.PodSecurityContext != nil {
 		podSecurityContext = dcTemplate.DatacenterOptions.PodSecurityContext
