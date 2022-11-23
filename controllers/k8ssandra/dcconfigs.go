@@ -22,19 +22,11 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 	logger logr.Logger,
 	systemReplication cassandra.SystemReplication,
 ) ([]*cassandra.DatacenterConfig, error) {
-	cdcLogger := logger.WithValues("k8ssandraCluster", kc.Name)
 	kcKey := utils.GetKey(kc)
 	var dcConfigs []*cassandra.DatacenterConfig
 
-	if kc.Spec.Cassandra.AdditionalPodAnnotations != nil {
-		cdcLogger.Info("AdditionalPodAnnotations is passed, but feature is not implemented yet")
-	}
-
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 
-		if dcTemplate.AdditionalPodAnnotations != nil {
-			cdcLogger.Info("AdditionalPodAnnotations is passed at dc level, but feature is not implemented yet")
-		}
 		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		dcConfig.ExternalSecrets = kc.Spec.UseExternalSecrets()
 
