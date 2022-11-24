@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"net/http"
 	neturl "net/url"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strconv"
 	"testing"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/frame"
@@ -411,11 +412,17 @@ func insertRowsGrpc(t *testing.T, grpc *grpcclient.StargateClient, nbRows int, t
 }
 
 func checkRowCountGrpc(t *testing.T, grpc *grpcclient.StargateClient, nbRows int, tableName, keyspaceName string) {
-	cql := fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName)
-	response, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
-	if assert.NoError(t, err, "Query failed: %s", cql) {
-		assert.Len(t, response.GetResultSet().GetRows(), nbRows, "Expected SELECT query to return %d rows", nbRows)
-	}
+	assert.Eventually(t, func() bool {
+		cql := fmt.Sprintf("SELECT id FROM %s.%s", keyspaceName, tableName)
+		response, err := grpc.ExecuteQuery(&grpcproto.Query{Cql: cql})
+		if err != nil {
+			t.Logf("Query failed: %s with error %s", cql, err)
+			return false
+		} else {
+			t.Logf("Expected %d rows, got %d", nbRows, len(response.GetResultSet().GetRows()))
+			return len(response.GetResultSet().GetRows()) == nbRows
+		}
+	}, time.Minute, time.Second*10, "failed checking count through gRPC")
 }
 
 func formatReplicationForRestApi(replication map[string]int) string {
