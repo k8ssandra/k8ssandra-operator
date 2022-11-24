@@ -34,6 +34,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -408,6 +409,10 @@ func registerApis() error {
 	}
 
 	if err := medusaapi.AddToScheme(scheme.Scheme); err != nil {
+		return err
+	}
+
+	if err := controlapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 

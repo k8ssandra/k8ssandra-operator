@@ -18,6 +18,7 @@ import (
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -522,6 +523,41 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func() bool {
 	withDc := f.NewWithDatacenter(ctx, key)
 	return withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return true
+	})
+}
+
+// NewWithCassTask is a function generator for withCassandraTask that is bound to ctx, and key.
+func (f *Framework) NewWithCassTask(ctx context.Context, key ClusterKey) func(func(*casstaskapi.CassandraTask) bool) func() bool {
+	return func(condition func(dc *casstaskapi.CassandraTask) bool) func() bool {
+		return f.withCassTask(ctx, key, condition)
+	}
+}
+
+// withCassTask Fetches the CassandraTask specified by key and then calls condition.
+func (f *Framework) withCassTask(ctx context.Context, key ClusterKey, condition func(task *casstaskapi.CassandraTask) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup CassandraDatacenter", "key", key)
+			return false
+		}
+
+		dc := &casstaskapi.CassandraTask{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
+			return condition(dc)
+		} else {
+			if !errors.IsNotFound(err) {
+				f.logger.Error(err, "failed to get CassandraTask", "key", key)
+			}
+			return false
+		}
+	}
+}
+
+func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
+	withCassTask := f.NewWithCassTask(ctx, key)
+	return withCassTask(func(dc *casstaskapi.CassandraTask) bool {
 		return true
 	})
 }
