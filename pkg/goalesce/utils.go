@@ -33,6 +33,7 @@ func MergeCRDs[T any](cluster, dc T) T {
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]corev1.VolumeMount{}), "MountPath"),
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]corev1.VolumeDevice{}), "DevicePath"),
 		// Also best merged with merge-by-id semantics.
+		goalesce.WithSliceMergeByID(reflect.TypeOf([]cassdcapi.Rack{}), "Name"),
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]cassdcapi.AdditionalVolumes{}), "Name"),
 		// EnvVar cannot have both Value and ValueFrom set at the same time, so we use a custom
 		// merger.

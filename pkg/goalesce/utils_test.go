@@ -101,6 +101,12 @@ func TestMergeCRDs(t *testing.T) {
 			want:    []corev1.VolumeDevice{{DevicePath: "foo", Name: "bar"}},
 		},
 		{
+			name:    "racks",
+			cluster: []cassdcapi.Rack{{Name: "foo", NodeAffinityLabels: map[string]string{"foo": "cluster", "bar": "cluster"}}},
+			dc:      []cassdcapi.Rack{{Name: "foo", NodeAffinityLabels: map[string]string{"foo": "dc", "qix": "dc"}}},
+			want:    []cassdcapi.Rack{{Name: "foo", NodeAffinityLabels: map[string]string{"foo": "dc", "bar": "cluster", "qix": "dc"}}},
+		},
+		{
 			name:    "additional volumes",
 			cluster: []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "foo", PVCSpec: corev1.PersistentVolumeClaimSpec{}}},
 			dc:      []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "bar"}},

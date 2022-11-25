@@ -36,15 +36,15 @@ cassandra:
       size: 3  
 ``` 
 
-There are two elements in the array. K8ssnandra Operator will create CassandraDatacenters named `dc1` and `dc2`. Each one will have a size of 3.
+There are two elements in the array. K8ssandra Operator will create CassandraDatacenters named `dc1` and `dc2`. Each one will have a size of 3.
 
-<!-- TODO: Add link to configuration doc when its available -->
+<!-- TODO: Add link to configuration doc when it's available -->
 
- The `k8sContext` property specifies in which Kubernetes cluster the CassandraDatacenter should be created. K8sandra Operator creates `dc1` in the `east` cluster and `dc2` in the `west` cluster. If `k8sContext` is not specified, the operator creates the CassandraDatacenter in the control plane cluster. To understand what values can be specified for `k8sContext` we have to talk about ClientConfigs which are covered in the next section.
+ The `k8sContext` property specifies in which Kubernetes cluster the CassandraDatacenter should be created. K8ssandra Operator creates `dc1` in the `east` cluster and `dc2` in the `west` cluster. If `k8sContext` is not specified, the operator creates the CassandraDatacenter in the control plane cluster. To understand what values can be specified for `k8sContext` we have to talk about ClientConfigs which are covered in the next section.
 
 [Cass Operator](https://github.com/k8ssandra/cass-operator) provides the CassandraDatacenter CRD and manages CassandraDatacenter objects. After K8ssandra Operator, the K8ssandraCluster controller to be precise, creates the CassandraDatacenter, Cass Operator creates a StatefulSet. 
 
-**Note:** There can be multiple StatefulSets for a CassandraDatacenter. The example in the diagram only includes one for simplicty.
+**Note:** There can be multiple StatefulSets for a CassandraDatacenter. The example in the diagram only includes one for simplicity.
 
 After Cass Operator creates the StatefulSet, the StatefulSet controller, which is part of Kubernetes itself, creates the Cassandra pods. The Cassandra pod consists of several containers. The `cassandra` container is the main one where the Cassandra process runs.
 
@@ -68,7 +68,7 @@ cassandra:
         true
 ```
 
-When telemetry is enabled, K8ssandra Operator creates a ServiceMonitor for each CassandraDatacenter. The ServiceMonitor CRD is provided by [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator). You must install the CRD in order for K8ssabdra Operator to be able to create Service Monitors. This can most easily be done by installing Prometheus Operator.
+When telemetry is enabled, K8ssandra Operator creates a ServiceMonitor for each CassandraDatacenter. The ServiceMonitor CRD is provided by [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator). You must install the CRD in order for K8ssandra Operator to be able to create Service Monitors. This can most easily be done by installing Prometheus Operator.
 
 **Note:** See [Monitoring using Prometheus](prometheus-grafana/prometheus-installation-configuration.md) for more information about using ServiceMonitors.
 
@@ -86,9 +86,9 @@ stargate:
 
 The presence of the `stargate` property tells the operator to enable and configure Stargate for each CassandraDatacenter. The `size` property configures the number of Stargate nodes per datacenter.
 
-<!-- TODO: Add link to configuration doc when its available -->
+<!-- TODO: Add link to configuration doc when it's available -->
 
-**Note:** See [stargate.io](https://stargate.io/) to learn more abour Stargate.
+**Note:** See [stargate.io](https://stargate.io/) to learn more about Stargate.
 
 After the K8ssandraCluster controller creates the Stargate object, the Stargate controller creates a Deployment. After the Deployment is created, the Deployment controller, which is part of Kubernetes itself, creates the Stargate pod. This pod runs the Stargate process.
 
@@ -105,13 +105,13 @@ stargate:
 reaper: {}    
 ```
 
-The presence of the `reaper` property tells the operator to enable and configure Repaer for each CassandraDatacenter. The empty object `{}` simply means that Reaper will be configured with default settings.
+The presence of the `reaper` property tells the operator to enable and configure Reaper for each CassandraDatacenter. The empty object `{}` simply means that Reaper will be configured with default settings.
 
 **Note:** See [cassandra-reaper.io](http://cassandra-reaper.io/) to learn more about Reaper.
 
-<!-- TODO: Add link to configuration doc when its available -->
+<!-- TODO: Add link to configuration doc when it's available -->
 
-After the K8ssadraCluster controller creates the Reaper object, the Reaper controller creates a Deployment. After the Deployment is created, the Deployment controller, which is part of Kubernetes itself, creates the Reaper pod. This pod runs the Reaper process.
+After the K8ssandraCluster controller creates the Reaper object, the Reaper controller creates a Deployment. After the Deployment is created, the Deployment controller, which is part of Kubernetes itself, creates the Reaper pod. This pod runs the Reaper process.
 
 # Medusa
 K8ssandra Operator provides CassandraBackup and CassandraRestore CRDs for performing backup/restore operations with Medusa. CassandraBackup and CassandraRestore objects are managed by their own, respective controllers.
@@ -132,7 +132,7 @@ medusa:
 
 **Note:** See [https://github.com/thelastpickle/cassandra-medusa](https://github.com/thelastpickle/cassandra-medusa) to learn more about Medusa.
 
-The `medusa` property is different from the `telemetry`, `stargate`, and `reaper` properties in that it does not result in the operator creating an additional object. Instead K8ssandra Operator configures the CassandraDatacenter to enable and deploy Medusa. 
+The `medusa` property is different from the `telemetry`, `stargate`, and `reaper` properties in that it does not result in the operator creating an additional object. Instead, K8ssandra Operator configures the CassandraDatacenter to enable and deploy Medusa. 
 
 The Cassandra pod has a `medusa-restore` init container and a `medusa` sidecar container. The former performs restores and the latter performs backups.
 
@@ -145,5 +145,4 @@ K8ssandra Operator provides a ReplicatedSecret CRD. ReplicatedSecrets are manage
 
 There is a superuser secret for each K8ssandraCluster. It can be created and provided by the user; otherwise, the operator generates a default one. The SecretSync controller ensures that the secret is replicated to each of the data plane clusters.
 
-<!-- TODO: Add link to secrets management doc when its available -->
- 
+<!-- TODO: Add link to secrets management doc when it's available -->
