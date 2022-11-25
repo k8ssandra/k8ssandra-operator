@@ -857,7 +857,7 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 						SecretsProvider: "external",
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
+								Enabled: pointer.Bool(true),
 							},
 						},
 					},
