@@ -2,9 +2,9 @@ package v1alpha1
 
 import goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 
-// MergeWith merges the parent object into this one.
-func (in *TelemetrySpec) MergeWith(parent *TelemetrySpec) *TelemetrySpec {
-	return goalesceutils.Merge(parent, in)
+// MergeWith merges the given cluster-level template into this (DC-level) template.
+func (in *TelemetrySpec) MergeWith(clusterTemplate *TelemetrySpec) *TelemetrySpec {
+	return goalesceutils.Merge(clusterTemplate, in)
 }
 
 func (in *TelemetrySpec) IsPrometheusEnabled() bool {

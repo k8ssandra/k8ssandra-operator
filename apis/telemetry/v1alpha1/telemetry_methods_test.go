@@ -28,6 +28,7 @@ func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
 			in: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{},
 			},
+			want: false,
 		},
 		{
 			name: "false",
@@ -57,27 +58,47 @@ func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
 
 func TestTelemetrySpec_MergeWith(t *testing.T) {
 	tests := []struct {
-		name   string
-		in     *TelemetrySpec
-		parent *TelemetrySpec
-		want   *TelemetrySpec
+		name    string
+		cluster *TelemetrySpec
+		dc      *TelemetrySpec
+		want    *TelemetrySpec
 	}{
 		{
-			name:   "nil receiver, nil parent",
-			in:     nil,
-			parent: nil,
-			want:   nil,
+			name:    "nil cluster, nil dc",
+			cluster: nil,
+			dc:      nil,
+			want:    nil,
 		},
 		{
-			name:   "empty receiver, empty parent",
-			in:     &TelemetrySpec{},
-			parent: &TelemetrySpec{},
-			want:   &TelemetrySpec{},
+			name:    "empty cluster, empty dc",
+			cluster: &TelemetrySpec{},
+			dc:      &TelemetrySpec{},
+			want:    &TelemetrySpec{},
 		},
 		{
-			name: "nil receiver, non empty parent",
-			in:   nil,
-			parent: &TelemetrySpec{
+			name: "non empty cluster, nil dc",
+			cluster: &TelemetrySpec{
+				Prometheus: &PrometheusTelemetrySpec{
+					Enabled: pointer.Bool(true),
+					CommonLabels: map[string]string{
+						"key1": "value1",
+					},
+				},
+			},
+			dc: nil,
+			want: &TelemetrySpec{
+				Prometheus: &PrometheusTelemetrySpec{
+					Enabled: pointer.Bool(true),
+					CommonLabels: map[string]string{
+						"key1": "value1",
+					},
+				},
+			},
+		},
+		{
+			name:    "nil cluster, non empty dc",
+			cluster: nil,
+			dc: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
 					Enabled: pointer.Bool(true),
 					CommonLabels: map[string]string{
@@ -95,42 +116,22 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			},
 		},
 		{
-			name: "non empty receiver, nil parent",
-			in: &TelemetrySpec{
+			name: "non empty cluster, non empty dc",
+			cluster: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
 					Enabled: pointer.Bool(true),
 					CommonLabels: map[string]string{
-						"key1": "value1",
+						"key1": "cluster",
+						"key2": "cluster",
 					},
 				},
 			},
-			parent: nil,
-			want: &TelemetrySpec{
-				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
-					CommonLabels: map[string]string{
-						"key1": "value1",
-					},
-				},
-			},
-		},
-		{
-			name: "non empty receiver, non empty parent",
-			in: &TelemetrySpec{
+			dc: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
 					Enabled: pointer.Bool(false),
 					CommonLabels: map[string]string{
-						"key1": "receiver",
-						"key2": "receiver",
-					},
-				},
-			},
-			parent: &TelemetrySpec{
-				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
-					CommonLabels: map[string]string{
-						"key1": "parent",
-						"key3": "parent",
+						"key1": "dc",
+						"key3": "dc",
 					},
 				},
 			},
@@ -138,9 +139,9 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 				Prometheus: &PrometheusTelemetrySpec{
 					Enabled: pointer.Bool(false),
 					CommonLabels: map[string]string{
-						"key1": "receiver",
-						"key2": "receiver",
-						"key3": "parent",
+						"key1": "dc",
+						"key2": "cluster",
+						"key3": "dc",
 					},
 				},
 			},
@@ -148,7 +149,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.in.MergeWith(tt.parent))
+			assert.Equal(t, tt.want, tt.dc.MergeWith(tt.cluster))
 		})
 	}
 }
