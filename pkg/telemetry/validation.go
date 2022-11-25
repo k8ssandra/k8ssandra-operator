@@ -16,10 +16,8 @@ func SpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) bool {
 		return true
 	case tspec.Prometheus == nil:
 		return true
-	case tspec.IsPrometheusEnabled() && !promInstalled:
-		return false
-	case tspec.IsPrometheusEnabled() && promInstalled:
-		return true
+	case tspec.IsPrometheusEnabled():
+		return promInstalled
 	default:
 		return true
 	}

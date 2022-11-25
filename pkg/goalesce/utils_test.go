@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestMerge(t *testing.T) {
+func TestMergeCRDs(t *testing.T) {
 	type Foo struct {
 		Enabled *bool
 		Text    string
@@ -146,7 +146,7 @@ func TestMerge(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Merge(tt.cluster, tt.dc)
+			got := MergeCRDs(tt.cluster, tt.dc)
 			assert.Equal(t, tt.want, got)
 		})
 	}

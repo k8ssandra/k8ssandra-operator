@@ -4,7 +4,7 @@ import goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 
 // MergeWith merges the given cluster-level template into this (DC-level) template.
 func (in *TelemetrySpec) MergeWith(clusterTemplate *TelemetrySpec) *TelemetrySpec {
-	return goalesceutils.Merge(clusterTemplate, in)
+	return goalesceutils.MergeCRDs(clusterTemplate, in)
 }
 
 func (in *TelemetrySpec) IsPrometheusEnabled() bool {

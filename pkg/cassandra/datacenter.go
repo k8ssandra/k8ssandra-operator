@@ -298,7 +298,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// FIXME if we are doing this, then we should remove the pointer
 	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 
-	mergedOptions := goalesceutils.Merge(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
+	mergedOptions := goalesceutils.MergeCRDs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
 
 	if len(mergedOptions.ServerVersion) > 0 {
 		dcConfig.ServerVersion = semver.MustParse(mergedOptions.ServerVersion)
@@ -307,7 +307,6 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.JmxInitContainerImage = mergedOptions.JmxInitContainerImage
 	dcConfig.Racks = mergedOptions.Racks
 	dcConfig.Resources = mergedOptions.Resources
-	// TODO Add validation check to ensure StorageConfig is set at the cluster or DC level
 	dcConfig.StorageConfig = mergedOptions.StorageConfig
 	dcConfig.Networking = mergedOptions.Networking.ToCassNetworkingConfig()
 	if mergedOptions.CassandraConfig != nil {

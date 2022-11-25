@@ -163,7 +163,7 @@ func (in *StargateDatacenterTemplate) MergeWith(clusterTemplate *StargateCluster
 		return in
 	} else {
 		dcTemplate := in.DeepCopy()
-		mergedClusterTemplate := goalesceutils.Merge(clusterTemplate, &dcTemplate.StargateClusterTemplate)
+		mergedClusterTemplate := goalesceutils.MergeCRDs(clusterTemplate, &dcTemplate.StargateClusterTemplate)
 		dcTemplate.StargateClusterTemplate = *mergedClusterTemplate
 		return dcTemplate
 	}
@@ -192,7 +192,7 @@ func (in *StargateRackTemplate) MergeWith(dcTemplate *StargateDatacenterTemplate
 		return &in.StargateTemplate
 	} else {
 		template := in.StargateTemplate.DeepCopy()
-		return goalesceutils.Merge(&dcTemplate.StargateTemplate, template)
+		return goalesceutils.MergeCRDs(&dcTemplate.StargateTemplate, template)
 	}
 }
 

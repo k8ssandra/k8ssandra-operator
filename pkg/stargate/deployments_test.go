@@ -220,6 +220,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	deployments := NewDeployments(stargate, dc)
+
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")

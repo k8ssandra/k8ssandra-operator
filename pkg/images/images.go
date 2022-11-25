@@ -64,7 +64,7 @@ func (in Image) String() string {
 // Other components are computed as follows: if the image specifies a (non-empty) component, that component is returned;
 // otherwise, the component from the default image is returned.
 func (in *Image) ApplyDefaults(defaults Image) *Image {
-	merged, _ := goalesce.DeepMerge(&defaults, in)
+	merged := goalesce.MustDeepMerge(&defaults, in)
 	if merged.Registry == "" {
 		merged.Registry = DefaultRegistry
 	}
