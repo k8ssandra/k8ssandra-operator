@@ -41,9 +41,6 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		return result.Error(err)
 	}
 	validConfig := telemetry.SpecIsValid(mergedSpec, promInstalled)
-	if err != nil {
-		return result.Error(errors.New("could not determine if telemetry config is valid"))
-	}
 	if !validConfig {
 		return result.Error(errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it"))
 	}

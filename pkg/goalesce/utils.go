@@ -21,9 +21,10 @@ func Merge[T any](cluster, dc T) T {
 		// atomically.
 		goalesce.WithAtomicMerge(reflect.TypeOf(resource.Quantity{})),
 		goalesce.WithAtomicCopy(reflect.TypeOf(resource.Quantity{})),
-		// VolumeSource is a struct where only one of its fields can be set at a time, so we
-		// cannot merge 2 volume sources together.
+		// Types where only one of the fields can be set at a time, so we cannot merge them
+		// together.
 		goalesce.WithAtomicMerge(reflect.TypeOf(corev1.VolumeSource{})),
+		goalesce.WithAtomicMerge(reflect.TypeOf(corev1.EnvVarSource{})),
 		// The following slices are merged with merge-by-id semantics by Kubernetes.
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]corev1.Container{}), "Name"),
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]corev1.ContainerPort{}), "ContainerPort"),
@@ -33,5 +34,32 @@ func Merge[T any](cluster, dc T) T {
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]corev1.VolumeDevice{}), "DevicePath"),
 		// Also best merged with merge-by-id semantics.
 		goalesce.WithSliceMergeByID(reflect.TypeOf([]cassdcapi.AdditionalVolumes{}), "Name"),
+		// EnvVar cannot have both Value and ValueFrom set at the same time, so we use a custom
+		// merger.
+		goalesce.WithTypeMergerProvider(reflect.TypeOf(corev1.EnvVar{}),
+			func(merger goalesce.DeepMergeFunc, copier goalesce.DeepCopyFunc) goalesce.DeepMergeFunc {
+				return func(v1, v2 reflect.Value) (reflect.Value, error) {
+					if v1.IsZero() {
+						return copier(v2)
+					} else if v2.IsZero() {
+						return copier(v1)
+					}
+					merged := reflect.New(v1.Type()).Elem()
+					name, _ := merger(v1.FieldByName("Name"), v2.FieldByName("Name"))
+					merged.FieldByName("Name").Set(name)
+					value, _ := merger(v1.FieldByName("Value"), v2.FieldByName("Value"))
+					merged.FieldByName("Value").Set(value)
+					valueFrom, _ := merger(v1.FieldByName("ValueFrom"), v2.FieldByName("ValueFrom"))
+					merged.FieldByName("ValueFrom").Set(valueFrom)
+					if !value.IsZero() && !valueFrom.IsZero() {
+						if v2.FieldByName("Value").IsZero() {
+							merged.FieldByName("Value").Set(reflect.Zero(value.Type()))
+						} else {
+							merged.FieldByName("ValueFrom").Set(reflect.Zero(valueFrom.Type()))
+						}
+					}
+					return merged, nil
+				}
+			}),
 	)
 }

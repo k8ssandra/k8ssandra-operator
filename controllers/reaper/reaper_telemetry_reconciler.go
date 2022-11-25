@@ -53,9 +53,6 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 		return err
 	}
 	validConfig := telemetry.SpecIsValid(thisReaper.Spec.Telemetry, promInstalled)
-	if err != nil {
-		return errors.New("could not determine if telemetry config is valid")
-	}
 	if !validConfig {
 		return errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
 	}

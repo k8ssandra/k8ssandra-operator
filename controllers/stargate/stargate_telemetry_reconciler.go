@@ -40,9 +40,6 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		return ctrl.Result{}, err
 	}
 	validConfig := telemetry.SpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
-	if err != nil {
-		return ctrl.Result{}, errors.New("could not determine if telemetry config is valid")
-	}
 	if !validConfig {
 		return ctrl.Result{}, errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
 	}
