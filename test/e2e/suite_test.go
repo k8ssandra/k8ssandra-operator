@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"gopkg.in/resty.v1"
@@ -667,8 +668,8 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 		t.Logf("failed to dump cluster info: %v", err)
 	}
 
-	timeout := 3 * time.Minute
-	interval := 10 * time.Second
+	timeout := 10 * time.Minute
+	interval := 15 * time.Second
 
 	if !opts.skipK8ssandraClusterCleanup {
 		if err := f.DeleteK8ssandraClusters(opts.sutNamespace, timeout, interval); err != nil {

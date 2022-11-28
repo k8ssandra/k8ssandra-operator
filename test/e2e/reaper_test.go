@@ -167,15 +167,6 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 		username, password := retrieveCredentials(t, f, ctx, secretKey)
 		testReaperApi(t, ctx, f.DataPlaneContexts[1], DcClusterName(t, f, dc2Key), "reaper_ks", username, password)
 	})
-
-	replication := map[string]int{"dc1": 1, "dc2": 1}
-
-	t.Run("TestStargateApi[0]", func(t *testing.T) {
-		testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
-	})
-	t.Run("TestStargateApi[1]", func(t *testing.T) {
-		testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
-	})
 }
 
 func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
