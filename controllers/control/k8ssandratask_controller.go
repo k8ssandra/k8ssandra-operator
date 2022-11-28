@@ -115,6 +115,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 		}
 		k8Task.BuildGlobalStatus()
+		// TODO replace by Patch()
 		if err = r.Status().Update(ctx, k8Task); err != nil {
 			if errors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
@@ -185,7 +186,7 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
-	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
+	k8TaskLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		taskName := labels.GetLabel(mapObj, api.K8ssandraTaskNameLabel)
@@ -198,11 +199,11 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 	}
 
 	cb = cb.Watches(&source.Kind{Type: &cassapi.CassandraTask{}},
-		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+		handler.EnqueueRequestsFromMapFunc(k8TaskLabelFilter))
 
 	for _, c := range clusters {
 		cb = cb.Watches(source.NewKindWithCache(&cassapi.CassandraTask{}, c.GetCache()),
-			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+			handler.EnqueueRequestsFromMapFunc(k8TaskLabelFilter))
 	}
 
 	return cb.Complete(r)

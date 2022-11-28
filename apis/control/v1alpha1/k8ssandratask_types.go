@@ -139,6 +139,15 @@ func (t *K8ssandraTask) setCondition(condition cassapi.JobConditionType, status 
 	return true
 }
 
+func (t *K8ssandraTask) GetConditionStatus(conditionType cassapi.JobConditionType) corev1.ConditionStatus {
+	for _, condition := range t.Status.Conditions {
+		if condition.Type == conditionType {
+			return condition.Status
+		}
+	}
+	return corev1.ConditionUnknown
+}
+
 func init() {
 	SchemeBuilder.Register(&K8ssandraTask{}, &K8ssandraTaskList{})
 }

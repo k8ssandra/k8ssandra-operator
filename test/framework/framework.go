@@ -403,6 +403,21 @@ func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updat
 	return remoteClient.Status().Patch(ctx, r, patch)
 }
 
+func (f *Framework) PatchCassandraTaskStatus(ctx context.Context, key ClusterKey, updateFn func(sg *casstaskapi.CassandraTask)) error {
+	task := &casstaskapi.CassandraTask{}
+	err := f.Get(ctx, key, task)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(task.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(task)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+	return remoteClient.Status().Patch(ctx, task, patch)
+}
+
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
 // ClusterKey.K8sContext is empty, this method blocks until the deployment is ready in all
 // remote clusters.
