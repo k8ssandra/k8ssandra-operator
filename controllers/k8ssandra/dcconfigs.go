@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// This method coleasces the cluster and datacenter level DC templates into a single object, then
+// This method merges the cluster and datacenter level DC templates into a single object, then
 // applies various defaults, and validates the resulting object. This method does NOT create the
 // actual DCs, nor any other dependent object such as ConfigMaps or Secrets; but it does all the
 // preparatory work required before starting creating such objects.

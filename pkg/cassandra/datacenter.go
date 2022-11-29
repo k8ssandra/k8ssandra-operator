@@ -278,7 +278,7 @@ func UpdateInitContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev
 func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) *DatacenterConfig {
 	dcConfig := &DatacenterConfig{}
 
-	// Handler cluster-wide settings first
+	// Handle cluster-wide settings first
 	dcConfig.Cluster = clusterName
 	dcConfig.SuperuserSecretRef = clusterTemplate.SuperuserSecretRef
 	dcConfig.ServerType = clusterTemplate.ServerType
