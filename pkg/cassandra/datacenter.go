@@ -107,9 +107,8 @@ type DatacenterConfig struct {
 	ServerTruststorePassword  string
 	CDC                       *cassdcapi.CDCConfiguration
 	DseWorkloads              *cassdcapi.DseWorkloads
-	ConfigBuilderResources    *corev1.ResourceRequirements
-	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
-	PerNodeConfigMapRef       corev1.LocalObjectReference
+	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef      corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
 
@@ -186,8 +185,12 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
 
-	if template.ConfigBuilderResources != nil {
-		dc.Spec.ConfigBuilderResources = *template.ConfigBuilderResources
+	position, found := FindInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName)
+	if found {
+		configBuilderResources := template.PodTemplateSpec.Spec.InitContainers[position].Resources
+		if configBuilderResources.Limits != nil || configBuilderResources.Requests != nil {
+			dc.Spec.ConfigBuilderResources = configBuilderResources
+		}
 	}
 
 	if template.ManagementApiAuth != nil {
@@ -353,10 +356,6 @@ func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...co
 
 func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers ...corev1.Container) {
 	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
-	position, found := FindInitContainer(&dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName)
-	if found && (dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Limits != nil || dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Requests != nil) {
-		dcConfig.ConfigBuilderResources = &dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources
-	}
 }
 
 func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
