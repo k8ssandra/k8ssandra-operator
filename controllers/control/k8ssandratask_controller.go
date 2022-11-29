@@ -70,6 +70,8 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
+	patch := client.MergeFrom(k8Task.DeepCopy())
+
 	kcKey := k8Task.GetClusterKey()
 	logger.Info("Fetching cluster", "K8ssandraCluster", kcKey)
 	kc := &k8capi.K8ssandraCluster{}
@@ -115,13 +117,8 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 		}
 		k8Task.BuildGlobalStatus()
-		// TODO replace by Patch()
-		if err = r.Status().Update(ctx, k8Task); err != nil {
-			if errors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			} else {
-				return ctrl.Result{}, err
-			}
+		if err = r.Status().Patch(ctx, k8Task, patch); err != nil {
+			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{}, nil
