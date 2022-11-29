@@ -80,6 +80,12 @@ rules:
 - apiGroups:
   - control.k8ssandra.io
   resources:
+  - cassandratasks/status
+  verbs:
+  - get
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
   - k8ssandratasks
   verbs:
   - create
