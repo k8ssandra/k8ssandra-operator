@@ -114,7 +114,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 	if desiredPerNodeConfig != nil {
 		dcConfig.PerNodeConfigMapRef.Name = desiredPerNodeConfig.Name
 		perNodeConfigMapHash := annotations.GetAnnotation(desiredPerNodeConfig, k8ssandraapi.ResourceHashAnnotation)
-		annotations.AddAnnotation(dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
+		annotations.AddAnnotation(&dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
 		nodeconfig.MountPerNodeConfig(dcConfig)
 		dcLogger.Info("Mounted per-node configuration")
 	}
@@ -160,7 +160,7 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 		// mount it as is. Also, we don't manage its full lifecycle.
 
 		perNodeConfigMapHash := utils.DeepHashString(actualPerNodeConfig)
-		annotations.AddAnnotation(dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
+		annotations.AddAnnotation(&dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
 		nodeconfig.MountPerNodeConfig(dcConfig)
 		dcLogger.Info("Mounted per-node configuration")
 

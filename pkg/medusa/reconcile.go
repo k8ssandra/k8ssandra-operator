@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
-	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -132,7 +132,8 @@ func CreateMedusaConfigMap(namespace, k8cName, medusaIni string) *corev1.ConfigM
 	}
 }
 
-// Get the cassandra user secret name from the medusa spec or generate one based on the cluster name
+// CassandraUserSecretName gets the cassandra user secret name from the medusa spec or generate one
+// based on the cluster name.
 func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, k8cName string) string {
 	if medusaSpec.CassandraUserSecretRef.Name == "" {
 		return fmt.Sprintf("%s-medusa", k8cName)
@@ -141,7 +142,7 @@ func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, k8cName stri
 }
 
 func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) {
-	restoreContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	restoreContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	restoreContainer := &corev1.Container{Name: "medusa-restore"}
 	if found {
 		logger.Info("Found medusa-restore init container")
@@ -150,8 +151,8 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
-	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, logger, "RESTORE")
-	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
+	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
 	if !found {
@@ -159,7 +160,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		// medusa-restore init container doesn't exist, we need to add it
 		// We'll add the server-config-init init container in first position so it initializes cassandra.yaml for Medusa to use, if it doesn't exist already.
 		// The definition of that container will be completed later by cass-operator.
-		_, serverConfigInitContainerFound := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "server-config-init")
+		_, serverConfigInitContainerFound := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "server-config-init")
 		if !serverConfigInitContainerFound {
 			serverConfigContainer := &corev1.Container{Name: "server-config-init"}
 			dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, *serverConfigContainer)
@@ -188,7 +189,7 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 }
 
 func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) {
-	medusaContainerIndex, found := cassandra.FindContainer(dcConfig.PodTemplateSpec, "medusa")
+	medusaContainerIndex, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, "medusa")
 	medusaContainer := &corev1.Container{Name: "medusa"}
 	if found {
 		logger.Info("Found medusa container")
@@ -197,12 +198,12 @@ func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	}
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
-	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, logger, "GRPC")
+	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "GRPC")
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{ContainerPort: 50051, Name: "grpc"},
 	}
 
-	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 
 	if !found {
@@ -238,7 +239,7 @@ func setImage(containerImage *images.Image, container *corev1.Container) {
 	container.ImagePullPolicy = image.PullPolicy
 }
 
-func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) []corev1.VolumeMount {
+func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
@@ -284,7 +285,7 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string, l
 	return volumeMounts
 }
 
-func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExternalSecrets bool, logger logr.Logger, mode string) []corev1.EnvVar {
+func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExternalSecrets bool, mode string) []corev1.EnvVar {
 	envVars := []corev1.EnvVar{
 		{
 			Name:  "MEDUSA_MODE",
@@ -329,9 +330,9 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExt
 }
 
 // Create or update volumes for medusa
-func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) {
+func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string) {
 	// Medusa config volume, containing medusa.ini
-	configVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", k8cName))
+	configVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", k8cName))
 	configVolume := &corev1.Volume{
 		Name: fmt.Sprintf("%s-medusa", k8cName),
 		VolumeSource: corev1.VolumeSource{
@@ -348,7 +349,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 	// Medusa credentials volume using the referenced secret
 	if medusaSpec.StorageProperties.StorageProvider != "local" {
 		// We're not using local storage for backups, which requires a secret with backend credentials
-		secretVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
+		secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
 		secretVolume := &corev1.Volume{
 			Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
 			VolumeSource: corev1.VolumeSource{
@@ -361,7 +362,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 		cassandra.AddOrUpdateVolume(dcConfig, secretVolume, secretVolumeIndex, found)
 	} else {
 		// We're using local storage for backups, which requires a volume for the local backup storage
-		backupVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "medusa-backups")
+		backupVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "medusa-backups")
 		accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		storageClassName := "standard"
 		storageSize := resource.MustParse("10Gi")
@@ -395,7 +396,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 	}
 
 	// Pod info volume
-	podInfoVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "podinfo")
+	podInfoVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "podinfo")
 	podInfoVolume := &corev1.Volume{
 		Name: "podinfo",
 		VolumeSource: corev1.VolumeSource{
@@ -416,7 +417,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 
 	// Encryption client certificates
 	if medusaSpec.CertificatesSecretRef.Name != "" {
-		encryptionClientVolumeIndex, found := cassandra.FindVolume(dcConfig.PodTemplateSpec, "certificates")
+		encryptionClientVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "certificates")
 		encryptionClientVolume := &corev1.Volume{
 			Name: "certificates",
 			VolumeSource: corev1.VolumeSource{

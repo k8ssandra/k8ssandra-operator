@@ -17,9 +17,9 @@ const (
 // should only be called for DCs having a per-node ConfigMap reference.
 func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 	// if the config-builder init container isn't found, declare a placeholder now to guarantee order of execution
-	cassandra.UpdateInitContainer(dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(container *v1.Container) {})
+	cassandra.UpdateInitContainer(&dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(container *v1.Container) {})
 	// add per-node-config init container
-	_ = cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
+	cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
 	// add per-node config volume to pod spec
 	cassandra.AddVolumesToPodTemplateSpec(dcConfig, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
 }

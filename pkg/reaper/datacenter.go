@@ -7,9 +7,6 @@ import (
 )
 
 func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig, authEnabled bool) {
-	if dcConfig.PodTemplateSpec == nil {
-		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
 	enableRemoteJmxAccess(dcConfig)
 	if authEnabled && !dcConfig.ExternalSecrets {
 		cassandra.AddCqlUser(reaperTemplate.CassandraUserSecretRef, dcConfig, DefaultUserSecretName(dcConfig.Cluster))
@@ -21,7 +18,7 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate
 // need to change that to LOCAL_JMX=no here. Note that this change has implications on authentication that were handled
 // already in pkg/cassandra/auth.go.
 func enableRemoteJmxAccess(dcConfig *cassandra.DatacenterConfig) {
-	cassandra.UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {
+	cassandra.UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(c.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
 	})
 }

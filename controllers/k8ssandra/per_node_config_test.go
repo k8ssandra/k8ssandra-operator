@@ -40,7 +40,6 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 					Meta: api.EmbeddedObjectMeta{
 						Name: "dc1",
 					},
-					PodTemplateSpec: &corev1.PodTemplateSpec{},
 				},
 				remoteClient: func() client.Client {
 					fakeClient, _ := test.NewFakeClient()
@@ -60,7 +59,6 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 					Meta: api.EmbeddedObjectMeta{
 						Name: "dc1",
 					},
-					PodTemplateSpec: &corev1.PodTemplateSpec{},
 					InitialTokensByPodName: map[string][]string{
 						"pod1": {"token1", "token2"},
 						"pod2": {"token3", "token4"},
@@ -74,11 +72,11 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 			wantResult: result.Continue(),
 			configAssert: func(t *testing.T, gotConfig *cassandra.DatacenterConfig) {
 				assert.Equal(t, "test-dc1-per-node-config", gotConfig.PerNodeConfigMapRef.Name)
-				hash := annotations.GetAnnotation(gotConfig.PodTemplateSpec, api.PerNodeConfigHashAnnotation)
+				hash := annotations.GetAnnotation(&gotConfig.PodTemplateSpec, api.PerNodeConfigHashAnnotation)
 				assert.NotEmpty(t, hash)
-				_, found := cassandra.FindInitContainer(gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigInitContainerName)
+				_, found := cassandra.FindInitContainer(&gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigInitContainerName)
 				assert.True(t, found)
-				_, found = cassandra.FindVolume(gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigVolumeName)
+				_, found = cassandra.FindVolume(&gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigVolumeName)
 				assert.True(t, found)
 			},
 		},
@@ -90,7 +88,6 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 						Name:      "dc1",
 						Namespace: "dc1-ns",
 					},
-					PodTemplateSpec: &corev1.PodTemplateSpec{},
 					PerNodeConfigMapRef: corev1.LocalObjectReference{
 						Name: "user-provided-per-node-config",
 					},
@@ -114,11 +111,11 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 			wantResult: result.Continue(),
 			configAssert: func(t *testing.T, gotConfig *cassandra.DatacenterConfig) {
 				assert.Equal(t, "user-provided-per-node-config", gotConfig.PerNodeConfigMapRef.Name)
-				hash := annotations.GetAnnotation(gotConfig.PodTemplateSpec, api.PerNodeConfigHashAnnotation)
+				hash := annotations.GetAnnotation(&gotConfig.PodTemplateSpec, api.PerNodeConfigHashAnnotation)
 				assert.NotEmpty(t, hash)
-				_, found := cassandra.FindInitContainer(gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigInitContainerName)
+				_, found := cassandra.FindInitContainer(&gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigInitContainerName)
 				assert.True(t, found)
-				_, found = cassandra.FindVolume(gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigVolumeName)
+				_, found = cassandra.FindVolume(&gotConfig.PodTemplateSpec, nodeconfig.PerNodeConfigVolumeName)
 				assert.True(t, found)
 			},
 		},

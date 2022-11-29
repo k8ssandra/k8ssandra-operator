@@ -30,14 +30,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {
 		logger.Info("Medusa is enabled")
-		if dcConfig.PodTemplateSpec == nil {
-			dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers:     []corev1.Container{},
-					InitContainers: []corev1.Container{},
-				},
-			}
-		}
 
 		// Check that certificates are provided if client encryption is enabled
 		if cassandra.ClientEncryptionEnabled(dcConfig) {
@@ -56,7 +48,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
-		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName(), logger)
+		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
 		if !kc.Spec.UseExternalSecrets() {
 			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName()))
 		}

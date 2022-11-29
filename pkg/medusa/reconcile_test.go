@@ -6,7 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -346,14 +346,7 @@ func TestInitContainerDefaultResources(t *testing.T) {
 		},
 	}
 
-	dcConfig := cassandra.DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers:     []corev1.Container{},
-				InitContainers: []corev1.Container{},
-			},
-		},
-	}
+	dcConfig := cassandra.DatacenterConfig{}
 
 	logger := logr.New(logr.Discard().GetSink())
 
@@ -363,7 +356,7 @@ func TestInitContainerDefaultResources(t *testing.T) {
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
 	// Init container resources
-	medusaInitContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	assert.True(t, found, "Couldn't find medusa-restore init container")
 
 	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -411,14 +404,7 @@ func TestInitContainerCustomResources(t *testing.T) {
 		},
 	}
 
-	dcConfig := cassandra.DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers:     []corev1.Container{},
-				InitContainers: []corev1.Container{},
-			},
-		},
-	}
+	dcConfig := cassandra.DatacenterConfig{}
 
 	logger := logr.New(logr.Discard().GetSink())
 
@@ -428,7 +414,7 @@ func TestInitContainerCustomResources(t *testing.T) {
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
 	// Init container resources
-	medusaInitContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	assert.True(t, found, "Couldn't find medusa-restore init container")
 
 	assert.Equal(t, resource.MustParse("10Gi"), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -458,21 +444,14 @@ func TestExternalSecretsFlag(t *testing.T) {
 		},
 	}
 
-	dcConfig := cassandra.DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers:     []corev1.Container{},
-				InitContainers: []corev1.Container{},
-			},
-		},
-	}
+	dcConfig := cassandra.DatacenterConfig{}
 
 	logger := logr.New(logr.Discard().GetSink())
 
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, true, "test", logger)
 	UpdateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
 
-	medusaInitContainerIndex, found := cassandra.FindInitContainer(dcConfig.PodTemplateSpec, "medusa-restore")
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	assert.True(t, found, "Couldn't find medusa-restore init container")
 
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.Containers[0].Env))

@@ -1,7 +1,6 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -10,11 +9,7 @@ import (
 )
 
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
-func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool) error {
-
-	if dcConfig.PodTemplateSpec == nil {
-		return errors.New("PodTemplateSpec was nil, cannot add auth settings")
-	}
+func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool) {
 
 	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled, dcConfig.ServerType)
 
@@ -38,7 +33,6 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets 
 		addOptionIfMissing(dcConfig, "-Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config")
 		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy")
 	}
-	return nil
 }
 
 // ApplyAuthSettings modifies the given config and applies defaults for authenticator, authorizer and role manager,

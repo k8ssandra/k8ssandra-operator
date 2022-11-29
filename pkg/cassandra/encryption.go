@@ -72,7 +72,7 @@ func addVolumesForEncryption(template *DatacenterConfig, storeType encryption.St
 
 	for _, volume := range []*corev1.Volume{keystoreVolume, truststoreVolume} {
 		if volume != nil {
-			indexKey, foundKey := FindVolume(template.PodTemplateSpec, volume.Name)
+			indexKey, foundKey := FindVolume(&template.PodTemplateSpec, volume.Name)
 			AddOrUpdateVolume(template, volume, indexKey, foundKey)
 		}
 	}
@@ -125,7 +125,7 @@ func addEncryptionMountToCassandra(template *DatacenterConfig, keystoreVolume, t
 		Name: "cassandra",
 	}
 
-	cassandraContainerIdx, foundCassandra := FindContainer(template.PodTemplateSpec, "cassandra")
+	cassandraContainerIdx, foundCassandra := FindContainer(&template.PodTemplateSpec, "cassandra")
 	if foundCassandra {
 		cassandraContainer = template.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].DeepCopy()
 	}

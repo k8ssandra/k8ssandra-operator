@@ -8,18 +8,18 @@ import (
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // Test_InjectCassandraTelemetryFilters tests that metrics filters from the CRD are correctly injected.
 func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
-		PodTemplateSpec: &v1.PodTemplateSpec{
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
+		PodTemplateSpec: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
 					{
 						Name: "cassandra",
-						Env:  []v1.EnvVar{},
+						Env:  []corev1.EnvVar{},
 					},
 				},
 			},
@@ -47,12 +47,12 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 // Test_InjectCassandraTelemetryFiltersDefaults tests that default metrics filters are injected when no custom ones are defined.
 func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
-		PodTemplateSpec: &v1.PodTemplateSpec{
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
+		PodTemplateSpec: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
 					{
 						Name: "cassandra",
-						Env:  []v1.EnvVar{},
+						Env:  []corev1.EnvVar{},
 					},
 				},
 			},
@@ -73,12 +73,12 @@ func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 
 func Test_InjectCassandraTelemetryFilters_Empty(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
-		PodTemplateSpec: &v1.PodTemplateSpec{
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
+		PodTemplateSpec: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
 					{
 						Name: "cassandra",
-						Env:  []v1.EnvVar{},
+						Env:  []corev1.EnvVar{},
 					},
 				},
 			},
