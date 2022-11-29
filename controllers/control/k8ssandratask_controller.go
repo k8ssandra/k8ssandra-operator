@@ -19,6 +19,7 @@ package control
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -42,6 +44,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
+)
+
+const (
+	k8ssandraTaskFinalizer = "k8ssandratask.k8ssandra.io/finalizer"
 )
 
 // K8ssandraTaskReconciler reconciles a K8ssandraTask object
@@ -68,13 +74,6 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if k8Task.DeletionTimestamp != nil {
-		// TODO delete dependent objects?
-		return ctrl.Result{}, nil
-	}
-
-	patch := client.MergeFrom(k8Task.DeepCopy())
-
 	kcKey := k8Task.GetClusterKey()
 	logger.Info("Fetching cluster", "K8ssandraCluster", kcKey)
 	kc := &k8capi.K8ssandraCluster{}
@@ -82,13 +81,36 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	if k8Task.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
+			logger.Info("Adding finalizer", "K8ssandraTask", req.NamespacedName)
+			controllerutil.AddFinalizer(k8Task, k8ssandraTaskFinalizer)
+			if err := r.Update(ctx, k8Task); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else { // The task is being deleted
+		if controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
+			// First time we've noticed the deletion, clean up dependents and remove the finalizer
+			if err := r.deleteDcTasks(ctx, k8Task, kc, logger); err != nil {
+				return ctrl.Result{}, err
+			}
+			logger.Info("Removing finalizer", "K8ssandraTask", req.NamespacedName)
+			controllerutil.RemoveFinalizer(k8Task, k8ssandraTaskFinalizer)
+			if err := r.Update(ctx, k8Task); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
+	}
+
+	patch := client.MergeFrom(k8Task.DeepCopy())
+
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
 		return ctrl.Result{}, err
 	} else {
-		newDcTasks := make([]*cassapi.CassandraTask, 0, len(dcs))
 		for _, dc := range dcs {
 			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
-
 			desiredDcTask := newDcTask(k8Task, dcNamespace, dc.Meta.Name)
 
 			remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
@@ -96,15 +118,11 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				return ctrl.Result{}, err
 			}
 
-			dcTaskKey := client.ObjectKey{
-				Namespace: desiredDcTask.Namespace,
-				Name:      desiredDcTask.Name,
-			}
+			dcTaskKey := client.ObjectKeyFromObject(desiredDcTask)
 			actualDcTask := &cassapi.CassandraTask{}
 			if err = remoteClient.Get(ctx, dcTaskKey, actualDcTask); err != nil {
 				if errors.IsNotFound(err) {
 					logger.Info("Creating DC task", "CassandraTask", dcTaskKey)
-					newDcTasks = append(newDcTasks, desiredDcTask)
 					if err = remoteClient.Create(ctx, desiredDcTask); err != nil {
 						return ctrl.Result{}, err
 					}
@@ -125,6 +143,37 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		return ctrl.Result{}, nil
+	}
+}
+
+func (r *K8ssandraTaskReconciler) deleteDcTasks(ctx context.Context, k8Task *api.K8ssandraTask, kc *k8capi.K8ssandraCluster, logger logr.Logger) error {
+	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
+		return err
+	} else {
+		for _, dc := range dcs {
+			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
+			actualDcTask := &cassapi.CassandraTask{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: dcNamespace,
+					Name:      dcTaskName(k8Task, dc.Meta.Name),
+				},
+			}
+			remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
+			if err != nil {
+				return err
+			}
+			logger.Info("Deleting DC task", "CassandraTask", actualDcTask)
+			if err := remoteClient.Delete(ctx, actualDcTask); err != nil {
+				if !errors.IsNotFound(err) {
+					return fmt.Errorf("deleting CassandraTask %s.%s in context %s: %s",
+						actualDcTask.ObjectMeta.Namespace,
+						actualDcTask.ObjectMeta.Name,
+						dc.K8sContext,
+						err)
+				}
+			}
+		}
+		return nil
 	}
 }
 
@@ -155,7 +204,7 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 	dcTask := &cassapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
-			Name:        k8Task.Name + "-" + dcName,
+			Name:        dcTaskName(k8Task, dcName),
 			Annotations: map[string]string{},
 			Labels: map[string]string{
 				k8capi.NameLabel:                k8capi.NameLabelValue,
@@ -179,6 +228,10 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 		},
 	}
 	return dcTask
+}
+
+func dcTaskName(k8Task *api.K8ssandraTask, dcName string) string {
+	return k8Task.Name + "-" + dcName
 }
 
 // SetupWithManager sets up the controller with the Manager.

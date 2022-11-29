@@ -66,6 +66,7 @@ func TestK8ssandraTask(t *testing.T) {
 
 	t.Run("CreateK8ssandraTask", testEnv.ControllerTest(ctx, createK8ssandraTask))
 	t.Run("CompleteK8ssandraTask", testEnv.ControllerTest(ctx, completeK8ssandraTask))
+	t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
 }
 
 // createK8ssandraTask verifies that CassandraTasks are created for each datacenter.
@@ -187,7 +188,49 @@ func completeK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Frame
 			k8Task.GetConditionStatus(cassapi.JobRunning) == corev1.ConditionFalse &&
 			k8Task.GetConditionStatus(cassapi.JobComplete) == corev1.ConditionTrue
 	}, timeout, interval)
+}
 
+// deleteK8ssandraTask verifies that when the K8ssandraTask gets deleted, its dependent CassandraTasks get deleted.
+func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := newCluster(namespace, "kc",
+		newDc("dc1", f.DataPlaneContexts[0]),
+		newDc("dc2", f.DataPlaneContexts[1]))
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
+
+	t.Log("Create a K8ssandraTask")
+	k8Task := &api.K8ssandraTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "upgradesstables",
+		},
+		Spec: api.K8ssandraTaskSpec{
+			Cluster: corev1.ObjectReference{
+				Name: "kc",
+			},
+			Template: cassapi.CassandraTaskSpec{
+				Jobs: []cassapi.CassandraJob{{
+					Name:    "job1",
+					Command: "upgradesstables",
+				}},
+			},
+		},
+	}
+	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
+
+	t.Log("Check that the CassandraTasks exist")
+	cassTask1Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
+	require.Eventually(f.CassTaskExists(ctx, cassTask1Key), timeout, interval)
+	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
+	require.Eventually(f.CassTaskExists(ctx, cassTask2Key), timeout, interval)
+
+	t.Log("Delete the K8ssandraTask")
+	require.NoError(f.Client.Delete(ctx, k8Task), "failed to delete K8ssandraTask")
+
+	t.Log("Check that the CassandraTasks do not exist anymore")
+	require.Eventually(func() bool { return !f.CassTaskExists(ctx, cassTask1Key)() }, timeout, interval)
+	require.Eventually(func() bool { return !f.CassTaskExists(ctx, cassTask2Key)() }, timeout, interval)
 }
 
 func newCluster(namespace, name string, dcs ...k8capi.CassandraDatacenterTemplate) *k8capi.K8ssandraCluster {
