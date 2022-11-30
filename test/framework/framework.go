@@ -20,6 +20,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	k8taskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -573,6 +574,41 @@ func (f *Framework) withCassTask(ctx context.Context, key ClusterKey, condition 
 func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
 	withCassTask := f.NewWithCassTask(ctx, key)
 	return withCassTask(func(dc *casstaskapi.CassandraTask) bool {
+		return true
+	})
+}
+
+// NewWithK8ssandraTask is a function generator for withCassandraTask that is bound to ctx, and key.
+func (f *Framework) NewWithK8ssandraTask(ctx context.Context, key ClusterKey) func(func(*k8taskapi.K8ssandraTask) bool) func() bool {
+	return func(condition func(dc *k8taskapi.K8ssandraTask) bool) func() bool {
+		return f.withK8ssandraTask(ctx, key, condition)
+	}
+}
+
+// withK8ssandraTask Fetches the CassandraTask specified by key and then calls condition.
+func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condition func(task *k8taskapi.K8ssandraTask) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup CassandraDatacenter", "key", key)
+			return false
+		}
+
+		dc := &k8taskapi.K8ssandraTask{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
+			return condition(dc)
+		} else {
+			if !errors.IsNotFound(err) {
+				f.logger.Error(err, "failed to get CassandraTask", "key", key)
+			}
+			return false
+		}
+	}
+}
+
+func (f *Framework) K8ssandraTaskExists(ctx context.Context, key ClusterKey) func() bool {
+	withK8ssandraTask := f.NewWithK8ssandraTask(ctx, key)
+	return withK8ssandraTask(func(dc *k8taskapi.K8ssandraTask) bool {
 		return true
 	})
 }

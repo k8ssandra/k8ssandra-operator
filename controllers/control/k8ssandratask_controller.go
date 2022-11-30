@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,6 +49,11 @@ import (
 
 const (
 	k8ssandraTaskFinalizer = "k8ssandratask.k8ssandra.io/finalizer"
+	defaultTTL             = time.Duration(86400) * time.Second
+)
+
+var (
+	noTTL int32 = 0
 )
 
 // K8ssandraTaskReconciler reconciles a K8ssandraTask object
@@ -81,6 +87,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	// Handle deletion
 	if k8Task.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
 			logger.Info("Adding finalizer", "K8ssandraTask", req.NamespacedName)
@@ -104,8 +111,28 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	patch := client.MergeFrom(k8Task.DeepCopy())
+	// Handle TTL
+	if k8Task.Status.CompletionTime != nil {
+		timeNow := metav1.Now()
+		deletionTime := calculateDeletionTime(k8Task)
+		if deletionTime.IsZero() { // No TTL set, we're done
+			return ctrl.Result{}, nil
+		}
 
+		if deletionTime.Before(timeNow.Time) {
+			logger.Info("deleting task due to expired TTL", "Request", req.NamespacedName)
+			err := r.Delete(ctx, k8Task)
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		// Reschedule for later deletion
+		nextRunTime := deletionTime.Sub(timeNow.Time)
+		logger.Info("scheduling task deletion", "Request", req.NamespacedName, "Delay", nextRunTime)
+		return ctrl.Result{RequeueAfter: nextRunTime}, nil
+	}
+
+	// Create subtasks and/or gather their status
+	patch := client.MergeFrom(k8Task.DeepCopy())
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
 		return ctrl.Result{}, err
 	} else {
@@ -137,9 +164,16 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				k8Task.Status.Datacenters[dc.Meta.Name] = actualDcTask.Status
 			}
 		}
+		wasComplete := k8Task.Status.CompletionTime != nil
 		k8Task.BuildGlobalStatus()
 		if err = r.Status().Patch(ctx, k8Task, patch); err != nil {
 			return ctrl.Result{}, err
+		}
+		// If the status update set a completion time, we want to reconcile again in order to handle the TTL. But
+		// because we configured GenerationChangedPredicate in SetupWithManager(), we ignore our own status updates.
+		// Requeue manually just for this case.
+		if !wasComplete && k8Task.Status.CompletionTime != nil {
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -220,11 +254,14 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 			Datacenter: corev1.ObjectReference{Namespace: namespace, Name: dcName},
 
 			// TODO revisit this once k8ssandra/cass-operator#458 merged
-			ScheduledTime:           k8Task.Spec.Template.ScheduledTime,
-			Jobs:                    k8Task.Spec.Template.Jobs,
-			RestartPolicy:           k8Task.Spec.Template.RestartPolicy,
-			TTLSecondsAfterFinished: k8Task.Spec.Template.TTLSecondsAfterFinished,
-			ConcurrencyPolicy:       k8Task.Spec.Template.ConcurrencyPolicy,
+			ScheduledTime:     k8Task.Spec.Template.ScheduledTime,
+			Jobs:              k8Task.Spec.Template.Jobs,
+			RestartPolicy:     k8Task.Spec.Template.RestartPolicy,
+			ConcurrencyPolicy: k8Task.Spec.Template.ConcurrencyPolicy,
+
+			// Never set the TTL here. We manage it ourselves on the K8ssandraTask, once it expires we'll cascade-delete
+			// the CassandraTasks.
+			TTLSecondsAfterFinished: &noTTL,
 		},
 	}
 	return dcTask
@@ -232,6 +269,16 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 
 func dcTaskName(k8Task *api.K8ssandraTask, dcName string) string {
 	return k8Task.Name + "-" + dcName
+}
+
+func calculateDeletionTime(k8Task *api.K8ssandraTask) time.Time {
+	if k8Task.Spec.Template.TTLSecondsAfterFinished != nil {
+		if *k8Task.Spec.Template.TTLSecondsAfterFinished == 0 {
+			return time.Time{}
+		}
+		return k8Task.Status.CompletionTime.Add(time.Duration(*k8Task.Spec.Template.TTLSecondsAfterFinished) * time.Second)
+	}
+	return k8Task.Status.CompletionTime.Add(defaultTTL)
 }
 
 // SetupWithManager sets up the controller with the Manager.
