@@ -80,11 +80,21 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	kcKey := k8Task.GetClusterKey()
-	logger.Info("Fetching cluster", "K8ssandraCluster", kcKey)
-	kc := &k8capi.K8ssandraCluster{}
-	if err := r.Get(ctx, kcKey, kc); err != nil {
+	kc, kcExists, err := r.getCluster(ctx, k8Task)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Set owner reference so that the task is deleted when the K8ssandraCluster is deleted.
+	if k8Task.OwnerReferences == nil && kcExists {
+		logger.Info("Setting owner reference", "K8ssandraTask", req.NamespacedName, "K8ssandraCluster", k8Task.GetClusterKey())
+		if err := controllerutil.SetControllerReference(kc, k8Task, r.Scheme); err != nil {
+			return ctrl.Result{}, fmt.Errorf("setting owner reference on K8ssandraTask: %s", err)
+		}
+		if err := r.Update(ctx, k8Task); err != nil {
+			return ctrl.Result{}, fmt.Errorf("updating K8ssandraTask to set owner reference: %s", err)
+		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Handle deletion
@@ -95,12 +105,15 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			if err := r.Update(ctx, k8Task); err != nil {
 				return ctrl.Result{}, err
 			}
+			return ctrl.Result{Requeue: true}, nil
 		}
 	} else { // The task is being deleted
 		if controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
 			// First time we've noticed the deletion, clean up dependents and remove the finalizer
-			if err := r.deleteDcTasks(ctx, k8Task, kc, logger); err != nil {
-				return ctrl.Result{}, err
+			if kcExists {
+				if err := r.deleteDcTasks(ctx, k8Task, kc, logger); err != nil {
+					return ctrl.Result{}, err
+				}
 			}
 			logger.Info("Removing finalizer", "K8ssandraTask", req.NamespacedName)
 			controllerutil.RemoveFinalizer(k8Task, k8ssandraTaskFinalizer)
@@ -132,6 +145,9 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Create subtasks and/or gather their status
+	if !kcExists {
+		return ctrl.Result{}, fmt.Errorf("unknown K8ssandraCluster %s", k8Task.GetClusterKey())
+	}
 	patch := client.MergeFrom(k8Task.DeepCopy())
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
 		return ctrl.Result{}, err
@@ -178,6 +194,16 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, nil
 	}
+}
+
+func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, k8Task *api.K8ssandraTask) (*k8capi.K8ssandraCluster, bool, error) {
+	kc := &k8capi.K8ssandraCluster{}
+	if err := r.Get(ctx, k8Task.GetClusterKey(), kc); errors.IsNotFound(err) {
+		return nil, false, nil
+	} else if err != nil {
+		return nil, false, err
+	}
+	return kc, true, nil
 }
 
 func (r *K8ssandraTaskReconciler) deleteDcTasks(ctx context.Context, k8Task *api.K8ssandraTask, kc *k8capi.K8ssandraCluster, logger logr.Logger) error {
