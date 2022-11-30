@@ -1,9 +1,10 @@
 package stargate
 
 import (
-	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
+
+	"k8s.io/utils/pointer"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 
@@ -147,7 +148,7 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 
 	seed := utils.FindEnvVarInContainer(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
-	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
+	assert.Equal(t, "cluster1-seed-service.namespace1.svc", seed.Value)
 
 	javaOpts := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, javaOpts, "failed to find JAVA_OPTS env var")
@@ -203,7 +204,7 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 
 	seed := utils.FindEnvVarInContainer(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
-	assert.Equal(t, "cluster1-seed-service.namespace1.svc.cluster.local", seed.Value)
+	assert.Equal(t, "cluster1-seed-service.namespace1.svc", seed.Value)
 
 }
 
