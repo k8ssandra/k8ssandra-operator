@@ -86,40 +86,41 @@ func (r *Replication) ReplicationFactor(dc, ks string) int {
 // to be specified at the DC-level. Using a DatacenterConfig allows to keep the api types
 // clean such that cluster-level settings won't leak into the dc-level settings.
 type DatacenterConfig struct {
-	Meta                     api.EmbeddedObjectMeta
-	K8sContext               string
-	Cluster                  string
-	SuperuserSecretRef       corev1.LocalObjectReference
-	ServerImage              string
-	ServerVersion            *semver.Version
-	ServerType               api.ServerDistribution
-	JmxInitContainerImage    *images.Image
-	Size                     int32
-	Stopped                  bool
-	Resources                *corev1.ResourceRequirements
-	SystemReplication        SystemReplication
-	StorageConfig            *cassdcapi.StorageConfig
-	Racks                    []cassdcapi.Rack
-	CassandraConfig          api.CassandraConfig
-	AdditionalSeeds          []string
-	Networking               *cassdcapi.NetworkingConfig
-	Users                    []cassdcapi.CassandraUser
-	PodTemplateSpec          *corev1.PodTemplateSpec
-	MgmtAPIHeap              *resource.Quantity
-	SoftPodAntiAffinity      *bool
-	Tolerations              []corev1.Toleration
-	ServerEncryptionStores   *encryption.Stores
-	ClientEncryptionStores   *encryption.Stores
-	ClientKeystorePassword   string
-	ClientTruststorePassword string
-	ServerKeystorePassword   string
-	ServerTruststorePassword string
-	CDC                      *cassdcapi.CDCConfiguration
-	DseWorkloads             *cassdcapi.DseWorkloads
-	ConfigBuilderResources   *corev1.ResourceRequirements
-	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
-	PerNodeConfigMapRef      corev1.LocalObjectReference
-	ExternalSecrets          bool
+	Meta                      api.EmbeddedObjectMeta
+	K8sContext                string
+	Cluster                   string
+	SuperuserSecretRef        corev1.LocalObjectReference
+	ServerImage               string
+	ServerVersion             *semver.Version
+	ServerType                api.ServerDistribution
+	JmxInitContainerImage     *images.Image
+	Size                      int32
+	Stopped                   bool
+	Resources                 *corev1.ResourceRequirements
+	SystemReplication         SystemReplication
+	StorageConfig             *cassdcapi.StorageConfig
+	Racks                     []cassdcapi.Rack
+	CassandraConfig           api.CassandraConfig
+	AdditionalSeeds           []string
+	Networking                *cassdcapi.NetworkingConfig
+	Users                     []cassdcapi.CassandraUser
+	PodTemplateSpec           *corev1.PodTemplateSpec
+	MgmtAPIHeap               *resource.Quantity
+	SoftPodAntiAffinity       *bool
+	Tolerations               []corev1.Toleration
+	ServerEncryptionStores    *encryption.Stores
+	ClientEncryptionStores    *encryption.Stores
+	ClientKeystorePassword    string
+	ClientTruststorePassword  string
+	ServerKeystorePassword    string
+	ServerTruststorePassword  string
+	CDC                       *cassdcapi.CDCConfiguration
+	DseWorkloads              *cassdcapi.DseWorkloads
+	ConfigBuilderResources    *corev1.ResourceRequirements
+	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef       corev1.LocalObjectReference
+	PerNodeInitContainerImage *images.Image
+	ExternalSecrets           bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -293,6 +294,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Stopped = dcTemplate.Stopped
 	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 	dcConfig.CDC = dcTemplate.CDC
+
+	if dcTemplate.DatacenterOptions.PerNodeInitContainerImage != nil {
+		dcConfig.PerNodeInitContainerImage = dcTemplate.DatacenterOptions.PerNodeInitContainerImage
+	} else {
+		dcConfig.PerNodeInitContainerImage = clusterTemplate.DatacenterOptions.PerNodeInitContainerImage
+	}
 
 	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 	// FIXME if we are doing this, then we should remove the pointer

@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#600](https://github.com/k8ssandra/k8ssandra-operator/issues/600) Disable secrets management and replication with the external secrets provider
 * [ENHANCEMENT] [#525](https://github.com/k8ssandra/k8ssandra-operator/issues/525) Deep-merge cluster- and dc-level templates
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
+* [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD

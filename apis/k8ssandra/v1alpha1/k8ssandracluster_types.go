@@ -409,6 +409,13 @@ type DatacenterOptions struct {
 	// ManagementApiAuth defines the authentication settings for the management API in the Cassandra pods.
 	// +optional
 	ManagementApiAuth *cassdcapi.ManagementApiAuthConfig `json:"managementApiAuth,omitempty"`
+
+	// The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
+	// configuration. This is only useful when PerNodeConfigMapRef is set.
+	// The default is "mikefarah/yq:4".
+	// +optional
+	// +kubebuilder:default={repository:"mikefarah",name:"yq",tag:"4"}
+	PerNodeInitContainerImage *images.Image `json:"perNodeInitContainerImage,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
