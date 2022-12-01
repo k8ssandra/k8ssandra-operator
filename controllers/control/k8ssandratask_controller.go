@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,6 +64,7 @@ type K8ssandraTaskReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
 	ClientCache *clientcache.ClientCache
+	Recorder    record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=k8ssandratasks,verbs=get;list;watch;create;update;patch;delete
@@ -111,10 +114,8 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	} else { // The task is being deleted
 		if controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
 			// First time we've noticed the deletion, clean up dependents and remove the finalizer
-			if kcExists {
-				if err := r.deleteDcTasks(ctx, k8Task, kc, logger); err != nil {
-					return ctrl.Result{}, err
-				}
+			if err := r.deleteDcTasks(ctx, k8Task, kc, logger); err != nil {
+				return ctrl.Result{}, err
 			}
 			logger.Info("Removing finalizer")
 			controllerutil.RemoveFinalizer(k8Task, k8ssandraTaskFinalizer)
@@ -147,11 +148,11 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Create subtasks and/or gather their status
 	if !kcExists {
-		return ctrl.Result{}, fmt.Errorf("unknown K8ssandraCluster %s", kcKey)
+		return r.reportInvalidSpec(ctx, k8Task, "Unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
 	patch := client.MergeFrom(k8Task.DeepCopy())
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
-		return ctrl.Result{}, err
+		return r.reportInvalidSpec(ctx, k8Task, err.Error())
 	} else {
 		for _, dc := range dcs {
 			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
@@ -166,10 +167,10 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			actualDcTask := &cassapi.CassandraTask{}
 			if err = remoteClient.Get(ctx, dcTaskKey, actualDcTask); err != nil {
 				if errors.IsNotFound(err) {
-					logger.Info("Creating DC task", "CassandraTask", dcTaskKey)
 					if err = remoteClient.Create(ctx, desiredDcTask); err != nil {
 						return ctrl.Result{}, err
 					}
+					r.recordDcTaskCreated(k8Task, desiredDcTask, dc.K8sContext)
 				} else {
 					return ctrl.Result{}, err
 				}
@@ -208,6 +209,11 @@ func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.O
 }
 
 func (r *K8ssandraTaskReconciler) deleteDcTasks(ctx context.Context, k8Task *api.K8ssandraTask, kc *k8capi.K8ssandraCluster, logger logr.Logger) error {
+	if k8Task.GetConditionStatus(api.JobInvalid) == corev1.ConditionTrue {
+		// We never create CassandraTasks when the spec is invalid
+		return nil
+	}
+
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
 		return err
 	} else {
@@ -245,6 +251,7 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 	}
 
 	dcs := make([]k8capi.CassandraDatacenterTemplate, 0, len(dcNames))
+	var unknownDcNames []string = nil
 	for _, dcName := range dcNames {
 		found := false
 		for _, dc := range kc.Spec.Cassandra.Datacenters {
@@ -255,8 +262,11 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 			}
 		}
 		if !found {
-			return nil, fmt.Errorf("unknown DC %s", dcName)
+			unknownDcNames = append(unknownDcNames, dcName)
 		}
+	}
+	if len(unknownDcNames) > 0 {
+		return nil, fmt.Errorf("Unknown datacenters: %s", strings.Join(unknownDcNames, ", "))
 	}
 	return dcs, nil
 }
@@ -306,6 +316,31 @@ func calculateDeletionTime(k8Task *api.K8ssandraTask) time.Time {
 		return k8Task.Status.CompletionTime.Add(time.Duration(*k8Task.Spec.Template.TTLSecondsAfterFinished) * time.Second)
 	}
 	return k8Task.Status.CompletionTime.Add(defaultTTL)
+}
+
+func (r *K8ssandraTaskReconciler) recordDcTaskCreated(k8Task *api.K8ssandraTask, desiredDcTask *cassapi.CassandraTask, k8sContext string) {
+	contextInfo := ""
+	if k8sContext != "" {
+		contextInfo = " in context " + k8sContext
+	}
+	r.Recorder.Event(k8Task, "Normal", "CreateCassandraTask",
+		fmt.Sprintf("Created CassandraTask %s.%s%s", desiredDcTask.Namespace, desiredDcTask.Name, contextInfo))
+}
+
+// reportInvalidSpec is called when the user provided an invalid K8ssandraTask spec. A warning event is emitted and the
+// task's status is set to "Invalid".
+func (r *K8ssandraTaskReconciler) reportInvalidSpec(
+	ctx context.Context,
+	k8Task *api.K8ssandraTask,
+	format string,
+	arguments ...interface{},
+) (ctrl.Result, error) {
+	r.Recorder.Event(k8Task, "Warning", "InvalidSpec", fmt.Sprintf(format, arguments...))
+
+	patch := client.MergeFrom(k8Task.DeepCopy())
+	k8Task.SetCondition(api.JobInvalid, corev1.ConditionTrue)
+	err := r.Status().Patch(ctx, k8Task, patch)
+	return ctrl.Result{}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.

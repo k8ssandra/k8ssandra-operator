@@ -24,6 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	JobInvalid cassapi.JobConditionType = "Invalid"
+)
+
 // K8ssandraTaskSpec defines the desired state of K8ssandraTask
 type K8ssandraTaskSpec struct {
 
@@ -113,22 +117,22 @@ func (t *K8ssandraTask) BuildGlobalStatus() {
 	t.Status.Succeeded = totalSucceeded
 	t.Status.Failed = totalFailed
 	if anyRunning {
-		t.setCondition(cassapi.JobRunning, corev1.ConditionTrue)
+		t.SetCondition(cassapi.JobRunning, corev1.ConditionTrue)
 	} else {
-		t.setCondition(cassapi.JobRunning, corev1.ConditionFalse)
+		t.SetCondition(cassapi.JobRunning, corev1.ConditionFalse)
 	}
 	if anyFailed {
-		t.setCondition(cassapi.JobFailed, corev1.ConditionTrue)
+		t.SetCondition(cassapi.JobFailed, corev1.ConditionTrue)
 	} else {
-		t.setCondition(cassapi.JobFailed, corev1.ConditionFalse)
+		t.SetCondition(cassapi.JobFailed, corev1.ConditionFalse)
 	}
 	if allComplete {
 		t.Status.CompletionTime = lastCompletionTime
-		t.setCondition(cassapi.JobComplete, corev1.ConditionTrue)
+		t.SetCondition(cassapi.JobComplete, corev1.ConditionTrue)
 	}
 }
 
-func (t *K8ssandraTask) setCondition(condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
+func (t *K8ssandraTask) SetCondition(condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
 	existing := false
 	for i := 0; i < len(t.Status.Conditions); i++ {
 		cond := t.Status.Conditions[i]

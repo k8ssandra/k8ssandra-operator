@@ -197,6 +197,7 @@ func main() {
 			Client:           mgr.GetClient(),
 			Scheme:           mgr.GetScheme(),
 			ClientCache:      clientCache,
+			Recorder:         mgr.GetEventRecorderFor("k8ssandratask-controller"),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
 			os.Exit(1)
