@@ -74,20 +74,21 @@ type K8ssandraTaskReconciler struct {
 func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("K8ssandraTask", req.NamespacedName)
 
-	logger.Info("Fetching task", "K8ssandraTask", req.NamespacedName)
+	logger.Info("Fetching task")
 	k8Task := &api.K8ssandraTask{}
 	if err := r.Get(ctx, req.NamespacedName, k8Task); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	kc, kcExists, err := r.getCluster(ctx, k8Task)
+	kcKey := k8Task.GetClusterKey()
+	kc, kcExists, err := r.getCluster(ctx, kcKey)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Set owner reference so that the task is deleted when the K8ssandraCluster is deleted.
 	if k8Task.OwnerReferences == nil && kcExists {
-		logger.Info("Setting owner reference", "K8ssandraTask", req.NamespacedName, "K8ssandraCluster", k8Task.GetClusterKey())
+		logger.Info("Setting owner reference", "K8ssandraCluster", kcKey)
 		if err := controllerutil.SetControllerReference(kc, k8Task, r.Scheme); err != nil {
 			return ctrl.Result{}, fmt.Errorf("setting owner reference on K8ssandraTask: %s", err)
 		}
@@ -100,7 +101,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Handle deletion
 	if k8Task.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(k8Task, k8ssandraTaskFinalizer) {
-			logger.Info("Adding finalizer", "K8ssandraTask", req.NamespacedName)
+			logger.Info("Adding finalizer")
 			controllerutil.AddFinalizer(k8Task, k8ssandraTaskFinalizer)
 			if err := r.Update(ctx, k8Task); err != nil {
 				return ctrl.Result{}, err
@@ -115,7 +116,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					return ctrl.Result{}, err
 				}
 			}
-			logger.Info("Removing finalizer", "K8ssandraTask", req.NamespacedName)
+			logger.Info("Removing finalizer")
 			controllerutil.RemoveFinalizer(k8Task, k8ssandraTaskFinalizer)
 			if err := r.Update(ctx, k8Task); err != nil {
 				return ctrl.Result{}, err
@@ -133,20 +134,20 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		if deletionTime.Before(timeNow.Time) {
-			logger.Info("deleting task due to expired TTL", "Request", req.NamespacedName)
+			logger.Info("Deleting task due to expired TTL")
 			err := r.Delete(ctx, k8Task)
 			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
 
 		// Reschedule for later deletion
 		nextRunTime := deletionTime.Sub(timeNow.Time)
-		logger.Info("scheduling task deletion", "Request", req.NamespacedName, "Delay", nextRunTime)
+		logger.Info("Scheduling task deletion", "Delay", nextRunTime)
 		return ctrl.Result{RequeueAfter: nextRunTime}, nil
 	}
 
 	// Create subtasks and/or gather their status
 	if !kcExists {
-		return ctrl.Result{}, fmt.Errorf("unknown K8ssandraCluster %s", k8Task.GetClusterKey())
+		return ctrl.Result{}, fmt.Errorf("unknown K8ssandraCluster %s", kcKey)
 	}
 	patch := client.MergeFrom(k8Task.DeepCopy())
 	if dcs, err := filterDcs(kc, k8Task.Spec.Datacenters); err != nil {
@@ -173,7 +174,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 					return ctrl.Result{}, err
 				}
 			} else {
-				logger.Info("DC task already exists, updating status", "CassandraTask", dcTaskKey)
+				logger.Info("DC task already exists, retrieving its status", "CassandraTask", dcTaskKey)
 				if k8Task.Status.Datacenters == nil {
 					k8Task.Status.Datacenters = make(map[string]cassapi.CassandraTaskStatus)
 				}
@@ -196,9 +197,9 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 }
 
-func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, k8Task *api.K8ssandraTask) (*k8capi.K8ssandraCluster, bool, error) {
+func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.ObjectKey) (*k8capi.K8ssandraCluster, bool, error) {
 	kc := &k8capi.K8ssandraCluster{}
-	if err := r.Get(ctx, k8Task.GetClusterKey(), kc); errors.IsNotFound(err) {
+	if err := r.Get(ctx, kcKey, kc); errors.IsNotFound(err) {
 		return nil, false, nil
 	} else if err != nil {
 		return nil, false, err
