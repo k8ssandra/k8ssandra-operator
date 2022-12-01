@@ -298,7 +298,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// FIXME if we are doing this, then we should remove the pointer
 	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 
-	mergedOptions := goalesceutils.MergeCRDs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
+	mergedOptions := goalesceutils.MergeCRs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
 
 	if len(mergedOptions.ServerVersion) > 0 {
 		dcConfig.ServerVersion = semver.MustParse(mergedOptions.ServerVersion)

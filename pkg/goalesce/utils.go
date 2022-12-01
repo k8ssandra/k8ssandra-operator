@@ -8,9 +8,9 @@ import (
 	"reflect"
 )
 
-// MergeCRDs returns a new object built by merging the given objects, with the required options to
+// MergeCRs returns a new object built by merging the given objects, with the required options to
 // make the merge work as expected for Kubernetes CRDs.
-func MergeCRDs[T any](cluster, dc T) T {
+func MergeCRs[T any](cluster, dc T) T {
 	// We use MustDeepMerge here because errors cannot happen with the given options.
 	return goalesce.MustDeepMerge(
 		cluster, dc,
