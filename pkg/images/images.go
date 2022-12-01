@@ -2,6 +2,7 @@ package images
 
 import (
 	"fmt"
+	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -63,14 +64,21 @@ func (in Image) String() string {
 // Other components are computed as follows: if the image specifies a (non-empty) component, that component is returned;
 // otherwise, the component from the default image is returned.
 func (in *Image) ApplyDefaults(defaults Image) *Image {
-	return &Image{
-		Registry:      in.registry(defaults),
-		Repository:    in.repository(defaults),
-		Name:          in.name(defaults),
-		Tag:           in.tag(defaults),
-		PullPolicy:    in.pullPolicy(defaults),
-		PullSecretRef: in.pullSecretRef(defaults),
+	merged := goalesce.MustDeepMerge(&defaults, in)
+	if merged.Registry == "" {
+		merged.Registry = DefaultRegistry
 	}
+	if merged.Tag == "" {
+		merged.Tag = "latest"
+	}
+	if merged.PullPolicy == "" {
+		if merged.Tag == "latest" {
+			merged.PullPolicy = corev1.PullAlways
+		} else {
+			merged.PullPolicy = corev1.PullIfNotPresent
+		}
+	}
+	return merged
 }
 
 // CollectPullSecrets returns a slice of secret references required to pull all the given images. The slice will be
@@ -85,54 +93,4 @@ func CollectPullSecrets(images ...*Image) []corev1.LocalObjectReference {
 		}
 	}
 	return secrets
-}
-
-func (in *Image) registry(defaults Image) string {
-	if in != nil && in.Registry != "" {
-		return in.Registry
-	} else if defaults.Registry != "" {
-		return defaults.Registry
-	}
-	return DefaultRegistry
-}
-
-func (in *Image) repository(defaults Image) string {
-	if in != nil && in.Repository != "" {
-		return in.Repository
-	}
-	return defaults.Repository
-}
-
-func (in *Image) name(defaults Image) string {
-	if in != nil && in.Name != "" {
-		return in.Name
-	}
-	return defaults.Name
-}
-
-func (in *Image) tag(defaults Image) string {
-	if in != nil && in.Tag != "" {
-		return in.Tag
-	} else if defaults.Tag != "" {
-		return defaults.Tag
-	}
-	return "latest"
-}
-
-func (in *Image) pullPolicy(defaults Image) corev1.PullPolicy {
-	if in != nil && in.PullPolicy != "" {
-		return in.PullPolicy
-	} else if defaults.PullPolicy != "" {
-		return defaults.PullPolicy
-	} else if in.tag(defaults) == "latest" {
-		return corev1.PullAlways
-	}
-	return corev1.PullIfNotPresent
-}
-
-func (in *Image) pullSecretRef(defaults Image) *corev1.LocalObjectReference {
-	if in != nil && in.PullSecretRef != nil {
-		return in.PullSecretRef
-	}
-	return defaults.PullSecretRef
 }

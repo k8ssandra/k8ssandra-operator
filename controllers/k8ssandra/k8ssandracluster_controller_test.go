@@ -269,7 +269,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 		},
 	}
 	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {
@@ -494,7 +494,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 									},
 								},
 							},
-							Networking: &cassdcapi.NetworkingConfig{
+							Networking: &api.NetworkingConfig{
 								NodePort: &cassdcapi.NodePortConfig{
 									Native: 9142,
 								},
@@ -527,7 +527,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 									},
 								},
 							},
-							Networking: &cassdcapi.NetworkingConfig{
+							Networking: &api.NetworkingConfig{
 								NodePort: &cassdcapi.NodePortConfig{
 									Native: 9242,
 								},
@@ -571,7 +571,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking, dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Cpu())
 	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Memory())
@@ -594,7 +594,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking, dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	t.Log("deleting K8ssandraCluster")
@@ -635,8 +635,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 							},
 						},
 					},
-					Networking: &cassdcapi.NetworkingConfig{
-						HostNetwork: true,
+					Networking: &api.NetworkingConfig{
+						HostNetwork: pointer.Bool(true),
 					},
 					CassandraConfig: &api.CassandraConfig{
 						CassandraYaml: unstructured.Unstructured{
@@ -676,8 +676,8 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 									},
 								},
 							},
-							Networking: &cassdcapi.NetworkingConfig{
-								HostNetwork: false,
+							Networking: &api.NetworkingConfig{
+								HostNetwork: pointer.Bool(false),
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: unstructured.Unstructured{
@@ -721,7 +721,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking, dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	t.Log("update dc1 status to ready")
@@ -740,7 +740,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking, dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
 

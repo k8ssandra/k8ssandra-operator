@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"testing"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -202,15 +203,15 @@ func TestCoalesce(t *testing.T) {
 			name: "Override Networking",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					Networking: &cassdcapi.NetworkingConfig{
-						HostNetwork: false,
+					Networking: &api.NetworkingConfig{
+						HostNetwork: pointer.Bool(false),
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					Networking: &cassdcapi.NetworkingConfig{
-						HostNetwork: true,
+					Networking: &api.NetworkingConfig{
+						HostNetwork: pointer.Bool(true),
 					},
 				},
 			},
@@ -233,6 +234,9 @@ func TestCoalesce(t *testing.T) {
 						CassandraYaml: unstructured.Unstructured{
 							"concurrent_reads": 8,
 						},
+						JvmOptions: api.JvmOptions{
+							MaxHeapSize: parseQuantity("512Mi"),
+						},
 					},
 				},
 			},
@@ -251,6 +255,7 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				CassandraConfig: api.CassandraConfig{
 					CassandraYaml: unstructured.Unstructured{
+						"concurrent_reads":  8,
 						"concurrent_writes": 8,
 					},
 					JvmOptions: api.JvmOptions{
@@ -538,11 +543,23 @@ func TestCoalesce(t *testing.T) {
 			name: "Additional Volumes dc level",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					ExtraVolumes: &api.K8ssandraVolumes{
-						PVCs: []cassdcapi.AdditionalVolumes{
+					ExtraVolumes: &api.K8ssandraVolumes{ // merged by Name
+						Volumes: []corev1.Volume{
 							{
-								Name:      "test-volume",
-								MountPath: "/test",
+								Name: "test-volume",
+								VolumeSource: corev1.VolumeSource{ // merged atomically
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
+						PVCs: []cassdcapi.AdditionalVolumes{ // merged by Name
+							{
+								Name:      "test-pvc",
+								MountPath: "/cluster",
+							},
+							{
+								Name:      "test-pvc2",
+								MountPath: "/cluster2",
 							},
 						},
 					},
@@ -551,10 +568,32 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ExtraVolumes: &api.K8ssandraVolumes{
+						Volumes: []corev1.Volume{
+							{
+								Name: "test-volume",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/dc",
+									},
+								},
+							},
+							{
+								Name: "test-volume2",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/dc2",
+									},
+								},
+							},
+						},
 						PVCs: []cassdcapi.AdditionalVolumes{
 							{
-								Name:      "test-volume-dc",
-								MountPath: "/test-dc",
+								Name:      "test-pvc",
+								MountPath: "/dc",
+							},
+							{
+								Name:      "test-pvc3",
+								MountPath: "/dc3",
 							},
 						},
 					},
@@ -564,13 +603,39 @@ func TestCoalesce(t *testing.T) {
 				StorageConfig: &cassdcapi.StorageConfig{
 					AdditionalVolumes: []cassdcapi.AdditionalVolumes{
 						{
-							Name:      "test-volume-dc",
-							MountPath: "/test-dc",
+							Name:      "test-pvc",
+							MountPath: "/dc",
+						},
+						{
+							Name:      "test-pvc2",
+							MountPath: "/cluster2",
+						},
+						{
+							Name:      "test-pvc3",
+							MountPath: "/dc3",
 						},
 					},
 				},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
+						Volumes: []corev1.Volume{
+							{
+								Name: "test-volume",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/dc",
+									},
+								},
+							},
+							{
+								Name: "test-volume2",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/dc2",
+									},
+								},
+							},
+						},
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
 				},
@@ -589,10 +654,205 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				DseWorkloads: &cassdcapi.DseWorkloads{GraphEnabled: true},
+				DseWorkloads: &cassdcapi.DseWorkloads{AnalyticsEnabled: true, GraphEnabled: true},
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
+		{
+			name: "Containers",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					Containers: []corev1.Container{ // merged by Name
+						{
+							Name:  reconciliation.CassandraContainerName,
+							Image: "cassandra-cluster-level-image",
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{ // merged by MountPath
+								{
+									Name:      "cluster-volume-mount",
+									MountPath: "/volume-mount1",
+								},
+							},
+							Env: []corev1.EnvVar{ // merged by Name
+								{
+									Name:  "ENV1",
+									Value: "cluster",
+								},
+								{
+									Name:  "ENV2",
+									Value: "cluster",
+								},
+							},
+						},
+						{
+							Name:            reconciliation.ServerConfigContainerName,
+							Image:           "config-cluster-level-image",
+							ImagePullPolicy: corev1.PullAlways,
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					Containers: []corev1.Container{
+						{
+							Name:  reconciliation.CassandraContainerName,
+							Image: "cassandra-dc-level-image",
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "dc-volume-mount",
+									MountPath: "/volume-mount1",
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  "ENV1",
+									Value: "dc",
+								},
+								{
+									Name:  "ENV3",
+									Value: "dc",
+								},
+							},
+						},
+						{
+							Name:  reconciliation.ServerConfigContainerName,
+							Image: "config-dc-level-image",
+						},
+					},
+				},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  reconciliation.CassandraContainerName,
+								Image: "cassandra-dc-level-image",
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"),
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "dc-volume-mount",
+										MountPath: "/volume-mount1",
+									},
+								},
+								Env: []corev1.EnvVar{
+									{
+										Name:  "ENV1",
+										Value: "dc",
+									},
+									{
+										Name:  "ENV2",
+										Value: "cluster",
+									},
+									{
+										Name:  "ENV3",
+										Value: "dc",
+									},
+								},
+							},
+							{
+								Name:            reconciliation.ServerConfigContainerName,
+								Image:           "config-dc-level-image",
+								ImagePullPolicy: corev1.PullAlways,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Init Containers",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					InitContainers: []corev1.Container{ // merged by Name
+						{
+							Name:  "container1",
+							Image: "container1-cluster-level-image",
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+						},
+						{
+							Name:            "container2",
+							Image:           "container2-cluster-level-image",
+							ImagePullPolicy: corev1.PullAlways,
+						},
+					},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					InitContainers: []corev1.Container{
+						{
+							Name:  "container1",
+							Image: "container1-dc-level-image",
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
+						},
+						{
+							Name:  "container2",
+							Image: "container2-dc-level-image",
+						},
+					},
+				},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+						InitContainers: []corev1.Container{
+							{
+								Name:  "container1",
+								Image: "container1-dc-level-image",
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("1"),
+										corev1.ResourceMemory: resource.MustParse("1Gi"),
+									},
+								},
+							},
+							{
+								Name:            "container2",
+								Image:           "container2-dc-level-image",
+								ImagePullPolicy: corev1.PullAlways,
+							},
+						},
 					},
 				},
 			},

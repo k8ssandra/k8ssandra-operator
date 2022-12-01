@@ -4,6 +4,7 @@ package reaper
 
 import (
 	"context"
+	"k8s.io/utils/pointer"
 	"testing"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -35,7 +36,7 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 	reaper := test.NewReaper("test-reaper", "test-reaper-namespace")
 	reaper.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{

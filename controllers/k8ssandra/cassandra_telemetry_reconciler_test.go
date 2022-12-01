@@ -4,6 +4,7 @@ package k8ssandra
 
 import (
 	"context"
+	"k8s.io/utils/pointer"
 
 	"testing"
 
@@ -51,7 +52,7 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
 				Telemetry: &telemetryapi.TelemetrySpec{
 					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled: true,
+						Enabled: pointer.Bool(true),
 					},
 				},
 			},

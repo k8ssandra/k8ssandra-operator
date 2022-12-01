@@ -4,6 +4,7 @@ package stargate
 
 import (
 	"context"
+	"k8s.io/utils/pointer"
 	"testing"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -35,7 +36,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{

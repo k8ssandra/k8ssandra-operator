@@ -3,6 +3,7 @@ package stargate
 import (
 	"context"
 	"encoding/json"
+	"k8s.io/utils/pointer"
 	"testing"
 	"time"
 
@@ -123,7 +124,7 @@ func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient 
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
+								Enabled: pointer.Bool(true),
 							},
 						},
 					},
@@ -579,7 +580,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
+								Enabled: pointer.Bool(true),
 							},
 						},
 					},
@@ -856,7 +857,7 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 						SecretsProvider: "external",
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: true,
+								Enabled: pointer.Bool(true),
 							},
 						},
 					},

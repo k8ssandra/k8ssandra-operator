@@ -11,6 +11,7 @@ import (
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -272,15 +273,18 @@ func UpdateInitContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev
 	p.Spec.InitContainers[idx] = *container
 }
 
-// Coalesce combines the cluster and dc templates with override semantics. If a property is
-// defined in both templates, the dc-level property takes precedence.
+// Coalesce merges the cluster and dc templates. If a property is defined in both templates, the
+// dc-level property takes precedence.
 func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) *DatacenterConfig {
 	dcConfig := &DatacenterConfig{}
 
-	// Handler cluster-wide settings first
+	// Handle cluster-wide settings first
 	dcConfig.Cluster = clusterName
 	dcConfig.SuperuserSecretRef = clusterTemplate.SuperuserSecretRef
 	dcConfig.ServerType = clusterTemplate.ServerType
+	dcConfig.ServerEncryptionStores = clusterTemplate.ServerEncryptionStores
+	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
+	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
 
 	// DC-level settings
 	dcConfig.K8sContext = dcTemplate.K8sContext // can be empty
@@ -288,142 +292,43 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Size = dcTemplate.Size
 	dcConfig.Stopped = dcTemplate.Stopped
 	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
-
-	if len(dcTemplate.DatacenterOptions.ServerVersion) > 0 {
-		dcConfig.ServerVersion = semver.MustParse(dcTemplate.DatacenterOptions.ServerVersion)
-	} else if len(clusterTemplate.DatacenterOptions.ServerVersion) > 0 {
-		dcConfig.ServerVersion = semver.MustParse(clusterTemplate.DatacenterOptions.ServerVersion)
-	}
-
-	if len(dcTemplate.DatacenterOptions.ServerImage) == 0 {
-		dcConfig.ServerImage = clusterTemplate.DatacenterOptions.ServerImage
-	} else {
-		dcConfig.ServerImage = dcTemplate.DatacenterOptions.ServerImage
-	}
-
-	if dcTemplate.DatacenterOptions.JmxInitContainerImage != nil {
-		dcConfig.JmxInitContainerImage = dcTemplate.DatacenterOptions.JmxInitContainerImage
-	} else {
-		dcConfig.JmxInitContainerImage = clusterTemplate.DatacenterOptions.JmxInitContainerImage
-	}
-
-	if len(dcTemplate.DatacenterOptions.Racks) == 0 {
-		dcConfig.Racks = clusterTemplate.DatacenterOptions.Racks
-	} else {
-		dcConfig.Racks = dcTemplate.DatacenterOptions.Racks
-	}
-
-	if dcTemplate.DatacenterOptions.Resources == nil {
-		dcConfig.Resources = clusterTemplate.DatacenterOptions.Resources
-	} else {
-		dcConfig.Resources = dcTemplate.DatacenterOptions.Resources
-	}
-
-	// TODO Add validation check to ensure StorageConfig is set at the cluster or DC level
-	if dcTemplate.DatacenterOptions.StorageConfig == nil {
-		dcConfig.StorageConfig = clusterTemplate.DatacenterOptions.StorageConfig
-	} else {
-		dcConfig.StorageConfig = dcTemplate.DatacenterOptions.StorageConfig
-	}
-
-	if dcTemplate.DatacenterOptions.Networking == nil {
-		dcConfig.Networking = clusterTemplate.DatacenterOptions.Networking
-	} else {
-		dcConfig.Networking = dcTemplate.DatacenterOptions.Networking
-	}
-
-	// TODO Do we want merge vs override?
-	if dcTemplate.DatacenterOptions.CassandraConfig != nil {
-		dcConfig.CassandraConfig = *dcTemplate.DatacenterOptions.CassandraConfig
-	} else if clusterTemplate.DatacenterOptions.CassandraConfig != nil {
-		dcConfig.CassandraConfig = *clusterTemplate.DatacenterOptions.CassandraConfig
-	}
-
-	if dcTemplate.DatacenterOptions.MgmtAPIHeap == nil {
-		dcConfig.MgmtAPIHeap = clusterTemplate.DatacenterOptions.MgmtAPIHeap
-	} else {
-		dcConfig.MgmtAPIHeap = dcTemplate.DatacenterOptions.MgmtAPIHeap
-	}
-
-	if dcTemplate.CDC != nil {
-		dcConfig.CDC = dcTemplate.CDC
-	}
-
-	if dcTemplate.DatacenterOptions.SoftPodAntiAffinity == nil {
-		dcConfig.SoftPodAntiAffinity = clusterTemplate.DatacenterOptions.SoftPodAntiAffinity
-	} else {
-		dcConfig.SoftPodAntiAffinity = dcTemplate.DatacenterOptions.SoftPodAntiAffinity
-	}
-
-	if len(dcTemplate.DatacenterOptions.Tolerations) == 0 {
-		dcConfig.Tolerations = clusterTemplate.DatacenterOptions.Tolerations
-	} else {
-		dcConfig.Tolerations = dcTemplate.DatacenterOptions.Tolerations
-	}
-
-	// Client/Server Encryption stores are only defined at the cluster level
-	dcConfig.ServerEncryptionStores = clusterTemplate.ServerEncryptionStores
-	dcConfig.ClientEncryptionStores = clusterTemplate.ClientEncryptionStores
-	dcConfig.AdditionalSeeds = clusterTemplate.AdditionalSeeds
-
-	if dcTemplate.DatacenterOptions.DseWorkloads != nil {
-		dcConfig.DseWorkloads = dcTemplate.DatacenterOptions.DseWorkloads
-	} else if clusterTemplate.DatacenterOptions.DseWorkloads != nil {
-		dcConfig.DseWorkloads = clusterTemplate.DatacenterOptions.DseWorkloads
-	}
-
-	if dcTemplate.DatacenterOptions.ManagementApiAuth != nil {
-		dcConfig.ManagementApiAuth = dcTemplate.DatacenterOptions.ManagementApiAuth
-	} else if clusterTemplate.DatacenterOptions.ManagementApiAuth != nil {
-		dcConfig.ManagementApiAuth = clusterTemplate.DatacenterOptions.ManagementApiAuth
-	}
+	dcConfig.CDC = dcTemplate.CDC
 
 	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 	// FIXME if we are doing this, then we should remove the pointer
 	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
 
-	var podSecurityContext *corev1.PodSecurityContext
-	if dcTemplate.DatacenterOptions.PodSecurityContext != nil {
-		podSecurityContext = dcTemplate.DatacenterOptions.PodSecurityContext
-	} else if clusterTemplate.DatacenterOptions.PodSecurityContext != nil {
-		podSecurityContext = clusterTemplate.DatacenterOptions.PodSecurityContext
+	mergedOptions := goalesceutils.MergeCRs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
+
+	if len(mergedOptions.ServerVersion) > 0 {
+		dcConfig.ServerVersion = semver.MustParse(mergedOptions.ServerVersion)
 	}
-	// Add the SecurityContext to the PodTemplateSpec if it's defined
-	if podSecurityContext != nil {
-		dcConfig.PodTemplateSpec.Spec.SecurityContext = podSecurityContext
+	dcConfig.ServerImage = mergedOptions.ServerImage
+	dcConfig.JmxInitContainerImage = mergedOptions.JmxInitContainerImage
+	dcConfig.Racks = mergedOptions.Racks
+	dcConfig.Resources = mergedOptions.Resources
+	dcConfig.StorageConfig = mergedOptions.StorageConfig
+	dcConfig.Networking = mergedOptions.Networking.ToCassNetworkingConfig()
+	if mergedOptions.CassandraConfig != nil {
+		dcConfig.CassandraConfig = *mergedOptions.CassandraConfig
+	}
+	dcConfig.MgmtAPIHeap = mergedOptions.MgmtAPIHeap
+	dcConfig.SoftPodAntiAffinity = mergedOptions.SoftPodAntiAffinity
+	dcConfig.Tolerations = mergedOptions.Tolerations
+	dcConfig.DseWorkloads = mergedOptions.DseWorkloads
+	dcConfig.ManagementApiAuth = mergedOptions.ManagementApiAuth
+	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
+
+	if len(mergedOptions.Containers) > 0 {
+		_ = AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
 	}
 
-	// Create additional containers if requested
-	var containers []corev1.Container
-	if len(dcTemplate.DatacenterOptions.Containers) > 0 {
-		containers = dcTemplate.DatacenterOptions.Containers
-	} else if len(clusterTemplate.DatacenterOptions.Containers) > 0 {
-		containers = clusterTemplate.DatacenterOptions.Containers
-	}
-	if len(containers) > 0 {
-		_ = AddContainersToPodTemplateSpec(dcConfig, containers...)
+	if len(mergedOptions.InitContainers) > 0 {
+		_ = AddInitContainersToPodTemplateSpec(dcConfig, mergedOptions.InitContainers...)
 	}
 
-	// Create additional init containers if requested
-	var initContainers []corev1.Container
-	if len(dcTemplate.DatacenterOptions.InitContainers) > 0 {
-		initContainers = dcTemplate.DatacenterOptions.InitContainers
-	} else if len(clusterTemplate.DatacenterOptions.InitContainers) > 0 {
-		initContainers = clusterTemplate.DatacenterOptions.InitContainers
-	}
-	if len(initContainers) > 0 {
-		_ = AddInitContainersToPodTemplateSpec(dcConfig, initContainers...)
-	}
-
-	// Create additional volumes if requested
-	var extraVolumes *api.K8ssandraVolumes
-	if dcTemplate.DatacenterOptions.ExtraVolumes != nil {
-		extraVolumes = dcTemplate.DatacenterOptions.ExtraVolumes
-	} else if clusterTemplate.DatacenterOptions.ExtraVolumes != nil {
-		extraVolumes = clusterTemplate.DatacenterOptions.ExtraVolumes
-	}
-	if extraVolumes != nil {
-		AddK8ssandraVolumesToPodTemplateSpec(dcConfig, *extraVolumes)
+	if mergedOptions.ExtraVolumes != nil {
+		AddK8ssandraVolumesToPodTemplateSpec(dcConfig, *mergedOptions.ExtraVolumes)
 	}
 
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid

@@ -10,18 +10,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) (bool, error) {
+func SpecIsValid(tspec *telemetryapi.TelemetrySpec, promInstalled bool) bool {
 	switch {
 	case tspec == nil:
-		return true, nil
+		return true
 	case tspec.Prometheus == nil:
-		return true, nil
-	case tspec.Prometheus.Enabled && !promInstalled:
-		return false, nil
-	case tspec.Prometheus.Enabled && promInstalled:
-		return true, nil
+		return true
+	case tspec.IsPrometheusEnabled():
+		return promInstalled
 	default:
-		return true, nil
+		return true
 	}
 }
 

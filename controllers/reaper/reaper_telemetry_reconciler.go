@@ -52,10 +52,7 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 	if err != nil {
 		return err
 	}
-	validConfig, err := telemetry.SpecIsValid(thisReaper.Spec.Telemetry, promInstalled)
-	if err != nil {
-		return errors.New("could not determine if telemetry config is valid")
-	}
+	validConfig := telemetry.SpecIsValid(thisReaper.Spec.Telemetry, promInstalled)
 	if !validConfig {
 		return errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
 	}
@@ -65,19 +62,18 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 	}
 	// If Reaper is attached
 	// Determine if we want a cleanup or a resource update.
-	switch {
-	case thisReaper.Spec.Telemetry == nil || thisReaper.Spec.Telemetry.Prometheus == nil:
-		logger.Info("Telemetry not present for Reaper, will delete resources", "TelemetrySpec", thisReaper.Spec.Telemetry)
-		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return err
-		}
-	case thisReaper.Spec.Telemetry.Prometheus.Enabled:
+	if thisReaper.Spec.Telemetry.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "TelemetrySpec", thisReaper.Spec.Telemetry)
 		desiredSM, err := cfg.NewReaperServiceMonitor()
 		if err != nil {
 			return err
 		}
 		if err := cfg.UpdateResources(ctx, remoteClient, thisReaper, &desiredSM); err != nil {
+			return err
+		}
+	} else {
+		logger.Info("Telemetry not present for Reaper, will delete resources", "TelemetrySpec", thisReaper.Spec.Telemetry)
+		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return err
 		}
 	}

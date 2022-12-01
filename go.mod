@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/Jeffail/gabs v1.4.0
 	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/adutra/goalesce v0.0.0-20221124153206-5643f911003d
 	github.com/apache/tinkerpop/gremlin-go v0.0.0-20220530191148-29272fa563ec
 	github.com/bombsimon/logrusr/v2 v2.0.1
 	github.com/datastax/go-cassandra-native-protocol v0.0.0-20220706104457-5e8aad05cf90
