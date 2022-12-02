@@ -857,6 +857,27 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Override PerNodeConfigInitContainerImage",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					PerNodeConfigInitContainerImage: "cluster-level:latest",
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					PerNodeConfigInitContainerImage: "dc-level:latest",
+				},
+			},
+			want: &DatacenterConfig{
+				PerNodeInitContainerImage: "dc-level:latest",
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

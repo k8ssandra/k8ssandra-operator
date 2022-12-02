@@ -414,8 +414,8 @@ type DatacenterOptions struct {
 	// configuration. This is only useful when PerNodeConfigMapRef is set.
 	// The default is "mikefarah/yq:4".
 	// +optional
-	// +kubebuilder:default={repository:"mikefarah",name:"yq",tag:"4"}
-	PerNodeInitContainerImage *images.Image `json:"perNodeInitContainerImage,omitempty"`
+	// +kubebuilder:default="mikefarah/yq:4"
+	PerNodeConfigInitContainerImage string `json:"perNodeConfigInitContainerImage,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to

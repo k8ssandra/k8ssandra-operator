@@ -119,7 +119,7 @@ type DatacenterConfig struct {
 	ConfigBuilderResources    *corev1.ResourceRequirements
 	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
 	PerNodeConfigMapRef       corev1.LocalObjectReference
-	PerNodeInitContainerImage *images.Image
+	PerNodeInitContainerImage string
 	ExternalSecrets           bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
@@ -295,12 +295,6 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 	dcConfig.CDC = dcTemplate.CDC
 
-	if dcTemplate.DatacenterOptions.PerNodeInitContainerImage != nil {
-		dcConfig.PerNodeInitContainerImage = dcTemplate.DatacenterOptions.PerNodeInitContainerImage
-	} else {
-		dcConfig.PerNodeInitContainerImage = clusterTemplate.DatacenterOptions.PerNodeInitContainerImage
-	}
-
 	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
 	// FIXME if we are doing this, then we should remove the pointer
 	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -325,6 +319,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.DseWorkloads = mergedOptions.DseWorkloads
 	dcConfig.ManagementApiAuth = mergedOptions.ManagementApiAuth
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
+	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
 	if len(mergedOptions.Containers) > 0 {
 		_ = AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)

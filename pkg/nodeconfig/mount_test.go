@@ -4,14 +4,13 @@ import (
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
 )
 
 func TestMountPerNodeConfig(t *testing.T) {
-	testImage := &images.Image{Registry: "test-registry", Repository: "test", Name: "yq-test", Tag: "1.2.3", PullPolicy: corev1.PullNever}
+	testImage := "test-registry/test/yq-test:1.2.3"
 	tests := []struct {
 		name       string
 		dcConfig   *cassandra.DatacenterConfig
@@ -38,7 +37,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{Name: reconciliation.ServerConfigContainerName},
-							newPerNodeConfigInitContainer(&defaultPerNodeImage),
+							newPerNodeConfigInitContainer(""),
 						},
 						Volumes: []corev1.Volume{
 							newPerNodeConfigVolume("test-dc1-per-node-config"),

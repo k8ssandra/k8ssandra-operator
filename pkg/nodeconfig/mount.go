@@ -3,7 +3,6 @@ package nodeconfig
 import (
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -26,23 +25,10 @@ func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 }
 
 const (
-	DefaultPerNodeImageRepository = "mikefarah"
-	DefaultPerNodeImageName       = "yq"
-	DefaultPerNodeImageTag        = "4"
+	defaultPerNodeConfigInitContainerImage = "mikefarah/yq:4"
 )
 
-var (
-	defaultPerNodeImage = images.Image{
-		Registry:   images.DefaultRegistry,
-		Repository: DefaultPerNodeImageRepository,
-		Name:       DefaultPerNodeImageName,
-		Tag:        DefaultPerNodeImageTag,
-	}
-	// When changing the defaults above, please also change the kubebuilder marker in
-	// apis/k8ssandra/v1alpha1/k8ssandracluster_types.go accordingly.
-)
-
-func newPerNodeConfigInitContainer(image *images.Image) v1.Container {
+func newPerNodeConfigInitContainer(image string) v1.Container {
 	var perNodeConfigInitContainer = v1.Container{
 		Name: PerNodeConfigInitContainerName,
 		Resources: v1.ResourceRequirements{
@@ -89,10 +75,11 @@ func newPerNodeConfigInitContainer(image *images.Image) v1.Container {
 				"fi",
 		},
 	}
-
-	perNodeConfigImage := image.ApplyDefaults(defaultPerNodeImage)
-	perNodeConfigInitContainer.Image = perNodeConfigImage.String()
-	perNodeConfigInitContainer.ImagePullPolicy = perNodeConfigImage.PullPolicy
+	if image == "" {
+		perNodeConfigInitContainer.Image = defaultPerNodeConfigInitContainerImage
+	} else {
+		perNodeConfigInitContainer.Image = image
+	}
 	return perNodeConfigInitContainer
 }
 
