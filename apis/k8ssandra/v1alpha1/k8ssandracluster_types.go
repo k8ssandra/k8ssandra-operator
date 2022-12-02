@@ -303,7 +303,7 @@ type CassandraDatacenterTemplate struct {
 	// +optional
 	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
 
-	// Datacenter specific annotations/labels for pods (takes precdence to CassandraClusterTemplate CommonTags)
+	// Datacenter specific annotations/labels for pods (takes precedence to CassandraClusterTemplate CommonTags)
 	// +optional
 	PodTags *meta.MetaTags `json:"podTags,omitempty"`
 }
