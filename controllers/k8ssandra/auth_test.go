@@ -293,7 +293,6 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 
 	// verify not created
 	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
-	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultJmxUserSecretName(kc.Name))
 	verifyReplicatedSecretNotReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
@@ -362,8 +361,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 
 	t.Log("check that authentication is enabled in Reaper CRD")
 	require.Never(t, withReaper(func(r *reaperapi.Reaper) bool {
-		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")} ||
-			r.Spec.JmxUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultJmxUserSecretName("cluster1")}
+		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")}
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")
