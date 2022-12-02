@@ -5,6 +5,7 @@ import (
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,13 +19,7 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 			Name:        serviceName,
 			Namespace:   stargate.Namespace,
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				coreapi.NameLabel:      coreapi.NameLabelValue,
-				coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-				coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-				coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-				api.StargateLabel:      stargate.Name,
-			},
+			Labels:      createServiceLabels(stargate),
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -52,4 +47,19 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 	}
 	annotations.AddHashAnnotation(service)
 	return service
+}
+
+func createServiceLabels(stargate *api.Stargate) map[string]string {
+	labels := map[string]string{
+		coreapi.NameLabel:      coreapi.NameLabelValue,
+		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+		api.StargateLabel:      stargate.Name,
+	}
+
+	if meta := stargate.Spec.ResourceMeta; meta != nil && meta.ServiceTags != nil {
+		return utils.MergeMap(meta.ServiceTags.Labels, labels)
+	}
+	return labels
 }

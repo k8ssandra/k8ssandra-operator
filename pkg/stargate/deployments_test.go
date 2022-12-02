@@ -10,6 +10,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,25 @@ var (
 		Spec: api.StargateSpec{
 			DatacenterRef: corev1.LocalObjectReference{Name: dc.Name},
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
-				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
+				StargateClusterTemplate: api.StargateClusterTemplate{
+					StargateTemplate: api.StargateTemplate{
+						ResourceMeta: &meta.ResourceMeta{
+							OrchestrationTags: &meta.MetaTags{
+								Labels:      map[string]string{"deployment-label": "label-value"},
+								Annotations: map[string]string{"deployment-annotation": "annotation-value"},
+							},
+							ChildTags: &meta.MetaTags{
+								Labels:      map[string]string{"pod-label": "pod-label-value"},
+								Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
+							},
+							ServiceTags: &meta.MetaTags{
+								Labels:      map[string]string{"service-label": "service-label-value"},
+								Annotations: map[string]string{"service-annotation": "service-annotation-value"},
+							},
+						},
+					},
+					Size: 1,
+				},
 			},
 			CassandraEncryption: &api.CassandraEncryption{
 				ServerEncryptionStores: &encryption.Stores{
@@ -80,7 +99,6 @@ func TestNewDeployments(t *testing.T) {
 }
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
-
 	deployments := NewDeployments(stargate, dc)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
@@ -90,6 +108,8 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, namespace, deployment.Namespace)
 	assert.Contains(t, deployment.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
+	assert.Equal(t, "label-value", deployment.Labels["deployment-label"])
+	assert.Equal(t, "annotation-value", deployment.Annotations["deployment-annotation"])
 
 	assert.EqualValues(t, 1, *deployment.Spec.Replicas)
 
@@ -104,6 +124,9 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, "default", deployment.Spec.Template.Spec.ServiceAccountName)
 	assert.Equal(t, affinityForRack(dc, "default"), deployment.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
+
+	assert.Equal(t, "pod-label-value", deployment.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
 
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
@@ -180,6 +203,8 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	assert.Equal(t, namespace, deployment.Namespace)
 	assert.Contains(t, deployment.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
+	assert.Equal(t, "label-value", deployment.Labels["deployment-label"])
+	assert.Equal(t, "annotation-value", deployment.Annotations["deployment-annotation"])
 
 	assert.EqualValues(t, 3, *deployment.Spec.Replicas)
 
@@ -190,6 +215,8 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	assert.Equal(t, "s1", deployment.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
 
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
@@ -228,6 +255,8 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
+	assert.Equal(t, "label-value", deployment1.Labels["deployment-label"])
+	assert.Equal(t, "annotation-value", deployment1.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 3, *deployment1.Spec.Replicas)
 	assert.Contains(t, deployment1.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
@@ -235,6 +264,8 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Equal(t, "s1", deployment1.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment1.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "pod-annotation-value", deployment1.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
@@ -246,13 +277,18 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
+	assert.Equal(t, "label-value", deployment2.Labels["deployment-label"])
+	assert.Equal(t, "annotation-value", deployment2.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 3, *deployment2.Spec.Replicas)
 	assert.Contains(t, deployment2.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment2.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateDeploymentLabel)
+
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment2.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "pod-annotation-value", deployment2.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
@@ -264,10 +300,14 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment3 := deployments["cluster1-dc1-rack3-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Name)
+	assert.Equal(t, "label-value", deployment3.Labels["deployment-label"])
+	assert.Equal(t, "annotation-value", deployment3.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 2, *deployment3.Spec.Replicas)
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "pod-label-value", deployment3.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "pod-annotation-value", deployment3.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, "s1", deployment3.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])

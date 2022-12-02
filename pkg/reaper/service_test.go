@@ -3,6 +3,7 @@ package reaper
 import (
 	"testing"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,9 +18,13 @@ func TestNewService(t *testing.T) {
 
 	assert.Equal(t, key.Name, service.Name)
 	assert.Equal(t, key.Namespace, service.Namespace)
-	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Labels)
 
-	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Spec.Selector)
+	commonLabels := createServiceAndDeploymentLabels(reaper)
+	labels := utils.MergeMap(reaper.Spec.ReaperTemplate.ResourceMeta.ServiceTags.Labels, commonLabels)
+
+	assert.Equal(t, labels, service.Labels)
+
+	assert.Equal(t, commonLabels, service.Spec.Selector)
 	assert.Len(t, service.Spec.Ports, 2)
 
 	appPort := corev1.ServicePort{

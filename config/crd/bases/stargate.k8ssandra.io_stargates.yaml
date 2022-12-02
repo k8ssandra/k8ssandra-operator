@@ -2632,6 +2632,48 @@ spec:
                           format: int32
                           type: integer
                       type: object
+                    resourceMeta:
+                      description: labels and annotations for resources created by
+                        Stargate
+                      properties:
+                        childTags:
+                          description: metaTags for the child components (Pods)
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        orchestrationTags:
+                          description: metaTags for the orchestrator component (e.g.
+                            Statefulet, Deployment)
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        serviceTags:
+                          description: metaTags for the Service component
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                      type: object
                     resources:
                       description: Resources is the Kubernetes resource requests and
                         limits to apply, per Stargate pod. Leave nil to use defaults.
@@ -2911,6 +2953,47 @@ spec:
                       Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     format: int32
                     type: integer
+                type: object
+              resourceMeta:
+                description: labels and annotations for resources created by Stargate
+                properties:
+                  childTags:
+                    description: metaTags for the child components (Pods)
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  orchestrationTags:
+                    description: metaTags for the orchestrator component (e.g. Statefulet,
+                      Deployment)
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  serviceTags:
+                    description: metaTags for the Service component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                 type: object
               resources:
                 description: Resources is the Kubernetes resource requests and limits

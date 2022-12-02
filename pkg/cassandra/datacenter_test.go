@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"k8s.io/utils/pointer"
 
@@ -16,6 +17,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -872,6 +874,109 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				PerNodeInitContainerImage: "dc-level:latest",
 				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
+		{
+			name: "Set Cluster Pod Tags",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+				CommonPodTags: &meta.MetaTags{
+					Labels:      map[string]string{"label": "lvalue"},
+					Annotations: map[string]string{"annotation:": "avalue"},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      map[string]string{"label": "lvalue"},
+						Annotations: map[string]string{"annotation:": "avalue"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
+		{
+			name: "Set DC Pod Tags",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+				PodTags: &meta.MetaTags{
+					Labels:      map[string]string{"label": "lvalue"},
+					Annotations: map[string]string{"annotation:": "avalue"},
+				},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      map[string]string{"label": "lvalue"},
+						Annotations: map[string]string{"annotation:": "avalue"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
+		{
+			name: "Set Cluster & DC Tags",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+				CommonPodTags: &meta.MetaTags{
+					Labels:      map[string]string{"cluster-label": "cluster-lvalue"},
+					Annotations: map[string]string{"cluster-annotation:": "cluster-avalue"},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+				PodTags: &meta.MetaTags{
+					Labels:      map[string]string{"dc-label": "dc-lvalue"},
+					Annotations: map[string]string{"dc-annotation:": "dc-avalue"},
+				},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      map[string]string{"dc-label": "dc-lvalue", "cluster-label": "cluster-lvalue"},
+						Annotations: map[string]string{"dc-annotation:": "dc-avalue", "cluster-annotation:": "cluster-avalue"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
+		{
+			name: "DC Override Tags",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				CommonPodTags: &meta.MetaTags{
+					Labels:      map[string]string{"label": "cluster-lvalue"},
+					Annotations: map[string]string{"annotation:": "cluster-avalue"},
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{},
+				PodTags: &meta.MetaTags{
+					Labels:      map[string]string{"label": "dc-lvalue"},
+					Annotations: map[string]string{"annotation:": "dc-avalue"},
+				},
+			},
+			want: &DatacenterConfig{
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels:      map[string]string{"label": "dc-lvalue"},
+						Annotations: map[string]string{"annotation:": "dc-avalue"},
+					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},

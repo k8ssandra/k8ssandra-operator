@@ -1826,6 +1826,47 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              resourceMeta:
+                description: labels and annotations for resources created by Reaper
+                properties:
+                  childTags:
+                    description: metaTags for the child components (Pods)
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  orchestrationTags:
+                    description: metaTags for the orchestrator component (e.g. Statefulet,
+                      Deployment)
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  serviceTags:
+                    description: metaTags for the Service component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
               resources:
                 description: Main Container resources.
                 properties:

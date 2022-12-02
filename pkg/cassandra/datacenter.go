@@ -106,8 +106,8 @@ type DatacenterConfig struct {
 	ServerTruststorePassword  string
 	CDC                       *cassdcapi.CDCConfiguration
 	DseWorkloads              *cassdcapi.DseWorkloads
-	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
-	PerNodeConfigMapRef      corev1.LocalObjectReference
+	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
 
@@ -309,6 +309,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
+	if clusterTemplate.CommonPodTags != nil || dcTemplate.PodTags != nil {
+		AddPodTemplateSpecMeta(dcConfig, clusterTemplate, dcTemplate)
+	}
+
 	if len(mergedOptions.Containers) > 0 {
 		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
 	}
@@ -373,6 +377,28 @@ func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolum
 
 func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volume) {
 	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+}
+
+func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) {
+	var commonLabels, podLabels map[string]string
+	var commonAnnotations, podAnnotations map[string]string
+
+	if clusterTemplate.CommonPodTags != nil {
+		commonLabels = clusterTemplate.CommonPodTags.Labels
+		commonAnnotations = clusterTemplate.CommonPodTags.Annotations
+	}
+
+	if dcTemplate.PodTags != nil {
+		podLabels = dcTemplate.PodTags.Labels
+		podAnnotations = dcTemplate.PodTags.Annotations
+	}
+
+	labels := utils.MergeMap(commonLabels, podLabels)
+	annotations := utils.MergeMap(commonAnnotations, podAnnotations)
+	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
+		Annotations: annotations,
+		Labels:      labels,
+	}
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {

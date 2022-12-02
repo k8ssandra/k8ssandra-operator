@@ -8,6 +8,8 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,13 +35,31 @@ func TestNewDeployment(t *testing.T) {
 			Name: "truststore-secret",
 		}},
 	}
+	reaper.Spec.ResourceMeta = &meta.ResourceMeta{
+		OrchestrationTags: &meta.MetaTags{
+			Labels:      map[string]string{"deployment-label": "label-value"},
+			Annotations: map[string]string{"deployment-annotation": "annotation-value"},
+		},
+		ChildTags: &meta.MetaTags{
+			Labels:      map[string]string{"pod-label": "pod-label-value"},
+			Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
+		},
+		ServiceTags: &meta.MetaTags{
+			Labels:      map[string]string{"service-label": "service-label-value"},
+			Annotations: map[string]string{"service-annotation": "service-annotation-value"},
+		},
+	}
 
 	labels := createServiceAndDeploymentLabels(reaper)
+	deploymentLabels := utils.MergeMap(reaper.Spec.ResourceMeta.OrchestrationTags.Labels, labels)
+	podLabels := utils.MergeMap(reaper.Spec.ResourceMeta.ChildTags.Labels, labels)
+
 	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"))
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)
-	assert.Equal(t, labels, deployment.Labels)
+	assert.Equal(t, deploymentLabels, deployment.Labels)
+	assert.Equal(t, reaper.Spec.ResourceMeta.OrchestrationTags.Annotations, deployment.Annotations)
 	assert.Equal(t, reaper.Spec.ServiceAccountName, deployment.Spec.Template.Spec.ServiceAccountName)
 
 	selector := deployment.Spec.Selector
@@ -57,7 +77,8 @@ func TestNewDeployment(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, labels, deployment.Spec.Template.Labels)
+	assert.Equal(t, podLabels, deployment.Spec.Template.Labels)
+	assert.Equal(t, reaper.Spec.ResourceMeta.ChildTags.Annotations, deployment.Spec.Template.Annotations)
 
 	podSpec := deployment.Spec.Template.Spec
 	assert.Len(t, podSpec.Containers, 1)
@@ -445,6 +466,20 @@ func newTestReaper() *reaperapi.Reaper {
 			},
 			ReaperTemplate: reaperapi.ReaperTemplate{
 				Keyspace: "reaper_db",
+				ResourceMeta: &meta.ResourceMeta{
+					OrchestrationTags: &meta.MetaTags{
+						Labels:      map[string]string{"deployment-label": "label-value"},
+						Annotations: map[string]string{"deployment-annotation": "annotation-value"},
+					},
+					ChildTags: &meta.MetaTags{
+						Labels:      map[string]string{"pod-label": "pod-label-value"},
+						Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
+					},
+					ServiceTags: &meta.MetaTags{
+						Labels:      map[string]string{"service-label": "service-label-value"},
+						Annotations: map[string]string{"service-annotation": "service-annotation-value"},
+					},
+				},
 			},
 		},
 	}

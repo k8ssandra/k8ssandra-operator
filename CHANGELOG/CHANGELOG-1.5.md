@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
 * [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD
+* [FEATURE] [#501](https://github.com/k8ssandra/k8ssandra-operator/issues/501) Allow configuring annotations and labels on services, statefulsets, deployments and pods

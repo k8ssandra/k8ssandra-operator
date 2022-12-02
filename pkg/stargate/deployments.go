@@ -8,6 +8,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -98,18 +99,22 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		tolerations := template.Tolerations
 		affinity := computeAffinity(template, dc, &rack)
 
+		var deploymentAnnotations, podAnnotations map[string]string
+		if meta := template.ResourceMeta; meta != nil {
+			if meta.OrchestrationTags != nil {
+				deploymentAnnotations = meta.OrchestrationTags.Annotations
+			}
+			if meta.ChildTags != nil {
+				podAnnotations = meta.ChildTags.Annotations
+			}
+		}
+
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        deploymentName,
 				Namespace:   stargate.Namespace,
-				Annotations: map[string]string{},
-				Labels: map[string]string{
-					coreapi.NameLabel:      coreapi.NameLabelValue,
-					coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-					coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-					coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-					api.StargateLabel:      stargate.Name,
-				},
+				Annotations: deploymentAnnotations,
+				Labels:      createDeploymentLabels(stargate),
 			},
 
 			Spec: appsv1.DeploymentSpec{
@@ -125,14 +130,8 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 				Template: corev1.PodTemplateSpec{
 
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							coreapi.NameLabel:           coreapi.NameLabelValue,
-							coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
-							coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
-							coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
-							api.StargateLabel:           stargate.Name,
-							api.StargateDeploymentLabel: deploymentName,
-						},
+						Labels:      createPodLabels(stargate, deploymentName),
+						Annotations: podAnnotations,
 					},
 
 					Spec: corev1.PodSpec{
@@ -470,6 +469,38 @@ func configureAuth(stargate *api.Stargate, deployment *appsv1.Deployment) {
 			}
 		}
 	}
+}
+
+func createDeploymentLabels(stargate *api.Stargate) map[string]string {
+	commonLabels := map[string]string{
+		coreapi.NameLabel:      coreapi.NameLabelValue,
+		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+		api.StargateLabel:      stargate.Name,
+	}
+
+	if meta := stargate.Spec.ResourceMeta; meta != nil && meta.OrchestrationTags != nil {
+		return utils.MergeMap(meta.OrchestrationTags.Labels, commonLabels)
+	}
+	return commonLabels
+}
+
+func createPodLabels(stargate *api.Stargate, deploymentName string) map[string]string {
+	commonLabels := map[string]string{
+		coreapi.NameLabel:           coreapi.NameLabelValue,
+		coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
+		coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
+		coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
+		api.StargateLabel:           stargate.Name,
+		api.StargateDeploymentLabel: deploymentName,
+	}
+
+	if meta := stargate.Spec.ResourceMeta; meta != nil && meta.ChildTags != nil {
+		return utils.MergeMap(meta.ChildTags.Labels, commonLabels)
+	}
+
+	return commonLabels
 }
 
 func GeneratedConfigMapName(clusterName, dcName string) string {

@@ -205,6 +205,18 @@ spec:
                       the cluster name will be the same as the K8ssandraCluster CRD
                       name.
                     type: string
+                  commonPodTags:
+                    description: annotations/labels for CassandraDatacenter pods
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
                   config:
                     description: CassandraConfig contains configuration settings that
                       are applied to cassandra.yaml, dse.yaml and the various jvm*.options
@@ -7606,6 +7618,19 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        podTags:
+                          description: Datacenter specific annotations/labels for
+                            pods (takes precdence to CassandraClusterTemplate CommonTags)
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
                         racks:
                           description: Racks is a list of named racks. Note that racks
                             are used to create node affinity. //
@@ -10575,6 +10600,49 @@ spec:
                                         format: int32
                                         type: integer
                                     type: object
+                                  resourceMeta:
+                                    description: labels and annotations for resources
+                                      created by Stargate
+                                    properties:
+                                      childTags:
+                                        description: metaTags for the child components
+                                          (Pods)
+                                        properties:
+                                          annotations:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          labels:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      orchestrationTags:
+                                        description: metaTags for the orchestrator
+                                          component (e.g. Statefulet, Deployment)
+                                        properties:
+                                          annotations:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          labels:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      serviceTags:
+                                        description: metaTags for the Service component
+                                        properties:
+                                          annotations:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          labels:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                    type: object
                                   resources:
                                     description: Resources is the Kubernetes resource
                                       requests and limits to apply, per Stargate pod.
@@ -10883,6 +10951,48 @@ spec:
                                     value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                                   format: int32
                                   type: integer
+                              type: object
+                            resourceMeta:
+                              description: labels and annotations for resources created
+                                by Stargate
+                              properties:
+                                childTags:
+                                  description: metaTags for the child components (Pods)
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                orchestrationTags:
+                                  description: metaTags for the orchestrator component
+                                    (e.g. Statefulet, Deployment)
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                serviceTags:
+                                  description: metaTags for the Service component
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
                               type: object
                             resources:
                               description: Resources is the Kubernetes resource requests
@@ -17742,6 +17852,47 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  resourceMeta:
+                    description: labels and annotations for resources created by Reaper
+                    properties:
+                      childTags:
+                        description: metaTags for the child components (Pods)
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      orchestrationTags:
+                        description: metaTags for the orchestrator component (e.g.
+                          Statefulet, Deployment)
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      serviceTags:
+                        description: metaTags for the Service component
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                    type: object
                   resources:
                     description: Main Container resources.
                     properties:
@@ -19341,6 +19492,47 @@ spec:
                           https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
+                    type: object
+                  resourceMeta:
+                    description: labels and annotations for resources created by Stargate
+                    properties:
+                      childTags:
+                        description: metaTags for the child components (Pods)
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      orchestrationTags:
+                        description: metaTags for the orchestrator component (e.g.
+                          Statefulet, Deployment)
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      serviceTags:
+                        description: metaTags for the Service component
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
                     type: object
                   resources:
                     description: Resources is the Kubernetes resource requests and

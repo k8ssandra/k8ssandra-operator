@@ -20,6 +20,7 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,6 +135,10 @@ type ReaperTemplate struct {
 	// (unless overriden by DC specific settings)
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
+
+	// labels and annotations for resources created by Reaper
+	// +optional
+	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

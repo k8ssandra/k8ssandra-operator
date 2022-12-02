@@ -38,3 +38,19 @@ func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
 
 	return utils.MergeMap(labels, commonLabels)
 }
+
+func createDeploymentLabels(r *reaperapi.Reaper) map[string]string {
+	labels := createServiceAndDeploymentLabels(r)
+	if meta := r.Spec.ResourceMeta; meta != nil && meta.OrchestrationTags != nil {
+		return utils.MergeMap(meta.OrchestrationTags.Labels, labels)
+	}
+	return labels
+}
+
+func createPodLabels(r *reaperapi.Reaper) map[string]string {
+	labels := createServiceAndDeploymentLabels(r)
+	if meta := r.Spec.ResourceMeta; meta != nil && r.Spec.ResourceMeta.ChildTags != nil {
+		return utils.MergeMap(meta.ChildTags.Labels, labels)
+	}
+	return labels
+}

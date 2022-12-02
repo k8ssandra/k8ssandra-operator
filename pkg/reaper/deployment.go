@@ -42,8 +42,6 @@ var defaultImage = images.Image{
 }
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, authVars ...*corev1.EnvVar) *appsv1.Deployment {
-	labels := createServiceAndDeploymentLabels(reaper)
-
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
@@ -184,17 +182,21 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
+	deploymentAnnotations, podAnnotations := getAnnotations(reaper)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reaper.Namespace,
-			Name:      reaper.Name,
-			Labels:    labels,
+			Namespace:   reaper.Namespace,
+			Name:        reaper.Name,
+			Labels:      createDeploymentLabels(reaper),
+			Annotations: deploymentAnnotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      createPodLabels(reaper),
+					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
@@ -350,4 +352,18 @@ func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacente
 		}
 	}
 	return
+}
+
+func getAnnotations(reaper *api.Reaper) (map[string]string, map[string]string) {
+	var deploymentAnnotations, podAnnotations map[string]string
+	if meta := reaper.Spec.ResourceMeta; meta != nil {
+		if meta.OrchestrationTags != nil {
+			deploymentAnnotations = meta.OrchestrationTags.Annotations
+		}
+		if meta.ChildTags != nil {
+			podAnnotations = meta.ChildTags.Annotations
+		}
+	}
+
+	return deploymentAnnotations, podAnnotations
 }

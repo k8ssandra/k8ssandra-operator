@@ -24,6 +24,7 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -261,6 +262,10 @@ type CassandraClusterTemplate struct {
 	// +kubebuilder:validation:Enum=cassandra;dse
 	// +kubebuilder:default=cassandra
 	ServerType ServerDistribution `json:"serverType,omitempty"`
+
+	// annotations/labels for CassandraDatacenter pods
+	// +optional
+	CommonPodTags *meta.MetaTags `json:"commonPodTags,omitEmpty"`
 }
 
 type CassandraDatacenterTemplate struct {
@@ -297,6 +302,10 @@ type CassandraDatacenterTemplate struct {
 	// the pod are merged into their respective configuration files.
 	// +optional
 	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
+
+	// Datacenter specific annotations/labels for pods (takes precdence to CassandraClusterTemplate CommonTags)
+	// +optional
+	PodTags *meta.MetaTags `json:"podTags,omitempty"`
 }
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
