@@ -95,7 +95,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		volumeMounts := computeVolumeMounts(template, encryptionVolumesMounts)
 		serviceAccountName := computeServiceAccount(template)
 		nodeSelector := computeNodeSelector(template, dc)
-		tolerations := computeTolerations(template, dc)
+		tolerations := template.Tolerations
 		affinity := computeAffinity(template, dc, &rack)
 
 		deployment := &appsv1.Deployment{
@@ -409,13 +409,6 @@ func computeNodeSelector(template *api.StargateTemplate, dc *cassdcapi.Cassandra
 		return dc.Spec.PodTemplateSpec.Spec.NodeSelector
 	}
 	return nil
-}
-
-func computeTolerations(template *api.StargateTemplate, dc *cassdcapi.CassandraDatacenter) []corev1.Toleration {
-	if template.Tolerations != nil {
-		return template.Tolerations
-	}
-	return dc.Spec.Tolerations
 }
 
 func computeAffinity(template *api.StargateTemplate, dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) *corev1.Affinity {
