@@ -37,8 +37,8 @@ type K8ssandraTaskSpec struct {
 	// The names of the targeted datacenters. If omitted, will default to all DCs in spec order.
 	Datacenters []string `json:"datacenters,omitempty"`
 
-	// TODO replace with CassandraTaskTemplate (once k8ssandra/cass-operator#458 merged)
-	Template cassapi.CassandraTaskSpec `json:"template,omitempty"`
+	// The characteristics of the CassandraTask that will get created for each DC.
+	Template cassapi.CassandraTaskTemplate `json:"template,omitempty"`
 }
 
 // K8ssandraTaskStatus defines the observed state of K8ssandraTask

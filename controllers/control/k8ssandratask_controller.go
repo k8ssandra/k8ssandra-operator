@@ -272,6 +272,12 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 }
 
 func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cassapi.CassandraTask {
+	template := k8Task.Spec.Template
+
+	// Never set the TTL on the CassandraTask. We manage it ourselves on the K8ssandraTask, once it expires we'll
+	// cascade-delete the dependent CassandraTasks.
+	template.TTLSecondsAfterFinished = &noTTL
+
 	dcTask := &cassapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
@@ -286,19 +292,9 @@ func newDcTask(k8Task *api.K8ssandraTask, namespace string, dcName string) *cass
 				api.K8ssandraTaskNamespaceLabel: k8Task.Namespace,
 			},
 		},
-
 		Spec: cassapi.CassandraTaskSpec{
-			Datacenter: corev1.ObjectReference{Namespace: namespace, Name: dcName},
-
-			// TODO revisit this once k8ssandra/cass-operator#458 merged
-			ScheduledTime:     k8Task.Spec.Template.ScheduledTime,
-			Jobs:              k8Task.Spec.Template.Jobs,
-			RestartPolicy:     k8Task.Spec.Template.RestartPolicy,
-			ConcurrencyPolicy: k8Task.Spec.Template.ConcurrencyPolicy,
-
-			// Never set the TTL here. We manage it ourselves on the K8ssandraTask, once it expires we'll cascade-delete
-			// the CassandraTasks.
-			TTLSecondsAfterFinished: &noTTL,
+			Datacenter:            corev1.ObjectReference{Namespace: namespace, Name: dcName},
+			CassandraTaskTemplate: template,
 		},
 	}
 	return dcTask
