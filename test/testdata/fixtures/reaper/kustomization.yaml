@@ -4,5 +4,4 @@ resources:
   - cassdc.yaml
   - reaper.yaml
   - reaper-cql-secret.yaml
-  - reaper-jmx-secret.yaml
   - reaper-ui-secret.yaml

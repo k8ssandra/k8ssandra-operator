@@ -57,18 +57,13 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 		if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 			logger.Info("Reconciling Reaper user secrets")
 			var cassandraUserSecretRef corev1.LocalObjectReference
-			var jmxUserSecretRef corev1.LocalObjectReference
 			var uiUserSecretRef corev1.LocalObjectReference
 			if kc.Spec.Reaper != nil {
 				cassandraUserSecretRef = kc.Spec.Reaper.CassandraUserSecretRef
-				jmxUserSecretRef = kc.Spec.Reaper.JmxUserSecretRef
 				uiUserSecretRef = kc.Spec.Reaper.UiUserSecretRef
 			}
 			if cassandraUserSecretRef.Name == "" {
 				cassandraUserSecretRef.Name = reaper.DefaultUserSecretName(kc.SanitizedName())
-			}
-			if jmxUserSecretRef.Name == "" {
-				jmxUserSecretRef.Name = reaper.DefaultJmxUserSecretName(kc.SanitizedName())
 			}
 			if uiUserSecretRef.Name == "" {
 				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.SanitizedName())
@@ -76,10 +71,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			kcKey := utils.GetKey(kc)
 			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
 				logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
-				return result.Error(err)
-			}
-			if err := secret.ReconcileSecret(ctx, r.Client, jmxUserSecretRef.Name, kcKey); err != nil {
-				logger.Error(err, "Failed to reconcile Reaper JMX user secret", "ReaperJmxUserSecretRef", jmxUserSecretRef)
 				return result.Error(err)
 			}
 			if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kcKey); err != nil {

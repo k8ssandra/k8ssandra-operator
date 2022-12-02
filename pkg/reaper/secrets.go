@@ -39,11 +39,6 @@ func DefaultUserSecretName(clusterName string) string {
 	return fmt.Sprintf("%v-reaper", clusterName)
 }
 
-// DefaultJmxUserSecretName generates a name for the Reaper JMX user, that is derived from the Cassandra cluster name.
-func DefaultJmxUserSecretName(clusterName string) string {
-	return fmt.Sprintf("%v-reaper-jmx", clusterName)
-}
-
 func DefaultUiSecretName(clusterName string) string {
 	return fmt.Sprintf("%v-reaper-ui", clusterName)
 }

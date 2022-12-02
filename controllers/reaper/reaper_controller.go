@@ -370,7 +370,8 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 		secretRef = &actualReaper.Spec.CassandraUserSecretRef
 		envVars = []*corev1.EnvVar{reaper.EnableCassAuthVar}
 	case "jmx":
-		secretRef = &actualReaper.Spec.JmxUserSecretRef
+		// JMX auth is based on the CQL role, so reuse the same secret (JmxUserSecretRef is deprecated)
+		secretRef = &actualReaper.Spec.CassandraUserSecretRef
 		envVars = []*corev1.EnvVar{}
 	case "ui":
 		secretRef = &actualReaper.Spec.UiUserSecretRef

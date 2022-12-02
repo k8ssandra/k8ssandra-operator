@@ -8,8 +8,6 @@ spec:
     name: dc1
   cassandraUserSecretRef:
     name: reaper-cql-secret
-  jmxUserSecretRef:
-    name: reaper-jmx-secret
   uiUserSecretRef:
     name: reaper-ui-secret
   containerImage:
