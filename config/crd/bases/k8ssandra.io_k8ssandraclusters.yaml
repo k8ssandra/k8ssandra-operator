@@ -1308,13 +1308,13 @@ spec:
                           type: string
                         ports:
                           description: List of ports to expose from the container.
-                            Exposing a port here gives the system additional information
-                            about the network connections a container uses, but is
-                            primarily informational. Not specifying a port here DOES
-                            NOT prevent that port from being exposed. Any port which
-                            is listening on the default "0.0.0.0" address inside a
-                            container will be accessible from the network. Cannot
-                            be updated.
+                            Not specifying a port here DOES NOT prevent that port
+                            from being exposed. Any port which is listening on the
+                            default "0.0.0.0" address inside a container will be accessible
+                            from the network. Modifying this array with strategic
+                            merge patch may corrupt the data. For more information
+                            See https://github.com/kubernetes/kubernetes/issues/108255.
+                            Cannot be updated.
                           items:
                             description: ContainerPort represents a network port in
                               a single container.
@@ -3218,13 +3218,13 @@ spec:
                                 type: string
                               ports:
                                 description: List of ports to expose from the container.
-                                  Exposing a port here gives the system additional
-                                  information about the network connections a container
-                                  uses, but is primarily informational. Not specifying
-                                  a port here DOES NOT prevent that port from being
-                                  exposed. Any port which is listening on the default
-                                  "0.0.0.0" address inside a container will be accessible
-                                  from the network. Cannot be updated.
+                                  Not specifying a port here DOES NOT prevent that
+                                  port from being exposed. Any port which is listening
+                                  on the default "0.0.0.0" address inside a container
+                                  will be accessible from the network. Modifying this
+                                  array with strategic merge patch may corrupt the
+                                  data. For more information See https://github.com/kubernetes/kubernetes/issues/108255.
+                                  Cannot be updated.
                                 items:
                                   description: ContainerPort represents a network
                                     port in a single container.
@@ -6561,13 +6561,13 @@ spec:
                                 type: string
                               ports:
                                 description: List of ports to expose from the container.
-                                  Exposing a port here gives the system additional
-                                  information about the network connections a container
-                                  uses, but is primarily informational. Not specifying
-                                  a port here DOES NOT prevent that port from being
-                                  exposed. Any port which is listening on the default
-                                  "0.0.0.0" address inside a container will be accessible
-                                  from the network. Cannot be updated.
+                                  Not specifying a port here DOES NOT prevent that
+                                  port from being exposed. Any port which is listening
+                                  on the default "0.0.0.0" address inside a container
+                                  will be accessible from the network. Modifying this
+                                  array with strategic merge patch may corrupt the
+                                  data. For more information See https://github.com/kubernetes/kubernetes/issues/108255.
+                                  Cannot be updated.
                                 items:
                                   description: ContainerPort represents a network
                                     port in a single container.
@@ -13993,13 +13993,13 @@ spec:
                           type: string
                         ports:
                           description: List of ports to expose from the container.
-                            Exposing a port here gives the system additional information
-                            about the network connections a container uses, but is
-                            primarily informational. Not specifying a port here DOES
-                            NOT prevent that port from being exposed. Any port which
-                            is listening on the default "0.0.0.0" address inside a
-                            container will be accessible from the network. Cannot
-                            be updated.
+                            Not specifying a port here DOES NOT prevent that port
+                            from being exposed. Any port which is listening on the
+                            default "0.0.0.0" address inside a container will be accessible
+                            from the network. Modifying this array with strategic
+                            merge patch may corrupt the data. For more information
+                            See https://github.com/kubernetes/kubernetes/issues/108255.
+                            Cannot be updated.
                           items:
                             description: ContainerPort represents a network port in
                               a single container.
@@ -19562,7 +19562,7 @@ spec:
                           description: TrackedTasks tracks the tasks for completion
                             that were created by the cass-operator
                           items:
-                            description: 'ObjectReference contains enough information
+                            description: "ObjectReference contains enough information
                               to let you inspect or modify the referred object. ---
                               New uses of this type are discouraged because of difficulty
                               describing its usage when embedded in APIs. 1. Ignored
@@ -19571,8 +19571,8 @@ spec:
                               are both very rarely valid in actual usage. 2. Invalid
                               usage help.  It is impossible to add specific help for
                               individual usage.  In most embedded usages, there are
-                              particular restrictions like, "must refer only to types
-                              A and B" or "UID not honored" or "name must be restricted".
+                              particular restrictions like, \"must refer only to types
+                              A and B\" or \"UID not honored\" or \"name must be restricted\".
                               Those cannot be well described when embedded. 3. Inconsistent
                               validation.  Because the usages are different, the validation
                               rules are different by usage, which makes it hard for
@@ -19584,12 +19584,12 @@ spec:
                               and the version of the actual struct is irrelevant.
                               5. We cannot easily change it.  Because this type is
                               embedded in many locations, updates to this type will
-                              affect numerous schemas.  Don''t make new APIs embed
-                              an underspecified API type they do not control. Instead
+                              affect numerous schemas.  Don't make new APIs embed
+                              an underspecified API type they do not control. \n Instead
                               of using this type, create a locally provided and used
                               type that is well-focused on your reference. For example,
                               ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533
-                              .'
+                              ."
                             properties:
                               apiVersion:
                                 description: API version of the referent.
