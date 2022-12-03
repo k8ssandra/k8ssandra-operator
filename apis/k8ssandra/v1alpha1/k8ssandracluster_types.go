@@ -263,9 +263,9 @@ type CassandraClusterTemplate struct {
 	// +kubebuilder:default=cassandra
 	ServerType ServerDistribution `json:"serverType,omitempty"`
 
-	// annotations/labels for CassandraDatacenter pods
+	// datacenter specific annotations/labesl for resources created by the CassandraDatacenter
 	// +optional
-	CommonPodTags *meta.MetaTags `json:"commonPodTags,omitEmpty"`
+	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
 
 type CassandraDatacenterTemplate struct {
@@ -303,9 +303,9 @@ type CassandraDatacenterTemplate struct {
 	// +optional
 	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
 
-	// Datacenter specific annotations/labels for pods (takes precedence to CassandraClusterTemplate CommonTags)
+	// datacenter specific annotations/labesl for resources created by the CassandraDatacenter
 	// +optional
-	PodTags *meta.MetaTags `json:"podTags,omitempty"`
+	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC

@@ -110,6 +110,7 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
+	ServiceConfig             *cassdcapi.ServiceConfig
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -190,6 +191,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.ManagementApiAuth != nil {
 		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
+	}
+
+	if template.ServiceConfig != nil {
+		dc.Spec.AdditionalServiceConfig = *template.ServiceConfig
 	}
 
 	dc.Spec.Tolerations = template.Tolerations
@@ -309,8 +314,9 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
-	if clusterTemplate.CommonPodTags != nil || dcTemplate.PodTags != nil {
+	if clusterTemplate.ResourceMeta != nil || dcTemplate.ResourceMeta != nil {
 		AddPodTemplateSpecMeta(dcConfig, clusterTemplate, dcTemplate)
+		AddServiceConfig(dcConfig, clusterTemplate, dcTemplate)
 	}
 
 	if len(mergedOptions.Containers) > 0 {
@@ -383,14 +389,14 @@ func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, clusterTemplate *api.Cas
 	var commonLabels, podLabels map[string]string
 	var commonAnnotations, podAnnotations map[string]string
 
-	if clusterTemplate.CommonPodTags != nil {
-		commonLabels = clusterTemplate.CommonPodTags.Labels
-		commonAnnotations = clusterTemplate.CommonPodTags.Annotations
+	if clMeta := clusterTemplate.ResourceMeta; clMeta != nil && clMeta.ChildTags != nil {
+		commonLabels = clMeta.ChildTags.Labels
+		commonAnnotations = clMeta.ChildTags.Annotations
 	}
 
-	if dcTemplate.PodTags != nil {
-		podLabels = dcTemplate.PodTags.Labels
-		podAnnotations = dcTemplate.PodTags.Annotations
+	if dcMeta := dcTemplate.ResourceMeta; dcMeta != nil && dcMeta.ChildTags != nil {
+		podLabels = dcMeta.ChildTags.Labels
+		podAnnotations = dcMeta.ChildTags.Annotations
 	}
 
 	labels := utils.MergeMap(commonLabels, podLabels)
@@ -399,6 +405,44 @@ func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, clusterTemplate *api.Cas
 		Annotations: annotations,
 		Labels:      labels,
 	}
+}
+
+func AddServiceConfig(dcConfig *DatacenterConfig, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) {
+	var commonLabels, commonAnnotations map[string]string
+	if clusterMeta := clusterTemplate.ResourceMeta; clusterMeta != nil && clusterMeta.ServiceTags != nil {
+		commonLabels = clusterMeta.ServiceTags.Labels
+		commonAnnotations = clusterMeta.ServiceTags.Annotations
+	}
+
+	var dcLabels, dcAnnotations map[string]string
+	if dcMeta := dcTemplate.ResourceMeta; dcMeta != nil && dcMeta.ServiceTags != nil {
+		dcLabels = dcMeta.ServiceTags.Labels
+		dcAnnotations = dcMeta.ServiceTags.Annotations
+	}
+
+	dcConfig.ServiceConfig = &cassdcapi.ServiceConfig{
+		DatacenterService: cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(commonLabels, dcLabels),
+			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
+		},
+		SeedService: cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(commonLabels, dcLabels),
+			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
+		},
+		AllPodsService: cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(commonLabels, dcLabels),
+			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
+		},
+		AdditionalSeedService: cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(commonLabels, dcLabels),
+			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
+		},
+		NodePortService: cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(commonLabels, dcLabels),
+			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
+		},
+	}
+
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
