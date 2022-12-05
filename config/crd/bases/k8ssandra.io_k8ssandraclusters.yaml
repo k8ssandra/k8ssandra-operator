@@ -15102,7 +15102,7 @@ spec:
                       type: object
                     type: array
                   resourceMeta:
-                    description: datacenter specific annotations/labesl for resources
+                    description: cluster specific annotations/labesl for resources
                       created by the CassandraDatacenter
                     properties:
                       childTags:

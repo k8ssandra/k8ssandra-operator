@@ -263,7 +263,7 @@ type CassandraClusterTemplate struct {
 	// +kubebuilder:default=cassandra
 	ServerType ServerDistribution `json:"serverType,omitempty"`
 
-	// datacenter specific annotations/labesl for resources created by the CassandraDatacenter
+	// cluster specific annotations/labesl for resources created by the CassandraDatacenter
 	// +optional
 	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
