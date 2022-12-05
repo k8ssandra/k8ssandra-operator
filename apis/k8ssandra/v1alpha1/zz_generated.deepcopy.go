@@ -141,11 +141,6 @@ func (in *CassandraClusterTemplate) DeepCopyInto(out *CassandraClusterTemplate) 
 		*out = new(encryption.Stores)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.CommonPodTags != nil {
-		in, out := &in.CommonPodTags, &out.CommonPodTags
-		*out = new(meta.MetaTags)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.ResourceMeta != nil {
 		in, out := &in.ResourceMeta, &out.ResourceMeta
 		*out = new(meta.ResourceMeta)
@@ -192,11 +187,6 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 		(*in).DeepCopyInto(*out)
 	}
 	out.PerNodeConfigMapRef = in.PerNodeConfigMapRef
-	if in.PodTags != nil {
-		in, out := &in.PodTags, &out.PodTags
-		*out = new(meta.MetaTags)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.ResourceMeta != nil {
 		in, out := &in.ResourceMeta, &out.ResourceMeta
 		*out = new(meta.ResourceMeta)
