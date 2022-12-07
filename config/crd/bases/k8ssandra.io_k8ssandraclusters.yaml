@@ -7400,6 +7400,13 @@ spec:
                                   type: integer
                               type: object
                           type: object
+                        perNodeConfigInitContainerImage:
+                          default: mikefarah/yq:4
+                          description: The image to use in each Cassandra pod for
+                            the (short-lived) init container that merges global and
+                            perNodeConfig configuration. This is only useful when
+                            PerNodeConfigMapRef is set. The default is "mikefarah/yq:4".
+                          type: string
                         perNodeConfigMapRef:
                           description: 'PerNodeConfigMapRef is a reference to a ConfigMap
                             that contains per-node configuration for this DC. The
@@ -14765,6 +14772,13 @@ spec:
                             type: integer
                         type: object
                     type: object
+                  perNodeConfigInitContainerImage:
+                    default: mikefarah/yq:4
+                    description: The image to use in each Cassandra pod for the (short-lived)
+                      init container that merges global and perNodeConfig configuration.
+                      This is only useful when PerNodeConfigMapRef is set. The default
+                      is "mikefarah/yq:4".
+                    type: string
                   podSecurityContext:
                     description: PodSecurityContext defines the security context for
                       the Cassandra pods.

@@ -19,57 +19,68 @@ func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 	// if the config-builder init container isn't found, declare a placeholder now to guarantee order of execution
 	cassandra.UpdateInitContainer(dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(container *v1.Container) {})
 	// add per-node-config init container
-	_ = cassandra.AddInitContainersToPodTemplateSpec(dcConfig, perNodeConfigInitContainer)
+	_ = cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
 	// add per-node config volume to pod spec
 	cassandra.AddVolumesToPodTemplateSpec(dcConfig, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
 }
 
-var perNodeConfigInitContainer = v1.Container{
-	Name:  PerNodeConfigInitContainerName,
-	Image: "mikefarah/yq:4",
-	Resources: v1.ResourceRequirements{
-		Requests: v1.ResourceList{
-			"cpu":    resource.MustParse("10m"),
-			"memory": resource.MustParse("16Mi"),
+const (
+	defaultPerNodeConfigInitContainerImage = "mikefarah/yq:4"
+)
+
+func newPerNodeConfigInitContainer(image string) v1.Container {
+	var perNodeConfigInitContainer = v1.Container{
+		Name: PerNodeConfigInitContainerName,
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				"cpu":    resource.MustParse("10m"),
+				"memory": resource.MustParse("16Mi"),
+			},
+			Limits: v1.ResourceList{
+				"cpu":    resource.MustParse("100m"),
+				"memory": resource.MustParse("64Mi"),
+			},
 		},
-		Limits: v1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("64Mi"),
-		},
-	},
-	Env: []v1.EnvVar{
-		{
-			Name: "POD_NAME",
-			ValueFrom: &v1.EnvVarSource{
-				FieldRef: &v1.ObjectFieldSelector{
-					FieldPath: "metadata.name",
+		Env: []v1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &v1.EnvVarSource{
+					FieldRef: &v1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
 				},
 			},
 		},
-	},
-	VolumeMounts: []v1.VolumeMount{
-		{
-			Name:      "server-config", // volume will be created by cass-operator
-			MountPath: "/config",
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "server-config", // volume will be created by cass-operator
+				MountPath: "/config",
+			},
+			{
+				Name:      PerNodeConfigVolumeName,
+				MountPath: "/per-node-config",
+			},
 		},
-		{
-			Name:      PerNodeConfigVolumeName,
-			MountPath: "/per-node-config",
+		Command: []string{
+			"sh",
+			"-c",
+			"if [ -e /per-node-config/${POD_NAME}_* ]; then " +
+				"for src in /per-node-config/${POD_NAME}_*; do " +
+				"dest=/config/`echo $src | cut -d \"_\" -f2`; " +
+				"yq ea '. as $item ireduce ({}; . * $item)' -i $dest $src && echo merged $src into $dest || exit 1; " +
+				"done; " +
+				"echo done merging per-node config for pod $POD_NAME; " +
+				"else " +
+				"echo no per-node config found for pod $POD_NAME; " +
+				"fi",
 		},
-	},
-	Command: []string{
-		"sh",
-		"-c",
-		"if [ -e /per-node-config/${POD_NAME}_* ]; then " +
-			"for src in /per-node-config/${POD_NAME}_*; do " +
-			"dest=/config/`echo $src | cut -d \"_\" -f2`; " +
-			"yq ea '. as $item ireduce ({}; . * $item)' -i $dest $src && echo merged $src into $dest || exit 1; " +
-			"done; " +
-			"echo done merging per-node config for pod $POD_NAME; " +
-			"else " +
-			"echo no per-node config found for pod $POD_NAME; " +
-			"fi",
-	},
+	}
+	if image == "" {
+		perNodeConfigInitContainer.Image = defaultPerNodeConfigInitContainerImage
+	} else {
+		perNodeConfigInitContainer.Image = image
+	}
+	return perNodeConfigInitContainer
 }
 
 func newPerNodeConfigVolume(perNodeConfigMapName string) v1.Volume {

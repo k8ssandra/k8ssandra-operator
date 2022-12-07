@@ -10,6 +10,7 @@ import (
 )
 
 func TestMountPerNodeConfig(t *testing.T) {
+	testImage := "test-registry/test/yq-test:1.2.3"
 	tests := []struct {
 		name       string
 		dcConfig   *cassandra.DatacenterConfig
@@ -36,7 +37,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{Name: reconciliation.ServerConfigContainerName},
-							perNodeConfigInitContainer,
+							newPerNodeConfigInitContainer(""),
 						},
 						Volumes: []corev1.Volume{
 							newPerNodeConfigVolume("test-dc1-per-node-config"),
@@ -46,6 +47,41 @@ func TestMountPerNodeConfig(t *testing.T) {
 				PerNodeConfigMapRef: corev1.LocalObjectReference{
 					Name: "test-dc1-per-node-config",
 				},
+			},
+		},
+		{
+			name: "overriding-image",
+			dcConfig: &cassandra.DatacenterConfig{
+				Meta: api.EmbeddedObjectMeta{
+					Name:      "dc1",
+					Namespace: "dc1-ns",
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{},
+				PerNodeConfigMapRef: corev1.LocalObjectReference{
+					Name: "test-dc1-per-node-config",
+				},
+				PerNodeInitContainerImage: testImage,
+			},
+			wantConfig: &cassandra.DatacenterConfig{
+				Meta: api.EmbeddedObjectMeta{
+					Name:      "dc1",
+					Namespace: "dc1-ns",
+				},
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						InitContainers: []corev1.Container{
+							{Name: reconciliation.ServerConfigContainerName},
+							newPerNodeConfigInitContainer(testImage),
+						},
+						Volumes: []corev1.Volume{
+							newPerNodeConfigVolume("test-dc1-per-node-config"),
+						},
+					},
+				},
+				PerNodeConfigMapRef: corev1.LocalObjectReference{
+					Name: "test-dc1-per-node-config",
+				},
+				PerNodeInitContainerImage: testImage,
 			},
 		},
 	}
