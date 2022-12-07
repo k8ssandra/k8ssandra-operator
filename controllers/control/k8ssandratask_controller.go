@@ -153,7 +153,6 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !kcExists {
 		return r.reportInvalidSpec(ctx, kTask, "Unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
-	patch := client.MergeFrom(kTask.DeepCopy())
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
 		return r.reportInvalidSpec(ctx, kTask, err.Error())
 	} else {
@@ -187,7 +186,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 		wasComplete := kTask.Status.CompletionTime != nil
 		kTask.BuildGlobalStatus()
-		if err = r.Status().Patch(ctx, kTask, patch); err != nil {
+		if err = r.Status().Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
 		}
 		// If the status update set a completion time, we want to reconcile again in order to handle the TTL. But
