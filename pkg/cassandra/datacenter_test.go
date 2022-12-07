@@ -910,7 +910,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 		&template,
 	)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
+	assert.Equal(t, &corev1.PodTemplateSpec{}, dc.Spec.PodTemplateSpec)
 }
 
 func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {

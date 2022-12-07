@@ -2,7 +2,6 @@ package cassandra
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -164,13 +163,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			SuperuserSecretName: superUserSecretName,
 			Users:               template.Users,
 			Networking:          template.Networking,
+			PodTemplateSpec:     &template.PodTemplateSpec,
 			CDC:                 template.CDC,
 			DseWorkloads:        template.DseWorkloads,
 		},
-	}
-
-	if !reflect.ValueOf(template.PodTemplateSpec).IsZero() {
-		dc.Spec.PodTemplateSpec = &template.PodTemplateSpec
 	}
 
 	if template.Resources != nil {
@@ -185,8 +181,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
 
-	position, found := FindInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName)
-	if found {
+	if position, found := FindInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName); found {
 		configBuilderResources := template.PodTemplateSpec.Spec.InitContainers[position].Resources
 		if configBuilderResources.Limits != nil || configBuilderResources.Requests != nil {
 			dc.Spec.ConfigBuilderResources = configBuilderResources
