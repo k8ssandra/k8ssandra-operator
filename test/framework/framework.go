@@ -20,6 +20,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	k8taskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -68,11 +69,17 @@ func Init(t *testing.T) {
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
 
+	err = casstaskapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for cass-operator tasks")
+
 	err = promapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for prometheus")
 
 	err = medusaapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for medusa")
+
+	err = controlapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for control")
 
 	// cfg, err := ctrl.GetConfig()
 	// require.NoError(t, err, "failed to get *rest.Config")

@@ -70,6 +70,7 @@ var (
 		medusaBackupDone        pollingConfig
 		medusaRestoreDone       pollingConfig
 		datacenterUpdating      pollingConfig
+		cassandraTaskCreated    pollingConfig
 	}
 )
 
@@ -345,6 +346,10 @@ func TestOperator(t *testing.T) {
 			fixture:  framework.NewTestFixture("single-dc-per-node-config", controlPlane),
 		}))
 	})
+	t.Run("CreateMultiDatacenterTask", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMultiDatacenterTask,
+		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -648,6 +653,9 @@ func applyPollingDefaults() {
 
 	polling.datacenterUpdating.timeout = 1 * time.Minute
 	polling.datacenterUpdating.interval = 1 * time.Second
+
+	polling.cassandraTaskCreated.timeout = 1 * time.Minute
+	polling.cassandraTaskCreated.interval = 3 * time.Second
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {

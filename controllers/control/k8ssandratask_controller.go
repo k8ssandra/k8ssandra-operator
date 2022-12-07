@@ -117,7 +117,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	} else { // The task is being deleted
 		if controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
 			// First time we've noticed the deletion, clean up dependents and remove the finalizer
-			if err := r.deleteCassandraTasks(ctx, kTask, kc, logger); err != nil {
+			if err := r.deleteCassandraTasks(ctx, kTask, kc, kcExists, logger); err != nil {
 				return ctrl.Result{}, err
 			}
 			logger.Info("Removing finalizer")
@@ -211,9 +211,16 @@ func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.O
 	return kc, true, nil
 }
 
-func (r *K8ssandraTaskReconciler) deleteCassandraTasks(ctx context.Context, kTask *api.K8ssandraTask, kc *k8capi.K8ssandraCluster, logger logr.Logger) error {
-	if kTask.GetConditionStatus(api.JobInvalid) == corev1.ConditionTrue {
-		// We never create CassandraTasks when the spec is invalid
+func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
+	ctx context.Context,
+	kTask *api.K8ssandraTask,
+	kc *k8capi.K8ssandraCluster,
+	kcExists bool, logger logr.Logger,
+) error {
+	// If the K8ssandraCluster was deleted, the CassandraDatacenters and CassandraTasks will be deleted automatically.
+	// If the spec was invalid, we didn't create the CassandraTasks in the first place.
+	if !kcExists ||
+		kTask.GetConditionStatus(api.JobInvalid) == corev1.ConditionTrue {
 		return nil
 	}
 
