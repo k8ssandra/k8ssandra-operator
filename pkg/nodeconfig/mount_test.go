@@ -55,7 +55,6 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Name:      "dc1",
 					Namespace: "dc1-ns",
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{},
 				PerNodeConfigMapRef: corev1.LocalObjectReference{
 					Name: "test-dc1-per-node-config",
 				},
@@ -66,7 +65,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Name:      "dc1",
 					Namespace: "dc1-ns",
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{Name: reconciliation.ServerConfigContainerName},

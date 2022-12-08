@@ -871,7 +871,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				PerNodeInitContainerImage: "dc-level:latest",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
