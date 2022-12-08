@@ -66,7 +66,7 @@ func TestCoalesce(t *testing.T) {
 				Size:               3,
 				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
 				ServerType:         "dse",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -87,7 +87,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerVersion: semver.MustParse("4.0.1"),
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -108,7 +108,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerImage: "k8ssandra/cass-operator:dev",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -144,7 +144,7 @@ func TestCoalesce(t *testing.T) {
 						corev1.ResourceMemory: resource.MustParse("2048Mi"),
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -192,7 +192,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -219,7 +219,7 @@ func TestCoalesce(t *testing.T) {
 				Networking: &cassdcapi.NetworkingConfig{
 					HostNetwork: true,
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -262,7 +262,7 @@ func TestCoalesce(t *testing.T) {
 						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -307,7 +307,7 @@ func TestCoalesce(t *testing.T) {
 						Name: "rack3",
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -345,7 +345,7 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -383,7 +383,7 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -404,7 +404,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				JmxInitContainerImage: &images.Image{Name: "dc-image"},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -419,7 +419,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				Stopped: true,
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -440,7 +440,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -481,7 +481,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{
@@ -532,7 +532,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -616,7 +616,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Volumes: []corev1.Volume{
 							{
@@ -655,7 +655,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				DseWorkloads: &cassdcapi.DseWorkloads{AnalyticsEnabled: true, GraphEnabled: true},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -738,7 +738,7 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -829,7 +829,7 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 						InitContainers: []corev1.Container{
@@ -871,7 +871,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				PerNodeInitContainerImage: "dc-level:latest",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
 					},
@@ -910,7 +910,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 		&template,
 	)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, (*corev1.PodTemplateSpec)(nil), dc.Spec.PodTemplateSpec)
+	assert.Equal(t, &corev1.PodTemplateSpec{}, dc.Spec.PodTemplateSpec)
 }
 
 func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {

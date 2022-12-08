@@ -52,9 +52,6 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 
 func TestAddEncryptionMountToCassandra(t *testing.T) {
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{},
-		},
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{
@@ -142,9 +139,6 @@ func TestAddEncryptionMountToCassandra(t *testing.T) {
 
 func TestAddVolumesForEncryption(t *testing.T) {
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{},
-		},
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{
@@ -196,9 +190,6 @@ func TestAddVolumesForEncryption(t *testing.T) {
 func TestHandleEncryptionOptions(t *testing.T) {
 	// Test a succeeding case with both client and server encryption turned on
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{},
-		},
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{
@@ -279,7 +270,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 	// Test a succeeding case with both client and server encryption turned on
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
+		PodTemplateSpec: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
@@ -345,9 +336,6 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 func TestHandleNoEncryptionOptions(t *testing.T) {
 	// Test a succeeding case with disabled encryption
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{},
-		},
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{
@@ -380,9 +368,6 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 func TestHandleFailedEncryptionOptions(t *testing.T) {
 	// Test a succeeding case with missing encryption options
 	dcConfig := &DatacenterConfig{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{},
-		},
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{

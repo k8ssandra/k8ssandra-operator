@@ -1,7 +1,6 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -95,7 +94,7 @@ type DatacenterConfig struct {
 	AdditionalSeeds           []string
 	Networking                *cassdcapi.NetworkingConfig
 	Users                     []cassdcapi.CassandraUser
-	PodTemplateSpec           *corev1.PodTemplateSpec
+	PodTemplateSpec           corev1.PodTemplateSpec
 	MgmtAPIHeap               *resource.Quantity
 	SoftPodAntiAffinity       *bool
 	Tolerations               []corev1.Toleration
@@ -107,9 +106,8 @@ type DatacenterConfig struct {
 	ServerTruststorePassword  string
 	CDC                       *cassdcapi.CDCConfiguration
 	DseWorkloads              *cassdcapi.DseWorkloads
-	ConfigBuilderResources    *corev1.ResourceRequirements
-	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
-	PerNodeConfigMapRef       corev1.LocalObjectReference
+	ManagementApiAuth        *cassdcapi.ManagementApiAuthConfig
+	PerNodeConfigMapRef      corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
 
@@ -165,7 +163,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			SuperuserSecretName: superUserSecretName,
 			Users:               template.Users,
 			Networking:          template.Networking,
-			PodTemplateSpec:     template.PodTemplateSpec,
+			PodTemplateSpec:     &template.PodTemplateSpec,
 			CDC:                 template.CDC,
 			DseWorkloads:        template.DseWorkloads,
 		},
@@ -183,8 +181,11 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
 
-	if template.ConfigBuilderResources != nil {
-		dc.Spec.ConfigBuilderResources = *template.ConfigBuilderResources
+	if position, found := FindInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName); found {
+		configBuilderResources := template.PodTemplateSpec.Spec.InitContainers[position].Resources
+		if configBuilderResources.Limits != nil || configBuilderResources.Requests != nil {
+			dc.Spec.ConfigBuilderResources = configBuilderResources
+		}
 	}
 
 	if template.ManagementApiAuth != nil {
@@ -286,10 +287,6 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 	dcConfig.CDC = dcTemplate.CDC
 
-	// Ensure we have a valid PodTemplateSpec before proceeding to modify it.
-	// FIXME if we are doing this, then we should remove the pointer
-	dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{}
-
 	mergedOptions := goalesceutils.MergeCRs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
 
 	if len(mergedOptions.ServerVersion) > 0 {
@@ -313,11 +310,11 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
 	if len(mergedOptions.Containers) > 0 {
-		_ = AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
+		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
 	}
 
 	if len(mergedOptions.InitContainers) > 0 {
-		_ = AddInitContainersToPodTemplateSpec(dcConfig, mergedOptions.InitContainers...)
+		AddInitContainersToPodTemplateSpec(dcConfig, mergedOptions.InitContainers...)
 	}
 
 	if mergedOptions.ExtraVolumes != nil {
@@ -325,7 +322,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	}
 
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
-	UpdateCassandraContainer(dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 
 	return dcConfig
 }
@@ -348,26 +345,12 @@ func ValidateDatacenterConfig(dcConfig *DatacenterConfig) error {
 	return nil
 }
 
-func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) error {
-	if dcConfig.PodTemplateSpec == nil {
-		return errors.New("PodTemplateSpec was nil, cannot add containers")
-	} else {
-		dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
-		return nil
-	}
+func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) {
+	dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
 }
 
-func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers ...corev1.Container) error {
-	if dcConfig.PodTemplateSpec == nil {
-		return errors.New("PodTemplateSpec was nil, cannot add init containers")
-	} else {
-		dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
-		position, found := FindInitContainer(dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName)
-		if found && (dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Limits != nil || dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources.Requests != nil) {
-			dcConfig.ConfigBuilderResources = &dcConfig.PodTemplateSpec.Spec.InitContainers[position].Resources
-		}
-		return nil
-	}
+func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers ...corev1.Container) {
+	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
 }
 
 func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
@@ -389,26 +372,17 @@ func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolum
 }
 
 func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volume) {
-	if dcConfig.PodTemplateSpec == nil {
-		dcConfig.PodTemplateSpec = &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Volumes: []corev1.Volume{volume},
-			},
-		}
-	} else {
-		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
-	}
+	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
-	if dcPodTemplateSpec != nil && dcPodTemplateSpec.Spec.Containers != nil {
+	if dcPodTemplateSpec != nil {
 		for i, container := range dcPodTemplateSpec.Spec.Containers {
 			if container.Name == containerName {
 				return i, true
 			}
 		}
 	}
-
 	return -1, false
 }
 
@@ -420,7 +394,6 @@ func FindInitContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName 
 			}
 		}
 	}
-
 	return -1, false
 }
 
@@ -432,19 +405,15 @@ func FindVolume(dcPodTemplateSpec *corev1.PodTemplateSpec, volumeName string) (i
 			}
 		}
 	}
-
 	return -1, false
 }
 
 func FindAdditionalVolume(dcConfig *DatacenterConfig, volumeName string) (int, bool) {
-	if dcConfig.StorageConfig.AdditionalVolumes != nil {
-		for i, volume := range dcConfig.StorageConfig.AdditionalVolumes {
-			if volume.Name == volumeName {
-				return i, true
-			}
+	for i, volume := range dcConfig.StorageConfig.AdditionalVolumes {
+		if volume.Name == volumeName {
+			return i, true
 		}
 	}
-
 	return -1, false
 }
 

@@ -48,7 +48,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			return nil, err
 		}
 
-		_ = cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets())
+		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets())
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
 		// unauthenticated clusters.
@@ -72,9 +72,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		}
 
 		// Inject MCAC metrics filters
-		if err = telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig); err != nil {
-			return nil, err
-		}
+		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
 
 		cassandra.AddNumTokens(dcConfig)
 		cassandra.AddStartRpc(dcConfig)

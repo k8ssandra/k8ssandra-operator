@@ -27,7 +27,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 			&cassandra.DatacenterConfig{
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
@@ -39,7 +39,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
 				Users:   []cassdcapi.CassandraUser{{SecretName: "cluster1-reaper", Superuser: true}},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
@@ -61,7 +61,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 			&cassandra.DatacenterConfig{
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
@@ -85,7 +85,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Cluster:            "cluster1",
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "cassandra-superuser"},
 				Users:              []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -109,7 +109,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 					{SecretName: "another-user", Superuser: true},
 					{SecretName: "cass-user", Superuser: true},
 				},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -141,7 +141,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
 				Users:   []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -159,7 +159,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Meta:    api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster: "cluster1",
 				Users:   []cassdcapi.CassandraUser{{SecretName: "another-user", Superuser: true}},
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{
@@ -193,7 +193,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				Meta:            api.EmbeddedObjectMeta{Name: "dc1"},
 				Cluster:         "cluster1",
 				ExternalSecrets: true,
-				PodTemplateSpec: &corev1.PodTemplateSpec{
+				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
 							Name: reconciliation.CassandraContainerName,
