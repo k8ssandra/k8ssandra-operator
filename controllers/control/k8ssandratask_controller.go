@@ -184,7 +184,6 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				kTask.Status.Datacenters[dc.Meta.Name] = actualCTask.Status
 			}
 		}
-		wasComplete := kTask.Status.CompletionTime != nil
 		kTask.BuildGlobalStatus()
 		if err = r.Status().Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
@@ -192,7 +191,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// If the status update set a completion time, we want to reconcile again in order to handle the TTL. But
 		// because we configured GenerationChangedPredicate in SetupWithManager(), we ignore our own status updates.
 		// Requeue manually just for this case.
-		if !wasComplete && kTask.Status.CompletionTime != nil {
+		if kTask.Status.CompletionTime != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
 
