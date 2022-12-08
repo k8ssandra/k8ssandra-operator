@@ -81,7 +81,7 @@ func (t *K8ssandraTask) GetClusterKey() client.ObjectKey {
 	}
 }
 
-func (t *K8ssandraTask) BuildGlobalStatus() {
+func (t *K8ssandraTask) RefreshGlobalStatus() {
 	firstStartTime := &metav1.Time{}
 	lastCompletionTime := &metav1.Time{}
 	totalActive := 0

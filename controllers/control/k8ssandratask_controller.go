@@ -184,7 +184,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				kTask.Status.Datacenters[dc.Meta.Name] = actualCTask.Status
 			}
 		}
-		kTask.BuildGlobalStatus()
+		kTask.RefreshGlobalStatus()
 		if err = r.Status().Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
 		}
