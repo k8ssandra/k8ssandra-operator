@@ -13,6 +13,18 @@ spec:
         resources:
           requests:
             storage: 5Gi
+    telemetry:
+      vector:
+        enabled: true
+        config:
+          name: vector-custom-conf
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
     config:
       cassandraYaml:
         auto_snapshot: false

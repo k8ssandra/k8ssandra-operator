@@ -83,6 +83,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return recResult, actualDcs
 		}
 
+		// Create Vector related objects
+		if vectorResult := r.reconcileVector(ctx, kc, dcConfig, remoteClient, dcLogger); vectorResult.Completed() {
+			return vectorResult, actualDcs
+		}
+
 		desiredDc, err := cassandra.NewDatacenter(kcKey, dcConfig)
 		if err != nil {
 			dcLogger.Error(err, "Failed to create new CassandraDatacenter")

@@ -698,6 +698,8 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
+	f.DeployVectorConfigMap(namespace)
+
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
@@ -713,6 +715,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
+	checkVectorAgentPresence(t, ctx, f, dcKey)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -946,6 +949,8 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
+	f.DeployVectorConfigMap(namespace)
+
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
@@ -959,6 +964,9 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	checkVectorAgentPresence(t, ctx, f, dc1Key)
+	checkVectorAgentPresence(t, ctx, f, dc2Key)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
@@ -1896,7 +1904,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	}
 
 	require.Equal(t, nbVolumes, len(cassdc.Spec.StorageConfig.AdditionalVolumes), "expected a different number of additional volume")
-	require.Equal(t, "/etc/extra", cassdc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected busybox-vol mount path")
+	require.Equal(t, "/var/lib/extra", cassdc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected busybox-vol mount path")
 
 	_, found := cassandra.FindVolume(cassdc.Spec.PodTemplateSpec, "busybox-vol")
 	require.True(t, found, "busybox-vol volume not found in cassandra pod")
@@ -1904,7 +1912,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "busybox"); containerFound {
 		volumeMount := cassandra.FindVolumeMount(&cassdc.Spec.PodTemplateSpec.Spec.Containers[containerIndex], "busybox-vol")
 		require.NotNil(t, volumeMount, "busybox-vol volume mount not found in busybox container")
-		require.Equal(t, "/etc/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
+		require.Equal(t, "/var/lib/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
 	} else {
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
@@ -1912,7 +1920,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	if initContainerIndex, initContainerFound := cassandra.FindInitContainer(cassdc.Spec.PodTemplateSpec, "init-busybox"); initContainerFound {
 		volumeMount := cassandra.FindVolumeMount(&cassdc.Spec.PodTemplateSpec.Spec.InitContainers[initContainerIndex], "busybox-vol")
 		require.NotNil(t, volumeMount, "busybox-vol volume mount not found in init-busybox container")
-		require.Equal(t, "/etc/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
+		require.Equal(t, "/var/lib/busybox", volumeMount.MountPath, "expected busybox-vol mount path")
 	} else {
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
@@ -1923,9 +1931,19 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	require.True(t, cassandraFound, "cannot find cassandra container in cassandra pod")
 	volumeMount := cassandra.FindVolumeMount(&cassandraPods[0].Spec.Containers[cassandraIndex], "sts-extra-vol")
 	require.NotNil(t, volumeMount, "sts-extra-vol volume mount not found in cassandra container")
-	require.Equal(t, "/etc/extra", volumeMount.MountPath, "expected sts-extra-vol mount path")
+	require.Equal(t, "/var/lib/extra", volumeMount.MountPath, "expected sts-extra-vol mount path")
 
 	return nil
+}
+
+func checkVectorAgentPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+	t.Logf("check that vector agent is present in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, cassdc)
+	require.NoError(t, err, "failed to get cassandra datacenter")
+
+	_, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "vector-agent")
+	require.True(t, containerFound, "cannot find vector agent container in pod template spec")
 }
 
 func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {
