@@ -91,6 +91,9 @@ NUM_CLUSTERS = 2
 # It can either be a single number or a comma-separated list of numbers, one per cluster.
 NUM_WORKER_NODES = 4
 
+# The version of the Kind image to run end-to-end tests.
+KIND_NODE_VERSION = v1.25.3
+
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
 else
@@ -264,10 +267,10 @@ cleanup:
 	done
 
 create-kind-cluster:
-	scripts/setup-kind-multicluster.sh --clusters 1 --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
+	scripts/setup-kind-multicluster.sh --clusters 1 --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 create-kind-multicluster:
-	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
+	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 kind-load-image:
 	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
