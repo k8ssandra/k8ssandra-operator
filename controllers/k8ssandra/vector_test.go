@@ -174,5 +174,6 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: vectorConfigMapKey}, &corev1.ConfigMap{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }

@@ -36,7 +36,7 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 			return result.Error(err)
 		}
 
-		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), toml)
+		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), kc.Namespace, toml)
 		annotations.AddHashAnnotation(desiredVectorConfigMap)
 		k8ssandralabels.SetManagedBy(desiredVectorConfigMap, kcKey)
 

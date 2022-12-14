@@ -54,7 +54,7 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 
 func TestBuildVectorAgentConfigMap(t *testing.T) {
 	vectorToml := "Test"
-	vectorConfigMap := BuildVectorAgentConfigMap("k8ssandra-operator", "k8ssandra", vectorToml)
+	vectorConfigMap := BuildVectorAgentConfigMap("k8ssandra-operator", "k8ssandra", "k8ssandra-operator", vectorToml)
 	assert.Equal(t, vectorToml, vectorConfigMap.Data["vector.toml"])
 	assert.Equal(t, "k8ssandra-cass-vector", vectorConfigMap.Name)
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)

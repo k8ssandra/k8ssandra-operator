@@ -335,7 +335,7 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := k8ssandralabels.ManagedByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
 	configMaps := &corev1.ConfigMapList{}
 	options := client.ListOptions{
 		Namespace:     namespace,

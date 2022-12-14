@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/go-logr/logr"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
@@ -149,11 +150,19 @@ scrape_interval_secs = {{ .ScrapeInterval }}
 	return vectorToml.String(), nil
 }
 
-func BuildVectorAgentConfigMap(namespace, k8cName, vectorToml string) *corev1.ConfigMap {
+func BuildVectorAgentConfigMap(namespace, k8cName, k8cNamespace, vectorToml string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      VectorAgentConfigMapName(k8cName),
 			Namespace: namespace,
+			Labels: map[string]string{
+				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
+				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
+				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
+				k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+				k8ssandraapi.K8ssandraClusterNameLabel:      k8cName,
+				k8ssandraapi.K8ssandraClusterNamespaceLabel: k8cNamespace,
+			},
 		},
 		Data: map[string]string{
 			"vector.toml": vectorToml,
