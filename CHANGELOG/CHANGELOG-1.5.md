@@ -19,6 +19,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#323](https://github.com/k8ssandra/k8ssandra/issues/323) Use Cassandra internals for JMX authentication
 * [ENHANCEMENT] [#770](https://github.com/k8ssandra/k8ssandra-operator/issues/770) Update to Go 1.19 and Operator SDK 1.25.2
 * [ENHANCEMENT] [#525](https://github.com/k8ssandra/k8ssandra-operator/issues/525) Deep-merge cluster- and dc-level templates
-* [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
-* [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
 * [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD
+* [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
+* [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
+* [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
