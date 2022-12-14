@@ -27,10 +27,6 @@ const (
 	cassandraConfigPath = "/config/cassandra.yaml"
 	cqlConfigPath       = "/config/" + CqlConfigName
 	cassandraConfigMap  = "cassandra-config"
-
-	// FIXME should this be customized? Cf. K8ssandra 1.x Helm chart template:
-	// "{{ .Values.clusterDomain | default \"cluster.local\" }}
-	clusterDomain = "cluster.local"
 )
 
 const (
@@ -217,7 +213,7 @@ func computeDNSPolicy(dc *cassdcapi.CassandraDatacenter) corev1.DNSPolicy {
 }
 
 func computeSeedServiceUrl(dc *cassdcapi.CassandraDatacenter) string {
-	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName) + "-seed-service." + dc.Namespace + ".svc." + clusterDomain
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName) + "-seed-service." + dc.Namespace + ".svc"
 }
 
 func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
