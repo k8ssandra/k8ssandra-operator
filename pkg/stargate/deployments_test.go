@@ -46,15 +46,11 @@ var (
 				StargateClusterTemplate: api.StargateClusterTemplate{
 					StargateTemplate: api.StargateTemplate{
 						ResourceMeta: &meta.ResourceMeta{
-							OrchestrationTags: &meta.MetaTags{
-								Labels:      map[string]string{"deployment-label": "label-value"},
-								Annotations: map[string]string{"deployment-annotation": "annotation-value"},
-							},
-							ChildTags: &meta.MetaTags{
+							Pods: &meta.MetaTags{
 								Labels:      map[string]string{"pod-label": "pod-label-value"},
 								Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 							},
-							ServiceTags: &meta.MetaTags{
+							Service: &meta.MetaTags{
 								Labels:      map[string]string{"service-label": "service-label-value"},
 								Annotations: map[string]string{"service-annotation": "service-annotation-value"},
 							},
@@ -108,8 +104,6 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, namespace, deployment.Namespace)
 	assert.Contains(t, deployment.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
-	assert.Equal(t, "label-value", deployment.Labels["deployment-label"])
-	assert.Equal(t, "annotation-value", deployment.Annotations["deployment-annotation"])
 
 	assert.EqualValues(t, 1, *deployment.Spec.Replicas)
 
@@ -203,8 +197,6 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	assert.Equal(t, namespace, deployment.Namespace)
 	assert.Contains(t, deployment.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment.Labels[api.StargateLabel])
-	assert.Equal(t, "label-value", deployment.Labels["deployment-label"])
-	assert.Equal(t, "annotation-value", deployment.Annotations["deployment-annotation"])
 
 	assert.EqualValues(t, 3, *deployment.Spec.Replicas)
 
@@ -255,8 +247,6 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment1 := deployments["cluster1-dc1-rack1-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Name)
-	assert.Equal(t, "label-value", deployment1.Labels["deployment-label"])
-	assert.Equal(t, "annotation-value", deployment1.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 3, *deployment1.Spec.Replicas)
 	assert.Contains(t, deployment1.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
@@ -277,8 +267,6 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment2 := deployments["cluster1-dc1-rack2-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Name)
-	assert.Equal(t, "label-value", deployment2.Labels["deployment-label"])
-	assert.Equal(t, "annotation-value", deployment2.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 3, *deployment2.Spec.Replicas)
 	assert.Contains(t, deployment2.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
@@ -300,8 +288,6 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 
 	deployment3 := deployments["cluster1-dc1-rack3-stargate-deployment"]
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Name)
-	assert.Equal(t, "label-value", deployment3.Labels["deployment-label"])
-	assert.Equal(t, "annotation-value", deployment3.Annotations["deployment-annotation"])
 	assert.EqualValues(t, 2, *deployment3.Spec.Replicas)
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])

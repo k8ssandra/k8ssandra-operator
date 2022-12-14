@@ -20,7 +20,7 @@ func TestNewService(t *testing.T) {
 	assert.Equal(t, key.Namespace, service.Namespace)
 
 	commonLabels := createServiceAndDeploymentLabels(reaper)
-	labels := utils.MergeMap(reaper.Spec.ReaperTemplate.ResourceMeta.ServiceTags.Labels, commonLabels)
+	labels := utils.MergeMap(reaper.Spec.ReaperTemplate.ResourceMeta.Service.Labels, commonLabels)
 
 	assert.Equal(t, labels, service.Labels)
 

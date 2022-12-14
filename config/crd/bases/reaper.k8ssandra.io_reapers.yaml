@@ -1519,6 +1519,52 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              metadata:
+                description: labels and annotations for Reaper resources
+                properties:
+                  commonLabels:
+                    additionalProperties:
+                      type: string
+                    description: labels/annotations that will be applied to all components
+                      created by the CRD
+                    type: object
+                  pods:
+                    description: labels/annotations for the pod components
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  resource:
+                    description: labels/annotations for the top-level CRD component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  service:
+                    description: labels/annotations for the service component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
               podSecurityContext:
                 description: PodSecurityContext contains a pod-level SecurityContext
                   to apply to Reaper pods.
@@ -1825,47 +1871,6 @@ spec:
                       Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                     format: int32
                     type: integer
-                type: object
-              resourceMeta:
-                description: labels and annotations for resources created by Reaper
-                properties:
-                  childTags:
-                    description: metaTags for the child components (Pods)
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                    type: object
-                  orchestrationTags:
-                    description: metaTags for the orchestrator component (e.g. Statefulet,
-                      Deployment)
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                    type: object
-                  serviceTags:
-                    description: metaTags for the Service component
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                    type: object
                 type: object
               resources:
                 description: Main Container resources.

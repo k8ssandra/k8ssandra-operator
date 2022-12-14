@@ -136,9 +136,9 @@ type ReaperTemplate struct {
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
-	// labels and annotations for resources created by Reaper
+	// labels and annotations for Reaper resources
 	// +optional
-	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
+	ResourceMeta *meta.ResourceMeta `json:"metadata,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

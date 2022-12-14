@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -182,21 +183,21 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
-	deploymentAnnotations, podAnnotations := getAnnotations(reaper)
+	podMeta := getPodMeta(reaper)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   reaper.Namespace,
 			Name:        reaper.Name,
-			Labels:      createDeploymentLabels(reaper),
-			Annotations: deploymentAnnotations,
+			Labels:      createServiceAndDeploymentLabels(reaper),
+			Annotations: podMeta.Annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      createPodLabels(reaper),
-					Annotations: podAnnotations,
+					Labels:      podMeta.Labels,
+					Annotations: podMeta.Annotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
@@ -354,16 +355,18 @@ func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacente
 	return
 }
 
-func getAnnotations(reaper *api.Reaper) (map[string]string, map[string]string) {
-	var deploymentAnnotations, podAnnotations map[string]string
+func getPodMeta(reaper *api.Reaper) meta.MetaTags {
+	labels := createPodLabels(reaper)
+
+	var podAnnotations map[string]string
 	if meta := reaper.Spec.ResourceMeta; meta != nil {
-		if meta.OrchestrationTags != nil {
-			deploymentAnnotations = meta.OrchestrationTags.Annotations
-		}
-		if meta.ChildTags != nil {
-			podAnnotations = meta.ChildTags.Annotations
+		if meta.Pods != nil {
+			podAnnotations = meta.Pods.Annotations
 		}
 	}
 
-	return deploymentAnnotations, podAnnotations
+	return meta.MetaTags{
+		Labels:      labels,
+		Annotations: podAnnotations,
+	}
 }

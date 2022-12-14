@@ -6,6 +6,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,19 +46,27 @@ func NewStargate(
 		cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
 	}
 
+	labels := map[string]string{
+		api.NameLabel:                      api.NameLabelValue,
+		api.PartOfLabel:                    api.PartOfLabelValue,
+		api.ComponentLabel:                 api.ComponentLabelValueStargate,
+		api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
+		api.K8ssandraClusterNameLabel:      kc.Name,
+		api.K8ssandraClusterNamespaceLabel: kc.Namespace,
+	}
+
+	var annotations map[string]string
+	if m := stargateTemplate.ResourceMeta; m != nil && m.Resource != nil {
+		labels = utils.MergeMap(labels, m.Resource.Labels)
+		annotations = m.Resource.Annotations
+	}
+
 	desiredStargate := &stargateapi.Stargate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   stargateKey.Namespace,
 			Name:        stargateKey.Name,
-			Annotations: map[string]string{},
-			Labels: map[string]string{
-				api.NameLabel:                      api.NameLabelValue,
-				api.PartOfLabel:                    api.PartOfLabelValue,
-				api.ComponentLabel:                 api.ComponentLabelValueStargate,
-				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterNameLabel:      kc.Name,
-				api.K8ssandraClusterNamespaceLabel: kc.Namespace,
-			},
+			Annotations: annotations,
+			Labels:      labels,
 		},
 		Spec: stargateapi.StargateSpec{
 			StargateDatacenterTemplate: *stargateTemplate,

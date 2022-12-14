@@ -25,6 +25,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -226,6 +227,8 @@ type K8ssandraClusterList struct {
 type CassandraClusterTemplate struct {
 	DatacenterOptions `json:",inline"`
 
+	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
+
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
 	// K8ssandraCluster CRD name.
@@ -262,10 +265,6 @@ type CassandraClusterTemplate struct {
 	// +kubebuilder:validation:Enum=cassandra;dse
 	// +kubebuilder:default=cassandra
 	ServerType ServerDistribution `json:"serverType,omitempty"`
-
-	// cluster specific annotations/labesl for resources created by the CassandraDatacenter
-	// +optional
-	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
 
 type CassandraDatacenterTemplate struct {
@@ -302,10 +301,6 @@ type CassandraDatacenterTemplate struct {
 	// the pod are merged into their respective configuration files.
 	// +optional
 	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
-
-	// datacenter specific annotations/labesl for resources created by the CassandraDatacenter
-	// +optional
-	ResourceMeta *meta.ResourceMeta `json:"resourceMeta,omitempty"`
 }
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
@@ -466,26 +461,84 @@ type EmbeddedObjectMeta struct {
 	Name string `json:"name"`
 
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
+	Metadata *CassandraDatacenterMeta `json:"dcMetadata,omitempty"`
+}
 
+type CassandraDatacenterMeta struct {
+	// labels/annotations for the CassandraDatacenter object
 	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Resource *meta.MetaTags `json:"resource,omitempty"`
+
+	// labels/annotations that will be applied to all resources
+	// created by the CassandraDatacenter
+	// +optional
+	CommonLabels map[string]string `json:"commonLabels,omitempty"`
+
+	// labels/annotations for the pod components
+	// +optional
+	Pods *meta.MetaTags `json:"pods,omitempty"`
+
+	// labels/annotations for all of the CassandraDatacenter service components
+	ServiceConfig *cassdcapi.ServiceConfig `json:"services,omitempty"`
 }
 
-func (in *EmbeddedObjectMeta) GetAnnotations() map[string]string {
-	return in.Annotations
+// merge a CassandraDatacenterMeta into a destination CassandraDatacenterMeta. If properties are shared between the two configs,
+// the destination CassandraDatacenterMeta property will be used
+func MergeCassandraDatacenterMeta(m1 *CassandraDatacenterMeta, m2 *CassandraDatacenterMeta) *CassandraDatacenterMeta {
+	if m1 == nil && m2 == nil {
+		return nil
+	}
+
+	if m1 == nil {
+		return m2.DeepCopy()
+	}
+
+	if m2 == nil {
+		return m1.DeepCopy()
+	}
+
+	var commonLabels map[string]string
+	if m1.CommonLabels != nil || m2.CommonLabels != nil {
+		commonLabels = utils.MergeMap(m1.CommonLabels, m2.CommonLabels)
+	}
+
+	return &CassandraDatacenterMeta{
+		Resource:      meta.MergeMetaTags(m1.Resource, m2.Resource),
+		CommonLabels:  commonLabels,
+		Pods:          meta.MergeMetaTags(m1.Pods, m2.Pods),
+		ServiceConfig: mergeServiceConfig(m1.ServiceConfig, m2.ServiceConfig),
+	}
 }
 
-func (in *EmbeddedObjectMeta) SetAnnotations(annotations map[string]string) {
-	in.Annotations = annotations
-}
+// merge a ServiceConfig into a destination ServiceConfig. If properties are shared between the two configs,
+// the destination ServiceConfig property will be used
+func mergeServiceConfig(s1 *cassdcapi.ServiceConfig, s2 *cassdcapi.ServiceConfig) *cassdcapi.ServiceConfig {
+	if s1 == nil && s2 == nil {
+		return nil
+	}
 
-func (in *EmbeddedObjectMeta) GetLabels() map[string]string {
-	return in.Labels
-}
+	if s1 == nil {
+		return s2.DeepCopy()
+	}
 
-func (in *EmbeddedObjectMeta) SetLabels(labels map[string]string) {
-	in.Labels = labels
+	if s2 == nil {
+		return s1.DeepCopy()
+	}
+
+	merge := func(sc1 cassdcapi.ServiceConfigAdditions, sc2 cassdcapi.ServiceConfigAdditions) cassdcapi.ServiceConfigAdditions {
+		return cassdcapi.ServiceConfigAdditions{
+			Labels:      utils.MergeMap(sc1.Labels, sc2.Labels),
+			Annotations: utils.MergeMap(sc1.Annotations, sc2.Annotations),
+		}
+	}
+
+	return &cassdcapi.ServiceConfig{
+		DatacenterService:     merge(s1.DatacenterService, s2.DatacenterService),
+		SeedService:           merge(s1.SeedService, s2.SeedService),
+		AllPodsService:        merge(s1.AllPodsService, s2.AllPodsService),
+		AdditionalSeedService: merge(s1.AdditionalSeedService, s2.AdditionalSeedService),
+		NodePortService:       merge(s1.NodePortService, s2.NodePortService),
+	}
 }
 
 func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {

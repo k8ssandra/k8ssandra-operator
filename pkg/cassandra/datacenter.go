@@ -193,8 +193,19 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
 	}
 
-	if template.ServiceConfig != nil {
-		dc.Spec.AdditionalServiceConfig = *template.ServiceConfig
+	if m := template.Meta.Metadata; m != nil {
+		if m.Resource != nil {
+			dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Resource.Labels)
+			dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
+		}
+
+		if m.CommonLabels != nil {
+			dc.Spec.AdditionalLabels = m.CommonLabels
+		}
+
+		if m.ServiceConfig != nil {
+			dc.Spec.AdditionalServiceConfig = *m.ServiceConfig
+		}
 	}
 
 	dc.Spec.Tolerations = template.Tolerations
@@ -314,9 +325,11 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
-	if clusterTemplate.ResourceMeta != nil || dcTemplate.ResourceMeta != nil {
-		AddPodTemplateSpecMeta(dcConfig, clusterTemplate, dcTemplate)
-		AddServiceConfig(dcConfig, clusterTemplate, dcTemplate)
+	m := api.MergeCassandraDatacenterMeta(clusterTemplate.Meta.Metadata, dcTemplate.Meta.Metadata)
+	dcConfig.Meta.Metadata = m
+
+	if m != nil {
+		AddPodTemplateSpecMeta(dcConfig, m)
 	}
 
 	if len(mergedOptions.Containers) > 0 {
@@ -385,64 +398,13 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volum
 	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
 }
 
-func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) {
-	var commonLabels, podLabels map[string]string
-	var commonAnnotations, podAnnotations map[string]string
-
-	if clMeta := clusterTemplate.ResourceMeta; clMeta != nil && clMeta.ChildTags != nil {
-		commonLabels = clMeta.ChildTags.Labels
-		commonAnnotations = clMeta.ChildTags.Annotations
+func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m *api.CassandraDatacenterMeta) {
+	if m.Pods != nil {
+		dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
+			Annotations: m.Pods.Annotations,
+			Labels:      utils.MergeMap(m.CommonLabels, m.Pods.Labels),
+		}
 	}
-
-	if dcMeta := dcTemplate.ResourceMeta; dcMeta != nil && dcMeta.ChildTags != nil {
-		podLabels = dcMeta.ChildTags.Labels
-		podAnnotations = dcMeta.ChildTags.Annotations
-	}
-
-	labels := utils.MergeMap(commonLabels, podLabels)
-	annotations := utils.MergeMap(commonAnnotations, podAnnotations)
-	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
-		Annotations: annotations,
-		Labels:      labels,
-	}
-}
-
-func AddServiceConfig(dcConfig *DatacenterConfig, clusterTemplate *api.CassandraClusterTemplate, dcTemplate *api.CassandraDatacenterTemplate) {
-	var commonLabels, commonAnnotations map[string]string
-	if clusterMeta := clusterTemplate.ResourceMeta; clusterMeta != nil && clusterMeta.ServiceTags != nil {
-		commonLabels = clusterMeta.ServiceTags.Labels
-		commonAnnotations = clusterMeta.ServiceTags.Annotations
-	}
-
-	var dcLabels, dcAnnotations map[string]string
-	if dcMeta := dcTemplate.ResourceMeta; dcMeta != nil && dcMeta.ServiceTags != nil {
-		dcLabels = dcMeta.ServiceTags.Labels
-		dcAnnotations = dcMeta.ServiceTags.Annotations
-	}
-
-	dcConfig.ServiceConfig = &cassdcapi.ServiceConfig{
-		DatacenterService: cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(commonLabels, dcLabels),
-			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
-		},
-		SeedService: cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(commonLabels, dcLabels),
-			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
-		},
-		AllPodsService: cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(commonLabels, dcLabels),
-			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
-		},
-		AdditionalSeedService: cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(commonLabels, dcLabels),
-			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
-		},
-		NodePortService: cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(commonLabels, dcLabels),
-			Annotations: utils.MergeMap(commonAnnotations, dcAnnotations),
-		},
-	}
-
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
