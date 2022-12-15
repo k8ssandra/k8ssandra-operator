@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,15 @@ type K8ssandraTaskSpec struct {
 
 	// The names of the targeted datacenters. If omitted, will default to all DCs in spec order.
 	Datacenters []string `json:"datacenters,omitempty"`
+
+	// How to handle concurrency across DCs. Valid values are:
+	// - "Forbid" (default): sequential processing. The K8ssandraTask only spawns one CassandraTask at a time, which
+	//   must run to completion before the CassandraTask for the next DC is created. If any CassandraTask fails, the
+	//   K8ssandraTask is marked as failed, and the remaining CassandraTasks are cancelled (i.e. never created).
+	// - "Allow": parallel processing. The K8ssandraTask spawns all CassandraTasks at once. If any CassandraTask fails,
+	//   the K8ssandraTask is marked as failed, but the remaining CassandraTasks finish running.
+	// +optional
+	DcConcurrencyPolicy batchv1.ConcurrencyPolicy `json:"dcConcurrencyPolicy,omitempty"`
 
 	// The characteristics of the CassandraTask that will get created for each DC.
 	Template cassapi.CassandraTaskTemplate `json:"template,omitempty"`
@@ -81,7 +91,14 @@ func (t *K8ssandraTask) GetClusterKey() client.ObjectKey {
 	}
 }
 
-func (t *K8ssandraTask) RefreshGlobalStatus() {
+func (t *K8ssandraTask) SetDcStatus(dcName string, dcStatus cassapi.CassandraTaskStatus) {
+	if t.Status.Datacenters == nil {
+		t.Status.Datacenters = make(map[string]cassapi.CassandraTaskStatus)
+	}
+	t.Status.Datacenters[dcName] = dcStatus
+}
+
+func (t *K8ssandraTask) RefreshGlobalStatus(expectedDcCount int) {
 	firstStartTime := &metav1.Time{}
 	lastCompletionTime := &metav1.Time{}
 	totalActive := 0
@@ -126,7 +143,7 @@ func (t *K8ssandraTask) RefreshGlobalStatus() {
 	} else {
 		t.SetCondition(cassapi.JobFailed, corev1.ConditionFalse)
 	}
-	if allComplete {
+	if allComplete && len(t.Status.Datacenters) == expectedDcCount {
 		t.Status.CompletionTime = lastCompletionTime
 		t.SetCondition(cassapi.JobComplete, corev1.ConditionTrue)
 	}

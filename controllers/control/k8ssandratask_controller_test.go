@@ -12,6 +12,7 @@ import (
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -66,14 +67,14 @@ func TestK8ssandraTask(t *testing.T) {
 	defer testEnv.Stop(t)
 	defer cancel()
 
-	t.Run("CreateK8ssandraTask", testEnv.ControllerTest(ctx, createK8ssandraTask))
-	t.Run("CompleteK8ssandraTask", testEnv.ControllerTest(ctx, completeK8ssandraTask))
+	t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
+	t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
 	t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
 	t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
 }
 
-// createK8ssandraTask verifies that CassandraTasks are created for each datacenter.
-func createK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+// executeParallelK8ssandraTask creates and runs a K8ssandraTask with parallel DC processing.
+func executeParallelK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
 	kc := newCluster(namespace, "kc",
@@ -97,11 +98,12 @@ func createK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 					Command: "upgradesstables",
 				}},
 			},
+			DcConcurrencyPolicy: batchv1.AllowConcurrent,
 		},
 	}
 	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
 
-	t.Log("Check that the corresponding CassandraTasks have been created")
+	t.Log("Check that all the CassandraTasks have been created")
 	cassTask1 := loadCassandraTask(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1", ctx, f, require)
 	require.Equal("job1", cassTask1.Spec.Jobs[0].Name)
 	require.Equal("upgradesstables", string(cassTask1.Spec.Jobs[0].Command))
@@ -109,43 +111,11 @@ func createK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 	cassTask2 := loadCassandraTask(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2", ctx, f, require)
 	require.Equal("job1", cassTask2.Spec.Jobs[0].Name)
 	require.Equal("upgradesstables", string(cassTask2.Spec.Jobs[0].Command))
-}
-
-// completeK8ssandraTask verifies that when the dependent CassandraTasks complete, then the K8ssandraTask completes as
-// well.
-func completeK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-	require := require.New(t)
-
-	kc := newCluster(namespace, "kc",
-		newDc("dc1", f.DataPlaneContexts[0]),
-		newDc("dc2", f.DataPlaneContexts[1]))
-	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
-
-	t.Log("Create a K8ssandraTask")
-	k8Task := &api.K8ssandraTask{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "upgradesstables",
-		},
-		Spec: api.K8ssandraTaskSpec{
-			Cluster: corev1.ObjectReference{
-				Name: "kc",
-			},
-			Template: cassapi.CassandraTaskTemplate{
-				Jobs: []cassapi.CassandraJob{{
-					Name:    "job1",
-					Command: "upgradesstables",
-				}},
-			},
-		},
-	}
-	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
 
 	t.Log("Mark the CassandraTasks as Running")
 	startTime1 := metav1.Now().Rfc3339Copy()
 	startTime2 := metav1.NewTime(startTime1.Add(time.Second))
 	cassTask1Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
-	require.Eventually(f.CassTaskExists(ctx, cassTask1Key), timeout, interval)
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
 		cassTask1.Status.Active = 1
 		cassTask1.Status.StartTime = &startTime1
@@ -153,7 +123,6 @@ func completeK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Frame
 	}))
 
 	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
-	require.Eventually(f.CassTaskExists(ctx, cassTask2Key), timeout, interval)
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
 		cassTask2.Status.Active = 1
 		cassTask2.Status.StartTime = &startTime2
@@ -199,6 +168,112 @@ func completeK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Frame
 	}, timeout, interval)
 }
 
+// executeSequentialK8ssandraTask creates and runs a K8ssandraTask with sequential DC processing.
+func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := newCluster(namespace, "kc",
+		newDc("dc1", f.DataPlaneContexts[0]),
+		newDc("dc2", f.DataPlaneContexts[1]))
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
+
+	t.Log("Create a K8ssandraTask")
+	k8Task := &api.K8ssandraTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "upgradesstables",
+		},
+		Spec: api.K8ssandraTaskSpec{
+			Cluster: corev1.ObjectReference{
+				Name: "kc",
+			},
+			Template: cassapi.CassandraTaskTemplate{
+				Jobs: []cassapi.CassandraJob{{
+					Name:    "job1",
+					Command: "upgradesstables",
+				}},
+			},
+			// Note: DcConcurrencyPolicy defaults to batchv1.ForbidConcurrent
+		},
+	}
+	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
+
+	cassTask1Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
+	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
+
+	t.Log("Check that CassandraTask 1 has been created")
+	cassTask1 := loadCassandraTask(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1", ctx, f, require)
+	require.Equal("job1", cassTask1.Spec.Jobs[0].Name)
+	require.Equal("upgradesstables", string(cassTask1.Spec.Jobs[0].Command))
+
+	t.Log("Check that CassandraTask 2 hasn't been created yet")
+	require.False(f.CassTaskExists(ctx, cassTask2Key)())
+
+	t.Log("Mark CassandraTask 1 as Running")
+	startTime1 := metav1.Now().Rfc3339Copy()
+	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
+		cassTask1.Status.Active = 1
+		cassTask1.Status.StartTime = &startTime1
+		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionTrue)
+	}))
+
+	t.Log("Check that the K8ssandraTask is marked as Running")
+	require.Eventually(func() bool {
+		k8Task = &api.K8ssandraTask{}
+		require.NoError(f.Get(ctx, newClusterKey(f.ControlPlaneContext, namespace, "upgradesstables"), k8Task))
+		return k8Task.Status.Active == 1 &&
+			k8Task.Status.StartTime.Equal(&startTime1) &&
+			k8Task.GetConditionStatus(cassapi.JobRunning) == corev1.ConditionTrue
+	}, timeout, interval)
+
+	t.Log("Check that CassandraTask 2 still hasn't been created")
+	require.False(f.CassTaskExists(ctx, cassTask2Key)())
+
+	t.Log("Mark CassandraTask 1 as Complete")
+	completionTime1 := metav1.NewTime(startTime1.Add(10 * time.Second))
+	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
+		cassTask1.Status.Active = 0
+		cassTask1.Status.Succeeded = 1
+		cassTask1.Status.CompletionTime = &completionTime1
+		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionFalse)
+		casscontrol.SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
+	}))
+
+	t.Log("Check that CassandraTask 2 has been created")
+	cassTask2 := loadCassandraTask(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2", ctx, f, require)
+	require.Equal("job1", cassTask2.Spec.Jobs[0].Name)
+	require.Equal("upgradesstables", string(cassTask2.Spec.Jobs[0].Command))
+
+	t.Log("Mark CassandraTask 2 as Running")
+	startTime2 := metav1.NewTime(startTime1.Add(11 * time.Second))
+	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
+		cassTask2.Status.Active = 1
+		cassTask2.Status.StartTime = &startTime2
+		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionTrue)
+	}))
+
+	t.Log("Mark CassandraTask 2 as Complete")
+	completionTime2 := metav1.NewTime(startTime1.Add(20 * time.Second))
+	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
+		cassTask2.Status.Active = 0
+		cassTask2.Status.Succeeded = 1
+		cassTask2.Status.CompletionTime = &completionTime2
+		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionFalse)
+		casscontrol.SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
+	}))
+
+	t.Log("Check that the K8ssandraTask is marked as Complete")
+	require.Eventually(func() bool {
+		k8Task = &api.K8ssandraTask{}
+		require.NoError(f.Get(ctx, newClusterKey(f.ControlPlaneContext, namespace, "upgradesstables"), k8Task))
+		return k8Task.Status.Active == 0 &&
+			k8Task.Status.Succeeded == 2 &&
+			k8Task.Status.CompletionTime.Equal(&completionTime2) &&
+			k8Task.GetConditionStatus(cassapi.JobRunning) == corev1.ConditionFalse &&
+			k8Task.GetConditionStatus(cassapi.JobComplete) == corev1.ConditionTrue
+	}, timeout, interval)
+}
+
 // deleteK8ssandraTask verifies that when the K8ssandraTask gets deleted, its dependent CassandraTasks get deleted.
 func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -224,6 +299,7 @@ func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 					Command: "upgradesstables",
 				}},
 			},
+			DcConcurrencyPolicy: batchv1.AllowConcurrent,
 		},
 	}
 	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
@@ -271,6 +347,7 @@ func expireK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 					Command: "upgradesstables",
 				}},
 			},
+			DcConcurrencyPolicy: batchv1.AllowConcurrent,
 		},
 	}
 	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
@@ -344,6 +421,6 @@ func loadCassandraTask(k8sContext, namespace, cassTaskName string, ctx context.C
 	cassTaskKey := newClusterKey(k8sContext, namespace, cassTaskName)
 	require.Eventually(f.CassTaskExists(ctx, cassTaskKey), timeout, interval)
 	cassTask := &cassapi.CassandraTask{}
-	require.NoError(f.Get(ctx, cassTaskKey, cassTask), "failed to get CassandraTask in dc1")
+	require.NoError(f.Get(ctx, cassTaskKey, cassTask), "failed to get CassandraTask")
 	return cassTask
 }

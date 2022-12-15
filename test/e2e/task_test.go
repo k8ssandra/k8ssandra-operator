@@ -51,7 +51,7 @@ func createMultiDatacenterTask(t *testing.T, ctx context.Context, namespace stri
 	}
 	require.NoError(f.Client.Create(ctx, kTask))
 
-	t.Log("check that CassandraTasks were created")
+	t.Log("check that CassandraTask 1 was created")
 	cTask1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "restart-task-dc1")
 	cTask1 := &ctaskapi.CassandraTask{}
 	require.Eventually(func() bool {
@@ -61,6 +61,12 @@ func createMultiDatacenterTask(t *testing.T, ctx context.Context, namespace stri
 	require.Equal("restart-job", cTask1.Spec.Jobs[0].Name)
 	require.Equal("restart", string(cTask1.Spec.Jobs[0].Command))
 
+	t.Log("check that DC 1 restarted")
+	require.Eventually(func() bool {
+		return dcRestarted(ctx, cTask1Key, kcName, f, require)
+	}, polling.datacenterReady.timeout, polling.datacenterReady.interval)
+
+	t.Log("check that CassandraTask 2 was created")
 	cTask2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "restart-task-dc2")
 	cTask2 := &ctaskapi.CassandraTask{}
 	require.Eventually(func() bool {
@@ -70,16 +76,17 @@ func createMultiDatacenterTask(t *testing.T, ctx context.Context, namespace stri
 	require.Equal("restart-job", cTask2.Spec.Jobs[0].Name)
 	require.Equal("restart", string(cTask2.Spec.Jobs[0].Command))
 
+	t.Log("check that DC 2 restarted")
+	require.Eventually(func() bool {
+		return dcRestarted(ctx, cTask2Key, kcName, f, require)
+	}, polling.datacenterReady.timeout, polling.datacenterReady.interval)
+
 	t.Log("check that the K8ssandraTask completes")
 	kTaskKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, "restart-task")
 	require.Eventually(func() bool {
 		require.NoError(f.Get(ctx, kTaskKey, kTask))
 		return !kTask.Status.CompletionTime.IsZero()
 	}, polling.datacenterReady.timeout, polling.datacenterReady.interval)
-
-	t.Log("check that the DCs have restarted")
-	require.True(dcRestarted(ctx, cTask1Key, kcName, f, require))
-	require.True(dcRestarted(ctx, cTask2Key, kcName, f, require))
 
 	t.Log("delete dc1")
 	require.NoError(f.Client.Get(ctx, kcKey, kc))

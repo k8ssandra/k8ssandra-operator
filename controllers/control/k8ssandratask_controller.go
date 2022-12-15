@@ -130,7 +130,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Handle TTL
-	if kTask.Status.CompletionTime != nil {
+	if !kTask.Status.CompletionTime.IsZero() {
 		timeNow := metav1.Now()
 		deletionTime := calculateDeletionTime(kTask)
 		if deletionTime.IsZero() { // No TTL set, we're done
@@ -169,29 +169,32 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			actualCTask := &cassapi.CassandraTask{}
 			if err = remoteClient.Get(ctx, cTaskKey, actualCTask); err != nil {
 				if errors.IsNotFound(err) {
-					if err = remoteClient.Create(ctx, desiredCTask); err != nil {
+					actualCTask = desiredCTask
+					if err = remoteClient.Create(ctx, actualCTask); err != nil {
 						return ctrl.Result{}, err
 					}
-					r.recordCassandraTaskCreated(kTask, desiredCTask, dc.K8sContext)
+					r.recordCassandraTaskCreated(kTask, actualCTask, dc.K8sContext)
 				} else {
 					return ctrl.Result{}, err
 				}
 			} else {
 				logger.Info("CassandraTask already exists, retrieving its status", "CassandraTask", cTaskKey)
-				if kTask.Status.Datacenters == nil {
-					kTask.Status.Datacenters = make(map[string]cassapi.CassandraTaskStatus)
-				}
-				kTask.Status.Datacenters[dc.Meta.Name] = actualCTask.Status
+				kTask.SetDcStatus(dc.Meta.Name, actualCTask.Status)
+			}
+
+			// If we're running sequentially, only continue creating tasks if this one is complete
+			if kTask.Spec.DcConcurrencyPolicy != "Allow" && actualCTask.Status.CompletionTime.IsZero() {
+				break
 			}
 		}
-		kTask.RefreshGlobalStatus()
+		kTask.RefreshGlobalStatus(len(dcs))
 		if err = r.Status().Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
 		}
 		// If the status update set a completion time, we want to reconcile again in order to handle the TTL. But
 		// because we configured GenerationChangedPredicate in SetupWithManager(), we ignore our own status updates.
 		// Requeue manually just for this case.
-		if kTask.Status.CompletionTime != nil {
+		if !kTask.Status.CompletionTime.IsZero() {
 			return ctrl.Result{Requeue: true}, nil
 		}
 
