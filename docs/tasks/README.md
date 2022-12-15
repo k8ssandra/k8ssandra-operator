@@ -250,12 +250,12 @@ Warning  InvalidSpec  3s (x2 over 3s)  k8ssandratask-controller  Unknown datacen
 
 #### Job failures
 
-If any `CassandraTask` fail, this will be reflected in its status via the `Failed` condition. The `K8ssandraTask` will
+If any `CassandraTask` fails, this will be reflected in its status via the `Failed` condition. The `K8ssandraTask` will
 in turn get that same condition.
 
 # Task configuration reference
 
-Our quickstart example used a minimal configuration. There are many other optional fields that control the behavior of a
+Our quickstart example used a minimal configuration. There are other optional fields that control the behavior of a
 task: 
 
 ## Datacenters
