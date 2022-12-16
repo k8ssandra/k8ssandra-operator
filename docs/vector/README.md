@@ -19,8 +19,6 @@ spec:
     telemetry:
       vector:
         enabled: true
-        config:
-          name: vector-custom-conf
         resources:
           requests:
             cpu: 100m
@@ -75,7 +73,32 @@ data:
     inputs = [ "cassandra_metrics" ]
 ```
 
-The above configuration will discard all the metrics scraped from Cassandra and replace the defaul console sink.
+The above configuration will discard all the metrics scraped from Cassandra and replace the default console sink.
+
+Reference the configmap in the manifest under `.spec.cassandra.telemetry.vector.config`:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: 4.0.6
+    telemetry:
+      vector:
+        enabled: true
+        config:
+          name: vector-custom-conf
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+...
+```     
 
 In case of multi DC deployment, the configmap needs to exist in each cluster and namespace where a Cassandra Datacenter is deployed.
 
