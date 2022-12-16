@@ -4,6 +4,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type TelemetrySpec struct {
@@ -41,9 +42,10 @@ type VectorSpec struct {
 	Image string `json:"image,omitempty"`
 
 	// ScrapeInterval is the interval at which the Vector agent will scrape the metrics endpoint.
+	// Use values like 30s, 1m, 5m.
 	// +optional
-	// kube:default=30
-	ScrapeInterval int32 `json:"scrapeInterval,omitempty"`
+	// kube:default=30s
+	ScrapeInterval *metav1.Duration `json:"scrapeInterval,omitempty"`
 }
 
 type McacTelemetrySpec struct {

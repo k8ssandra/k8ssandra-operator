@@ -11,6 +11,7 @@ spec:
         enabled: true
         config:
           name: vector-custom-conf
+        scrapeInterval: 30s
         resources:
           requests:
             cpu: 100m

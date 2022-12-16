@@ -2780,9 +2780,8 @@ spec:
                             scrapeInterval:
                               description: ScrapeInterval is the interval at which
                                 the Vector agent will scrape the metrics endpoint.
-                                kube:default=30
-                              format: int32
-                              type: integer
+                                Use values like 30s, 1m, 5m. kube:default=30s
+                              type: string
                           type: object
                       type: object
                     tolerations:
@@ -3122,9 +3121,9 @@ spec:
                         type: object
                       scrapeInterval:
                         description: ScrapeInterval is the interval at which the Vector
-                          agent will scrape the metrics endpoint. kube:default=30
-                        format: int32
-                        type: integer
+                          agent will scrape the metrics endpoint. Use values like
+                          30s, 1m, 5m. kube:default=30s
+                        type: string
                     type: object
                 type: object
               tolerations:

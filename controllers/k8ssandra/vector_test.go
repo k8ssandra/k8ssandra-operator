@@ -159,7 +159,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 	require.True(foundVector, fmt.Sprintf("Vector container not found in Cassandra pod: %v", dc.Spec.PodTemplateSpec.Spec.Containers))
 
 	// Check that the Vector config map was created
-	vectorConfigMapKey := types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kc.Name)}
+	vectorConfigMapKey := types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kc.Name, dc1Key.Name)}
 	vectorConfigMap := &corev1.ConfigMap{}
 	require.Eventually(func() bool {
 		err = f.Get(ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: vectorConfigMapKey}, vectorConfigMap)

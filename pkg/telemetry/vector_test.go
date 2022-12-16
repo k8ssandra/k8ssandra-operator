@@ -38,13 +38,9 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
-	dcConfig := &cassandra.DatacenterConfig{
-		PodTemplateSpec: corev1.PodTemplateSpec{},
-	}
-
 	fakeClient := test.NewFakeClientWRestMapper()
 
-	toml, err := CreateCassandraVectorToml(context.Background(), telemetrySpec, dcConfig, fakeClient, "k8ssandra-operator")
+	toml, err := CreateCassandraVectorToml(context.Background(), telemetrySpec, fakeClient, "k8ssandra-operator")
 	if err != nil {
 		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
 	}
@@ -54,8 +50,8 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 
 func TestBuildVectorAgentConfigMap(t *testing.T) {
 	vectorToml := "Test"
-	vectorConfigMap := BuildVectorAgentConfigMap("k8ssandra-operator", "k8ssandra", "k8ssandra-operator", vectorToml)
+	vectorConfigMap := BuildVectorAgentConfigMap("k8ssandra-operator", "k8ssandra", "dc1", "k8ssandra-operator", vectorToml)
 	assert.Equal(t, vectorToml, vectorConfigMap.Data["vector.toml"])
-	assert.Equal(t, "k8ssandra-cass-vector", vectorConfigMap.Name)
+	assert.Equal(t, "k8ssandra-dc1-cass-vector", vectorConfigMap.Name)
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
 }

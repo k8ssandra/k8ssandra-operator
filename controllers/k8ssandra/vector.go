@@ -23,20 +23,20 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 	remoteClient client.Client,
 	dcLogger logr.Logger,
 ) result.ReconcileResult {
+	kcKey := utils.GetKey(kc)
+	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
+	configMapKey := client.ObjectKey{
+		Namespace: namespace,
+		Name:      telemetry.VectorAgentConfigMapName(kc.SanitizedName(), dcConfig.Meta.Name),
+	}
 	if kc.Spec.Cassandra.Telemetry.IsVectorEnabled() {
-		kcKey := utils.GetKey(kc)
-		namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
-		configMapKey := client.ObjectKey{
-			Namespace: namespace,
-			Name:      telemetry.VectorAgentConfigMapName(kc.SanitizedName()),
-		}
 		// Create the vector toml config content
-		toml, err := telemetry.CreateCassandraVectorToml(ctx, kc.Spec.Cassandra.Telemetry, dcConfig, remoteClient, namespace)
+		toml, err := telemetry.CreateCassandraVectorToml(ctx, kc.Spec.Cassandra.Telemetry, remoteClient, namespace)
 		if err != nil {
 			return result.Error(err)
 		}
 
-		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), kc.Namespace, toml)
+		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), dcConfig.Meta.Name, kc.Namespace, toml)
 		annotations.AddHashAnnotation(desiredVectorConfigMap)
 		k8ssandralabels.SetManagedBy(desiredVectorConfigMap, kcKey)
 
@@ -46,9 +46,18 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		if err := remoteClient.Get(ctx, configMapKey, actualVectorConfigMap); err != nil {
 			if errors.IsNotFound(err) {
 				if err := remoteClient.Create(ctx, desiredVectorConfigMap); err != nil {
-					dcLogger.Error(err, "Failed to create Vector Agent ConfigMap")
-					return result.Error(err)
+					if errors.IsAlreadyExists(err) {
+						// the read from the local cache didn't catch that the resource was created
+						// already; simply requeue until the cache is up-to-date
+						dcLogger.Info("Vector Agent configuration already exists, requeueing")
+						return result.RequeueSoon(r.DefaultDelay)
+					} else {
+						dcLogger.Error(err, "Failed to create Vector Agent ConfigMap")
+						return result.Error(err)
+					}
 				}
+				// Requeue to ensure the config map can be retrieved
+				return result.RequeueSoon(r.DefaultDelay)
 			}
 		}
 
@@ -64,8 +73,28 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 			}
 			return result.RequeueSoon(r.DefaultDelay)
 		}
+	} else {
+		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
+			return result.Error(err)
+		}
 	}
 
 	dcLogger.Info("Vector Agent ConfigMap successfully reconciled")
 	return result.Continue()
+}
+
+func deleteConfigMapIfExists(ctx context.Context, remoteClient client.Client, configMapKey client.ObjectKey, logger logr.Logger) error {
+	configMap := &corev1.ConfigMap{}
+	if err := remoteClient.Get(ctx, configMapKey, configMap); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		logger.Error(err, "Failed to get ConfigMap", configMapKey)
+		return err
+	}
+	if err := remoteClient.Delete(ctx, configMap); err != nil {
+		logger.Error(err, "Failed to delete ConfigMap", configMapKey)
+		return err
+	}
+	return nil
 }

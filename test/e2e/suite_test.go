@@ -19,6 +19,7 @@ import (
 	"gopkg.in/resty.v1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
@@ -790,6 +791,23 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
+
+	t.Log("Disable Vector in k8ssandracluster resource")
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	vectorPatch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	k8ssandra.Spec.Cassandra.Telemetry.Vector.Enabled = pointer.Bool(false)
+	err = f.Client.Patch(ctx, k8ssandra, vectorPatch)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	require.Eventually(func() bool {
+		// Check that vector's configmap is deleted
+		cm := &corev1.ConfigMap{}
+		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kcKey.Name, dcKey.Name)}, cm)
+		if err != nil && errors.IsNotFound(err) {
+			return true
+		}
+		return false
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "vector configmap was not deleted")
 }
 
 // createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter

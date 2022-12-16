@@ -30,6 +30,10 @@ spec:
 ...
 ```
 
+Telemetry settings can be configured at the cluster level and then overridden at the datacenter level.
+
+```yaml
+
 The following content will be added automatically to the vector.toml file, setting up Cassandra metrics scraping:
 
 ```toml
@@ -59,7 +63,7 @@ target = "stdout"
 
 ## Custom Vector configuration
 
-To customize the Vector configuration, you need to create a `ConfigMap` containing a `vector.toml` file. The `ConfigMap` must be in the same namespace as the `K8ssandraCluster` resource:
+To customize the Vector configuration, you need to create a `ConfigMap` containing a `vector.toml` file. The `ConfigMap` must be in the same namespace as the `CassandraDatacenter` resource (the namespace where the DC is deployed):
 
 ```yaml
 apiVersion: v1
