@@ -2125,6 +2125,11 @@ spec:
                               More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             type: object
                         type: object
+                      scrapeInterval:
+                        description: ScrapeInterval is the interval at which the Vector
+                          agent will scrape the metrics endpoint. kube:default=30
+                        format: int32
+                        type: integer
                     type: object
                 type: object
               tolerations:

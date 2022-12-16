@@ -23,6 +23,7 @@ const (
 	DefaultVectorMemoryRequest = "128Mi"
 	DefaultVectorCpuLimit      = "2"
 	DefaultVectorMemoryLimit   = "2Gi"
+	DefaultScrapeInterval      = 30
 )
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
@@ -118,10 +119,15 @@ target = "stdout"
 		}
 	}
 
+	var scrapeInterval int32 = DefaultScrapeInterval
+	if telemetrySpec.Vector.ScrapeInterval != 0 {
+		scrapeInterval = telemetrySpec.Vector.ScrapeInterval
+	}
+
 	config := VectorConfig{
 		Sinks:          sinks,
 		ScrapePort:     CassandraMetricsPort,
-		ScrapeInterval: 30,
+		ScrapeInterval: scrapeInterval,
 	}
 
 	vectorTomlTemplate := `

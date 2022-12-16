@@ -39,6 +39,11 @@ type VectorSpec struct {
 	// +optional
 	// kube:default="timberio/vector:0.26.0-alpine"
 	Image string `json:"image,omitempty"`
+
+	// ScrapeInterval is the interval at which the Vector agent will scrape the metrics endpoint.
+	// +optional
+	// kube:default=30
+	ScrapeInterval int32 `json:"scrapeInterval,omitempty"`
 }
 
 type McacTelemetrySpec struct {

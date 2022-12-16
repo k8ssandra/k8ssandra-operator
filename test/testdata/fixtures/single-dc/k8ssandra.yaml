@@ -63,7 +63,7 @@ spec:
                   requests:
                     storage: 1Gi
             - name: commitlog-vol
-              mountPath: "/var/lib/commitlog"
+              mountPath: "/var/lib/cassandra/commitlog2"
               pvcSpec:
                 storageClassName: standard
                 accessModes:
@@ -76,7 +76,7 @@ spec:
             data_file_directories:
               - /var/lib/cassandra/data
               - /var/lib/extra/data
-            commitlog_directory: "/var/lib/commitlog"
+            commitlog_directory: "/var/lib/cassandra/commitlog2"
           jvmOptions:
             heap_initial_size: 512Mi
             heap_max_size: 512Mi
