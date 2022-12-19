@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"errors"
+
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
@@ -13,7 +14,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -171,35 +171,4 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 	}
 
 	return result.Continue()
-}
-
-func (r *K8ssandraClusterReconciler) deletePerNodeConfigurations(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	perNodeConfigs := &corev1.ConfigMapList{}
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	if err := remoteClient.List(ctx, perNodeConfigs, &options); err != nil {
-		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, rp := range perNodeConfigs.Items {
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !apierrors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Reaper", "Reaper", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-	return
 }

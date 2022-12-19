@@ -8,6 +8,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const (
+	defaultVectorImage = "timberio/vector:0.26.0-alpine"
+)
+
 var (
 	DefaultFilters = []string{"deny:org.apache.cassandra.metrics.Table",
 		"deny:org.apache.cassandra.metrics.table",

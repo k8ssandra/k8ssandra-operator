@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
@@ -16,6 +17,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -92,7 +94,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			hasErrors = true
 		}
 
-		if r.deletePerNodeConfigurations(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
+		if r.deleteK8ssandraConfigMaps(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 	}
@@ -323,4 +325,35 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	}
 
 	return nil, nil, nil
+}
+
+func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	kcLogger logr.Logger,
+) (hasErrors bool) {
+	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
+	configMaps := &corev1.ConfigMapList{}
+	options := client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selector),
+	}
+	if err := remoteClient.List(ctx, configMaps, &options); err != nil {
+		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
+		return true
+	}
+	for _, rp := range configMaps.Items {
+		if err := remoteClient.Delete(ctx, &rp); err != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
+			if !apierrors.IsNotFound(err) {
+				kcLogger.Error(err, "Failed to delete configmap", "ConfigMap", key,
+					"Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+		}
+	}
+	return
 }

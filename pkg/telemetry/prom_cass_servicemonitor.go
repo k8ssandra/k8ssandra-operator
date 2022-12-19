@@ -12,6 +12,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+const (
+	CassandraMetricsPort = 9103
+)
+
 // Static configuration for ServiceMonitor's endpoints.
 const endpointString = `
 apiVersion: monitoring.coreos.com/v1
@@ -23,7 +27,7 @@ spec:
     path: /metrics
     scheme: http
     scrapeTimeout: 15s
-    targetPort: 9103
+    targetPort: %d
     metricRelabelings:
     - regex: collectd_mcac_(meter|histogram).*
       sourceLabels:
@@ -308,7 +312,7 @@ var cassServiceMonitorTemplate = &promapi.ServiceMonitor{}
 
 func init() {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
-	_, _, err := decode([]byte(endpointString), nil, cassServiceMonitorTemplate)
+	_, _, err := decode([]byte(fmt.Sprintf(endpointString, CassandraMetricsPort)), nil, cassServiceMonitorTemplate)
 	if err != nil {
 		fmt.Println("Fatal error initialising EndpointHolder in pks/telemetry/prometheus_resourcer.go", err)
 		os.Exit(1)
