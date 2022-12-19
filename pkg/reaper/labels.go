@@ -36,7 +36,7 @@ func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
 		labels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = kcNamespace
 	}
 
-	if meta := r.Spec.ResourceMeta; meta != nil && meta.CommonLabels != nil {
+	if meta := r.Spec.ResourceMeta; meta != nil {
 		return utils.MergeMap(commonLabels, labels, meta.CommonLabels)
 	}
 
@@ -45,7 +45,7 @@ func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
 
 func createPodLabels(r *reaperapi.Reaper) map[string]string {
 	labels := createServiceAndDeploymentLabels(r)
-	if meta := r.Spec.ResourceMeta; meta != nil && r.Spec.ResourceMeta.Pods != nil {
+	if meta := r.Spec.ResourceMeta; meta != nil {
 		return utils.MergeMap(labels, meta.Pods.Labels)
 	}
 	return labels

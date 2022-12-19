@@ -16,7 +16,7 @@ type Tags struct {
 type ResourceMeta struct {
 	// labels/annotations for the top-level CRD component
 	// +optional
-	Resource *Tags `json:"resource,omitempty"`
+	Resource Tags `json:"resource,omitempty"`
 
 	// labels/annotations that will be applied to all components
 	// created by the CRD
@@ -25,17 +25,18 @@ type ResourceMeta struct {
 
 	// labels/annotations for the pod components
 	// +optional
-	Pods *Tags `json:"pods,omitempty"`
+	Pods Tags `json:"pods,omitempty"`
 
 	// labels/annotations for the service component
-	Service *Tags `json:"service,omitempty"`
+	Service Tags `json:"service,omitempty"`
 }
 
+// Struct to hold labels and annotations for a CassandraDatacenter
 // +kubebuilder:object:generate=true
 type CassandraDatacenterMeta struct {
-	// labels/annotations for the top-level CRD component
+	// labels/annotations for the CassandraDatacenter component
 	// +optional
-	Resource *Tags `json:"resource,omitempty"`
+	Resource Tags `json:"resource,omitempty"`
 
 	// labels/annotations that will be applied to all components
 	// created by the CRD
@@ -44,7 +45,8 @@ type CassandraDatacenterMeta struct {
 
 	// labels/annotations for the pod components
 	// +optional
-	Pods *Tags `json:"pods,omitempty"`
+	Pods Tags `json:"pods,omitempty"`
+
 	// labels/annotations for all of the CassandraDatacenter service components
 	ServiceConfig CassandraDatacenterServicesMeta `json:"services,omitempty"`
 }

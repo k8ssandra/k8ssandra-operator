@@ -33,7 +33,7 @@ func NewReaper(
 ) *reaperapi.Reaper {
 	labels := createResourceLabels(kc)
 	var anns map[string]string
-	if m := reaperTemplate.ResourceMeta; m != nil && m.Resource != nil {
+	if m := reaperTemplate.ResourceMeta; m != nil {
 		labels = utils.MergeMap(labels, m.Resource.Labels)
 		anns = m.Resource.Annotations
 	}

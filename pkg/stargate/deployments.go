@@ -486,7 +486,7 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 	}
 
 	var annotations map[string]string
-	if m := stargate.Spec.ResourceMeta; m != nil && m.Pods != nil {
+	if m := stargate.Spec.ResourceMeta; m != nil {
 		labels = utils.MergeMap(labels, m.CommonLabels, m.Pods.Labels)
 		annotations = m.Pods.Annotations
 	}
@@ -504,7 +504,7 @@ func createPodLabels(stargate *api.Stargate, deploymentName string) map[string]s
 		api.StargateDeploymentLabel: deploymentName,
 	}
 
-	if m := stargate.Spec.ResourceMeta; m != nil && m.Pods != nil {
+	if m := stargate.Spec.ResourceMeta; m != nil {
 		return utils.MergeMap(commonLabels, m.CommonLabels, m.Pods.Labels)
 	}
 

@@ -56,7 +56,7 @@ func NewStargate(
 	}
 
 	var annotations map[string]string
-	if m := stargateTemplate.ResourceMeta; m != nil && m.Resource != nil {
+	if m := stargateTemplate.ResourceMeta; m != nil {
 		labels = utils.MergeMap(labels, m.Resource.Labels)
 		annotations = m.Resource.Annotations
 	}

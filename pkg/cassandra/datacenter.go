@@ -194,10 +194,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	m := template.Meta.Metadata
-	if m.Resource != nil {
+	if m.Resource.Labels != nil {
 		dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Resource.Labels)
-		dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
 	}
+	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
 
 	if m.CommonLabels != nil {
 		dc.Spec.AdditionalLabels = m.CommonLabels
@@ -394,12 +394,16 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volum
 }
 
 func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {
-	if m.Pods != nil {
-		dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
-			Annotations: m.Pods.Annotations,
-			Labels:      utils.MergeMap(m.CommonLabels, m.Pods.Labels),
-		}
+	labels := m.CommonLabels
+	if m.Pods.Labels != nil {
+		labels = utils.MergeMap(m.CommonLabels, m.Pods.Labels)
 	}
+
+	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
+		Annotations: m.Pods.Annotations,
+		Labels:      labels,
+	}
+
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {

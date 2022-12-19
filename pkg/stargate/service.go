@@ -61,11 +61,7 @@ func createServiceLabels(stargate *api.Stargate) map[string]string {
 	}
 
 	if m := stargate.Spec.ResourceMeta; m != nil {
-		labels = utils.MergeMap(labels, m.CommonLabels)
-
-		if m.Service != nil {
-			labels = utils.MergeMap(labels, m.Service.Labels)
-		}
+		labels = utils.MergeMap(labels, m.CommonLabels, m.Service.Labels)
 
 	}
 	return labels
@@ -84,10 +80,9 @@ func createServiceMeta(stargate *api.Stargate) meta.Tags {
 	if meta := stargate.Spec.ResourceMeta; meta != nil {
 		labels = utils.MergeMap(labels, meta.CommonLabels)
 
-		if meta.Service != nil {
-			labels = utils.MergeMap(labels, meta.Service.Labels)
-			annotations = meta.Service.Annotations
-		}
+		labels = utils.MergeMap(labels, meta.Service.Labels)
+		annotations = meta.Service.Annotations
+
 	}
 
 	return meta.Tags{

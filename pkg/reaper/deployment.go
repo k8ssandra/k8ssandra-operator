@@ -360,9 +360,8 @@ func getPodMeta(reaper *api.Reaper) meta.Tags {
 
 	var podAnnotations map[string]string
 	if meta := reaper.Spec.ResourceMeta; meta != nil {
-		if meta.Pods != nil {
-			podAnnotations = meta.Pods.Annotations
-		}
+		podAnnotations = meta.Pods.Annotations
+
 	}
 
 	return meta.Tags{

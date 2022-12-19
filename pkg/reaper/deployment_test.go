@@ -36,11 +36,11 @@ func TestNewDeployment(t *testing.T) {
 		}},
 	}
 	reaper.Spec.ResourceMeta = &meta.ResourceMeta{
-		Pods: &meta.Tags{
+		Pods: meta.Tags{
 			Labels:      map[string]string{"pod-label": "pod-label-value"},
 			Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 		},
-		Service: &meta.Tags{
+		Service: meta.Tags{
 			Labels:      map[string]string{"service-label": "service-label-value"},
 			Annotations: map[string]string{"service-annotation": "service-annotation-value"},
 		},
@@ -461,11 +461,11 @@ func newTestReaper() *reaperapi.Reaper {
 			ReaperTemplate: reaperapi.ReaperTemplate{
 				Keyspace: "reaper_db",
 				ResourceMeta: &meta.ResourceMeta{
-					Pods: &meta.Tags{
+					Pods: meta.Tags{
 						Labels:      map[string]string{"pod-label": "pod-label-value"},
 						Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 					},
-					Service: &meta.Tags{
+					Service: meta.Tags{
 						Labels:      map[string]string{"service-label": "service-label-value"},
 						Annotations: map[string]string{"service-annotation": "service-annotation-value"},
 					},

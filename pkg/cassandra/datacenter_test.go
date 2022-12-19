@@ -50,7 +50,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -65,7 +65,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -335,7 +335,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -353,7 +353,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -384,7 +384,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -399,7 +399,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: &meta.Tags{
+						Resource: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -909,7 +909,7 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: meta.CassandraDatacenterMeta{
-					Pods: &meta.Tags{
+					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
 						Annotations: map[string]string{"annotation:": "avalue"},
 					},
@@ -922,7 +922,7 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
-						Pods: &meta.Tags{
+						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
 						},
@@ -949,7 +949,7 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
-						Pods: &meta.Tags{
+						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
 						},
@@ -960,7 +960,7 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
-						Pods: &meta.Tags{
+						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
 						},
@@ -982,7 +982,7 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: meta.CassandraDatacenterMeta{
-					Pods: &meta.Tags{
+					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue", "cluster": "cluster"},
 						Annotations: map[string]string{"annotation:": "avalue", "cluster": "cluster"},
 					},
@@ -993,7 +993,7 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
-						Pods: &meta.Tags{
+						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "dcvalue", "dc": "dc"},
 							Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc"},
 						},
@@ -1004,7 +1004,7 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
-						Pods: &meta.Tags{
+						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "dcvalue", "dc": "dc", "cluster": "cluster"},
 							Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc", "cluster": "cluster"},
 						},
@@ -1398,7 +1398,7 @@ func GetDatacenterConfig() DatacenterConfig {
 			Namespace: "k8ssandra",
 			Name:      "dc1",
 			Metadata: meta.CassandraDatacenterMeta{
-				Resource: &meta.Tags{
+				Resource: meta.Tags{
 					Labels: map[string]string{
 						"env": "dev",
 					},
