@@ -32,7 +32,6 @@ spec:
 
 Telemetry settings can be configured at the cluster level and then overridden at the datacenter level.
 
-```yaml
 
 The following content will be added automatically to the vector.toml file, setting up Cassandra metrics scraping:
 
