@@ -7382,7 +7382,7 @@ spec:
                                   type: object
                               type: object
                             resource:
-                              description: labels/annotations for the top-level CRD
+                              description: labels/annotations for the CassandraDatacenter
                                 component
                               properties:
                                 annotations:
@@ -14929,6 +14929,7 @@ spec:
                         type: object
                     type: object
                   metadata:
+                    description: Struct to hold labels and annotations for a CassandraDatacenter
                     properties:
                       commonLabels:
                         additionalProperties:
@@ -14949,7 +14950,8 @@ spec:
                             type: object
                         type: object
                       resource:
-                        description: labels/annotations for the top-level CRD component
+                        description: labels/annotations for the CassandraDatacenter
+                          component
                         properties:
                           annotations:
                             additionalProperties:
