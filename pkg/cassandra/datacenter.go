@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -110,7 +111,6 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
-	ServiceConfig             *cassdcapi.ServiceConfig
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -193,20 +193,17 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
 	}
 
-	if m := template.Meta.Metadata; m != nil {
-		if m.Resource != nil {
-			dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Resource.Labels)
-			dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
-		}
-
-		if m.CommonLabels != nil {
-			dc.Spec.AdditionalLabels = m.CommonLabels
-		}
-
-		if m.ServiceConfig != nil {
-			dc.Spec.AdditionalServiceConfig = *m.ServiceConfig
-		}
+	m := template.Meta.Metadata
+	if m.Resource != nil {
+		dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Resource.Labels)
+		dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
 	}
+
+	if m.CommonLabels != nil {
+		dc.Spec.AdditionalLabels = m.CommonLabels
+	}
+
+	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
 
 	dc.Spec.Tolerations = template.Tolerations
 
@@ -325,12 +322,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
-	m := api.MergeCassandraDatacenterMeta(clusterTemplate.Meta.Metadata, dcTemplate.Meta.Metadata)
+	m := goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
 	dcConfig.Meta.Metadata = m
 
-	if m != nil {
-		AddPodTemplateSpecMeta(dcConfig, m)
-	}
+	AddPodTemplateSpecMeta(dcConfig, m)
 
 	if len(mergedOptions.Containers) > 0 {
 		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
@@ -398,7 +393,7 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volum
 	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
 }
 
-func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m *api.CassandraDatacenterMeta) {
+func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {
 	if m.Pods != nil {
 		dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
 			Annotations: m.Pods.Annotations,

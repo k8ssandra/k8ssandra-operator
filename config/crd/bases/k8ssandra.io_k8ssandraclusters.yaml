@@ -7359,114 +7359,101 @@ spec:
                           type: object
                         metadata:
                           properties:
-                            dcMetadata:
-                              properties:
-                                commonLabels:
-                                  additionalProperties:
-                                    type: string
-                                  description: labels/annotations that will be applied
-                                    to all resources created by the CassandraDatacenter
-                                  type: object
-                                pods:
-                                  description: labels/annotations for the pod components
-                                  properties:
-                                    annotations:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    labels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                resource:
-                                  description: labels/annotations for the CassandraDatacenter
-                                    object
-                                  properties:
-                                    annotations:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    labels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                services:
-                                  description: labels/annotations for all of the CassandraDatacenter
-                                    service components
-                                  properties:
-                                    additionalSeedService:
-                                      description: ServiceConfigAdditions exposes
-                                        additional options for each service
-                                      properties:
-                                        additionalAnnotations:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                        additionalLabels:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                      type: object
-                                    allpodsService:
-                                      description: ServiceConfigAdditions exposes
-                                        additional options for each service
-                                      properties:
-                                        additionalAnnotations:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                        additionalLabels:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                      type: object
-                                    dcService:
-                                      description: ServiceConfigAdditions exposes
-                                        additional options for each service
-                                      properties:
-                                        additionalAnnotations:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                        additionalLabels:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                      type: object
-                                    nodePortService:
-                                      description: ServiceConfigAdditions exposes
-                                        additional options for each service
-                                      properties:
-                                        additionalAnnotations:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                        additionalLabels:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                      type: object
-                                    seedService:
-                                      description: ServiceConfigAdditions exposes
-                                        additional options for each service
-                                      properties:
-                                        additionalAnnotations:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                        additionalLabels:
-                                          additionalProperties:
-                                            type: string
-                                          type: object
-                                      type: object
-                                  type: object
+                            commonLabels:
+                              additionalProperties:
+                                type: string
+                              description: labels/annotations that will be applied
+                                to all components created by the CRD
                               type: object
                             name:
                               type: string
                             namespace:
                               type: string
+                            pods:
+                              description: labels/annotations for the pod components
+                              properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
+                            resource:
+                              description: labels/annotations for the top-level CRD
+                                component
+                              properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
+                            services:
+                              description: labels/annotations for all of the CassandraDatacenter
+                                service components
+                              properties:
+                                additionalSeedService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                allPodsService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                dcService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                nodePortService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                seedService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                              type: object
                           required:
                           - name
                           type: object
@@ -14943,16 +14930,41 @@ spec:
                     type: object
                   metadata:
                     properties:
-                      dcMetadata:
+                      commonLabels:
+                        additionalProperties:
+                          type: string
+                        description: labels/annotations that will be applied to all
+                          components created by the CRD
+                        type: object
+                      pods:
+                        description: labels/annotations for the pod components
                         properties:
-                          commonLabels:
+                          annotations:
                             additionalProperties:
                               type: string
-                            description: labels/annotations that will be applied to
-                              all resources created by the CassandraDatacenter
                             type: object
-                          pods:
-                            description: labels/annotations for the pod components
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      resource:
+                        description: labels/annotations for the top-level CRD component
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      services:
+                        description: labels/annotations for all of the CassandraDatacenter
+                          service components
+                        properties:
+                          additionalSeedService:
                             properties:
                               annotations:
                                 additionalProperties:
@@ -14963,9 +14975,7 @@ spec:
                                   type: string
                                 type: object
                             type: object
-                          resource:
-                            description: labels/annotations for the CassandraDatacenter
-                              object
+                          allPodsService:
                             properties:
                               annotations:
                                 additionalProperties:
@@ -14976,83 +14986,40 @@ spec:
                                   type: string
                                 type: object
                             type: object
-                          services:
-                            description: labels/annotations for all of the CassandraDatacenter
-                              service components
+                          dcService:
                             properties:
-                              additionalSeedService:
-                                description: ServiceConfigAdditions exposes additional
-                                  options for each service
-                                properties:
-                                  additionalAnnotations:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                  additionalLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
+                              annotations:
+                                additionalProperties:
+                                  type: string
                                 type: object
-                              allpodsService:
-                                description: ServiceConfigAdditions exposes additional
-                                  options for each service
-                                properties:
-                                  additionalAnnotations:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                  additionalLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
                                 type: object
-                              dcService:
-                                description: ServiceConfigAdditions exposes additional
-                                  options for each service
-                                properties:
-                                  additionalAnnotations:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                  additionalLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
+                            type: object
+                          nodePortService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
                                 type: object
-                              nodePortService:
-                                description: ServiceConfigAdditions exposes additional
-                                  options for each service
-                                properties:
-                                  additionalAnnotations:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                  additionalLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
                                 type: object
-                              seedService:
-                                description: ServiceConfigAdditions exposes additional
-                                  options for each service
-                                properties:
-                                  additionalAnnotations:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
-                                  additionalLabels:
-                                    additionalProperties:
-                                      type: string
-                                    type: object
+                            type: object
+                          seedService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
                                 type: object
                             type: object
                         type: object
-                      name:
-                        type: string
-                      namespace:
-                        type: string
-                    required:
-                    - name
                     type: object
                   mgmtAPIHeap:
                     anyOf:

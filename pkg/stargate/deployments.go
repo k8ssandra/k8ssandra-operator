@@ -475,7 +475,7 @@ func createDeploymentLabels(stargate *api.Stargate) map[string]string {
 	return commonLabels
 }
 
-func createPodMeta(stargate *api.Stargate, deploymentName string) meta.MetaTags {
+func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 	labels := map[string]string{
 		coreapi.NameLabel:           coreapi.NameLabelValue,
 		coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
@@ -491,7 +491,7 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.MetaTags 
 		annotations = m.Pods.Annotations
 	}
 
-	return meta.MetaTags{Labels: labels, Annotations: annotations}
+	return meta.Tags{Labels: labels, Annotations: annotations}
 }
 
 func createPodLabels(stargate *api.Stargate, deploymentName string) map[string]string {

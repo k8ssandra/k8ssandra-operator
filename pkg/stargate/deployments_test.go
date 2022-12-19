@@ -47,11 +47,11 @@ var (
 				StargateClusterTemplate: api.StargateClusterTemplate{
 					StargateTemplate: api.StargateTemplate{
 						ResourceMeta: &meta.ResourceMeta{
-							Pods: &meta.MetaTags{
+							Pods: &meta.Tags{
 								Labels:      map[string]string{"pod-label": "pod-label-value"},
 								Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 							},
-							Service: &meta.MetaTags{
+							Service: &meta.Tags{
 								Labels:      map[string]string{"service-label": "service-label-value"},
 								Annotations: map[string]string{"service-annotation": "service-annotation-value"},
 							},

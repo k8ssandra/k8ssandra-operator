@@ -71,7 +71,7 @@ func createServiceLabels(stargate *api.Stargate) map[string]string {
 	return labels
 }
 
-func createServiceMeta(stargate *api.Stargate) meta.MetaTags {
+func createServiceMeta(stargate *api.Stargate) meta.Tags {
 	labels := map[string]string{
 		coreapi.NameLabel:      coreapi.NameLabelValue,
 		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
@@ -90,7 +90,7 @@ func createServiceMeta(stargate *api.Stargate) meta.MetaTags {
 		}
 	}
 
-	return meta.MetaTags{
+	return meta.Tags{
 		Labels:      labels,
 		Annotations: annotations,
 	}

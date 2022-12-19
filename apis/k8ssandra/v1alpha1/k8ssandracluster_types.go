@@ -25,7 +25,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -227,7 +226,7 @@ type K8ssandraClusterList struct {
 type CassandraClusterTemplate struct {
 	DatacenterOptions `json:",inline"`
 
-	Meta EmbeddedObjectMeta `json:"metadata,omitempty"`
+	Meta meta.CassandraDatacenterMeta `json:"metadata,omitempty"`
 
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
@@ -461,84 +460,7 @@ type EmbeddedObjectMeta struct {
 	Name string `json:"name"`
 
 	// +optional
-	Metadata *CassandraDatacenterMeta `json:"dcMetadata,omitempty"`
-}
-
-type CassandraDatacenterMeta struct {
-	// labels/annotations for the CassandraDatacenter object
-	// +optional
-	Resource *meta.MetaTags `json:"resource,omitempty"`
-
-	// labels/annotations that will be applied to all resources
-	// created by the CassandraDatacenter
-	// +optional
-	CommonLabels map[string]string `json:"commonLabels,omitempty"`
-
-	// labels/annotations for the pod components
-	// +optional
-	Pods *meta.MetaTags `json:"pods,omitempty"`
-
-	// labels/annotations for all of the CassandraDatacenter service components
-	ServiceConfig *cassdcapi.ServiceConfig `json:"services,omitempty"`
-}
-
-// merge a CassandraDatacenterMeta into a destination CassandraDatacenterMeta. If properties are shared between the two configs,
-// the destination CassandraDatacenterMeta property will be used
-func MergeCassandraDatacenterMeta(m1 *CassandraDatacenterMeta, m2 *CassandraDatacenterMeta) *CassandraDatacenterMeta {
-	if m1 == nil && m2 == nil {
-		return nil
-	}
-
-	if m1 == nil {
-		return m2.DeepCopy()
-	}
-
-	if m2 == nil {
-		return m1.DeepCopy()
-	}
-
-	var commonLabels map[string]string
-	if m1.CommonLabels != nil || m2.CommonLabels != nil {
-		commonLabels = utils.MergeMap(m1.CommonLabels, m2.CommonLabels)
-	}
-
-	return &CassandraDatacenterMeta{
-		Resource:      meta.MergeMetaTags(m1.Resource, m2.Resource),
-		CommonLabels:  commonLabels,
-		Pods:          meta.MergeMetaTags(m1.Pods, m2.Pods),
-		ServiceConfig: mergeServiceConfig(m1.ServiceConfig, m2.ServiceConfig),
-	}
-}
-
-// merge a ServiceConfig into a destination ServiceConfig. If properties are shared between the two configs,
-// the destination ServiceConfig property will be used
-func mergeServiceConfig(s1 *cassdcapi.ServiceConfig, s2 *cassdcapi.ServiceConfig) *cassdcapi.ServiceConfig {
-	if s1 == nil && s2 == nil {
-		return nil
-	}
-
-	if s1 == nil {
-		return s2.DeepCopy()
-	}
-
-	if s2 == nil {
-		return s1.DeepCopy()
-	}
-
-	merge := func(sc1 cassdcapi.ServiceConfigAdditions, sc2 cassdcapi.ServiceConfigAdditions) cassdcapi.ServiceConfigAdditions {
-		return cassdcapi.ServiceConfigAdditions{
-			Labels:      utils.MergeMap(sc1.Labels, sc2.Labels),
-			Annotations: utils.MergeMap(sc1.Annotations, sc2.Annotations),
-		}
-	}
-
-	return &cassdcapi.ServiceConfig{
-		DatacenterService:     merge(s1.DatacenterService, s2.DatacenterService),
-		SeedService:           merge(s1.SeedService, s2.SeedService),
-		AllPodsService:        merge(s1.AllPodsService, s2.AllPodsService),
-		AdditionalSeedService: merge(s1.AdditionalSeedService, s2.AdditionalSeedService),
-		NodePortService:       merge(s1.NodePortService, s2.NodePortService),
-	}
+	Metadata meta.CassandraDatacenterMeta `json:",inline"`
 }
 
 func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {

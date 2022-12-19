@@ -355,7 +355,7 @@ func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacente
 	return
 }
 
-func getPodMeta(reaper *api.Reaper) meta.MetaTags {
+func getPodMeta(reaper *api.Reaper) meta.Tags {
 	labels := createPodLabels(reaper)
 
 	var podAnnotations map[string]string
@@ -365,7 +365,7 @@ func getPodMeta(reaper *api.Reaper) meta.MetaTags {
 		}
 	}
 
-	return meta.MetaTags{
+	return meta.Tags{
 		Labels:      labels,
 		Annotations: podAnnotations,
 	}
