@@ -2,5 +2,5 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands: 
 - script: |
-    ../../../bin/kustomize build ../../../config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
+    kustomize build ../../../config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
   ignoreFailure: false 
