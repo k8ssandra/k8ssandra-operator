@@ -58,6 +58,9 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 				}
 				// Requeue to ensure the config map can be retrieved
 				return result.RequeueSoon(r.DefaultDelay)
+			} else {
+				dcLogger.Error(err, "Failed to get Vector Agent ConfigMap")
+				return result.Error(err)
 			}
 		}
 
