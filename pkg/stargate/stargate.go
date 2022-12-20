@@ -6,6 +6,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +47,27 @@ func NewStargate(
 		cassandraEncryption.ServerEncryptionStores = kc.Spec.Cassandra.ServerEncryptionStores
 	}
 
+	tags := createResourceMeta(stargateTemplate, kc)
+
+	desiredStargate := &stargateapi.Stargate{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   stargateKey.Namespace,
+			Name:        stargateKey.Name,
+			Annotations: tags.Annotations,
+			Labels:      tags.Labels,
+		},
+		Spec: stargateapi.StargateSpec{
+			StargateDatacenterTemplate: *stargateTemplate,
+			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
+			Auth:                       kc.Spec.Auth,
+			CassandraEncryption:        &cassandraEncryption,
+		},
+	}
+
+	return desiredStargate
+}
+
+func createResourceMeta(stargateTemplate *stargateapi.StargateDatacenterTemplate, kc *api.K8ssandraCluster) meta.Tags {
 	labels := map[string]string{
 		api.NameLabel:                      api.NameLabelValue,
 		api.PartOfLabel:                    api.PartOfLabelValue,
@@ -61,20 +83,8 @@ func NewStargate(
 		annotations = m.Resource.Annotations
 	}
 
-	desiredStargate := &stargateapi.Stargate{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   stargateKey.Namespace,
-			Name:        stargateKey.Name,
-			Annotations: annotations,
-			Labels:      labels,
-		},
-		Spec: stargateapi.StargateSpec{
-			StargateDatacenterTemplate: *stargateTemplate,
-			DatacenterRef:              corev1.LocalObjectReference{Name: actualDc.Name},
-			Auth:                       kc.Spec.Auth,
-			CassandraEncryption:        &cassandraEncryption,
-		},
+	return meta.Tags{
+		Annotations: annotations,
+		Labels:      labels,
 	}
-
-	return desiredStargate
 }

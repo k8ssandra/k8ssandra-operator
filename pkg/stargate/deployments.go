@@ -494,23 +494,6 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 	return meta.Tags{Labels: labels, Annotations: annotations}
 }
 
-func createPodLabels(stargate *api.Stargate, deploymentName string) map[string]string {
-	commonLabels := map[string]string{
-		coreapi.NameLabel:           coreapi.NameLabelValue,
-		coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
-		coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
-		api.StargateLabel:           stargate.Name,
-		api.StargateDeploymentLabel: deploymentName,
-	}
-
-	if m := stargate.Spec.ResourceMeta; m != nil {
-		return utils.MergeMap(commonLabels, m.CommonLabels, m.Pods.Labels)
-	}
-
-	return commonLabels
-}
-
 func GeneratedConfigMapName(clusterName, dcName string) string {
 	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
 }

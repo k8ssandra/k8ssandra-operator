@@ -909,6 +909,9 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: meta.CassandraDatacenterMeta{
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
 						Annotations: map[string]string{"annotation:": "avalue"},
@@ -922,6 +925,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
@@ -949,6 +955,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
@@ -960,6 +969,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						Pods: meta.Tags{
 							Labels:      map[string]string{"label": "lvalue"},
 							Annotations: map[string]string{"annotation:": "avalue"},
@@ -1026,6 +1038,9 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: meta.CassandraDatacenterMeta{
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
 					ServiceConfig: meta.CassandraDatacenterServicesMeta{
 						DatacenterService: meta.Tags{
 							Labels:      map[string]string{"dclabel": "dcvalue"},
@@ -1056,6 +1071,9 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						ServiceConfig: meta.CassandraDatacenterServicesMeta{
 							DatacenterService: meta.Tags{
 								Labels:      map[string]string{"dclabel": "dcvalue"},
@@ -1096,6 +1114,9 @@ func TestCoalesce(t *testing.T) {
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: api.EmbeddedObjectMeta{
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						ServiceConfig: meta.CassandraDatacenterServicesMeta{
 							DatacenterService: meta.Tags{
 								Labels:      map[string]string{"dclabel": "dcvalue"},
@@ -1124,6 +1145,9 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Metadata: meta.CassandraDatacenterMeta{
+						CommonLabels: map[string]string{
+							"common": "label",
+						},
 						ServiceConfig: meta.CassandraDatacenterServicesMeta{
 							DatacenterService: meta.Tags{
 								Labels:      map[string]string{"dclabel": "dcvalue"},

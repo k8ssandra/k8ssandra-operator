@@ -190,7 +190,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Namespace:   reaper.Namespace,
 			Name:        reaper.Name,
 			Labels:      createServiceAndDeploymentLabels(reaper),
-			Annotations: podMeta.Annotations,
+			Annotations: map[string]string{},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &selector,

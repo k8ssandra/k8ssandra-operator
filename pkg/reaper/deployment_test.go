@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
@@ -36,8 +37,9 @@ func TestNewDeployment(t *testing.T) {
 		}},
 	}
 	reaper.Spec.ResourceMeta = &meta.ResourceMeta{
+		CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
 		Pods: meta.Tags{
-			Labels:      map[string]string{"pod-label": "pod-label-value"},
+			Labels:      map[string]string{"pod-label": "pod-label-value", "override": "podLevel"},
 			Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 		},
 		Service: meta.Tags{
@@ -47,7 +49,7 @@ func TestNewDeployment(t *testing.T) {
 	}
 
 	labels := createServiceAndDeploymentLabels(reaper)
-	podLabels := utils.MergeMap(reaper.Spec.ResourceMeta.Pods.Labels, labels)
+	podLabels := utils.MergeMap(labels, reaper.Spec.ResourceMeta.Pods.Labels)
 
 	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"))
 
@@ -461,12 +463,13 @@ func newTestReaper() *reaperapi.Reaper {
 			ReaperTemplate: reaperapi.ReaperTemplate{
 				Keyspace: "reaper_db",
 				ResourceMeta: &meta.ResourceMeta{
+					CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
 					Pods: meta.Tags{
-						Labels:      map[string]string{"pod-label": "pod-label-value"},
+						Labels:      map[string]string{"pod-label": "pod-label-value", "override": "podLevel"},
 						Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
 					},
 					Service: meta.Tags{
-						Labels:      map[string]string{"service-label": "service-label-value"},
+						Labels:      map[string]string{"service-label": "service-label-value", "override": "serviceLevel"},
 						Annotations: map[string]string{"service-annotation": "service-annotation-value"},
 					},
 				},
@@ -539,4 +542,34 @@ func TestCustomResources(t *testing.T) {
 	assert.Equal(t, resource.MustParse("10Gi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory(), "expected main container memory request to be set")
 	assert.Equal(t, resource.MustParse("4"), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu(), "expected main container cpu request to be set")
 	assert.Equal(t, resource.MustParse("20Gi"), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
+}
+
+func TestLabelsAnnotations(t *testing.T) {
+	reaper := newTestReaper()
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+
+	deploymentLabels := map[string]string{
+		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		reaperapi.ReaperLabel:       reaper.Name,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
+		"common":                    "everywhere", "override": "commonLevel",
+	}
+
+	podLabels := map[string]string{
+		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		reaperapi.ReaperLabel:       reaper.Name,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
+		"common":                    "everywhere",
+		"override":                  "podLevel",
+		"pod-label":                 "pod-label-value",
+	}
+
+	assert.Equal(t, deploymentLabels, deployment.Labels)
+	assert.Equal(t, podLabels, deployment.Spec.Template.Labels)
 }

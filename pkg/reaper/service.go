@@ -49,7 +49,7 @@ func NewService(key types.NamespacedName, reaper *api.Reaper) *corev1.Service {
 					StrVal: "admin",
 				},
 			}},
-			Selector: commonLabels,
+			Selector: getConstantLabels(reaper),
 		},
 	}
 	annotations.AddHashAnnotation(service)

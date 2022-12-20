@@ -51,22 +51,6 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 	return service
 }
 
-func createServiceLabels(stargate *api.Stargate) map[string]string {
-	labels := map[string]string{
-		coreapi.NameLabel:      coreapi.NameLabelValue,
-		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-		api.StargateLabel:      stargate.Name,
-	}
-
-	if m := stargate.Spec.ResourceMeta; m != nil {
-		labels = utils.MergeMap(labels, m.CommonLabels, m.Service.Labels)
-
-	}
-	return labels
-}
-
 func createServiceMeta(stargate *api.Stargate) meta.Tags {
 	labels := map[string]string{
 		coreapi.NameLabel:      coreapi.NameLabelValue,
@@ -78,9 +62,7 @@ func createServiceMeta(stargate *api.Stargate) meta.Tags {
 
 	var annotations map[string]string
 	if meta := stargate.Spec.ResourceMeta; meta != nil {
-		labels = utils.MergeMap(labels, meta.CommonLabels)
-
-		labels = utils.MergeMap(labels, meta.Service.Labels)
+		labels = utils.MergeMap(labels, meta.CommonLabels, meta.Service.Labels)
 		annotations = meta.Service.Annotations
 
 	}

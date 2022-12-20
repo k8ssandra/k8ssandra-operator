@@ -320,10 +320,9 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
-	m := goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
-	dcConfig.Meta.Metadata = m
+	dcConfig.Meta.Metadata = goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
 
-	AddPodTemplateSpecMeta(dcConfig, m)
+	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta.Metadata)
 
 	if len(mergedOptions.Containers) > 0 {
 		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
@@ -392,14 +391,10 @@ func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volum
 }
 
 func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {
-	labels := m.CommonLabels
-	if m.Pods.Labels != nil {
-		labels = utils.MergeMap(m.CommonLabels, m.Pods.Labels)
-	}
-
+	// We don't need to overlay m.CommonLabels as this will be done by cass-operator itself
 	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
 		Annotations: m.Pods.Annotations,
-		Labels:      labels,
+		Labels:      m.Pods.Labels,
 	}
 
 }
