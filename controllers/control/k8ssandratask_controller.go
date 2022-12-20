@@ -26,8 +26,10 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/pkg/errors"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -50,7 +52,7 @@ import (
 )
 
 const (
-	k8ssandraTaskFinalizer = "k8ssandratask.k8ssandra.io/finalizer"
+	k8ssandraTaskFinalizer = "control.k8ssandra.io/finalizer"
 	defaultTTL             = time.Duration(86400) * time.Second
 )
 
@@ -96,10 +98,10 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if kTask.OwnerReferences == nil && kcExists {
 		logger.Info("Setting owner reference", "K8ssandraCluster", kcKey)
 		if err := controllerutil.SetControllerReference(kc, kTask, r.Scheme); err != nil {
-			return ctrl.Result{}, fmt.Errorf("setting owner reference on K8ssandraTask: %s", err)
+			return ctrl.Result{}, errors.Wrap(err, "setting owner reference on K8ssandraTask")
 		}
 		if err := r.Update(ctx, kTask); err != nil {
-			return ctrl.Result{}, fmt.Errorf("updating K8ssandraTask to set owner reference: %s", err)
+			return ctrl.Result{}, errors.Wrap(err, "updating K8ssandraTask to set owner reference")
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -151,7 +153,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Create CassandraTasks and/or gather their status
 	if !kcExists {
-		return r.reportInvalidSpec(ctx, kTask, "Unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
+		return r.reportInvalidSpec(ctx, kTask, "unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
 		return r.reportInvalidSpec(ctx, kTask, err.Error())
@@ -168,7 +170,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			cTaskKey := client.ObjectKeyFromObject(desiredCTask)
 			actualCTask := &cassapi.CassandraTask{}
 			if err = remoteClient.Get(ctx, cTaskKey, actualCTask); err != nil {
-				if errors.IsNotFound(err) {
+				if k8serrors.IsNotFound(err) {
 					actualCTask = desiredCTask
 					if err = remoteClient.Create(ctx, actualCTask); err != nil {
 						return ctrl.Result{}, err
@@ -183,7 +185,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 
 			// If we're running sequentially, only continue creating tasks if this one is complete
-			if kTask.Spec.DcConcurrencyPolicy != "Allow" && actualCTask.Status.CompletionTime.IsZero() {
+			if kTask.Spec.DcConcurrencyPolicy != batchv1.AllowConcurrent && actualCTask.Status.CompletionTime.IsZero() {
 				break
 			}
 		}
@@ -204,7 +206,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.ObjectKey) (*k8capi.K8ssandraCluster, bool, error) {
 	kc := &k8capi.K8ssandraCluster{}
-	if err := r.Get(ctx, kcKey, kc); errors.IsNotFound(err) {
+	if err := r.Get(ctx, kcKey, kc); k8serrors.IsNotFound(err) {
 		return nil, false, nil
 	} else if err != nil {
 		return nil, false, err
@@ -243,12 +245,11 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 			}
 			logger.Info("Deleting CassandraTask", "CassandraTask", actualCTask)
 			if err := remoteClient.Delete(ctx, actualCTask); err != nil {
-				if !errors.IsNotFound(err) {
-					return fmt.Errorf("deleting CassandraTask %s.%s in context %s: %s",
+				if !k8serrors.IsNotFound(err) {
+					return errors.Wrapf(err, "deleting CassandraTask %s.%s in context %s",
 						actualCTask.ObjectMeta.Namespace,
 						actualCTask.ObjectMeta.Name,
-						dc.K8sContext,
-						err)
+						dc.K8sContext)
 				}
 			}
 		}
@@ -278,7 +279,7 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 		}
 	}
 	if len(unknownDcNames) > 0 {
-		return nil, fmt.Errorf("Unknown datacenters: %s", strings.Join(unknownDcNames, ", "))
+		return nil, fmt.Errorf("unknown datacenters: %s", strings.Join(unknownDcNames, ", "))
 	}
 	return dcs, nil
 }

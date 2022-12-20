@@ -237,7 +237,7 @@ The cause will also be recorded as an event. For example if the cluster referenc
 Events:
 Type     Reason       Age                    From                      Message
 ----     ------       ----                   ----                      -------
-Warning  InvalidSpec  5m38s (x2 over 5m38s)  k8ssandratask-controller  Unknown K8ssandraCluster k8ssandra-operator.demo2
+Warning  InvalidSpec  5m38s (x2 over 5m38s)  k8ssandratask-controller  unknown K8ssandraCluster k8ssandra-operator.demo2
 ```
 
 Or if the user specified an invalid list of DCs:
@@ -245,7 +245,7 @@ Or if the user specified an invalid list of DCs:
 Events:
 Type     Reason       Age              From                      Message
 ----     ------       ----             ----                      -------
-Warning  InvalidSpec  3s (x2 over 3s)  k8ssandratask-controller  Unknown datacenters: dc4
+Warning  InvalidSpec  3s (x2 over 3s)  k8ssandratask-controller  unknown datacenters: dc4
 ```
 
 #### Job failures
