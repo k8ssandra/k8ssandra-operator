@@ -14,6 +14,7 @@ import (
 	gremlingo "github.com/apache/tinkerpop/gremlin-go/driver"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,7 +48,13 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 
 	// Check that the smart token allocation is enabled
 	t.Log("Check that the smart token allocation is enabled")
-	require.Equal(t, int64(3), kc.Spec.Cassandra.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"].(int64), "expected smart token allocation to be enabled by default for DSE")
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Client.Get(ctx, dcKey.NamespacedName, dc)
+	require.NoError(t, err, "failed to get CassandraDatacenter %v", dcKey)
+	dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+	require.NoError(t, err, "failed to unmarshall CassandraDatacenter config")
+	allocateTokensSetting := dcConfig["cassandra-yaml"].(map[string]interface{})["allocate_tokens_for_local_replication_factor"].(float64)
+	require.Equal(t, float64(3), allocateTokensSetting, "expected smart token allocation to be enabled by default for DSE")
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
