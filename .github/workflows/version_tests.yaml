@@ -93,8 +93,7 @@ jobs:
       run: |
         docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
     - name: Install kustomize
-      run: |
-        make kustomize
+      uses: imranismail/setup-kustomize@v2
     - name: Install kuttl
       run: |
         make install-kuttl

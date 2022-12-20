@@ -2,15 +2,15 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands: 
-- command: ../../../bin/kustomize build ../../../config/deployments/control-plane
+- command: kustomize build ../../../config/deployments/control-plane
   ignoreFailure: false 
-- command: ../../../bin/kustomize build ../../../config/deployments/control-plane/cluster-scope
+- command: kustomize build ../../../config/deployments/control-plane/cluster-scope
   ignoreFailure: false 
-- command: ../../../bin/kustomize build ../../../config/deployments/control-plane/cass-operator-dev 
+- command: kustomize build ../../../config/deployments/control-plane/cass-operator-dev 
   ignoreFailure: false 
-- command: ../../../bin/kustomize build ../../../config/deployments/data-plane
+- command: kustomize build ../../../config/deployments/data-plane
   ignoreFailure: false 
-- command: ../../../bin/kustomize build ../../../config/deployments/data-plane/cluster-scope
+- command: kustomize build ../../../config/deployments/data-plane/cluster-scope
   ignoreFailure: false 
-- command: ../../../bin/kustomize build ../../../config/deployments/data-plane/cass-operator-dev
+- command: kustomize build ../../../config/deployments/data-plane/cass-operator-dev
   ignoreFailure: false 

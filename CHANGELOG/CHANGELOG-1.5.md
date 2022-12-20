@@ -25,3 +25,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
+* [TESTING] [#799](https://github.com/k8ssandra/k8ssandra-operator/issues/799) Fix GHA CI failures with Kustomize install being rate limited
