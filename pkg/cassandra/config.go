@@ -125,3 +125,14 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 	addOptionIfMissing(dcConfig, allowAlterRf)
 }
+
+// EnableSmartTokenAllocation adds the allocate_tokens_for_local_replication_factor option to
+// cassandra.yaml if it is not already present when running DSE.
+// This option is enabled by default in Cassandra but not DSE.
+func EnableSmartTokenAllocation(template *DatacenterConfig) {
+	// Note: we put int64 values because even if int values can be marshaled just fine,
+	// Unstructured.DeepCopy() would reject them since int is not a supported json type.
+	if template.ServerType == api.ServerDistributionDse {
+		template.CassandraConfig.CassandraYaml.PutIfAbsent("allocate_tokens_for_local_replication_factor", int64(3))
+	}
+}

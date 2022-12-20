@@ -45,6 +45,10 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	err = f.Client.Patch(ctx, kc, patch)
 	require.NoError(t, err, "failed to patch K8ssandraCluster %v", kcKey)
 
+	// Check that the smart token allocation is enabled
+	t.Log("Check that the smart token allocation is enabled")
+	require.Equal(t, int64(3), kc.Spec.Cassandra.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"].(int64), "expected smart token allocation to be enabled by default for DSE")
+
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
