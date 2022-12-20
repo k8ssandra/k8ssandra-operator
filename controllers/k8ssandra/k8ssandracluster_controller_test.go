@@ -114,6 +114,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
 	t.Run("CreateMultiDcDseCluster", testEnv.ControllerTest(ctx, createMultiDcDseCluster))
 	t.Run("PerNodeConfiguration", testEnv.ControllerTest(ctx, perNodeConfiguration))
+	t.Run("CreateSingleDcClusterWithVector", testEnv.ControllerTest(ctx, createSingleDcClusterWithVector))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the

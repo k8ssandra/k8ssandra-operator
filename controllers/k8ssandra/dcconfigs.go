@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -73,6 +74,11 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 
 		// Inject MCAC metrics filters
 		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+
+		// Inject Vector agent
+		if err = telemetry.InjectCassandraVectorAgent(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
+			return nil, err
+		}
 
 		cassandra.AddNumTokens(dcConfig)
 		cassandra.AddStartRpc(dcConfig)

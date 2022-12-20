@@ -6,6 +6,19 @@ spec:
   cassandra:
     serverVersion: 4.0.6
     clusterName: "Weird Cluster Name"
+    telemetry:
+      vector:
+        enabled: true
+        config:
+          name: vector-custom-conf
+        scrapeInterval: 30s
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
     datacenters:
       - metadata:
           name: dc1
@@ -26,7 +39,7 @@ spec:
             command: ["sleep", "10"]
             volumeMounts:
               - name: busybox-vol
-                mountPath: /etc/busybox
+                mountPath: /var/lib/busybox
         containers:
           - name: "cassandra"
           - name: "server-system-logger"
@@ -35,14 +48,14 @@ spec:
             command: ["sleep", "3600"]
             volumeMounts:
               - name: busybox-vol
-                mountPath: /etc/busybox
+                mountPath: /var/lib/busybox
         extraVolumes:
           volumes:
             - name: busybox-vol
               emptyDir: {}
           pvcs:
             - name: sts-extra-vol
-              mountPath: "/etc/extra"
+              mountPath: "/var/lib/extra"
               pvcSpec:
                 storageClassName: standard
                 accessModes:
@@ -51,7 +64,7 @@ spec:
                   requests:
                     storage: 1Gi
             - name: commitlog-vol
-              mountPath: "/etc/commitlog"
+              mountPath: "/var/lib/cassandra/commitlog2"
               pvcSpec:
                 storageClassName: standard
                 accessModes:
@@ -63,8 +76,8 @@ spec:
           cassandraYaml:
             data_file_directories:
               - /var/lib/cassandra/data
-              - /etc/extra/data
-            commitlog_directory: "/etc/commitlog"
+              - /var/lib/extra/data
+            commitlog_directory: "/var/lib/cassandra/commitlog2"
           jvmOptions:
             heap_initial_size: 512Mi
             heap_max_size: 512Mi

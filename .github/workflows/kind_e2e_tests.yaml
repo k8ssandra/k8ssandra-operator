@@ -15,7 +15,27 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'
+  workflow_call:
+    inputs:
+      kind_node_version:
+        required: true
+        type: string
 jobs:
+  set_kind_node_version:
+    runs-on: ubuntu-latest
+    outputs:
+      kind_node_version: ${{ steps.input_or_default.outputs.kind_node_version }}
+    steps:
+      - id: input_or_default
+        name: Set Kind node version from workflow input or default
+        env:
+          DEFAULT_KIND_NODE_VERSION: v1.25.3
+        run: |
+          if [[ -z "${{ inputs.kind_node_version }}" ]]; then
+            echo '::set-output name=kind_node_version::${{ env.DEFAULT_KIND_NODE_VERSION }}'
+          else
+            echo '::set-output name=kind_node_version::${{ inputs.kind_node_version }}'
+          fi
   build_image:
     name: Build Image
     runs-on: ubuntu-latest
@@ -64,9 +84,10 @@ jobs:
           path: /tmp/k8ssandra-operator.tar
   kind_e2e_tests:
     runs-on: ubuntu-latest
-    needs: build_image
+    needs: [set_kind_node_version, build_image]
     strategy:
       matrix:
+        kind_node_version: ["${{ needs.set_kind_node_version.outputs.kind_node_version }}"]
         e2e_test:
           - CreateSingleDatacenterCluster
           - CreateStargateAndDatacenter
@@ -124,7 +145,7 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
       - name: Install kustomize
-        run: make kustomize
+        uses: imranismail/setup-kustomize@v2
       - name: Install Kind
         run: go get sigs.k8s.io/kind
       - name: Set up Docker Buildx
@@ -137,8 +158,8 @@ jobs:
       - name: Load images
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
-      - name: Setup kind cluster
-        run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" create-kind-cluster kind-load-image cert-manager nginx-kind
+      - name: Setup kind cluster ( ${{ matrix.kind_node_version }} )
+        run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" KIND_NODE_VERSION="${{ matrix.kind_node_version }}" create-kind-cluster kind-load-image cert-manager nginx-kind
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
           e2e_test="TestOperator/${{ matrix.e2e_test }}"

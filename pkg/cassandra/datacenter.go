@@ -20,6 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	VectorContainerName = "vector-agent"
+)
+
 // SystemReplication represents the replication factor of the system_auth, system_traces,
 // and system_distributed keyspaces. This is applied to each datacenter. The replication
 // is configured per DC.
@@ -227,20 +231,21 @@ func UpdateCassandraContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Contai
 	UpdateContainer(p, reconciliation.CassandraContainerName, f)
 }
 
+// UpdateVectorContainer finds the vector container, passes it to f, and then adds it
+// back to the PodTemplateSpec. The Container object is created if necessary before calling
+// f. Only the Name field is initialized.
+func UpdateVectorContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
+	UpdateContainer(p, VectorContainerName, f)
+}
+
 // UpdateContainer finds the container with the given name, passes it to f, and then adds it
 // back to the PodTemplateSpec. The Container object is created if necessary before calling
 // f. Only the Name field is initialized.
 func UpdateContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev1.Container)) {
-	idx := -1
-	var container *corev1.Container
-	for i, c := range p.Spec.Containers {
-		if c.Name == name {
-			idx = i
-			break
-		}
-	}
+	idx, found := FindContainer(p, name)
+	container := &corev1.Container{}
 
-	if idx == -1 {
+	if !found {
 		idx = len(p.Spec.Containers)
 		container = &corev1.Container{Name: name}
 		p.Spec.Containers = append(p.Spec.Containers, *container)

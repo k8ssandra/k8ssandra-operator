@@ -2812,6 +2812,69 @@ spec:
                                 for this resource (Cassandra or Stargate).
                               type: boolean
                           type: object
+                        vector:
+                          properties:
+                            config:
+                              description: Config is the name of the configmap containing
+                                custom sinks and transformers for the Vector agent.
+                                The configmap must be in the same namespace as the
+                                CassandraDatacenter and contain a vector.toml entry
+                                with the Vector configuration in toml format. The
+                                agent is already configured with a "cassandra_metrics"
+                                source that needs to be used as input for the sinks.
+                                If not set, the default console sink will be used.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            enabled:
+                              description: Enabled enables the Vector agent for this
+                                resource (Cassandra, Reaper or Stargate). Enabling
+                                the vector agent will inject a sidecar container into
+                                the pod.
+                              type: boolean
+                            image:
+                              description: Image is the name of the Vector image to
+                                use. If not set, the default image will be used. kube:default="timberio/vector:0.26.0-alpine"
+                              type: string
+                            resources:
+                              description: Resources is the resource requirements
+                                for the Vector agent.
+                              properties:
+                                limits:
+                                  additionalProperties:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
+                                  description: 'Limits describes the maximum amount
+                                    of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                  type: object
+                                requests:
+                                  additionalProperties:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                    x-kubernetes-int-or-string: true
+                                  description: 'Requests describes the minimum amount
+                                    of compute resources required. If Requests is
+                                    omitted for a container, it defaults to Limits
+                                    if that is explicitly specified, otherwise to
+                                    an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                                  type: object
+                              type: object
+                            scrapeInterval:
+                              description: ScrapeInterval is the interval at which
+                                the Vector agent will scrape the metrics endpoint.
+                                Use values like 30s, 1m, 5m. kube:default=30s
+                              type: string
+                          type: object
                       type: object
                     tolerations:
                       description: Tolerations are tolerations to apply to the Stargate
@@ -3093,6 +3156,66 @@ spec:
                         description: Enable the creation of Prometheus serviceMonitors
                           for this resource (Cassandra or Stargate).
                         type: boolean
+                    type: object
+                  vector:
+                    properties:
+                      config:
+                        description: Config is the name of the configmap containing
+                          custom sinks and transformers for the Vector agent. The
+                          configmap must be in the same namespace as the CassandraDatacenter
+                          and contain a vector.toml entry with the Vector configuration
+                          in toml format. The agent is already configured with a "cassandra_metrics"
+                          source that needs to be used as input for the sinks. If
+                          not set, the default console sink will be used.
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      enabled:
+                        description: Enabled enables the Vector agent for this resource
+                          (Cassandra, Reaper or Stargate). Enabling the vector agent
+                          will inject a sidecar container into the pod.
+                        type: boolean
+                      image:
+                        description: Image is the name of the Vector image to use.
+                          If not set, the default image will be used. kube:default="timberio/vector:0.26.0-alpine"
+                        type: string
+                      resources:
+                        description: Resources is the resource requirements for the
+                          Vector agent.
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Limits describes the maximum amount of compute
+                              resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Requests describes the minimum amount of
+                              compute resources required. If Requests is omitted for
+                              a container, it defaults to Limits if that is explicitly
+                              specified, otherwise to an implementation-defined value.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                        type: object
+                      scrapeInterval:
+                        description: ScrapeInterval is the interval at which the Vector
+                          agent will scrape the metrics endpoint. Use values like
+                          30s, 1m, 5m. kube:default=30s
+                        type: string
                     type: object
                 type: object
               tolerations:

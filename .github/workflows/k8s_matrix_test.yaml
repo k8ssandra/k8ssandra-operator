@@ -1,0 +1,15 @@
+# Runs the single-cluster e2e tests with various versions of Kubernetes, to ensure backward compatibility.
+name: K8s version test
+on:
+  schedule:
+    - cron: '0 12 * * 0' # Every Sunday at noon UTC
+  workflow_dispatch:
+jobs:
+  run-e2e-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        kind_node_version: ["v1.21.14", "v1.22.15", "v1.23.6", "v1.24.7", "v1.25.3", "v1.26.0"]
+    uses: ./.github/workflows/kind_e2e_tests.yaml
+    with:
+      kind_node_version: ${{ matrix.kind_node_version }}
