@@ -554,7 +554,8 @@ func TestLabelsAnnotations(t *testing.T) {
 		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
 		reaperapi.ReaperLabel:       reaper.Name,
 		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
-		"common":                    "everywhere", "override": "commonLevel",
+		"common":                    "everywhere",
+		"override":                  "commonLevel",
 	}
 
 	podLabels := map[string]string{

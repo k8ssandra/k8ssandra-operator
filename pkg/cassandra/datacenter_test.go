@@ -50,7 +50,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -65,7 +65,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -335,7 +335,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -353,7 +353,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -384,7 +384,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -399,7 +399,7 @@ func TestCoalesce(t *testing.T) {
 					Namespace: "k8ssandra",
 					Name:      "dc1",
 					Metadata: meta.CassandraDatacenterMeta{
-						Resource: meta.Tags{
+						Tags: meta.Tags{
 							Labels: map[string]string{
 								"env": "dev",
 							},
@@ -1422,7 +1422,7 @@ func GetDatacenterConfig() DatacenterConfig {
 			Namespace: "k8ssandra",
 			Name:      "dc1",
 			Metadata: meta.CassandraDatacenterMeta{
-				Resource: meta.Tags{
+				Tags: meta.Tags{
 					Labels: map[string]string{
 						"env": "dev",
 					},

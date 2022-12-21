@@ -16,7 +16,7 @@ type Tags struct {
 type ResourceMeta struct {
 	// labels/annotations for the top-level CRD component
 	// +optional
-	Resource Tags `json:"resource,omitempty"`
+	Tags `json:",inline"`
 
 	// labels/annotations that will be applied to all components
 	// created by the CRD
@@ -36,7 +36,7 @@ type ResourceMeta struct {
 type CassandraDatacenterMeta struct {
 	// labels/annotations for the CassandraDatacenter component
 	// +optional
-	Resource Tags `json:"resource,omitempty"`
+	Tags `json:",inline"`
 
 	// labels/annotations that will be applied to all components
 	// created by the CRD

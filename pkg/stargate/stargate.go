@@ -79,8 +79,8 @@ func createResourceMeta(stargateTemplate *stargateapi.StargateDatacenterTemplate
 
 	var annotations map[string]string
 	if m := stargateTemplate.ResourceMeta; m != nil {
-		labels = utils.MergeMap(labels, m.Resource.Labels)
-		annotations = m.Resource.Annotations
+		labels = utils.MergeMap(labels, m.Labels)
+		annotations = m.Annotations
 	}
 
 	return meta.Tags{

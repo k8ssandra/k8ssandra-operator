@@ -7359,11 +7359,19 @@ spec:
                           type: object
                         metadata:
                           properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
                             commonLabels:
                               additionalProperties:
                                 type: string
                               description: labels/annotations that will be applied
                                 to all components created by the CRD
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
                               type: object
                             name:
                               type: string
@@ -7371,19 +7379,6 @@ spec:
                               type: string
                             pods:
                               description: labels/annotations for the pod components
-                              properties:
-                                annotations:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                                labels:
-                                  additionalProperties:
-                                    type: string
-                                  type: object
-                              type: object
-                            resource:
-                              description: labels/annotations for the CassandraDatacenter
-                                component
                               properties:
                                 annotations:
                                   additionalProperties:
@@ -9039,27 +9034,22 @@ spec:
                             metadata:
                               description: labels and annotations for Stargate resources
                               properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
                                 commonLabels:
                                   additionalProperties:
                                     type: string
                                   description: labels/annotations that will be applied
                                     to all components created by the CRD
                                   type: object
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
                                 pods:
                                   description: labels/annotations for the pod components
-                                  properties:
-                                    annotations:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                    labels:
-                                      additionalProperties:
-                                        type: string
-                                      type: object
-                                  type: object
-                                resource:
-                                  description: labels/annotations for the top-level
-                                    CRD component
                                   properties:
                                     annotations:
                                       additionalProperties:
@@ -10526,6 +10516,10 @@ spec:
                                     description: labels and annotations for Stargate
                                       resources
                                     properties:
+                                      annotations:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
                                       commonLabels:
                                         additionalProperties:
                                           type: string
@@ -10533,22 +10527,13 @@ spec:
                                           be applied to all components created by
                                           the CRD
                                         type: object
+                                      labels:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
                                       pods:
                                         description: labels/annotations for the pod
                                           components
-                                        properties:
-                                          annotations:
-                                            additionalProperties:
-                                              type: string
-                                            type: object
-                                          labels:
-                                            additionalProperties:
-                                              type: string
-                                            type: object
-                                        type: object
-                                      resource:
-                                        description: labels/annotations for the top-level
-                                          CRD component
                                         properties:
                                           annotations:
                                             additionalProperties:
@@ -15141,27 +15126,22 @@ spec:
                   metadata:
                     description: Struct to hold labels and annotations for a CassandraDatacenter
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
                       commonLabels:
                         additionalProperties:
                           type: string
                         description: labels/annotations that will be applied to all
                           components created by the CRD
                         type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       pods:
                         description: labels/annotations for the pod components
-                        properties:
-                          annotations:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                        type: object
-                      resource:
-                        description: labels/annotations for the CassandraDatacenter
-                          component
                         properties:
                           annotations:
                             additionalProperties:
@@ -17975,26 +17955,22 @@ spec:
                   metadata:
                     description: labels and annotations for Reaper resources
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
                       commonLabels:
                         additionalProperties:
                           type: string
                         description: labels/annotations that will be applied to all
                           components created by the CRD
                         type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       pods:
                         description: labels/annotations for the pod components
-                        properties:
-                          annotations:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                        type: object
-                      resource:
-                        description: labels/annotations for the top-level CRD component
                         properties:
                           annotations:
                             additionalProperties:
@@ -19846,26 +19822,22 @@ spec:
                   metadata:
                     description: labels and annotations for Stargate resources
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
                       commonLabels:
                         additionalProperties:
                           type: string
                         description: labels/annotations that will be applied to all
                           components created by the CRD
                         type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
                       pods:
                         description: labels/annotations for the pod components
-                        properties:
-                          annotations:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                        type: object
-                      resource:
-                        description: labels/annotations for the top-level CRD component
                         properties:
                           annotations:
                             additionalProperties:

@@ -198,8 +198,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	m := template.Meta.Metadata
-	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Resource.Labels)
-	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Resource.Annotations)
+	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
+	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
 
 	if m.CommonLabels != nil {
 		dc.Spec.AdditionalLabels = m.CommonLabels
