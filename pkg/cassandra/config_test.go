@@ -272,3 +272,36 @@ func parseQuantity(quantity string) *resource.Quantity {
 	parsed := resource.MustParse(quantity)
 	return &parsed
 }
+
+func TestEnableSmartTokenAllocDse(t *testing.T) {
+	dcConfig := &DatacenterConfig{
+		ServerType: api.ServerDistributionDse,
+	}
+
+	EnableSmartTokenAllocation(dcConfig)
+	assert.Equal(t, int64(3), dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"].(int64), "allocate_tokens_for_local_replication_factor should be set to 3 by default for DSE")
+}
+
+func TestOverrideSmartTokenAllocDse(t *testing.T) {
+	dcConfig := &DatacenterConfig{
+		ServerType: api.ServerDistributionDse,
+		CassandraConfig: api.CassandraConfig{
+			CassandraYaml: unstructured.Unstructured{
+				"allocate_tokens_for_local_replication_factor": int64(5),
+			},
+		},
+	}
+
+	EnableSmartTokenAllocation(dcConfig)
+	assert.Equal(t, int64(5), dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"].(int64), "allocate_tokens_for_local_replication_factor should retain configured value")
+}
+
+func TestSmartTokenAllocCassandra(t *testing.T) {
+	dcConfig := &DatacenterConfig{
+		ServerType: api.ServerDistributionCassandra,
+	}
+
+	EnableSmartTokenAllocation(dcConfig)
+	_, exists := dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
+	assert.False(t, exists, "allocate_tokens_for_local_replication_factor should not be set for Cassandra")
+}

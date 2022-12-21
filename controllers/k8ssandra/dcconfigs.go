@@ -83,6 +83,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		cassandra.AddNumTokens(dcConfig)
 		cassandra.AddStartRpc(dcConfig)
 		cassandra.HandleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
+		cassandra.EnableSmartTokenAllocation(dcConfig)
 
 		if err := cassandra.ValidateDatacenterConfig(dcConfig); err != nil {
 			return nil, err
