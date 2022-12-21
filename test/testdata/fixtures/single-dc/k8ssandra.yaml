@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.1.0
+    serverVersion: 4.0.6
     clusterName: "Weird Cluster Name"
     telemetry:
       vector:
