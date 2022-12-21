@@ -19,10 +19,10 @@ func createResourceLabels(kc *k8ssandraapi.K8ssandraCluster) map[string]string {
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
 		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 	}
-	return utils.MergeMap(labels, commonLabels)
+	return utils.MergeMap(commonLabels, labels)
 }
 
-func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
+func getConstantLabels(r *reaperapi.Reaper) map[string]string {
 	labels := map[string]string{
 		reaperapi.ReaperLabel:       r.Name,
 		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
@@ -36,5 +36,23 @@ func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
 		labels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = kcNamespace
 	}
 
-	return utils.MergeMap(labels, commonLabels)
+	return utils.MergeMap(commonLabels, labels)
+}
+
+func createServiceAndDeploymentLabels(r *reaperapi.Reaper) map[string]string {
+	labels := getConstantLabels(r)
+
+	if meta := r.Spec.ResourceMeta; meta != nil {
+		return utils.MergeMap(meta.CommonLabels, labels)
+	}
+
+	return labels
+}
+
+func createPodLabels(r *reaperapi.Reaper) map[string]string {
+	labels := createServiceAndDeploymentLabels(r)
+	if meta := r.Spec.ResourceMeta; meta != nil {
+		return utils.MergeMap(labels, meta.Pods.Labels)
+	}
+	return labels
 }

@@ -5,6 +5,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,11 +32,17 @@ func NewReaper(
 	reaperTemplate *reaperapi.ReaperClusterTemplate,
 ) *reaperapi.Reaper {
 	labels := createResourceLabels(kc)
+	var anns map[string]string
+	if m := reaperTemplate.ResourceMeta; m != nil {
+		labels = utils.MergeMap(labels, m.Labels)
+		anns = m.Annotations
+	}
+
 	desiredReaper := &reaperapi.Reaper{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   reaperKey.Namespace,
 			Name:        reaperKey.Name,
-			Annotations: map[string]string{},
+			Annotations: anns,
 			Labels:      labels,
 		},
 		Spec: reaperapi.ReaperSpec{

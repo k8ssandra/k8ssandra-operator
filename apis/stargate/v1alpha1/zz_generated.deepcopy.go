@@ -25,6 +25,7 @@ import (
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -332,6 +333,11 @@ func (in *StargateTemplate) DeepCopyInto(out *StargateTemplate) {
 		in, out := &in.AuthOptions, &out.AuthOptions
 		*out = new(AuthOptions)
 		**out = **in
+	}
+	if in.ResourceMeta != nil {
+		in, out := &in.ResourceMeta, &out.ResourceMeta
+		*out = new(meta.ResourceMeta)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

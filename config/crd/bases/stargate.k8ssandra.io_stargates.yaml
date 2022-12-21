@@ -1309,6 +1309,48 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              metadata:
+                description: labels and annotations for Stargate resources
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  commonLabels:
+                    additionalProperties:
+                      type: string
+                    description: labels/annotations that will be applied to all components
+                      created by the CRD
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  pods:
+                    description: labels/annotations for the pod components
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  service:
+                    description: labels/annotations for the service component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -2466,6 +2508,48 @@ spec:
                             https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                           format: int32
                           type: integer
+                      type: object
+                    metadata:
+                      description: labels and annotations for Stargate resources
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        commonLabels:
+                          additionalProperties:
+                            type: string
+                          description: labels/annotations that will be applied to
+                            all components created by the CRD
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        pods:
+                          description: labels/annotations for the pod components
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        service:
+                          description: labels/annotations for the service component
+                          properties:
+                            annotations:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            labels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
                       type: object
                     name:
                       description: Name is the rack name. It must correspond to an

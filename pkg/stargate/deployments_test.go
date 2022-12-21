@@ -11,6 +11,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,22 @@ var (
 		Spec: api.StargateSpec{
 			DatacenterRef: corev1.LocalObjectReference{Name: dc.Name},
 			StargateDatacenterTemplate: api.StargateDatacenterTemplate{
-				StargateClusterTemplate: api.StargateClusterTemplate{Size: 1},
+				StargateClusterTemplate: api.StargateClusterTemplate{
+					StargateTemplate: api.StargateTemplate{
+						ResourceMeta: &meta.ResourceMeta{
+							CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
+							Pods: meta.Tags{
+								Labels:      map[string]string{"pod-label": "pod-label-value", "override": "podLevel"},
+								Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
+							},
+							Service: meta.Tags{
+								Labels:      map[string]string{"service-label": "service-label-value", "override": "serviceLevel"},
+								Annotations: map[string]string{"service-annotation": "service-annotation-value"},
+							},
+						},
+					},
+					Size: 1,
+				},
 			},
 			CassandraEncryption: &api.CassandraEncryption{
 				ServerEncryptionStores: &encryption.Stores{
@@ -81,7 +97,6 @@ func TestNewDeployments(t *testing.T) {
 }
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
-
 	deployments := NewDeployments(stargate, dc)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
@@ -105,6 +120,11 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, "default", deployment.Spec.Template.Spec.ServiceAccountName)
 	assert.Equal(t, affinityForRack(dc, "default"), deployment.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
+
+	assert.Equal(t, "pod-label-value", deployment.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "podLevel", deployment.Spec.Template.Labels["override"])
+	assert.Equal(t, "everywhere", deployment.Spec.Template.Labels["common"])
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
 
 	container := findContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
@@ -191,6 +211,10 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	assert.Equal(t, "s1", deployment.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "podLevel", deployment.Spec.Template.Labels["override"])
+	assert.Equal(t, "everywhere", deployment.Spec.Template.Labels["common"])
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
 
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
@@ -236,6 +260,10 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Equal(t, "s1", deployment1.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment1.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack1-stargate-deployment", deployment1.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment1.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "podLevel", deployment1.Spec.Template.Labels["override"])
+	assert.Equal(t, "everywhere", deployment1.Spec.Template.Labels["common"])
+	assert.Equal(t, "pod-annotation-value", deployment1.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
@@ -253,7 +281,12 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateLabel)
 	assert.Equal(t, "s1", deployment2.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment2.Spec.Template.Labels, api.StargateDeploymentLabel)
+
 	assert.Equal(t, "cluster1-dc1-rack2-stargate-deployment", deployment2.Spec.Template.Labels[api.StargateDeploymentLabel])
+	assert.Equal(t, "pod-label-value", deployment2.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "podLevel", deployment2.Spec.Template.Labels["override"])
+	assert.Equal(t, "everywhere", deployment2.Spec.Template.Labels["common"])
+	assert.Equal(t, "pod-annotation-value", deployment2.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
@@ -269,6 +302,10 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Contains(t, deployment3.Spec.Selector.MatchLabels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Selector.MatchLabels[api.StargateDeploymentLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateLabel)
+	assert.Equal(t, "pod-label-value", deployment3.Spec.Template.Labels["pod-label"])
+	assert.Equal(t, "podLevel", deployment3.Spec.Template.Labels["override"])
+	assert.Equal(t, "everywhere", deployment3.Spec.Template.Labels["common"])
+	assert.Equal(t, "pod-annotation-value", deployment3.Spec.Template.Annotations["pod-annotation"])
 	assert.Equal(t, "s1", deployment3.Spec.Template.Labels[api.StargateLabel])
 	assert.Contains(t, deployment3.Spec.Template.Labels, api.StargateDeploymentLabel)
 	assert.Equal(t, "cluster1-dc1-rack3-stargate-deployment", deployment3.Spec.Template.Labels[api.StargateDeploymentLabel])

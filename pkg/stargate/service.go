@@ -5,6 +5,8 @@ import (
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,18 +15,13 @@ import (
 // resources.
 func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *corev1.Service {
 	serviceName := ServiceName(dc)
+	meta := createServiceMeta(stargate)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
 			Namespace:   stargate.Namespace,
-			Annotations: map[string]string{},
-			Labels: map[string]string{
-				coreapi.NameLabel:      coreapi.NameLabelValue,
-				coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-				coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-				coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-				api.StargateLabel:      stargate.Name,
-			},
+			Annotations: meta.Annotations,
+			Labels:      meta.Labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -52,4 +49,27 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 	}
 	annotations.AddHashAnnotation(service)
 	return service
+}
+
+func createServiceMeta(stargate *api.Stargate) meta.Tags {
+	labels := map[string]string{
+		coreapi.NameLabel:      coreapi.NameLabelValue,
+		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
+		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
+		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
+		api.StargateLabel:      stargate.Name,
+	}
+
+	var annotations map[string]string
+	if meta := stargate.Spec.ResourceMeta; meta != nil {
+		labels = utils.MergeMap(labels, meta.CommonLabels, meta.Service.Labels)
+		annotations = meta.Service.Annotations
+
+	}
+
+	return meta.Tags{
+		Labels:      labels,
+		Annotations: annotations,
+	}
+
 }

@@ -7363,6 +7363,12 @@ spec:
                               additionalProperties:
                                 type: string
                               type: object
+                            commonLabels:
+                              additionalProperties:
+                                type: string
+                              description: labels/annotations that will be applied
+                                to all components created by the CRD
+                              type: object
                             labels:
                               additionalProperties:
                                 type: string
@@ -7371,6 +7377,78 @@ spec:
                               type: string
                             namespace:
                               type: string
+                            pods:
+                              description: labels/annotations for the pod components
+                              properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                              type: object
+                            services:
+                              description: labels/annotations for all of the CassandraDatacenter
+                                service components
+                              properties:
+                                additionalSeedService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                allPodsService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                dcService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                nodePortService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                seedService:
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                              type: object
                           required:
                           - name
                           type: object
@@ -8953,6 +9031,49 @@ spec:
                                   format: int32
                                   type: integer
                               type: object
+                            metadata:
+                              description: labels and annotations for Stargate resources
+                              properties:
+                                annotations:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                commonLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: labels/annotations that will be applied
+                                    to all components created by the CRD
+                                  type: object
+                                labels:
+                                  additionalProperties:
+                                    type: string
+                                  type: object
+                                pods:
+                                  description: labels/annotations for the pod components
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                                service:
+                                  description: labels/annotations for the service
+                                    component
+                                  properties:
+                                    annotations:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    labels:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  type: object
+                              type: object
                             nodeSelector:
                               additionalProperties:
                                 type: string
@@ -10390,6 +10511,52 @@ spec:
                                           Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                                         format: int32
                                         type: integer
+                                    type: object
+                                  metadata:
+                                    description: labels and annotations for Stargate
+                                      resources
+                                    properties:
+                                      annotations:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
+                                      commonLabels:
+                                        additionalProperties:
+                                          type: string
+                                        description: labels/annotations that will
+                                          be applied to all components created by
+                                          the CRD
+                                        type: object
+                                      labels:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
+                                      pods:
+                                        description: labels/annotations for the pod
+                                          components
+                                        properties:
+                                          annotations:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          labels:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      service:
+                                        description: labels/annotations for the service
+                                          component
+                                        properties:
+                                          annotations:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          labels:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
                                     type: object
                                   name:
                                     description: Name is the rack name. It must correspond
@@ -14956,6 +15123,96 @@ spec:
                         - serverSecretName
                         type: object
                     type: object
+                  metadata:
+                    description: Struct to hold labels and annotations for a CassandraDatacenter
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      commonLabels:
+                        additionalProperties:
+                          type: string
+                        description: labels/annotations that will be applied to all
+                          components created by the CRD
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      pods:
+                        description: labels/annotations for the pod components
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      services:
+                        description: labels/annotations for all of the CassandraDatacenter
+                          service components
+                        properties:
+                          additionalSeedService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                          allPodsService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                          dcService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                          nodePortService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                          seedService:
+                            properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                            type: object
+                        type: object
+                    type: object
                   mgmtAPIHeap:
                     anyOf:
                     - type: integer
@@ -17695,6 +17952,48 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  metadata:
+                    description: labels and annotations for Reaper resources
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      commonLabels:
+                        additionalProperties:
+                          type: string
+                        description: labels/annotations that will be applied to all
+                          components created by the CRD
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      pods:
+                        description: labels/annotations for the pod components
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      service:
+                        description: labels/annotations for the service component
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                    type: object
                   podSecurityContext:
                     description: PodSecurityContext contains a pod-level SecurityContext
                       to apply to Reaper pods.
@@ -19519,6 +19818,48 @@ spec:
                           https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
                         format: int32
                         type: integer
+                    type: object
+                  metadata:
+                    description: labels and annotations for Stargate resources
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      commonLabels:
+                        additionalProperties:
+                          type: string
+                        description: labels/annotations that will be applied to all
+                          components created by the CRD
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      pods:
+                        description: labels/annotations for the pod components
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                      service:
+                        description: labels/annotations for the service component
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
                     type: object
                   nodeSelector:
                     additionalProperties:

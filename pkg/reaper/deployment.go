@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -42,8 +43,6 @@ var defaultImage = images.Image{
 }
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, authVars ...*corev1.EnvVar) *appsv1.Deployment {
-	labels := createServiceAndDeploymentLabels(reaper)
-
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
@@ -184,17 +183,21 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
+	podMeta := getPodMeta(reaper)
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reaper.Namespace,
-			Name:      reaper.Name,
-			Labels:    labels,
+			Namespace:   reaper.Namespace,
+			Name:        reaper.Name,
+			Labels:      createServiceAndDeploymentLabels(reaper),
+			Annotations: map[string]string{},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      podMeta.Labels,
+					Annotations: podMeta.Annotations,
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
@@ -350,4 +353,19 @@ func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacente
 		}
 	}
 	return
+}
+
+func getPodMeta(reaper *api.Reaper) meta.Tags {
+	labels := createPodLabels(reaper)
+
+	var podAnnotations map[string]string
+	if meta := reaper.Spec.ResourceMeta; meta != nil {
+		podAnnotations = meta.Pods.Annotations
+
+	}
+
+	return meta.Tags{
+		Labels:      labels,
+		Annotations: podAnnotations,
+	}
 }

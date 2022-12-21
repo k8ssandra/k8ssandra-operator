@@ -3,6 +3,7 @@ package reaper
 import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,12 +15,20 @@ func GetServiceName(reaperName string) string {
 }
 
 func NewService(key types.NamespacedName, reaper *api.Reaper) *corev1.Service {
-	labels := createServiceAndDeploymentLabels(reaper)
+	commonLabels := createServiceAndDeploymentLabels(reaper)
+
+	var serviceLabels, serviceAnnotations map[string]string
+	if meta := reaper.Spec.ResourceMeta; meta != nil {
+		serviceLabels = utils.MergeMap(commonLabels, meta.Service.Labels)
+		serviceAnnotations = meta.Service.Annotations
+	}
+
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-			Labels:    labels,
+			Name:        key.Name,
+			Namespace:   key.Namespace,
+			Labels:      serviceLabels,
+			Annotations: serviceAnnotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -40,7 +49,7 @@ func NewService(key types.NamespacedName, reaper *api.Reaper) *corev1.Service {
 					StrVal: "admin",
 				},
 			}},
-			Selector: labels,
+			Selector: getConstantLabels(reaper),
 		},
 	}
 	annotations.AddHashAnnotation(service)

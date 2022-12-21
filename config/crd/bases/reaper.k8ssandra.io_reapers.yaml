@@ -1519,6 +1519,48 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              metadata:
+                description: labels and annotations for Reaper resources
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  commonLabels:
+                    additionalProperties:
+                      type: string
+                    description: labels/annotations that will be applied to all components
+                      created by the CRD
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  pods:
+                    description: labels/annotations for the pod components
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  service:
+                    description: labels/annotations for the service component
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                type: object
               podSecurityContext:
                 description: PodSecurityContext contains a pod-level SecurityContext
                   to apply to Reaper pods.

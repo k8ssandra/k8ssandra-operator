@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -196,6 +197,16 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
 	}
 
+	m := template.Meta.Metadata
+	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
+	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
+
+	if m.CommonLabels != nil {
+		dc.Spec.AdditionalLabels = m.CommonLabels
+	}
+
+	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
+
 	dc.Spec.Tolerations = template.Tolerations
 
 	return dc, nil
@@ -314,6 +325,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 
+	dcConfig.Meta.Metadata = goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
+
+	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta.Metadata)
+
 	if len(mergedOptions.Containers) > 0 {
 		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
 	}
@@ -378,6 +393,15 @@ func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolum
 
 func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volume) {
 	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+}
+
+func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {
+	// We don't need to overlay m.CommonLabels as this will be done by cass-operator itself
+	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
+		Annotations: m.Pods.Annotations,
+		Labels:      m.Pods.Labels,
+	}
+
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {

@@ -21,6 +21,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,6 +122,10 @@ type StargateTemplate struct {
 	// +kubebuilder:validation:Enum=internal;external
 	// +kubebuilder:default=internal
 	SecretsProvider string `json:"secretsProvider,omitempty"`
+
+	// labels and annotations for Stargate resources
+	// +optional
+	ResourceMeta *meta.ResourceMeta `json:"metadata,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

@@ -3,6 +3,8 @@ package reaper
 import (
 	"testing"
 
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,9 +19,31 @@ func TestNewService(t *testing.T) {
 
 	assert.Equal(t, key.Name, service.Name)
 	assert.Equal(t, key.Namespace, service.Namespace)
-	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Labels)
 
-	assert.Equal(t, createServiceAndDeploymentLabels(reaper), service.Spec.Selector)
+	selectorLabels := map[string]string{
+		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		reaperapi.ReaperLabel:       reaper.Name,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
+	}
+
+	serviceLabels := map[string]string{
+		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
+		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
+		reaperapi.ReaperLabel:       reaper.Name,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
+		"common":                    "everywhere",
+		"service-label":             "service-label-value",
+		"override":                  "serviceLevel",
+	}
+
+	assert.Equal(t, serviceLabels, service.Labels)
+
+	assert.Equal(t, selectorLabels, service.Spec.Selector)
 	assert.Len(t, service.Spec.Ports, 2)
 
 	appPort := corev1.ServicePort{

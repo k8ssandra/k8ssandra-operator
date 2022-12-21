@@ -24,6 +24,7 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -224,6 +225,8 @@ type K8ssandraClusterList struct {
 
 type CassandraClusterTemplate struct {
 	DatacenterOptions `json:",inline"`
+
+	Meta meta.CassandraDatacenterMeta `json:"metadata,omitempty"`
 
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
@@ -457,26 +460,7 @@ type EmbeddedObjectMeta struct {
 	Name string `json:"name"`
 
 	// +optional
-	Labels map[string]string `json:"labels,omitempty"`
-
-	// +optional
-	Annotations map[string]string `json:"annotations,omitempty"`
-}
-
-func (in *EmbeddedObjectMeta) GetAnnotations() map[string]string {
-	return in.Annotations
-}
-
-func (in *EmbeddedObjectMeta) SetAnnotations(annotations map[string]string) {
-	in.Annotations = annotations
-}
-
-func (in *EmbeddedObjectMeta) GetLabels() map[string]string {
-	return in.Labels
-}
-
-func (in *EmbeddedObjectMeta) SetLabels(labels map[string]string) {
-	in.Labels = labels
+	Metadata meta.CassandraDatacenterMeta `json:",inline"`
 }
 
 func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {
