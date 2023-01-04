@@ -15,6 +15,9 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+
+## v1.4.1 - 2022-01-04
+
 * [ENHANCEMENT] [#797](https://github.com/k8ssandra/k8ssandra-operator/pull/797) Allow using Cassandra 4.1+ releases
 
 ## v1.4.0 - 2022-11-18
