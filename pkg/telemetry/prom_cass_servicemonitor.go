@@ -242,6 +242,11 @@ spec:
       sourceLabels:
       - mcac
       targetLabel: __name__
+    - regex: org\.apache\.cassandra\.metrics\.cdc_agent\.(\w+)
+      replacement: mcac_cdc_agent_${1}
+      sourceLabels:
+      - mcac
+      targetLabel: __name__
     - regex: com\.datastax\.bdp\.type\.performance_objects\.name\.cql_slow_log\.metrics\.queries_latency
       replacement: mcac_cql_slow_log_query_latency
       sourceLabels:
