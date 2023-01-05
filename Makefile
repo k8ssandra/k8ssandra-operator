@@ -318,7 +318,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.10.0
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
-# Wait for cert-manager rollout to be fully done	
+# Wait for cert-manager rollout to be fully done
 	kubectl rollout status deployment cert-manager -n cert-manager
 	kubectl rollout status deployment cert-manager-cainjector -n cert-manager
 	kubectl rollout status deployment cert-manager-webhook -n cert-manager
@@ -462,13 +462,13 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 # E2E tests from kuttl
-kuttl-test: install-kuttl docker-build
+kuttl-test: install-kuttl docker-build kustomize
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-servicemonitors
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-cassandra-versions
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-user-defined-ns
 
  # Install kuttl for e2e tests.
-install-kuttl: 
+install-kuttl:
 	mkdir -p ./bin ; \
 	cd ./bin ; \
 	OS="$$(uname | tr '[:upper:]' '[:lower:]')" ; \
