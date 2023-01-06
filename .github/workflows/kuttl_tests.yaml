@@ -76,9 +76,6 @@ jobs:
           - test-user-defined-ns
           - test-all-deployments
     steps:
-      - name: Make sure kustomize is installed in the place the kuttl tests expect
-        run: |
-          make kustomize
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
         if: github.event_name == 'pull_request'

@@ -462,7 +462,7 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 # E2E tests from kuttl
-kuttl-test: install-kuttl docker-build kustomize
+kuttl-test: install-kuttl docker-build
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-servicemonitors
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-cassandra-versions
 	./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test test-user-defined-ns
