@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [FEATURE] [#807](https://github.com/k8ssandra/k8ssandra-operator/pull/807) Adds Prometheus ServiceMonitor relabelling configurations for the CDC agent. The Agent's metrics will now appear in Prometheus alongside Cassandra's.
 * [FEATURE] [#775](https://github.com/k8ssandra/k8ssandra-operator/issues/775) Add the ability to inject and configure a Vector agent sidecar in the Cassandra pods
 * [FEATURE] [#600](https://github.com/k8ssandra/k8ssandra-operator/issues/600) Disable secrets management and replication with the external secrets provider
 * [ENHANCEMENT] [#796](https://github.com/k8ssandra/k8ssandra-operator/issues/796) Enable smart token allocation by default for DSE
