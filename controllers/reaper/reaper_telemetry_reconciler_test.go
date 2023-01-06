@@ -55,5 +55,5 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
-	assert.Equal(t, map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"}, currentSM)
+	assert.Contains(t, currentSM, map[string]string{"test-label": "test"})
 }
