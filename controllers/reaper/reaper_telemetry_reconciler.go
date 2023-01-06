@@ -82,7 +82,9 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func mustLabels(reaperName string, additionalLabels map[string]string) map[string]string {
-
+	if additionalLabels == nil {
+		additionalLabels = make(map[string]string)
+	}
 	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
 	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
 	additionalLabels[reaperapi.ReaperLabel] = reaperName
