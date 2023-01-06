@@ -36,12 +36,20 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 	remoteClient client.Client,
 ) error {
 	logger.Info("reconciling telemetry", "reaper", thisReaper.Name)
+	var commonLabels map[string]string
+	if thisReaper.Spec.Telemetry == nil {
+		commonLabels = make(map[string]string)
+	} else if thisReaper.Spec.Telemetry.Prometheus == nil {
+		commonLabels = make(map[string]string)
+	} else {
+		commonLabels = thisReaper.Spec.Telemetry.Prometheus.CommonLabels
+	}
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   thisReaper.Namespace,
 		MonitoringTargetName: thisReaper.Name,
 		ServiceMonitorName:   GetReaperPromSMName(thisReaper.Name),
 		Logger:               logger,
-		CommonLabels:         mustLabels(thisReaper.Name, thisReaper.Spec.Telemetry.Prometheus.CommonLabels),
+		CommonLabels:         mustLabels(thisReaper.Name, commonLabels),
 	}
 	klusterName, ok := thisReaper.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
 	if ok {

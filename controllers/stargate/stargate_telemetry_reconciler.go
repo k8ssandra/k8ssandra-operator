@@ -23,12 +23,21 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	remoteClient client.Client,
 ) (ctrl.Result, error) {
 	logger.Info("reconciling telemetry", "stargate", thisStargate.Name)
+	var commonLabels map[string]string
+	if thisStargate.Spec.Telemetry == nil {
+		commonLabels = make(map[string]string)
+	} else if thisStargate.Spec.Telemetry.Prometheus == nil {
+		commonLabels = make(map[string]string)
+	} else {
+		commonLabels = thisStargate.Spec.Telemetry.Prometheus.CommonLabels
+	}
+
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   thisStargate.Namespace,
 		MonitoringTargetName: thisStargate.Name,
 		ServiceMonitorName:   GetStargatePromSMName(thisStargate.Name),
 		Logger:               logger,
-		CommonLabels:         mustLabels(thisStargate.Name, thisStargate.Spec.Telemetry.Prometheus.CommonLabels),
+		CommonLabels:         mustLabels(thisStargate.Name, commonLabels),
 	}
 	klusterName, ok := thisStargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
 	if ok {
