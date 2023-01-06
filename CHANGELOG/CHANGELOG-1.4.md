@@ -14,6 +14,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## unreleased
+* [FEATURE] [#807](https://github.com/k8ssandra/k8ssandra-operator/pull/807) Adds Prometheus ServiceMonitor relabelling configurations for the CDC agent. The Agent's metrics will now appear in Prometheus alongside Cassandra's.
 
 
 ## v1.4.1 - 2022-01-04
@@ -24,7 +25,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [ENHANCEMENT] [#766](https://github.com/k8ssandra/k8ssandra-operator/issues/766) Upgrade Reaper to v3.2.1
 * [ENHANCEMENT] [#740](https://github.com/k8ssandra/k8ssandra-operator/issues/740)  Expose ManagementApiAuth and pod SecurityGroup from the cassdc spec in k8ssandra-operator
-* [ENHANCEMENT] [#737](https://github.com/k8ssandra/k8ssandra-operator/issues/737) Support additional jvm options for the various options files 
+* [ENHANCEMENT] [#737](https://github.com/k8ssandra/k8ssandra-operator/issues/737) Support additional jvm options for the various options files
 * [FEATURE] [#599](https://github.com/k8ssandra/k8ssandra-operator/issues/599) Introduce a secrets provider setting in the CRD
 * [FEATURE] [#728](https://github.com/k8ssandra/k8ssandra-operator/issues/728) Add token generation utility
 * [FEATURE] [#724](https://github.com/k8ssandra/k8ssandra-operator/issues/724) Ability to provide per-node configuration
