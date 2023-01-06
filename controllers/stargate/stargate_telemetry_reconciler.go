@@ -28,7 +28,7 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		MonitoringTargetName: thisStargate.Name,
 		ServiceMonitorName:   GetStargatePromSMName(thisStargate.Name),
 		Logger:               logger,
-		CommonLabels:         mustLabels(thisStargate.Name),
+		CommonLabels:         mustLabels(thisStargate.Name, thisStargate.Spec.Telemetry.Prometheus.CommonLabels),
 	}
 	klusterName, ok := thisStargate.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
 	if ok {
@@ -68,14 +68,15 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
-func mustLabels(stargateName string) map[string]string {
-	return map[string]string{
-		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
-		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
-		stargateapi.StargateLabel:   stargateName,
-		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelTelemetry,
-		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
-	}
+func mustLabels(stargateName string, additionalLabels map[string]string) map[string]string {
+
+	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
+	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
+	additionalLabels[stargateapi.StargateLabel] = stargateName
+	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
+	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
+	return additionalLabels
+
 }
 
 // GetStargatePromSMName gets the name for our ServiceMonitors based on cluster and DC name.

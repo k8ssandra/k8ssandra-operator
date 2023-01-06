@@ -41,7 +41,7 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 		MonitoringTargetName: thisReaper.Name,
 		ServiceMonitorName:   GetReaperPromSMName(thisReaper.Name),
 		Logger:               logger,
-		CommonLabels:         mustLabels(thisReaper.Name),
+		CommonLabels:         mustLabels(thisReaper.Name, thisReaper.Spec.Telemetry.Prometheus.CommonLabels),
 	}
 	klusterName, ok := thisReaper.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
 	if ok {
@@ -81,14 +81,14 @@ func (r *ReaperReconciler) reconcileReaperTelemetry(
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
-func mustLabels(reaperName string) map[string]string {
-	return map[string]string{
-		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
-		k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
-		reaperapi.ReaperLabel:       reaperName,
-		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelTelemetry,
-		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
-	}
+func mustLabels(reaperName string, additionalLabels map[string]string) map[string]string {
+
+	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
+	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
+	additionalLabels[reaperapi.ReaperLabel] = reaperName
+	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
+	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
+	return additionalLabels
 }
 
 // GetReaperPromSMName gets the name for our ServiceMonitors based on cluster and DC name.

@@ -2,29 +2,35 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: k8ssandra-operator
 resources:
-- ../../../config/fixtures/k8ssandra-base
+  - ../../../config/fixtures/k8ssandra-base
 # take basic deployment, add stargate and reaper, and add telemetry for stargate, cassandra and reaper.
 patches:
-- patch: |-
-    - op: add
-      path: /spec/stargate
-      value:
-        size: 1
-        telemetry:
+  - patch: |-
+      - op: add
+        path: /spec/stargate
+        value:
+          size: 1
+          telemetry:
+            prometheus:
+              enabled: true
+              commonLabels:
+                test-label: gobbledegook
+          allowStargateOnDataNodes: true
+      - op: add
+        path: /spec/cassandra/telemetry
+        value:
           prometheus:
-            enabled: true
-        allowStargateOnDataNodes: true
-    - op: add
-      path: /spec/cassandra/telemetry
-      value:
-        prometheus:
-            enabled: true
-    - op: add
-      path: /spec/reaper
-      value:
-        telemetry:
-          prometheus:
-            enabled: true
-  target:
-    kind: K8ssandraCluster
-    name: test
+              enabled: true
+              commonLabels:
+                test-label: gobbledegook
+      - op: add
+        path: /spec/reaper
+        value:
+          telemetry:
+            prometheus:
+              enabled: true
+              commonLabels:
+                test-label: gobbledegook
+    target:
+      kind: K8ssandraCluster
+      name: test
