@@ -37,7 +37,8 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 	reaper := test.NewReaper("test-reaper", "test-reaper-namespace")
 	reaper.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled:      pointer.Bool(true),
+			CommonLabels: map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{

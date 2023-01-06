@@ -37,7 +37,8 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled:      pointer.Bool(true),
+			CommonLabels: map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{
