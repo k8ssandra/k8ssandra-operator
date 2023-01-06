@@ -57,5 +57,5 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
 	assert.Equal(t, stargate.Name, currentSM.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement)
-	assert.Contains(t, currentSM.Labels, map[string]string{"test-label": "test"})
+	assert.Contains(t, currentSM.Labels, "test-label")
 }

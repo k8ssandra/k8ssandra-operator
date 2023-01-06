@@ -72,5 +72,5 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
 	assert.NotEqual(t, kc.Namespace, currentSM.Namespace)
-	assert.Contains(t, currentSM.Labels, map[string]string{"test-label": "test"})
+	assert.Contains(t, currentSM.Labels, "test-label")
 }
