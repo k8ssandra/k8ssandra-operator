@@ -94,39 +94,31 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Set owner reference so that the task is deleted when the K8ssandraCluster is deleted.
 	if kTask.OwnerReferences == nil && kcExists {
+		// First time we've seen this task.
 		logger.Info("Setting owner reference", "K8ssandraCluster", kcKey)
 		if err := controllerutil.SetControllerReference(kc, kTask, r.Scheme); err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "setting owner reference on K8ssandraTask")
 		}
+		logger.Info("Adding finalizer")
+		controllerutil.AddFinalizer(kTask, k8ssandraTaskFinalizer)
+
 		if err := r.Update(ctx, kTask); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "updating K8ssandraTask to set owner reference")
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Handle deletion
-	if kTask.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
-			logger.Info("Adding finalizer")
-			controllerutil.AddFinalizer(kTask, k8ssandraTaskFinalizer)
-			if err := r.Update(ctx, kTask); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
+	if !kTask.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
+		// The task is getting deleted, and it's the first time we've noticed it.
+		// Clean up dependents and remove the finalizer.
+		if err := r.deleteCassandraTasks(ctx, kTask, kc, kcExists, logger); err != nil {
+			return ctrl.Result{}, err
 		}
-	} else { // The task is being deleted
-		if controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
-			// First time we've noticed the deletion, clean up dependents and remove the finalizer
-			if err := r.deleteCassandraTasks(ctx, kTask, kc, kcExists, logger); err != nil {
-				return ctrl.Result{}, err
-			}
-			logger.Info("Removing finalizer")
-			controllerutil.RemoveFinalizer(kTask, k8ssandraTaskFinalizer)
-			if err := r.Update(ctx, kTask); err != nil {
-				return ctrl.Result{}, err
-			}
+		logger.Info("Removing finalizer")
+		controllerutil.RemoveFinalizer(kTask, k8ssandraTaskFinalizer)
+		if err := r.Update(ctx, kTask); err != nil {
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
