@@ -27,12 +27,20 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	clusterSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry
 	dcSpec := dcTemplate.DatacenterOptions.Telemetry
 	mergedSpec := dcSpec.MergeWith(clusterSpec)
+	var commonLabels map[string]string
+	if mergedSpec == nil {
+		commonLabels = make(map[string]string)
+	} else if mergedSpec.Prometheus == nil {
+		commonLabels = make(map[string]string)
+	} else {
+		commonLabels = mergedSpec.Prometheus.CommonLabels
+	}
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
 		ServiceMonitorName:   kc.SanitizedName() + "-" + actualDc.Name + "-" + "cass-servicemonitor",
 		Logger:               logger,
-		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name),
+		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name, commonLabels),
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
@@ -68,14 +76,16 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
-func mustLabels(klusterName string, klusterNamespace string, dcName string) map[string]string {
-	return map[string]string{
-		k8ssandraapi.ManagedByLabel:                 k8ssandraapi.NameLabelValue,
-		k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
-		k8ssandraapi.K8ssandraClusterNameLabel:      klusterName,
-		k8ssandraapi.DatacenterLabel:                dcName,
-		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterNamespace,
-		k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelTelemetry,
-		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
+func mustLabels(klusterName string, klusterNamespace string, dcName string, additionalLabels map[string]string) map[string]string {
+	if additionalLabels == nil {
+		additionalLabels = make(map[string]string)
 	}
+	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
+	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
+	additionalLabels[k8ssandraapi.K8ssandraClusterNameLabel] = klusterName
+	additionalLabels[k8ssandraapi.DatacenterLabel] = dcName
+	additionalLabels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
+	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
+	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
+	return additionalLabels
 }

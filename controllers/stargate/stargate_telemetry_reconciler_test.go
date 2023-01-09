@@ -4,8 +4,9 @@ package stargate
 
 import (
 	"context"
-	"k8s.io/utils/pointer"
 	"testing"
+
+	"k8s.io/utils/pointer"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
@@ -36,7 +37,8 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled:      pointer.Bool(true),
+			CommonLabels: map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{
@@ -44,7 +46,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 		MonitoringTargetName: stargate.Name,
 		Logger:               testLogger,
 		ServiceMonitorName:   GetStargatePromSMName(stargate.Name),
-		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
+		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 	}
 	_, err := r.reconcileStargateTelemetry(ctx, &stargate, testLogger, fakeClient)
 	if err != nil {
@@ -56,4 +58,5 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
 	assert.Equal(t, stargate.Name, currentSM.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement)
+	assert.Contains(t, currentSM.Labels, "test-label")
 }

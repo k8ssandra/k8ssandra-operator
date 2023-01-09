@@ -14,7 +14,6 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## unreleased
-
 * [FEATURE] [#775](https://github.com/k8ssandra/k8ssandra-operator/issues/775) Add the ability to inject and configure a Vector agent sidecar in the Cassandra pods
 * [FEATURE] [#600](https://github.com/k8ssandra/k8ssandra-operator/issues/600) Disable secrets management and replication with the external secrets provider
 * [ENHANCEMENT] [#796](https://github.com/k8ssandra/k8ssandra-operator/issues/796) Enable smart token allocation by default for DSE

@@ -4,8 +4,9 @@ package reaper
 
 import (
 	"context"
-	"k8s.io/utils/pointer"
 	"testing"
+
+	"k8s.io/utils/pointer"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
@@ -36,7 +37,8 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 	reaper := test.NewReaper("test-reaper", "test-reaper-namespace")
 	reaper.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled:      pointer.Bool(true),
+			CommonLabels: map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 		},
 	}
 	cfg := telemetry.PrometheusResourcer{
@@ -44,7 +46,7 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 		MonitoringTargetName: reaper.Name,
 		Logger:               testLogger,
 		ServiceMonitorName:   GetReaperPromSMName(reaper.Name),
-		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
+		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 	}
 	if err := r.reconcileReaperTelemetry(ctx, &reaper, testLogger, fakeClient); err != nil {
 		assert.Fail(t, "reconciliation failed", err)
@@ -54,4 +56,5 @@ func Test_reconcilereaperTelemetry_succeeds(t *testing.T) {
 		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
+	assert.Contains(t, currentSM.Labels, "test-label")
 }
