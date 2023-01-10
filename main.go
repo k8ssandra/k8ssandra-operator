@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	controlcontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/control"
 	"os"
 	"strings"
 
@@ -49,6 +50,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	controlv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	k8ssandraiov1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -80,6 +82,7 @@ func init() {
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
 	utilruntime.Must(promapi.AddToScheme(scheme))
 	utilruntime.Must(medusav1alpha1.AddToScheme(scheme))
+	utilruntime.Must(controlv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -186,6 +189,17 @@ func main() {
 			WatchNamespaces:  []string{watchNamespace},
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
+			os.Exit(1)
+		}
+
+		if err = (&controlcontrollers.K8ssandraTaskReconciler{
+			ReconcilerConfig: reconcilerConfig,
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			ClientCache:      clientCache,
+			Recorder:         mgr.GetEventRecorderFor("k8ssandratask-controller"),
+		}).SetupWithManager(mgr, additionalClusters); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
 			os.Exit(1)
 		}
 	}

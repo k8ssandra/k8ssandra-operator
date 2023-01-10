@@ -1,0 +1,6 @@
+apiVersion: control.k8ssandra.io/v1alpha1
+kind: K8ssandraTask
+metadata:
+  name: k8ssandratask-sample
+spec:
+  # TODO(user): Add fields here
