@@ -14,6 +14,8 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## unreleased
+
+* [FEATURE] [#807](https://github.com/k8ssandra/k8ssandra-operator/pull/807) Adds Prometheus ServiceMonitor relabelling configurations for the CDC agent. The Agent's metrics will now appear in Prometheus alongside Cassandra's.
 * [BUGFIX] [#808](https://github.com/k8ssandra/k8ssandra-operator/pull/808) Ensure that commonLabels are propagated to Prometheus ServiceMonitor resources.
 
 ## v1.4.1 - 2022-01-04
