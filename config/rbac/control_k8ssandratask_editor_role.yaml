@@ -1,0 +1,24 @@
+# permissions for end users to edit k8ssandratasks.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8ssandratask-editor-role
+rules:
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
+  - k8ssandratasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - control.k8ssandra.io
+  resources:
+  - k8ssandratasks/status
+  verbs:
+  - get

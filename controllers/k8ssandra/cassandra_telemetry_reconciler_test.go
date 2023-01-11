@@ -4,6 +4,7 @@ package k8ssandra
 
 import (
 	"context"
+
 	"k8s.io/utils/pointer"
 
 	"testing"
@@ -52,7 +53,8 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
 				Telemetry: &telemetryapi.TelemetrySpec{
 					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled: pointer.Bool(true),
+						Enabled:      pointer.Bool(true),
+						CommonLabels: map[string]string{"test-label": "test"},
 					},
 				},
 			},
@@ -69,5 +71,6 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 		assert.Fail(t, "could not get actual ServiceMonitor after reconciling k8ssandra cluster", err)
 	}
 	assert.NotEmpty(t, currentSM.Spec.Endpoints)
-	assert.NotEqual(t, currentSM.Namespace, kc.Namespace)
+	assert.NotEqual(t, kc.Namespace, currentSM.Namespace)
+	assert.Contains(t, currentSM.Labels, "test-label")
 }

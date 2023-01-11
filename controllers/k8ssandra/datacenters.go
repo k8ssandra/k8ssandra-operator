@@ -359,17 +359,19 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 			},
 		},
 		Spec: cassctlapi.CassandraTaskSpec{
-			ScheduledTime: &now,
 			Datacenter: corev1.ObjectReference{
 				Namespace: namespace,
 				Name:      targetDc,
 			},
-			Jobs: []cassctlapi.CassandraJob{
-				{
-					Name:    targetDc + "-rebuild",
-					Command: "rebuild",
-					Arguments: cassctlapi.JobArguments{
-						SourceDatacenter: srcDc,
+			CassandraTaskTemplate: cassctlapi.CassandraTaskTemplate{
+				ScheduledTime: &now,
+				Jobs: []cassctlapi.CassandraJob{
+					{
+						Name:    targetDc + "-rebuild",
+						Command: "rebuild",
+						Arguments: cassctlapi.JobArguments{
+							SourceDatacenter: srcDc,
+						},
 					},
 				},
 			},

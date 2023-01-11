@@ -8,4 +8,5 @@ resources:
 - medusa_v1alpha1_medusabackupjob.yaml
 - medusa_v1alpha1_medusarestorejob.yaml
 - medusa_v1alpha1_medusabackupschedule.yaml
+- control_v1alpha1_k8ssandratask.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

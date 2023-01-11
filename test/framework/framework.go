@@ -18,7 +18,10 @@ import (
 	terratestlogger "github.com/gruntwork-io/terratest/modules/logger"
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
+	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
+	k8taskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -66,11 +69,17 @@ func Init(t *testing.T) {
 	err = cassdcapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for cass-operator")
 
+	err = casstaskapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for cass-operator tasks")
+
 	err = promapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for prometheus")
 
 	err = medusaapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for medusa")
+
+	err = controlapi.AddToScheme(scheme.Scheme)
+	require.NoError(t, err, "failed to register scheme for control")
 
 	// cfg, err := ctrl.GetConfig()
 	// require.NoError(t, err, "failed to get *rest.Config")
@@ -402,6 +411,21 @@ func (f *Framework) PatchReaperStatus(ctx context.Context, key ClusterKey, updat
 	return remoteClient.Status().Patch(ctx, r, patch)
 }
 
+func (f *Framework) PatchCassandraTaskStatus(ctx context.Context, key ClusterKey, updateFn func(sg *casstaskapi.CassandraTask)) error {
+	task := &casstaskapi.CassandraTask{}
+	err := f.Get(ctx, key, task)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(task.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(task)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+	return remoteClient.Status().Patch(ctx, task, patch)
+}
+
 // WaitForDeploymentToBeReady Blocks until the Deployment is ready. If
 // ClusterKey.K8sContext is empty, this method blocks until the deployment is ready in all
 // remote clusters.
@@ -522,6 +546,76 @@ func (f *Framework) withDatacenter(ctx context.Context, key ClusterKey, conditio
 func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func() bool {
 	withDc := f.NewWithDatacenter(ctx, key)
 	return withDc(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return true
+	})
+}
+
+// NewWithCassTask is a function generator for withCassandraTask that is bound to ctx, and key.
+func (f *Framework) NewWithCassTask(ctx context.Context, key ClusterKey) func(func(*casstaskapi.CassandraTask) bool) func() bool {
+	return func(condition func(dc *casstaskapi.CassandraTask) bool) func() bool {
+		return f.withCassTask(ctx, key, condition)
+	}
+}
+
+// withCassTask Fetches the CassandraTask specified by key and then calls condition.
+func (f *Framework) withCassTask(ctx context.Context, key ClusterKey, condition func(task *casstaskapi.CassandraTask) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup CassandraDatacenter", "key", key)
+			return false
+		}
+
+		dc := &casstaskapi.CassandraTask{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
+			return condition(dc)
+		} else {
+			if !errors.IsNotFound(err) {
+				f.logger.Error(err, "failed to get CassandraTask", "key", key)
+			}
+			return false
+		}
+	}
+}
+
+func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
+	withCassTask := f.NewWithCassTask(ctx, key)
+	return withCassTask(func(dc *casstaskapi.CassandraTask) bool {
+		return true
+	})
+}
+
+// NewWithK8ssandraTask is a function generator for withCassandraTask that is bound to ctx, and key.
+func (f *Framework) NewWithK8ssandraTask(ctx context.Context, key ClusterKey) func(func(*k8taskapi.K8ssandraTask) bool) func() bool {
+	return func(condition func(dc *k8taskapi.K8ssandraTask) bool) func() bool {
+		return f.withK8ssandraTask(ctx, key, condition)
+	}
+}
+
+// withK8ssandraTask Fetches the CassandraTask specified by key and then calls condition.
+func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condition func(task *k8taskapi.K8ssandraTask) bool) func() bool {
+	return func() bool {
+		remoteClient, found := f.remoteClients[key.K8sContext]
+		if !found {
+			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup CassandraDatacenter", "key", key)
+			return false
+		}
+
+		dc := &k8taskapi.K8ssandraTask{}
+		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
+			return condition(dc)
+		} else {
+			if !errors.IsNotFound(err) {
+				f.logger.Error(err, "failed to get CassandraTask", "key", key)
+			}
+			return false
+		}
+	}
+}
+
+func (f *Framework) K8ssandraTaskExists(ctx context.Context, key ClusterKey) func() bool {
+	withK8ssandraTask := f.NewWithK8ssandraTask(ctx, key)
+	return withK8ssandraTask(func(dc *k8taskapi.K8ssandraTask) bool {
 		return true
 	})
 }
