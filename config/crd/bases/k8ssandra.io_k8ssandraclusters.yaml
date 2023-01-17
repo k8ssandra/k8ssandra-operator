@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: k8ssandraclusters.k8ssandra.io
 spec:
@@ -10799,6 +10799,10 @@ spec:
                                     properties:
                                       mcac:
                                         properties:
+                                          enabled:
+                                            description: enabled sets whether MCAC
+                                              (legacy metrics endpoint) is enabled.
+                                            type: boolean
                                           metricFilters:
                                             description: 'MetricFilters allows passing
                                               filters to MCAC in order to reduce the
@@ -11186,6 +11190,10 @@ spec:
                               properties:
                                 mcac:
                                   properties:
+                                    enabled:
+                                      description: enabled sets whether MCAC (legacy
+                                        metrics endpoint) is enabled.
+                                      type: boolean
                                     metricFilters:
                                       description: 'MetricFilters allows passing filters
                                         to MCAC in order to reduce the amount of extracted
@@ -11774,6 +11782,10 @@ spec:
                           properties:
                             mcac:
                               properties:
+                                enabled:
+                                  description: enabled sets whether MCAC (legacy metrics
+                                    endpoint) is enabled.
+                                  type: boolean
                                 metricFilters:
                                   description: 'MetricFilters allows passing filters
                                     to MCAC in order to reduce the amount of extracted
@@ -15968,6 +15980,10 @@ spec:
                     properties:
                       mcac:
                         properties:
+                          enabled:
+                            description: enabled sets whether MCAC (legacy metrics
+                              endpoint) is enabled.
+                            type: boolean
                           metricFilters:
                             description: 'MetricFilters allows passing filters to
                               MCAC in order to reduce the amount of extracted metrics.
@@ -18526,6 +18542,10 @@ spec:
                     properties:
                       mcac:
                         properties:
+                          enabled:
+                            description: enabled sets whether MCAC (legacy metrics
+                              endpoint) is enabled.
+                            type: boolean
                           metricFilters:
                             description: 'MetricFilters allows passing filters to
                               MCAC in order to reduce the amount of extracted metrics.
@@ -20076,6 +20096,10 @@ spec:
                     properties:
                       mcac:
                         properties:
+                          enabled:
+                            description: enabled sets whether MCAC (legacy metrics
+                              endpoint) is enabled.
+                            type: boolean
                           metricFilters:
                             description: 'MetricFilters allows passing filters to
                               MCAC in order to reduce the amount of extracted metrics.

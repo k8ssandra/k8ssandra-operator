@@ -12,6 +12,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,6 +73,31 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 			return result.Error(err)
 		}
 	}
+
+	cassandraContainer := &corev1.Container{
+		Name: "cassandra",
+	}
+	dcContainers := []corev1.Container{}
+	if !(actualDc.Spec.PodTemplateSpec == nil || len(actualDc.Spec.PodTemplateSpec.Spec.Containers) == 0) {
+		dcContainers = actualDc.Spec.PodTemplateSpec.Spec.Containers
+	}
+	for _, c := range dcContainers {
+		if c.Name == "cassandra" {
+			cassandraContainer = &c
+		}
+	}
+	disabled := "false"
+	if mergedSpec.IsMcacEnabled() {
+		disabled = "true"
+	}
+	cassandraContainer.Env = append(
+		cassandraContainer.Env,
+		corev1.EnvVar{
+			Name:  "MGMT_API_DISABLE_MCAC",
+			Value: disabled,
+		},
+	)
+
 	return result.Continue()
 }
 
