@@ -12,7 +12,7 @@ func (in *TelemetrySpec) IsPrometheusEnabled() bool {
 }
 
 func (in *TelemetrySpec) IsMcacEnabled() bool {
-	return in == nil && in.Mcac == nil && in.Mcac.Enabled == nil && *in.Mcac.Enabled
+	return in == nil || in.Mcac == nil || in.Mcac.Enabled == nil || *in.Mcac.Enabled
 }
 
 func (in *TelemetrySpec) IsVectorEnabled() bool {
