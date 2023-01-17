@@ -138,3 +138,13 @@ type Endpoint struct {
 	Address string `json:"address,omitempty"`
 	Port    string `json:"port,omitempty"`
 }
+
+type CassandraTelemetryAgentSpec struct {
+	Endpoint TelemetryAgentEndpoint `json:"endpoint,omitempty"`
+	Filters  promapi.RelabelConfig  `json:"filters,omitempty"`
+}
+
+type TelemetryAgentEndpoint struct {
+	Address string `json:"address,omitempty"`
+	Port    string `json:"port,omitempty"`
+}
