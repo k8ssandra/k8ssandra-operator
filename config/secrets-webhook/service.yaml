@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: k8ssandra-secrets-webhook
+  name: k8ssandra-secrets-webhook
+  namespace: k8ssandra-operator 
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 443
+      name: https
+  selector:
+    app: k8ssandra-secrets-webhook
+

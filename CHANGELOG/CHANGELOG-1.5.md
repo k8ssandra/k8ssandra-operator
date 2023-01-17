@@ -28,3 +28,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
 * [TESTING] [#799](https://github.com/k8ssandra/k8ssandra-operator/issues/799) Fix GHA CI failures with Kustomize install being rate limited
 * [FEATURE] [#501](https://github.com/k8ssandra/k8ssandra-operator/issues/501) Allow configuring annotations and labels on services, statefulsets, deployments and pods
+* [FEATURE] [#605](https://github.com/k8ssandra/k8ssandra-operator/issues/605) Create a mutating webhook for the internal secrets provider

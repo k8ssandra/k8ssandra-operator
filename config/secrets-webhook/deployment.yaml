@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: k8ssandra-secrets-webhook
+  name: k8ssandra-secrets-webhook
+  namespace: k8ssandra-operator 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8ssandra-secrets-webhook
+  template:
+    metadata:
+      labels:
+        app: k8ssandra-secrets-webhook
+    spec:
+      containers:
+        - image: k8ssandra/k8ssandra-secrets-webhook:latest
+          imagePullPolicy: Never
+          name: k8ssandra-secrets-webhook
+          env:
+            - name: TLS
+              value: "true"
+          volumeMounts:
+            - name: tls
+              mountPath: "/etc/admission-webhook/tls"
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: k8ssandra-secrets-webhook-server-cert
+            
+

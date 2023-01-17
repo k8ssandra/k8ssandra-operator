@@ -1,0 +1,24 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: k8ssandra-secrets-webhook
+webhooks:
+  - name: k8ssandra-secrets-webhook.k8ssandra.io
+    objectSelector: 
+      matchLabels:
+        k8ssandra.secrets/mutate: "inject"
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+        scope: "*"
+    clientConfig:
+      service:
+        namespace: k8ssandra-operator
+        name: k8ssandra-secrets-webhook
+        path: /mutate-pods
+        port: 443
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 2

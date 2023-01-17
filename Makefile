@@ -54,6 +54,9 @@ IMG ?= $(IMAGE_TAG_BASE):latest
 # Create Kubernetes objects with embeddedObjectMeta
 CRD_OPTIONS ?= "crd"
 
+WEBHOOK_IMG_BASE ?= k8ssandra/k8ssandra-secrets-webhook
+WEBHOOK_IMG ?= $(WEBHOOK_IMG_BASE):latest
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.x
 
@@ -165,8 +168,13 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
-docker-build:
+docker-build-operator:
 	docker buildx build --load -t ${IMG} .
+
+docker-build-secrets-webhook:
+	docker buildx build -t ${WEBHOOK_IMG} -f cmd/secrets-webhook/Dockerfile .
+
+docker-build: docker-build-operator docker-build-secrets-webhook
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
@@ -194,7 +202,7 @@ kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
 single-create: cleanup create-kind-cluster cert-manager nginx-kind
 
-single-prepare: build manifests docker-build kind-load-image
+single-prepare: build manifests docker-build kind-load-image kind-load-image-secrets-webhook
 
 single-up: single-create single-prepare kustomize
 	kubectl config use-context kind-k8ssandra-0
@@ -215,7 +223,7 @@ endif
 
 multi-create: cleanup create-kind-multicluster cert-manager-multi nginx-kind-multi
 
-multi-prepare: build manifests docker-build kind-load-image-multi
+multi-prepare: build manifests docker-build docker-build-secrets-webhook kind-load-image-multi  
 
 multi-up: multi-create multi-prepare kustomize
 ## install the control plane
@@ -272,12 +280,18 @@ create-kind-cluster:
 create-kind-multicluster:
 	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
-kind-load-image:
+kind-load-image-operator:
 	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
+
+kind-load-image-secrets-webhook:
+	kind load docker-image --name $(KIND_CLUSTER) ${WEBHOOK_IMG}
+
+kind-load-image: kind-load-image-operator kind-load-image-secrets-webhook
 
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
-		kind load docker-image --name k8ssandra-$$i ${IMG}; \
+		kind load docker-image --name k8ssandra-$$i ${IMG} && \
+		kind load docker-image --name k8ssandra-$$i ${WEBHOOK_IMG}; \
 	done
 
 ##@ Deployment

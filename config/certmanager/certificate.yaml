@@ -23,3 +23,19 @@ spec:
     kind: Issuer
     name: k8ssandra-operator-selfsigned-issuer
   secretName: k8ssandra-operator-webhook-server-cert # this secret will not be prefixed, since it's not managed by kustomize
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: k8ssandra-secrets-serving-cert
+  namespace: system
+spec:
+  # $(SECRETS_SERVICE_NAME) and $(SECRETS_SERVICE_NAMESPACE) will be substituted by kustomize
+  dnsNames:
+  - $(SECRETS_SERVICE_NAME_K8S).$(SECRETS_SERVICE_NAMESPACE_K8S).svc
+  - $(SECRETS_SERVICE_NAME_K8S).$(SECRETS_SERVICE_NAMESPACE_K8S).svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: k8ssandra-operator-selfsigned-issuer
+  secretName: k8ssandra-secrets-webhook-server-cert

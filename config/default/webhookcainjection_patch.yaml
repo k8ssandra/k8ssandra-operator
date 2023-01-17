@@ -13,3 +13,11 @@ metadata:
   name: k8ssandra-operator-validating-webhook-configuration
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE_K8S)/$(CERTIFICATE_NAME_K8S)
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: k8ssandra-secrets-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: $(SECRETS_CERTIFICATE_NAMESPACE_K8S)/$(SECRETS_CERTIFICATE_NAME_K8S)

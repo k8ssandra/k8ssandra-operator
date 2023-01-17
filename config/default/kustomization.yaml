@@ -24,6 +24,7 @@ resources:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 - ../webhook
+- ../secrets-webhook
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER'. 'WEBHOOK' components are required.
 - ../certmanager
 # [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
@@ -65,6 +66,21 @@ vars:
     group: cert-manager.io
     version: v1
     name: k8ssandra-operator-serving-cert # this name should match the one in certificate.yaml
+    # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
+- name: SECRETS_CERTIFICATE_NAMESPACE_K8S # namespace of the certificate CR
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: k8ssandra-secrets-serving-cert # this name should match the one in certificate.yaml
+  fieldref:
+    fieldpath: metadata.namespace
+- name: SECRETS_CERTIFICATE_NAME_K8S
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: k8ssandra-secrets-serving-cert # this name should match the one in certificate.yaml
 - name: SERVICE_NAMESPACE_K8S # namespace of the service
   objref:
     kind: Service
@@ -77,3 +93,15 @@ vars:
     kind: Service
     version: v1
     name: k8ssandra-operator-webhook-service
+- name: SECRETS_SERVICE_NAMESPACE_K8S # namespace of the service
+  objref:
+    kind: Service
+    version: v1
+    name: k8ssandra-secrets-webhook
+  fieldref:
+    fieldpath: metadata.namespace
+- name: SECRETS_SERVICE_NAME_K8S
+  objref:
+    kind: Service
+    version: v1
+    name: k8ssandra-secrets-webhook
