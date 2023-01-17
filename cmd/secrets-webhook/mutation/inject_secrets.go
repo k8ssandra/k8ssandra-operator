@@ -1,16 +1,18 @@
 package mutation
 
 import (
-	"sort"
-	"strings"
-
+	"encoding/json"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// annotations should follow the format prefix-{secret}={mountPath}
-// e.g. k8ssandra.io/inject-secret-cassandraSuperuser=/etc/credentials/cassandra
-const secretNameAnnotationPrefix = "k8ssandra.io/inject-secret-"
+// e.g. k8ssandra.io/inject-secret=[{secretName=my-secret, path=/etc/credentials/cassandra}]
+const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
+
+type SecretInjection struct {
+	SecretName string `json:"secretName"`
+	Path       string `json:"path"`
+}
 
 // injectEnv is a container for the mutation injecting secretss
 type injectSecrets struct {
@@ -30,17 +32,22 @@ func (se injectSecrets) Mutate(pod *corev1.Pod) (*corev1.Pod, error) {
 	se.Logger = se.Logger.With(zap.String("mutation", se.Name()))
 	mpod := pod.DeepCopy()
 
-	secretKeys := getSecretInjectionAnnotations(pod.ObjectMeta.Annotations)
-	if len(secretKeys) == 0 {
-		se.Logger.Info("no secret annotations exist")
+	secretsStr := pod.ObjectMeta.Annotations[secretInjectionAnnotation]
+	if len(secretsStr) == 0 {
+		se.Logger.Info("no secret annotation exists")
 		return mpod, nil
 	}
 
-	for _, key := range secretKeys {
-		// get secret name from annotation, which is in the format
-		// inject-secrets-template-{secret}
-		secretName := key[len(secretNameAnnotationPrefix):]
-		mountPath := pod.ObjectMeta.Annotations[key]
+	var secrets []SecretInjection
+	if err := json.Unmarshal([]byte(secretsStr), &secrets); err != nil {
+		se.Logger.Error("unable to unmarhsal secrets annotation", zap.String("annotation", secretsStr))
+		return mpod, err
+	}
+
+	for _, secret := range secrets {
+		// get secret name from injection annotation
+		secretName := secret.SecretName
+		mountPath := secret.Path
 		se.Logger.Debug("creating volume and volume mount for secret",
 			zap.String("secret", secretName),
 			zap.String("secret path", mountPath),
@@ -106,19 +113,4 @@ func hasVolumeMount(container corev1.Container, volumeMount corev1.VolumeMount) 
 		}
 	}
 	return false
-}
-
-// getSecretInjectionAnnotations retrieves the annotations that use the
-// secretNameAnnotation prefix and returns them in a sorted list
-func getSecretInjectionAnnotations(annotations map[string]string) []string {
-	// verify there is at least one injection annotation
-	var secretKeys []string
-	for a, _ := range annotations {
-		if strings.Contains(a, secretNameAnnotationPrefix) {
-			secretKeys = append(secretKeys, a)
-		}
-	}
-
-	sort.Strings(secretKeys)
-	return secretKeys
 }

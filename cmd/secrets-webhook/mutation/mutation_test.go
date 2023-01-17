@@ -39,7 +39,7 @@ func pod() *corev1.Pod {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "lifespan",
 			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret-mySecret": "/my/secret/path",
+				"k8ssandra.io/inject-secret": `[{"secretName": "mySecret", "path": "/my/secret/path"}]`,
 			},
 		},
 		Spec: corev1.PodSpec{
