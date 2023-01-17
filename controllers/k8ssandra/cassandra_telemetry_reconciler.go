@@ -74,14 +74,16 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		}
 	}
 
-	cassandraContainer := &corev1.Container{
-		Name: "cassandra",
+	if actualDc.Spec.PodTemplateSpec == nil {
+		actualDc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	dcContainers := []corev1.Container{}
-	if !(actualDc.Spec.PodTemplateSpec == nil || len(actualDc.Spec.PodTemplateSpec.Spec.Containers) == 0) {
-		dcContainers = actualDc.Spec.PodTemplateSpec.Spec.Containers
+	if len(actualDc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
+		actualDc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{
+			{Name: "cassandra"},
+		}
 	}
-	for _, c := range dcContainers {
+	var cassandraContainer *corev1.Container
+	for _, c := range actualDc.Spec.PodTemplateSpec.Spec.Containers {
 		if c.Name == "cassandra" {
 			cassandraContainer = &c
 		}
@@ -97,7 +99,6 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 			Value: disabled,
 		},
 	)
-
 	return result.Continue()
 }
 

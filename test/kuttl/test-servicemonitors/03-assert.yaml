@@ -3,6 +3,14 @@ kind: StatefulSet
 metadata:
   name: test-dc1-default-sts
   namespace: k8ssandra-operator
+spec:
+  template:
+    spec:
+      containers:
+        - name: cassandra
+          env:
+            - name: MGMT_API_DISABLE_MCAC
+              value: "true"
 status:
   readyReplicas: 1
 ---

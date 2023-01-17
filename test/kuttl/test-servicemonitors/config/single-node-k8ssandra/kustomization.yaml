@@ -23,6 +23,8 @@ patches:
               enabled: true
               commonLabels:
                 test-label: gobbledegook
+          mcac:
+            enabled: false
       - op: add
         path: /spec/reaper
         value:
