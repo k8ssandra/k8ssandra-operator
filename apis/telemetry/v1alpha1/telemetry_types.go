@@ -3,14 +3,16 @@
 package v1alpha1
 
 import (
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type TelemetrySpec struct {
-	Prometheus *PrometheusTelemetrySpec `json:"prometheus,omitempty"`
-	Mcac       *McacTelemetrySpec       `json:"mcac,omitempty"`
-	Vector     *VectorSpec              `json:"vector,omitempty"`
+	Prometheus *PrometheusTelemetrySpec     `json:"prometheus,omitempty"`
+	Mcac       *McacTelemetrySpec           `json:"mcac,omitempty"`
+	Vector     *VectorSpec                  `json:"vector,omitempty"`
+	Cassandra  *CassandraTelemetryAgentSpec `json:"cassandra,omitempty"`
 }
 
 type PrometheusTelemetrySpec struct {
@@ -125,4 +127,14 @@ type McacTelemetrySpec struct {
 	// enabled sets whether MCAC (legacy metrics endpoint) is enabled.
 	// This is considered true by default.
 	Enabled *bool `json:"enabled,omitempty"`
+}
+
+type CassandraTelemetryAgentSpec struct {
+	Endpoint TelemetryAgentEndpoint `json:"endpoint,omitempty"`
+	Filters  promapi.RelabelConfig  `json:"filters,omitempty"`
+}
+
+type TelemetryAgentEndpoint struct {
+	Address string `json:"address,omitempty"`
+	Port    string `json:"port,omitempty"`
 }
