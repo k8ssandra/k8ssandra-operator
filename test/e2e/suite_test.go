@@ -975,8 +975,6 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
-	f.DeployVectorConfigMap(namespace)
-
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}

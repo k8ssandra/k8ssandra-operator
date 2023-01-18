@@ -10840,6 +10840,88 @@ spec:
                                         type: object
                                       vector:
                                         properties:
+                                          components:
+                                            properties:
+                                              sinks:
+                                                description: Sinks is the list of
+                                                  sinks to use for the Vector agent.
+                                                items:
+                                                  properties:
+                                                    config:
+                                                      description: Config is the configuration
+                                                        for the sink.
+                                                      type: string
+                                                    inputs:
+                                                      description: Inputs is the list
+                                                        of inputs for the transform.
+                                                      items:
+                                                        type: string
+                                                      type: array
+                                                    name:
+                                                      description: Name is the name
+                                                        of the sink.
+                                                      type: string
+                                                    type:
+                                                      description: Type is the type
+                                                        of the sink.
+                                                      type: string
+                                                  required:
+                                                  - name
+                                                  - type
+                                                  type: object
+                                                type: array
+                                              sources:
+                                                description: Sources is the list of
+                                                  sources to use for the Vector agent.
+                                                items:
+                                                  properties:
+                                                    config:
+                                                      description: Config is the configuration
+                                                        for the source.
+                                                      type: string
+                                                    name:
+                                                      description: Name is the name
+                                                        of the source.
+                                                      type: string
+                                                    type:
+                                                      description: Type is the type
+                                                        of the source.
+                                                      type: string
+                                                  required:
+                                                  - name
+                                                  - type
+                                                  type: object
+                                                type: array
+                                              transforms:
+                                                description: Transforms is the list
+                                                  of transforms to use for the Vector
+                                                  agent.
+                                                items:
+                                                  properties:
+                                                    config:
+                                                      description: Config is the configuration
+                                                        for the transform.
+                                                      type: string
+                                                    inputs:
+                                                      description: Inputs is the list
+                                                        of inputs for the transform.
+                                                      items:
+                                                        type: string
+                                                      type: array
+                                                    name:
+                                                      description: Name is the name
+                                                        of the transform.
+                                                      type: string
+                                                    type:
+                                                      description: Type is the type
+                                                        of the transform.
+                                                      type: string
+                                                  required:
+                                                  - name
+                                                  - type
+                                                  type: object
+                                                type: array
+                                            type: object
                                           config:
                                             description: Config is the name of the
                                               configmap containing custom sinks and
@@ -11226,6 +11308,87 @@ spec:
                                   type: object
                                 vector:
                                   properties:
+                                    components:
+                                      properties:
+                                        sinks:
+                                          description: Sinks is the list of sinks
+                                            to use for the Vector agent.
+                                          items:
+                                            properties:
+                                              config:
+                                                description: Config is the configuration
+                                                  for the sink.
+                                                type: string
+                                              inputs:
+                                                description: Inputs is the list of
+                                                  inputs for the transform.
+                                                items:
+                                                  type: string
+                                                type: array
+                                              name:
+                                                description: Name is the name of the
+                                                  sink.
+                                                type: string
+                                              type:
+                                                description: Type is the type of the
+                                                  sink.
+                                                type: string
+                                            required:
+                                            - name
+                                            - type
+                                            type: object
+                                          type: array
+                                        sources:
+                                          description: Sources is the list of sources
+                                            to use for the Vector agent.
+                                          items:
+                                            properties:
+                                              config:
+                                                description: Config is the configuration
+                                                  for the source.
+                                                type: string
+                                              name:
+                                                description: Name is the name of the
+                                                  source.
+                                                type: string
+                                              type:
+                                                description: Type is the type of the
+                                                  source.
+                                                type: string
+                                            required:
+                                            - name
+                                            - type
+                                            type: object
+                                          type: array
+                                        transforms:
+                                          description: Transforms is the list of transforms
+                                            to use for the Vector agent.
+                                          items:
+                                            properties:
+                                              config:
+                                                description: Config is the configuration
+                                                  for the transform.
+                                                type: string
+                                              inputs:
+                                                description: Inputs is the list of
+                                                  inputs for the transform.
+                                                items:
+                                                  type: string
+                                                type: array
+                                              name:
+                                                description: Name is the name of the
+                                                  transform.
+                                                type: string
+                                              type:
+                                                description: Type is the type of the
+                                                  transform.
+                                                type: string
+                                            required:
+                                            - name
+                                            - type
+                                            type: object
+                                          type: array
+                                      type: object
                                     config:
                                       description: Config is the name of the configmap
                                         containing custom sinks and transformers for
@@ -11813,6 +11976,81 @@ spec:
                               type: object
                             vector:
                               properties:
+                                components:
+                                  properties:
+                                    sinks:
+                                      description: Sinks is the list of sinks to use
+                                        for the Vector agent.
+                                      items:
+                                        properties:
+                                          config:
+                                            description: Config is the configuration
+                                              for the sink.
+                                            type: string
+                                          inputs:
+                                            description: Inputs is the list of inputs
+                                              for the transform.
+                                            items:
+                                              type: string
+                                            type: array
+                                          name:
+                                            description: Name is the name of the sink.
+                                            type: string
+                                          type:
+                                            description: Type is the type of the sink.
+                                            type: string
+                                        required:
+                                        - name
+                                        - type
+                                        type: object
+                                      type: array
+                                    sources:
+                                      description: Sources is the list of sources
+                                        to use for the Vector agent.
+                                      items:
+                                        properties:
+                                          config:
+                                            description: Config is the configuration
+                                              for the source.
+                                            type: string
+                                          name:
+                                            description: Name is the name of the source.
+                                            type: string
+                                          type:
+                                            description: Type is the type of the source.
+                                            type: string
+                                        required:
+                                        - name
+                                        - type
+                                        type: object
+                                      type: array
+                                    transforms:
+                                      description: Transforms is the list of transforms
+                                        to use for the Vector agent.
+                                      items:
+                                        properties:
+                                          config:
+                                            description: Config is the configuration
+                                              for the transform.
+                                            type: string
+                                          inputs:
+                                            description: Inputs is the list of inputs
+                                              for the transform.
+                                            items:
+                                              type: string
+                                            type: array
+                                          name:
+                                            description: Name is the name of the transform.
+                                            type: string
+                                          type:
+                                            description: Type is the type of the transform.
+                                            type: string
+                                        required:
+                                        - name
+                                        - type
+                                        type: object
+                                      type: array
+                                  type: object
                                 config:
                                   description: Config is the name of the configmap
                                     containing custom sinks and transformers for the
@@ -16005,6 +16243,81 @@ spec:
                         type: object
                       vector:
                         properties:
+                          components:
+                            properties:
+                              sinks:
+                                description: Sinks is the list of sinks to use for
+                                  the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the sink.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the sink.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the sink.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              sources:
+                                description: Sources is the list of sources to use
+                                  for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the source.
+                                      type: string
+                                    name:
+                                      description: Name is the name of the source.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the source.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              transforms:
+                                description: Transforms is the list of transforms
+                                  to use for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the transform.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the transform.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the transform.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                            type: object
                           config:
                             description: Config is the name of the configmap containing
                               custom sinks and transformers for the Vector agent.
@@ -18563,6 +18876,81 @@ spec:
                         type: object
                       vector:
                         properties:
+                          components:
+                            properties:
+                              sinks:
+                                description: Sinks is the list of sinks to use for
+                                  the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the sink.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the sink.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the sink.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              sources:
+                                description: Sources is the list of sources to use
+                                  for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the source.
+                                      type: string
+                                    name:
+                                      description: Name is the name of the source.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the source.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              transforms:
+                                description: Transforms is the list of transforms
+                                  to use for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the transform.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the transform.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the transform.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                            type: object
                           config:
                             description: Config is the name of the configmap containing
                               custom sinks and transformers for the Vector agent.
@@ -20113,6 +20501,81 @@ spec:
                         type: object
                       vector:
                         properties:
+                          components:
+                            properties:
+                              sinks:
+                                description: Sinks is the list of sinks to use for
+                                  the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the sink.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the sink.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the sink.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              sources:
+                                description: Sources is the list of sources to use
+                                  for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the source.
+                                      type: string
+                                    name:
+                                      description: Name is the name of the source.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the source.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                              transforms:
+                                description: Transforms is the list of transforms
+                                  to use for the Vector agent.
+                                items:
+                                  properties:
+                                    config:
+                                      description: Config is the configuration for
+                                        the transform.
+                                      type: string
+                                    inputs:
+                                      description: Inputs is the list of inputs for
+                                        the transform.
+                                      items:
+                                        type: string
+                                      type: array
+                                    name:
+                                      description: Name is the name of the transform.
+                                      type: string
+                                    type:
+                                      description: Type is the type of the transform.
+                                      type: string
+                                  required:
+                                  - name
+                                  - type
+                                  type: object
+                                type: array
+                            type: object
                           config:
                             description: Config is the name of the configmap containing
                               custom sinks and transformers for the Vector agent.

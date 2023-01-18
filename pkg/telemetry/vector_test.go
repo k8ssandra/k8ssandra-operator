@@ -6,6 +6,7 @@ import (
 
 	testlogr "github.com/go-logr/logr/testing"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -54,4 +55,111 @@ func TestBuildVectorAgentConfigMap(t *testing.T) {
 	assert.Equal(t, vectorToml, vectorConfigMap.Data["vector.toml"])
 	assert.Equal(t, "k8ssandra-dc1-cass-vector", vectorConfigMap.Name)
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
+}
+
+func TestBuildVectorToml(t *testing.T) {
+	tests := []struct {
+		name  string
+		tspec *telemetry.TelemetrySpec
+		want  string
+	}{
+		{
+			"Single sink",
+			&telemetryapi.TelemetrySpec{
+				Vector: &telemetryapi.VectorSpec{
+					Enabled: pointer.Bool(true),
+					Components: &telemetryapi.VectorComponentsSpec{
+						Sinks: []telemetryapi.VectorSinkSpec{
+							{
+								Name: "console_sink",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			},
+			`
+[sinks.console_sink]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+		{
+			"Source, sink and transform",
+			&telemetryapi.TelemetrySpec{
+				Vector: &telemetryapi.VectorSpec{
+					Enabled: pointer.Bool(true),
+					Components: &telemetryapi.VectorComponentsSpec{
+						Sources: []telemetryapi.VectorSourceSpec{
+							{
+								Name: "custom_source",
+								Type: "whatever",
+								Config: `foo = "bar"
+baz = 1`,
+							},
+						},
+						Transforms: []telemetryapi.VectorTransformSpec{
+							{
+								Name:   "custom_transform1",
+								Type:   "remap",
+								Inputs: []string{"custom_source"},
+								Config: `foo = "bar"
+baz = 2`,
+							},
+							{
+								Name:   "custom_transform2",
+								Type:   "remap",
+								Inputs: []string{"custom_transform1"},
+								Config: `foo = "bar"
+baz = 3
+bulk.index = "vector-%Y-%m-%d"`,
+							},
+						},
+						Sinks: []telemetryapi.VectorSinkSpec{
+							{
+								Name: "console_sink",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			}, `
+[sources.custom_source]
+type = "whatever"
+foo = "bar"
+baz = 1
+
+[transforms.custom_transform1]
+type = "remap"
+inputs = ["custom_source"]
+foo = "bar"
+baz = 2
+
+[transforms.custom_transform2]
+type = "remap"
+inputs = ["custom_transform1"]
+foo = "bar"
+baz = 3
+bulk.index = "vector-%Y-%m-%d"
+
+[sinks.console_sink]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildCustomVectorToml(tt.tspec)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
