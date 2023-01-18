@@ -11,6 +11,14 @@ spec:
           env:
             - name: MGMT_API_DISABLE_MCAC
               value: "true"
+            - name: LOCAL_JMX
+            - name: METRIC_FILTERS
+            - name: DS_LICENSE
+            - name: DSE_AUTO_CONF_OFF
+            - name: USE_MGMT_API
+            - name: MGMT_API_EXPLICIT_START
+            - name: DSE_MGMT_EXPLICIT_START
+        - name: server-system-loggerßß
 status:
   readyReplicas: 1
 ---
