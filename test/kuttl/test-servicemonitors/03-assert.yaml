@@ -18,7 +18,7 @@ spec:
             - name: USE_MGMT_API
             - name: MGMT_API_EXPLICIT_START
             - name: DSE_MGMT_EXPLICIT_START
-        - name: server-system-loggerßß
+        - name: server-system-logger
 status:
   readyReplicas: 1
 ---
