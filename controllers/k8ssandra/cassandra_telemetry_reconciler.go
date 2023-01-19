@@ -89,7 +89,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		}
 	}
 	disabled := "false"
-	if mergedSpec.IsMcacEnabled() {
+	if !mergedSpec.IsMcacEnabled() {
 		disabled = "true"
 	}
 	cassandraContainer.Env = append(
