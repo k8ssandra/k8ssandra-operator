@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -107,20 +106,7 @@ target = "stdout"
   [sinks.console.encoding]
   codec = "json"`
 
-	if telemetrySpec.Vector.Config != nil {
-		// Read the Vector provided config map content and use it as the Vector sink config
-		vectorConfigMap := &corev1.ConfigMap{}
-		err := remoteClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: telemetrySpec.Vector.Config.Name}, vectorConfigMap)
-		if err != nil {
-			return "", err
-		} else {
-			if toml, found := vectorConfigMap.Data["vector.toml"]; found {
-				vectorConfigToml = toml
-			} else {
-				return "", fmt.Errorf("vector.toml not found in config map %s", telemetrySpec.Vector.Config.Name)
-			}
-		}
-	} else if telemetrySpec.Vector.Components != nil {
+	if telemetrySpec.Vector.Components != nil {
 		// Vector components are provided in the Telemetry spec, build the Vector sink config from them
 		vectorConfigToml = BuildCustomVectorToml(telemetrySpec)
 	}

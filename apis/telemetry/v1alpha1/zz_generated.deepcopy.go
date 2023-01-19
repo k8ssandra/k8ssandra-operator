@@ -184,11 +184,6 @@ func (in *VectorSpec) DeepCopyInto(out *VectorSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.Config != nil {
-		in, out := &in.Config, &out.Config
-		*out = new(v1.LocalObjectReference)
-		**out = **in
-	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = new(v1.ResourceRequirements)

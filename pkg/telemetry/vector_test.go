@@ -6,7 +6,6 @@ import (
 
 	testlogr "github.com/go-logr/logr/testing"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -65,11 +64,11 @@ func TestBuildVectorToml(t *testing.T) {
 	}{
 		{
 			"Single sink",
-			&telemetryapi.TelemetrySpec{
-				Vector: &telemetryapi.VectorSpec{
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
 					Enabled: pointer.Bool(true),
-					Components: &telemetryapi.VectorComponentsSpec{
-						Sinks: []telemetryapi.VectorSinkSpec{
+					Components: &telemetry.VectorComponentsSpec{
+						Sinks: []telemetry.VectorSinkSpec{
 							{
 								Name: "console_sink",
 								Type: "console",
@@ -90,11 +89,11 @@ inputs = ["test", "test2"]
 		},
 		{
 			"Source, sink and transform",
-			&telemetryapi.TelemetrySpec{
-				Vector: &telemetryapi.VectorSpec{
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
 					Enabled: pointer.Bool(true),
-					Components: &telemetryapi.VectorComponentsSpec{
-						Sources: []telemetryapi.VectorSourceSpec{
+					Components: &telemetry.VectorComponentsSpec{
+						Sources: []telemetry.VectorSourceSpec{
 							{
 								Name: "custom_source",
 								Type: "whatever",
@@ -102,7 +101,7 @@ inputs = ["test", "test2"]
 baz = 1`,
 							},
 						},
-						Transforms: []telemetryapi.VectorTransformSpec{
+						Transforms: []telemetry.VectorTransformSpec{
 							{
 								Name:   "custom_transform1",
 								Type:   "remap",
@@ -119,7 +118,7 @@ baz = 3
 bulk.index = "vector-%Y-%m-%d"`,
 							},
 						},
-						Sinks: []telemetryapi.VectorSinkSpec{
+						Sinks: []telemetry.VectorSinkSpec{
 							{
 								Name: "console_sink",
 								Type: "console",

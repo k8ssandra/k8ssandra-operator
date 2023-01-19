@@ -9,8 +9,12 @@ spec:
     telemetry:
       vector:
         enabled: true
-        config:
-          name: vector-custom-conf
+        components:
+          sinks:
+            - name: void
+              type: blackhole
+              inputs:
+                - cassandra_metrics
         scrapeInterval: 30s
         resources:
           requests:

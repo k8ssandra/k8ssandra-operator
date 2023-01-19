@@ -2881,23 +2881,6 @@ spec:
                                     type: object
                                   type: array
                               type: object
-                            config:
-                              description: Config is the name of the configmap containing
-                                custom sinks and transformers for the Vector agent.
-                                The configmap must be in the same namespace as the
-                                CassandraDatacenter and contain a vector.toml entry
-                                with the Vector configuration in toml format. The
-                                agent is already configured with a "cassandra_metrics"
-                                source that needs to be used as input for the sinks.
-                                If not set, the default console sink will be used.
-                              properties:
-                                name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Add other useful fields. apiVersion, kind,
-                                    uid?'
-                                  type: string
-                              type: object
-                              x-kubernetes-map-type: atomic
                             enabled:
                               description: Enabled enables the Vector agent for this
                                 resource (Cassandra, Reaper or Stargate). Enabling
@@ -3301,21 +3284,6 @@ spec:
                               type: object
                             type: array
                         type: object
-                      config:
-                        description: Config is the name of the configmap containing
-                          custom sinks and transformers for the Vector agent. The
-                          configmap must be in the same namespace as the CassandraDatacenter
-                          and contain a vector.toml entry with the Vector configuration
-                          in toml format. The agent is already configured with a "cassandra_metrics"
-                          source that needs to be used as input for the sinks. If
-                          not set, the default console sink will be used.
-                        properties:
-                          name:
-                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                              TODO: Add other useful fields. apiVersion, kind, uid?'
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
                       enabled:
                         description: Enabled enables the Vector agent for this resource
                           (Cassandra, Reaper or Stargate). Enabling the vector agent

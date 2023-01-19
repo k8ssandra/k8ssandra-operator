@@ -26,13 +26,6 @@ type VectorSpec struct {
 	// Enabling the vector agent will inject a sidecar container into the pod.
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// Config is the name of the configmap containing custom sinks and transformers for the Vector agent.
-	// The configmap must be in the same namespace as the CassandraDatacenter and contain a vector.toml entry
-	// with the Vector configuration in toml format.
-	// The agent is already configured with a "cassandra_metrics" source that needs to be used as input for the sinks.
-	// If not set, the default console sink will be used.
-	Config *corev1.LocalObjectReference `json:"config,omitempty"`
-
 	// Resources is the resource requirements for the Vector agent.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
