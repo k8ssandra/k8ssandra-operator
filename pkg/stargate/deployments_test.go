@@ -15,7 +15,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,7 +125,7 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Equal(t, "everywhere", deployment.Spec.Template.Labels["common"])
 	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
 
-	container := findContainer(&deployment, deployment.Name)
+	container := utils.FindAndGetContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
 	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+DefaultVersion, container.Image)
@@ -176,10 +175,10 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.Contains(t, javaOpts.Value, "-Xms268435456")
 	assert.Contains(t, javaOpts.Value, "-Xmx268435456")
 
-	volumeMount := findVolumeMount(container, "cassandra-config")
+	volumeMount := utils.FindVolumeMount(container, "cassandra-config")
 	require.NotNil(t, volumeMount)
 
-	volume := findVolume(&deployment, "cassandra-config")
+	volume := utils.FindAndGetVolume(&deployment, "cassandra-config")
 	require.NotNil(t, volume)
 }
 
@@ -219,7 +218,7 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment.Spec.Template.Spec.Tolerations)
 
-	container := findContainer(&deployment, deployment.Name)
+	container := utils.FindAndGetContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
 	rackName := utils.FindEnvVarInContainer(container, "RACK_NAME")
@@ -267,7 +266,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
+	container1 := utils.FindAndGetContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
 	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
@@ -290,7 +289,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
-	container2 := findContainer(&deployment2, deployment2.Name)
+	container2 := utils.FindAndGetContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
 	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
@@ -312,7 +311,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack3"), deployment3.Spec.Template.Spec.Affinity)
 	assert.Nil(t, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
-	container3 := findContainer(&deployment3, deployment3.Name)
+	container3 := utils.FindAndGetContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
 	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
@@ -358,7 +357,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
 	assert.Equal(t, dc.Spec.NodeSelector, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
+	container1 := utils.FindAndGetContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
 	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
@@ -376,7 +375,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Equal(t, dc.Spec.NodeSelector, deployment2.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment2.Spec.Template.Spec.Tolerations)
-	container2 := findContainer(&deployment2, deployment2.Name)
+	container2 := utils.FindAndGetContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
 	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
@@ -394,7 +393,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack3"), deployment3.Spec.Template.Spec.Affinity)
 	assert.Equal(t, dc.Spec.NodeSelector, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Nil(t, deployment3.Spec.Template.Spec.Tolerations)
-	container3 := findContainer(&deployment3, deployment3.Name)
+	container3 := utils.FindAndGetContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
 	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
@@ -470,7 +469,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack1"), deployment1.Spec.Template.Spec.Affinity)
 	assert.Equal(t, stargate.Spec.NodeSelector, deployment1.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Tolerations, deployment1.Spec.Template.Spec.Tolerations)
-	container1 := findContainer(&deployment1, deployment1.Name)
+	container1 := utils.FindAndGetContainer(&deployment1, deployment1.Name)
 	require.NotNil(t, container1, "failed to find stargate container")
 	rackName1 := utils.FindEnvVarInContainer(container1, "RACK_NAME")
 	require.NotNil(t, rackName1, "failed to find RACK_NAME env var")
@@ -488,7 +487,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	assert.Equal(t, affinityForRack(dc, "rack2"), deployment2.Spec.Template.Spec.Affinity)
 	assert.Equal(t, stargate.Spec.NodeSelector, deployment2.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Tolerations, deployment2.Spec.Template.Spec.Tolerations)
-	container2 := findContainer(&deployment2, deployment2.Name)
+	container2 := utils.FindAndGetContainer(&deployment2, deployment2.Name)
 	require.NotNil(t, container2, "failed to find stargate container")
 	rackName2 := utils.FindEnvVarInContainer(container2, "RACK_NAME")
 	require.NotNil(t, rackName2, "failed to find RACK_NAME env var")
@@ -507,7 +506,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	// node selectors should have been merged
 	assert.Equal(t, map[string]string{"selectorKey2": "selectorValue2", "selectorKey3": "selectorValue3"}, deployment3.Spec.Template.Spec.NodeSelector)
 	assert.Equal(t, stargate.Spec.Racks[0].Tolerations, deployment3.Spec.Template.Spec.Tolerations)
-	container3 := findContainer(&deployment3, deployment3.Name)
+	container3 := utils.FindAndGetContainer(&deployment3, deployment3.Name)
 	require.NotNil(t, container3, "failed to find stargate container")
 	rackName3 := utils.FindEnvVarInContainer(container3, "RACK_NAME")
 	require.NotNil(t, rackName3, "failed to find RACK_NAME env var")
@@ -552,18 +551,18 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
-	container := findContainer(&deployment, deployment.Name)
+	container := utils.FindAndGetContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
 	envVar := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, envVar, "failed to find JAVA_OPTS env var")
 	assert.True(t, strings.Contains(envVar.Value, "-Dstargate.unsafe.cassandra_config_path="+cassandraConfigPath))
 
-	volumeMount := findVolumeMount(container, "cassandra-config")
+	volumeMount := utils.FindVolumeMount(container, "cassandra-config")
 	require.NotNil(t, volumeMount, "failed to find cassandra-config volume mount")
 	assert.Equal(t, "/config", volumeMount.MountPath)
 
-	volume := findVolume(&deployment, "cassandra-config")
+	volume := utils.FindAndGetVolume(&deployment, "cassandra-config")
 	require.NotNil(t, volume, "failed to find cassandra-config volume")
 	expected := corev1.Volume{
 		Name: "cassandra-config",
@@ -584,30 +583,30 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
-	container := findContainer(&deployment, deployment.Name)
+	container := utils.FindAndGetContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
 	/* envVar := utils.FindEnvVarInContainer(container, "JAVA_OPTS")
 	require.NotNil(t, envVar, "failed to find JAVA_OPTS env var")
 	assert.True(t, strings.Contains(envVar.Value, "-Dstargate.unsafe.cassandra_config_path="+cassandraConfigPath)) */
 
-	volumeMount := findVolumeMount(container, "server-keystore")
+	volumeMount := utils.FindVolumeMount(container, "server-keystore")
 	require.NotNil(t, volumeMount, "failed to find server keystore volume mount")
 	assert.Equal(t, "/mnt/server-keystore", volumeMount.MountPath)
 
-	volumeMount = findVolumeMount(container, "server-truststore")
+	volumeMount = utils.FindVolumeMount(container, "server-truststore")
 	require.NotNil(t, volumeMount, "failed to find server truststore volume mount")
 	assert.Equal(t, "/mnt/server-truststore", volumeMount.MountPath)
 
-	volumeMount = findVolumeMount(container, "client-keystore")
+	volumeMount = utils.FindVolumeMount(container, "client-keystore")
 	require.NotNil(t, volumeMount, "failed to find client keystore volume mount")
 	assert.Equal(t, "/mnt/client-keystore", volumeMount.MountPath)
 
-	volumeMount = findVolumeMount(container, "client-truststore")
+	volumeMount = utils.FindVolumeMount(container, "client-truststore")
 	require.NotNil(t, volumeMount, "failed to find client truststore volume mount")
 	assert.Equal(t, "/mnt/client-truststore", volumeMount.MountPath)
 
-	volume := findVolume(&deployment, "client-keystore")
+	volume := utils.FindAndGetVolume(&deployment, "client-keystore")
 	require.NotNil(t, volume, "failed to find client-keystore volume")
 	expectedKeystoreVolume := corev1.Volume{
 		Name: "client-keystore",
@@ -625,7 +624,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	}
 	assert.Equal(t, expectedKeystoreVolume, *volume, "client keystore volume does not match expected value")
 
-	volume = findVolume(&deployment, "client-truststore")
+	volume = utils.FindAndGetVolume(&deployment, "client-truststore")
 	require.NotNil(t, volume, "failed to find client-truststore volume")
 	expectedTruststoreVolume := corev1.Volume{
 		Name: "client-truststore",
@@ -643,7 +642,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	}
 	assert.Equal(t, expectedTruststoreVolume, *volume, "client truststore volume does not match expected value")
 
-	volume = findVolume(&deployment, "server-keystore")
+	volume = utils.FindAndGetVolume(&deployment, "server-keystore")
 	require.NotNil(t, volume, "failed to find server-keystore volume")
 	expectedKeystoreVolume = corev1.Volume{
 		Name: "server-keystore",
@@ -661,7 +660,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	}
 	assert.Equal(t, expectedKeystoreVolume, *volume, "server keystore volume does not match expected value")
 
-	volume = findVolume(&deployment, "server-truststore")
+	volume = utils.FindAndGetVolume(&deployment, "server-truststore")
 	require.NotNil(t, volume, "failed to find server-truststore volume")
 	expectedTruststoreVolume = corev1.Volume{
 		Name: "server-truststore",
@@ -810,33 +809,6 @@ func testImages(t *testing.T) {
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
 	})
-}
-
-func findContainer(deployment *appsv1.Deployment, name string) *corev1.Container {
-	for _, c := range deployment.Spec.Template.Spec.Containers {
-		if c.Name == name {
-			return &c
-		}
-	}
-	return nil
-}
-
-func findVolumeMount(container *corev1.Container, name string) *corev1.VolumeMount {
-	for _, v := range container.VolumeMounts {
-		if v.Name == name {
-			return &v
-		}
-	}
-	return nil
-}
-
-func findVolume(deployment *appsv1.Deployment, name string) *corev1.Volume {
-	for _, v := range deployment.Spec.Template.Spec.Volumes {
-		if v.Name == name {
-			return &v
-		}
-	}
-	return nil
 }
 
 func affinityForRack(dc *cassdcapi.CassandraDatacenter, rackName string) *corev1.Affinity {

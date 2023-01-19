@@ -29,6 +29,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -263,6 +264,19 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			updatedReplicas += actualDeployment.Status.UpdatedReplicas
 			availableReplicas += actualDeployment.Status.AvailableReplicas
 		}
+	}
+
+	// create Vector configmap
+	if vectorReconcileResult, err := r.reconcileVector(ctx, *stargate, actualDc, r.Client, logger); err != nil {
+		return vectorReconcileResult, err
+	} else if vectorReconcileResult.Requeue {
+		return vectorReconcileResult, nil
+	}
+
+	// inject Vector
+	if err := telemetry.InjectVectorAgentForStargate(stargate, desiredDeployments, actualDc.Name, actualDc.Spec.ClusterName, logger); err != nil {
+		logger.Error(err, "Failed to inject Vector agent into Stargate deployments", "Deployment", desiredDeployments)
+		return ctrl.Result{}, err
 	}
 
 	for _, desiredDeployment := range desiredDeployments {

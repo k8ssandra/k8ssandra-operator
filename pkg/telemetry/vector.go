@@ -8,8 +8,11 @@ import (
 
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -212,4 +215,58 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 
 func VectorAgentConfigMapName(k8cName, dcName string) string {
 	return fmt.Sprintf("%s-%s-cass-vector", k8cName, dcName)
+}
+
+func InjectVectorAgentForStargate(stargate *stargateapi.Stargate, deployments map[string]appsv1.Deployment, dcName, clustername string, logger logr.Logger) error {
+	if stargate.Spec.Telemetry.IsVectorEnabled() {
+		logger.Info("Injecting Vector agent into Stargate deployments")
+		vectorImage := defaultVectorImage
+		if stargate.Spec.Telemetry.Vector.Image != "" {
+			vectorImage = stargate.Spec.Telemetry.Vector.Image
+		}
+
+		// Create the definition of the Vector agent container
+		vectorAgentContainer := corev1.Container{
+			Name:            cassandra.VectorContainerName,
+			Image:           vectorImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env: []corev1.EnvVar{
+				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
+				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
+				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{Name: "vector-config", MountPath: "/etc/vector"},
+			},
+			Resources: vectorContainerResources(stargate.Spec.Telemetry),
+		}
+		// Create the definition of the Vector agent config map volume
+		logger.Info("Creating Stargate Vector Agent Volume")
+		vectorAgentVolume := corev1.Volume{
+			Name: "vector-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: stargateapi.VectorAgentConfigMapNameStargate(clustername, dcName)},
+				},
+			},
+		}
+
+		logger.Info("Adding Vector Agent Sidecar to Stargate Deployments", "Stargate Deployments", deployments)
+		for idx, deployment := range deployments {
+			logger.Info("Deploymnet prior to adding container", "Containers", deployment.Spec.Template.Spec.Containers)
+			utils.UpdateContainer(&deployment, cassandra.VectorContainerName, func(c *corev1.Container) {
+				*c = vectorAgentContainer
+			})
+			logger.Info("Deploymnet after adding container", "Containers", deployment.Spec.Template.Spec.Containers)
+			utils.AddOrUpdateVolume(&deployment, &vectorAgentVolume)
+			deployments[idx] = deployment
+		}
+		logger.Info("Vector Agent Sidecar added to Stargate Deployments", "Stargate Deployments", deployments)
+
+		// cassandra.AddVolumesToPodTemplateSpec(dcConfig, vectorAgentVolume)
+	} else {
+		logger.Info("Skipping Vector agent injection for Stargate")
+	}
+
+	return nil
 }
