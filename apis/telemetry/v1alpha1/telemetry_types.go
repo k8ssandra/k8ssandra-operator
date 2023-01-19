@@ -26,13 +26,6 @@ type VectorSpec struct {
 	// Enabling the vector agent will inject a sidecar container into the pod.
 	Enabled *bool `json:"enabled,omitempty"`
 
-	// Config is the name of the configmap containing custom sinks and transformers for the Vector agent.
-	// The configmap must be in the same namespace as the CassandraDatacenter and contain a vector.toml entry
-	// with the Vector configuration in toml format.
-	// The agent is already configured with a "cassandra_metrics" source that needs to be used as input for the sinks.
-	// If not set, the default console sink will be used.
-	Config *corev1.LocalObjectReference `json:"config,omitempty"`
-
 	// Resources is the resource requirements for the Vector agent.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
@@ -46,6 +39,66 @@ type VectorSpec struct {
 	// +optional
 	// kube:default=30s
 	ScrapeInterval *metav1.Duration `json:"scrapeInterval,omitempty"`
+
+	Components *VectorComponentsSpec `json:"components,omitempty"`
+}
+
+type VectorComponentsSpec struct {
+	// Sources is the list of sources to use for the Vector agent.
+	// +optional
+	Sources []VectorSourceSpec `json:"sources,omitempty"`
+
+	// Sinks is the list of sinks to use for the Vector agent.
+	// +optional
+	Sinks []VectorSinkSpec `json:"sinks,omitempty"`
+
+	// Transforms is the list of transforms to use for the Vector agent.
+	// +optional
+	Transforms []VectorTransformSpec `json:"transforms,omitempty"`
+}
+
+type VectorSourceSpec struct {
+	// Name is the name of the source.
+	Name string `json:"name"`
+
+	// Type is the type of the source.
+	Type string `json:"type"`
+
+	// Config is the configuration for the source.
+	// +optional
+	Config string `json:"config,omitempty"`
+}
+
+type VectorSinkSpec struct {
+	// Name is the name of the sink.
+	Name string `json:"name"`
+
+	// Type is the type of the sink.
+	Type string `json:"type"`
+
+	// Inputs is the list of inputs for the transform.
+	// +optional
+	Inputs []string `json:"inputs,omitempty"`
+
+	// Config is the configuration for the sink.
+	// +optional
+	Config string `json:"config,omitempty"`
+}
+
+type VectorTransformSpec struct {
+	// Name is the name of the transform.
+	Name string `json:"name"`
+
+	// Type is the type of the transform.
+	Type string `json:"type"`
+
+	// Inputs is the list of inputs for the transform.
+	// +optional
+	Inputs []string `json:"inputs,omitempty"`
+
+	// Config is the configuration for the transform.
+	// +optional
+	Config string `json:"config,omitempty"`
 }
 
 type McacTelemetrySpec struct {

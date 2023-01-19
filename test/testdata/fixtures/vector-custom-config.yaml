@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: vector-custom-conf
-data:
-  vector.toml: |
-    [sinks.void]
-    type = "blackhole"
-    inputs = [ "cassandra_metrics" ]

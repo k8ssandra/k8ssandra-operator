@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/go-logr/logr"
@@ -13,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -97,7 +97,7 @@ type VectorConfig struct {
 }
 
 func CreateCassandraVectorToml(ctx context.Context, telemetrySpec *telemetry.TelemetrySpec, remoteClient client.Client, namespace string) (string, error) {
-	sinks := `
+	vectorConfigToml := `
 [sinks.console]
 type = "console"
 inputs = [ "cassandra_metrics" ]
@@ -106,19 +106,9 @@ target = "stdout"
   [sinks.console.encoding]
   codec = "json"`
 
-	if telemetrySpec.Vector.Config != nil {
-		// Read the Vector provided config map content and use it as the Vector sink config
-		vectorConfigMap := &corev1.ConfigMap{}
-		err := remoteClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: telemetrySpec.Vector.Config.Name}, vectorConfigMap)
-		if err != nil {
-			return "", err
-		} else {
-			if toml, found := vectorConfigMap.Data["vector.toml"]; found {
-				sinks = toml
-			} else {
-				return "", fmt.Errorf("vector.toml not found in config map %s", telemetrySpec.Vector.Config.Name)
-			}
-		}
+	if telemetrySpec.Vector.Components != nil {
+		// Vector components are provided in the Telemetry spec, build the Vector sink config from them
+		vectorConfigToml = BuildCustomVectorToml(telemetrySpec)
 	}
 
 	var scrapeInterval int32 = DefaultScrapeInterval
@@ -127,7 +117,7 @@ target = "stdout"
 	}
 
 	config := VectorConfig{
-		Sinks:          sinks,
+		Sinks:          vectorConfigToml,
 		ScrapePort:     CassandraMetricsPort,
 		ScrapeInterval: scrapeInterval,
 	}
@@ -156,6 +146,37 @@ scrape_interval_secs = {{ .ScrapeInterval }}
 	}
 
 	return vectorToml.String(), nil
+}
+
+func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
+	vectorConfigToml := ""
+	for _, source := range telemetrySpec.Vector.Components.Sources {
+		vectorConfigToml += fmt.Sprintf("\n[sources.%s]\n", source.Name)
+		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", source.Type)
+		if source.Config != "" {
+			vectorConfigToml += source.Config + "\n"
+		}
+	}
+
+	for _, transform := range telemetrySpec.Vector.Components.Transforms {
+		vectorConfigToml += fmt.Sprintf("\n[transforms.%s]\n", transform.Name)
+		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", transform.Type)
+		vectorConfigToml += fmt.Sprintf("inputs = [\"%s\"]\n", strings.Join(transform.Inputs, "\", \""))
+		if transform.Config != "" {
+			vectorConfigToml += transform.Config + "\n"
+		}
+	}
+
+	for _, sink := range telemetrySpec.Vector.Components.Sinks {
+		vectorConfigToml += fmt.Sprintf("\n[sinks.%s]\n", sink.Name)
+		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", sink.Type)
+		vectorConfigToml += fmt.Sprintf("inputs = [\"%s\"]\n", strings.Join(sink.Inputs, "\", \""))
+		if sink.Config != "" {
+			vectorConfigToml += sink.Config + "\n"
+		}
+	}
+
+	return vectorConfigToml
 }
 
 func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorToml string) *corev1.ConfigMap {

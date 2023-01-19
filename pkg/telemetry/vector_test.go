@@ -55,3 +55,110 @@ func TestBuildVectorAgentConfigMap(t *testing.T) {
 	assert.Equal(t, "k8ssandra-dc1-cass-vector", vectorConfigMap.Name)
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
 }
+
+func TestBuildVectorToml(t *testing.T) {
+	tests := []struct {
+		name  string
+		tspec *telemetry.TelemetrySpec
+		want  string
+	}{
+		{
+			"Single sink",
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
+					Enabled: pointer.Bool(true),
+					Components: &telemetry.VectorComponentsSpec{
+						Sinks: []telemetry.VectorSinkSpec{
+							{
+								Name: "console_sink",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			},
+			`
+[sinks.console_sink]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+		{
+			"Source, sink and transform",
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
+					Enabled: pointer.Bool(true),
+					Components: &telemetry.VectorComponentsSpec{
+						Sources: []telemetry.VectorSourceSpec{
+							{
+								Name: "custom_source",
+								Type: "whatever",
+								Config: `foo = "bar"
+baz = 1`,
+							},
+						},
+						Transforms: []telemetry.VectorTransformSpec{
+							{
+								Name:   "custom_transform1",
+								Type:   "remap",
+								Inputs: []string{"custom_source"},
+								Config: `foo = "bar"
+baz = 2`,
+							},
+							{
+								Name:   "custom_transform2",
+								Type:   "remap",
+								Inputs: []string{"custom_transform1"},
+								Config: `foo = "bar"
+baz = 3
+bulk.index = "vector-%Y-%m-%d"`,
+							},
+						},
+						Sinks: []telemetry.VectorSinkSpec{
+							{
+								Name: "console_sink",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			}, `
+[sources.custom_source]
+type = "whatever"
+foo = "bar"
+baz = 1
+
+[transforms.custom_transform1]
+type = "remap"
+inputs = ["custom_source"]
+foo = "bar"
+baz = 2
+
+[transforms.custom_transform2]
+type = "remap"
+inputs = ["custom_transform1"]
+foo = "bar"
+baz = 3
+bulk.index = "vector-%Y-%m-%d"
+
+[sinks.console_sink]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildCustomVectorToml(tt.tspec)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

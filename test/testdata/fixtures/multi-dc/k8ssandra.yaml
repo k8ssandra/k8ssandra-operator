@@ -16,8 +16,22 @@ spec:
     telemetry:
       vector:
         enabled: true
-        config:
-          name: vector-custom-conf
+        components:
+          transforms:
+          - name: my-transform
+            type: remap
+            inputs:
+              - cassandra_metrics
+            config: |-
+              source = ".tags.host = get_hostname!()"
+          sinks:
+          - name: console
+            inputs:
+              - my-transform
+            type: console
+            config: |-
+              [sinks.console.encoding]
+              codec = "json"
         resources:
           requests:
             cpu: 100m
