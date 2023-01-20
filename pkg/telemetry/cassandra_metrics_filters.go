@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	defaultVectorImage = "timberio/vector:0.26.0-alpine"
+	DefaultVectorImage = "timberio/vector:0.26.0-alpine"
 )
 
 var (

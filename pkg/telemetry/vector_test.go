@@ -53,7 +53,7 @@ func TestBuildVectorAgentConfigMap(t *testing.T) {
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
 }
 
-func TestBuildVectorToml(t *testing.T) {
+func TestBuildCustomVectorToml(t *testing.T) {
 	tests := []struct {
 		name  string
 		tspec *telemetry.TelemetrySpec
