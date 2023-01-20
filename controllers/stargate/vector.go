@@ -3,7 +3,7 @@ package stargate
 import (
 	"bytes"
 	"context"
-	"html/template"
+	"text/template"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
