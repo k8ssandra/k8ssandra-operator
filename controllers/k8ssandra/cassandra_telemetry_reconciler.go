@@ -11,6 +11,7 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
+	agent "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -71,8 +72,14 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 			return result.Error(err)
 		}
 	}
-	if err = telemetry.ReconcileTelemetryAgentConfigMap(ctx, remoteClient, *mergedSpec); err != nil {
-
+	agentCfg := agent.Configurator{
+		TelemetrySpec: *mergedSpec,
+		RemoteClient:  remoteClient,
+		Ctx:           ctx,
+		Kluster:       kc,
+	}
+	if err = agentCfg.ReconcileTelemetryAgentConfig(actualDc); err != nil {
+		return result.Error(err)
 	}
 
 	return result.Continue()
