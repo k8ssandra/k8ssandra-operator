@@ -91,32 +91,3 @@ func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
 	}
 	return nil
 }
-
-// Do we need this? If the agent is always enabled I guess we must always want to create the ConfigMap?
-func (c Configurator) RemoveStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
-	volumeIdx, found := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "metrics-agent-config")
-	if found {
-		dc.Spec.PodTemplateSpec.Spec.Volumes = append(
-			dc.Spec.PodTemplateSpec.Spec.Volumes[:volumeIdx],
-			dc.Spec.PodTemplateSpec.Spec.Volumes[(volumeIdx+1):]...,
-		)
-	}
-	cassandraContainerIdx, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
-	if found {
-		mountIdx := -1
-		found := false
-		for i, mount := range dc.Spec.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].VolumeMounts {
-			if mount.Name == "metrics-agent-config" {
-				mountIdx = i
-				found = true
-			}
-			if found {
-				dc.Spec.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].VolumeMounts = append(
-					dc.Spec.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].VolumeMounts[:mountIdx],
-					dc.Spec.PodTemplateSpec.Spec.Containers[cassandraContainerIdx].VolumeMounts[(mountIdx+1):]...)
-			}
-		}
-	}
-	return nil
-
-}
