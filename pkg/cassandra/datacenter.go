@@ -115,6 +115,7 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
+	McacEnabled               bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -125,6 +126,7 @@ type DatacenterConfig struct {
 
 const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
+	mcacEnabledEnvVar     = "MGMT_API_DISABLE_MCAC"
 )
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -182,6 +184,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
+	setMcacEnabled(dc, template.McacEnabled)
+
 	if template.SoftPodAntiAffinity != nil {
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
@@ -222,6 +226,34 @@ func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quanti
 		heapSizeInBytes := heapSize.Value()
 		c.Env = append(c.Env, corev1.EnvVar{Name: mgmtApiHeapSizeEnvVar, Value: fmt.Sprintf("%v", heapSizeInBytes)})
 	})
+}
+
+func setMcacEnabled(dc *cassdcapi.CassandraDatacenter, mcacEnabled bool) {
+	if dc.Spec.PodTemplateSpec == nil {
+		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
+	}
+	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
+		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{
+			{Name: "cassandra"},
+		}
+	}
+	var cassandraContainer *corev1.Container
+	for _, c := range dc.Spec.PodTemplateSpec.Spec.Containers {
+		if c.Name == "cassandra" {
+			cassandraContainer = &c
+		}
+	}
+	disabled := "false"
+	if !mcacEnabled {
+		disabled = "true"
+	}
+	cassandraContainer.Env = append(
+		cassandraContainer.Env,
+		corev1.EnvVar{
+			Name:  mcacEnabledEnvVar,
+			Value: disabled,
+		},
+	)
 }
 
 // UpdateCassandraContainer finds the cassandra container, passes it to f, and then adds it
@@ -343,6 +375,8 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+
+	dcConfig.McacEnabled = mergedOptions.Telemetry.IsMcacEnabled()
 
 	return dcConfig
 }
