@@ -6,7 +6,7 @@ import (
 
 func NewTelemetrySpec() telemetryapi.TelemetrySpec {
 	return telemetryapi.TelemetrySpec{
-		Cassandra: &telemetryapi.CassandraTelemetryAgentSpec{},
+		Cassandra: &telemetryapi.CassandraAgentSpec{},
 	}
 
 }
