@@ -1,8 +1,9 @@
 package cassandra
 
 import (
-	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"testing"
+
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
