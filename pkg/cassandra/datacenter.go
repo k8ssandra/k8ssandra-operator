@@ -114,6 +114,7 @@ type DatacenterConfig struct {
 	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
+	ServiceAccount            string
 	ExternalSecrets           bool
 	McacEnabled               bool
 
@@ -173,6 +174,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			PodTemplateSpec:     &template.PodTemplateSpec,
 			CDC:                 template.CDC,
 			DseWorkloads:        template.DseWorkloads,
+			ServiceAccount:      template.ServiceAccount,
 		},
 	}
 
@@ -339,6 +341,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.ManagementApiAuth = mergedOptions.ManagementApiAuth
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
+	dcConfig.ServiceAccount = mergedOptions.ServiceAccount
 
 	dcConfig.Meta.Metadata = goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
 

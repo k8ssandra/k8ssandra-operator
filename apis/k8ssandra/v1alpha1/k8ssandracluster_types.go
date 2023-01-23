@@ -419,6 +419,9 @@ type DatacenterOptions struct {
 	// +optional
 	// +kubebuilder:default="mikefarah/yq:4"
 	PerNodeConfigInitContainerImage string `json:"perNodeConfigInitContainerImage,omitempty"`
+
+	// The k8s service account to use for the Cassandra pods
+	ServiceAccount string `json:"serviceAccount,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
