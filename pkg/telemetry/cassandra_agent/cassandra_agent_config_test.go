@@ -9,8 +9,10 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -25,7 +27,7 @@ var (
   address: 127.0.0.1
   port: "10000"
 filters:
-- source_labels: 
+- sourceLabels: 
   - tag1
   - tag2
   separator: ;
@@ -36,32 +38,32 @@ filters:
   action: drop`
 )
 
-// func Test_GetTelemetryAgentConfigMap(t *testing.T) {
-// 	tspec := &Cfg.TelemetrySpec
-// 	tspec.Cassandra.Filters = []promapi.RelabelConfig{
-// 		{
-// 			SourceLabels: []string{"tag1", "tag2"},
-// 			Separator:    ";",
-// 			Regex:        "(.*);(b.*)",
-// 			Action:       "drop",
-// 		},
-// 	}
+func Test_GetTelemetryAgentConfigMap(t *testing.T) {
+	tspec := &Cfg.TelemetrySpec
+	tspec.Cassandra.Filters = []promapi.RelabelConfig{
+		{
+			SourceLabels: []string{"tag1", "tag2"},
+			Separator:    ";",
+			Regex:        "(.*);(b.*)",
+			Action:       "drop",
+		},
+	}
 
-// 	tspec.Cassandra.Endpoint.Address = "127.0.0.1"
-// 	tspec.Cassandra.Endpoint.Port = "10000"
-// 	expectedCm := corev1.ConfigMap{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Namespace: Cfg.Kluster.Namespace,
-// 			Name:      Cfg.Kluster.Name + "metrics-agent-config",
-// 		},
-// 		Data: map[string]string{filepath.Base(agentConfigLocation): expectedYaml},
-// 	}
-// 	cm, err := Cfg.GetTelemetryAgentConfigMap()
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, expectedCm.Data, cm.Data)
-// 	assert.Equal(t, expectedCm.Name, cm.Name)
-// 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
-// }
+	tspec.Cassandra.Endpoint.Address = "127.0.0.1"
+	tspec.Cassandra.Endpoint.Port = "10000"
+	expectedCm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: Cfg.Kluster.Namespace,
+			Name:      Cfg.Kluster.Name + "metrics-agent-config",
+		},
+		Data: map[string]string{filepath.Base(agentConfigLocation): expectedYaml},
+	}
+	cm, err := Cfg.GetTelemetryAgentConfigMap()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedCm.Data, cm.Data)
+	assert.Equal(t, expectedCm.Name, cm.Name)
+	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
+}
 
 func Test_AddStsVolumes(t *testing.T) {
 	dc := testutils.NewCassandraDatacenter("test-dc", "test-namespace")
@@ -93,8 +95,3 @@ func Test_AddStsVolumes(t *testing.T) {
 	}
 	assert.Contains(t, dc.Spec.PodTemplateSpec.Spec.Containers[cassContainer].VolumeMounts, expectedVm)
 }
-
-// Not sure if required
-// func Test_RemoveStsVolumes(t *testing.T) {
-
-// }
