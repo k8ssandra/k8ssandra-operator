@@ -5,12 +5,15 @@ import (
 	"path/filepath"
 	"time"
 
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,6 +27,91 @@ var (
 		Endpoint: telemetryapi.Endpoint{
 			Port:    "9000",
 			Address: "127.0.0.1",
+		},
+		Filters: []promapi.RelabelConfig{
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.Table.*",
+				TargetLabel:  "should_drop",
+				Replacement:  "true",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table.*",
+				TargetLabel:  "should_drop",
+				Replacement:  "true",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.live_ss_table_count",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.Table\\.LiveSSTableCount",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.live_disk_space_used",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.LiveDiskSpaceUsed",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.Table\\.Memtable",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.Table\\.Compaction",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.read",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.write",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.range",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.coordinator",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"__origname__"},
+				Regex:        "org\\.apache\\.cassandra\\.metrics\\.table\\.dropped_mutations",
+				TargetLabel:  "should_drop",
+				Replacement:  "false",
+			},
+			{
+				SourceLabels: []string{"should_drop"},
+				Regex:        "true",
+				Action:       "drop",
+			},
 		},
 	}
 )
@@ -42,6 +130,7 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 	var yamlData []byte
 	var err error
 	if c.TelemetrySpec.Cassandra != nil {
+		goalesceutils.MergeCRs(defaultAgentConfig, *c.TelemetrySpec.Cassandra)
 		yamlData, err = yaml.Marshal(&c.TelemetrySpec.Cassandra)
 		if err != nil {
 			return &corev1.ConfigMap{}, err
