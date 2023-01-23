@@ -9,10 +9,10 @@ import (
 )
 
 type TelemetrySpec struct {
-	Prometheus *PrometheusTelemetrySpec     `json:"prometheus,omitempty"`
-	Mcac       *McacTelemetrySpec           `json:"mcac,omitempty"`
-	Vector     *VectorSpec                  `json:"vector,omitempty"`
-	Cassandra  *CassandraTelemetryAgentSpec `json:"cassandra,omitempty"`
+	Prometheus *PrometheusTelemetrySpec `json:"prometheus,omitempty"`
+	Mcac       *McacTelemetrySpec       `json:"mcac,omitempty"`
+	Vector     *VectorSpec              `json:"vector,omitempty"`
+	Cassandra  *CassandraAgentSpec      `json:"cassandra,omitempty"`
 }
 
 type PrometheusTelemetrySpec struct {
@@ -129,12 +129,12 @@ type McacTelemetrySpec struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-type CassandraTelemetryAgentSpec struct {
-	Endpoint TelemetryAgentEndpoint  `json:"endpoint,omitempty"`
+type CassandraAgentSpec struct {
+	Endpoint Endpoint                `json:"endpoint,omitempty"`
 	Filters  []promapi.RelabelConfig `json:"filters,omitempty"`
 }
 
-type TelemetryAgentEndpoint struct {
+type Endpoint struct {
 	Address string `json:"address,omitempty"`
 	Port    string `json:"port,omitempty"`
 }

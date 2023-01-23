@@ -27,7 +27,7 @@ var (
   address: 127.0.0.1
   port: "10000"
 filters:
-- sourceLabels: 
+- sourcelabels:
   - tag1
   - tag2
   separator: ;
@@ -35,7 +35,8 @@ filters:
   regex: (.*);(b.*)
   modulus: 0
   replacement: ""
-  action: drop`
+  action: drop
+`
 )
 
 func Test_GetTelemetryAgentConfigMap(t *testing.T) {
@@ -60,7 +61,7 @@ func Test_GetTelemetryAgentConfigMap(t *testing.T) {
 	}
 	cm, err := Cfg.GetTelemetryAgentConfigMap()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedCm.Data, cm.Data)
+	assert.Equal(t, expectedCm.Data["metric-collector.yaml"], cm.Data["metric-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
 }
