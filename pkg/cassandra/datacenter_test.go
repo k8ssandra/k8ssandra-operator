@@ -16,6 +16,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -326,7 +327,7 @@ func TestCoalesce(t *testing.T) {
 			},
 		},
 		{
-			name:        "set management api heap size from DatacenterTemplate",
+			name:        "set management api heap size and MCAC disabled from DatacenterTemplate",
 			clusterName: "k8ssandra",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
@@ -346,6 +347,11 @@ func TestCoalesce(t *testing.T) {
 				Size: 3,
 				DatacenterOptions: api.DatacenterOptions{
 					MgmtAPIHeap: &mgmtAPIHeap,
+					Telemetry: &v1alpha1.TelemetrySpec{
+						Mcac: &v1alpha1.McacTelemetrySpec{
+							Enabled: pointer.Bool(false),
+						},
+					},
 				},
 			},
 			want: &DatacenterConfig{
@@ -364,6 +370,7 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
+				McacEnabled:        pointer.Bool(false),
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -1294,6 +1301,31 @@ func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
 	)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999000000")
+}
+
+func TestNewDatacenter_McacDisabled_Set(t *testing.T) {
+	template := GetDatacenterConfig()
+	mgmtAPIHeap := resource.MustParse("999M")
+	template.MgmtAPIHeap = &mgmtAPIHeap
+	template.McacEnabled = pointer.Bool(false)
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999000000")
+	cassContainerIdx, found := FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
+	if !found {
+		assert.Fail(t, "could not find cassandra container")
+	}
+
+	found = false
+	for _, envVar := range dc.Spec.PodTemplateSpec.Spec.Containers[cassContainerIdx].Env {
+		if envVar.Name == mcacDisabledEnvVar {
+			found = true
+		}
+	}
+	assert.True(t, found, "could not find expected MCAC disabled environment variable")
 }
 
 // TestNewDatacenter_MgmtAPIHeapSize_Unset tests that the podTemplateSpec remains empty when no management API heap size is set.
