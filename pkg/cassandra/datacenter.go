@@ -233,16 +233,19 @@ func setMcacEnabled(dc *cassdcapi.CassandraDatacenter, mcacEnabled *bool) {
 	if dc.Spec.PodTemplateSpec == nil {
 		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
-	if len(dc.Spec.PodTemplateSpec.Spec.Containers) == 0 {
-		dc.Spec.PodTemplateSpec.Spec.Containers = []corev1.Container{
-			{Name: "cassandra"},
-		}
-	}
 	var cassandraContainer *corev1.Container
+	found := false
 	for _, c := range dc.Spec.PodTemplateSpec.Spec.Containers {
 		if c.Name == "cassandra" {
 			cassandraContainer = &c
+			found = true
 		}
+	}
+	if !found {
+		dc.Spec.PodTemplateSpec.Spec.Containers = append(
+			dc.Spec.PodTemplateSpec.Spec.Containers,
+			corev1.Container{Name: "cassandra"})
+		cassandraContainer = &dc.Spec.PodTemplateSpec.Spec.Containers[len(dc.Spec.PodTemplateSpec.Spec.Containers)-1]
 	}
 	if mcacEnabled != nil && !*mcacEnabled {
 		cassandraContainer.Env = append(

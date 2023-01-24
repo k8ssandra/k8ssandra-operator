@@ -1305,15 +1305,12 @@ func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
 
 func TestNewDatacenter_McacDisabled_Set(t *testing.T) {
 	template := GetDatacenterConfig()
-	mgmtAPIHeap := resource.MustParse("999M")
-	template.MgmtAPIHeap = &mgmtAPIHeap
 	template.McacEnabled = pointer.Bool(false)
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,
 	)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999000000")
 	cassContainerIdx, found := FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
 	if !found {
 		assert.Fail(t, "could not find cassandra container")
