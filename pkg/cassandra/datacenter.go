@@ -212,52 +212,38 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	dc.Spec.Tolerations = template.Tolerations
 
-	setMcacEnabled(dc, template.McacEnabled)
+	setMcacDisabled(dc, template)
 
 	return dc, nil
 }
 
 // setMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
 func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
-	if dc.Spec.PodTemplateSpec == nil {
-		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-
 	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
 		heapSizeInBytes := heapSize.Value()
 		c.Env = append(c.Env, corev1.EnvVar{Name: mgmtApiHeapSizeEnvVar, Value: fmt.Sprintf("%v", heapSizeInBytes)})
 	})
 }
 
-func setMcacEnabled(dc *cassdcapi.CassandraDatacenter, mcacEnabled *bool) {
-	if mcacEnabled != nil && !*mcacEnabled {
-		if dc.Spec.PodTemplateSpec == nil {
-			dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
-		}
-		var cassandraContainer *corev1.Container
-		found := false
-		for _, c := range dc.Spec.PodTemplateSpec.Spec.Containers {
-			if c.Name == "cassandra" {
-				cassandraContainer = &c
-				found = true
-			}
-		}
-		if !found {
-			dc.Spec.PodTemplateSpec.Spec.Containers = append(
-				dc.Spec.PodTemplateSpec.Spec.Containers,
-				corev1.Container{Name: "cassandra"})
-			cassandraContainer = &dc.Spec.PodTemplateSpec.Spec.Containers[len(dc.Spec.PodTemplateSpec.Spec.Containers)-1]
-		}
-
-		cassandraContainer.Env = append(
-			cassandraContainer.Env,
-			corev1.EnvVar{
-				Name:  mcacDisabledEnvVar,
-				Value: "true",
-			},
-		)
+func isMcacEnabled(template *DatacenterConfig) bool {
+	if template.McacEnabled != nil {
+		return *template.McacEnabled
 	}
+	return true
+}
 
+func setMcacDisabled(dc *cassdcapi.CassandraDatacenter, template *DatacenterConfig) {
+	if !isMcacEnabled(template) {
+		UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
+			c.Env = append(
+				c.Env,
+				corev1.EnvVar{
+					Name:  mcacDisabledEnvVar,
+					Value: fmt.Sprintf("%v", !isMcacEnabled(template)),
+				},
+			)
+		})
+	}
 }
 
 // UpdateCassandraContainer finds the cassandra container, passes it to f, and then adds it
@@ -279,7 +265,7 @@ func UpdateVectorContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container
 // f. Only the Name field is initialized.
 func UpdateContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev1.Container)) {
 	idx, found := FindContainer(p, name)
-	container := &corev1.Container{}
+	var container *corev1.Container
 
 	if !found {
 		idx = len(p.Spec.Containers)

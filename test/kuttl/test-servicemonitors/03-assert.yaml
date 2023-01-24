@@ -9,19 +9,18 @@ spec:
       containers:
         - name: cassandra
           env:
-            - name: MGMT_API_DISABLE_MCAC
-              value: "true"
             - name: LOCAL_JMX
               value: "no"
             - name: METRIC_FILTERS
-              value: |-
-                deny:org.apache.cassandra.metrics.Table deny:org.apache.cassandra.metrics.table
+              value: deny:org.apache.cassandra.metrics.Table deny:org.apache.cassandra.metrics.table
                 allow:org.apache.cassandra.metrics.table.live_ss_table_count allow:org.apache.cassandra.metrics.Table.LiveSSTableCount
                 allow:org.apache.cassandra.metrics.table.live_disk_space_used allow:org.apache.cassandra.metrics.table.LiveDiskSpaceUsed
                 allow:org.apache.cassandra.metrics.Table.Pending allow:org.apache.cassandra.metrics.Table.Memtable
                 allow:org.apache.cassandra.metrics.Table.Compaction allow:org.apache.cassandra.metrics.table.read
                 allow:org.apache.cassandra.metrics.table.write allow:org.apache.cassandra.metrics.table.range
                 allow:org.apache.cassandra.metrics.table.coordinator allow:org.apache.cassandra.metrics.table.dropped_mutations
+            - name: MGMT_API_DISABLE_MCAC
+              value: "true"
             - name: DS_LICENSE
               value: accept
             - name: DSE_AUTO_CONF_OFF
