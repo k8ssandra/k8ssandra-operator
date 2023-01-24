@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -116,8 +115,7 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
-	// MCAC is enabled if McacEnabled is nil or true. It is disabled if McacEnabled is false.
-	McacEnabled *bool
+	McacEnabled               bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -213,7 +211,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	dc.Spec.Tolerations = template.Tolerations
 
-	if template.McacEnabled != nil && !*template.McacEnabled {
+	if !template.McacEnabled {
 		// MCAC needs to be disabled
 		setMcacDisabled(dc, template)
 	}
@@ -361,9 +359,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 
-	if mergedOptions.Telemetry != nil && mergedOptions.Telemetry.Mcac != nil && mergedOptions.Telemetry.Mcac.Enabled != nil {
-		dcConfig.McacEnabled = pointer.Bool(mergedOptions.Telemetry.IsMcacEnabled())
-	}
+	dcConfig.McacEnabled = mergedOptions.Telemetry.IsMcacEnabled()
 
 	return dcConfig
 }
