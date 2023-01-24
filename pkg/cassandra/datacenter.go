@@ -185,8 +185,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}
 
-	setMcacEnabled(dc, template.McacEnabled)
-
 	if template.SoftPodAntiAffinity != nil {
 		dc.Spec.AllowMultipleNodesPerWorker = *template.SoftPodAntiAffinity
 	}
@@ -213,6 +211,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
 
 	dc.Spec.Tolerations = template.Tolerations
+
+	setMcacEnabled(dc, template.McacEnabled)
 
 	return dc, nil
 }
