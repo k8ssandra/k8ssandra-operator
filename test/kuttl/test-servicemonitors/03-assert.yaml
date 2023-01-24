@@ -12,7 +12,8 @@ spec:
             - name: LOCAL_JMX
               value: "no"
             - name: METRIC_FILTERS
-              value: deny:org.apache.cassandra.metrics.Table deny:org.apache.cassandra.metrics.table
+              value: >-
+                deny:org.apache.cassandra.metrics.Table deny:org.apache.cassandra.metrics.table
                 allow:org.apache.cassandra.metrics.table.live_ss_table_count allow:org.apache.cassandra.metrics.Table.LiveSSTableCount
                 allow:org.apache.cassandra.metrics.table.live_disk_space_used allow:org.apache.cassandra.metrics.table.LiveDiskSpaceUsed
                 allow:org.apache.cassandra.metrics.Table.Pending allow:org.apache.cassandra.metrics.Table.Memtable
