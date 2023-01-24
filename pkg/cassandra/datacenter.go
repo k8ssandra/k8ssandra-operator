@@ -115,6 +115,7 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
+	McacEnabled               bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -125,6 +126,7 @@ type DatacenterConfig struct {
 
 const (
 	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
+	mcacDisabledEnvVar    = "MGMT_API_DISABLE_MCAC"
 )
 
 func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) (*cassdcapi.CassandraDatacenter, error) {
@@ -209,18 +211,31 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	dc.Spec.Tolerations = template.Tolerations
 
+	if !template.McacEnabled {
+		// MCAC needs to be disabled
+		setMcacDisabled(dc, template)
+	}
+
 	return dc, nil
 }
 
 // setMgmtAPIHeap sets the management API heap size on a CassandraDatacenter
 func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quantity) {
-	if dc.Spec.PodTemplateSpec == nil {
-		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-
 	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
 		heapSizeInBytes := heapSize.Value()
 		c.Env = append(c.Env, corev1.EnvVar{Name: mgmtApiHeapSizeEnvVar, Value: fmt.Sprintf("%v", heapSizeInBytes)})
+	})
+}
+
+func setMcacDisabled(dc *cassdcapi.CassandraDatacenter, template *DatacenterConfig) {
+	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
+		c.Env = append(
+			c.Env,
+			corev1.EnvVar{
+				Name:  mcacDisabledEnvVar,
+				Value: "true",
+			},
+		)
 	})
 }
 
@@ -243,7 +258,7 @@ func UpdateVectorContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container
 // f. Only the Name field is initialized.
 func UpdateContainer(p *corev1.PodTemplateSpec, name string, f func(c *corev1.Container)) {
 	idx, found := FindContainer(p, name)
-	container := &corev1.Container{}
+	var container *corev1.Container
 
 	if !found {
 		idx = len(p.Spec.Containers)
@@ -343,6 +358,8 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
+
+	dcConfig.McacEnabled = mergedOptions.Telemetry.IsMcacEnabled()
 
 	return dcConfig
 }
