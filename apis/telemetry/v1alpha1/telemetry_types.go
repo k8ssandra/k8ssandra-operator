@@ -70,5 +70,6 @@ type McacTelemetrySpec struct {
 	MetricFilters *[]string `json:"metricFilters,omitempty"`
 
 	// enabled sets whether MCAC (legacy metrics endpoint) is enabled.
+	// This is considered true by default.
 	Enabled *bool `json:"enabled,omitempty"`
 }

@@ -116,7 +116,8 @@ type DatacenterConfig struct {
 	PerNodeConfigMapRef       corev1.LocalObjectReference
 	PerNodeInitContainerImage string
 	ExternalSecrets           bool
-	McacEnabled               *bool
+	// MCAC is enabled if McacEnabled is nil or true. It is disabled if McacEnabled is false.
+	McacEnabled *bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -212,7 +213,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	dc.Spec.Tolerations = template.Tolerations
 
-	setMcacDisabled(dc, template)
+	if template.McacEnabled != nil && !*template.McacEnabled {
+		// MCAC needs to be disabled
+		setMcacDisabled(dc, template)
+	}
 
 	return dc, nil
 }
@@ -225,25 +229,16 @@ func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quanti
 	})
 }
 
-func isMcacEnabled(template *DatacenterConfig) bool {
-	if template.McacEnabled != nil {
-		return *template.McacEnabled
-	}
-	return true
-}
-
 func setMcacDisabled(dc *cassdcapi.CassandraDatacenter, template *DatacenterConfig) {
-	if !isMcacEnabled(template) {
-		UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
-			c.Env = append(
-				c.Env,
-				corev1.EnvVar{
-					Name:  mcacDisabledEnvVar,
-					Value: fmt.Sprintf("%v", !isMcacEnabled(template)),
-				},
-			)
-		})
-	}
+	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
+		c.Env = append(
+			c.Env,
+			corev1.EnvVar{
+				Name:  mcacDisabledEnvVar,
+				Value: "true",
+			},
+		)
+	})
 }
 
 // UpdateCassandraContainer finds the cassandra container, passes it to f, and then adds it

@@ -2770,7 +2770,7 @@ spec:
                           properties:
                             enabled:
                               description: enabled sets whether MCAC (legacy metrics
-                                endpoint) is enabled.
+                                endpoint) is enabled. This is considered true by default.
                               type: boolean
                             metricFilters:
                               description: 'MetricFilters allows passing filters to
@@ -3122,7 +3122,7 @@ spec:
                     properties:
                       enabled:
                         description: enabled sets whether MCAC (legacy metrics endpoint)
-                          is enabled.
+                          is enabled. This is considered true by default.
                         type: boolean
                       metricFilters:
                         description: 'MetricFilters allows passing filters to MCAC

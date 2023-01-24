@@ -72,7 +72,6 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 			return result.Error(err)
 		}
 	}
-
 	return result.Continue()
 }
 
