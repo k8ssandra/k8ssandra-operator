@@ -273,10 +273,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// inject Vector
-	if err := InjectVectorAgentForStargate(stargate, desiredDeployments, actualDc.Name, actualDc.Spec.ClusterName, logger); err != nil {
-		logger.Error(err, "Failed to inject Vector agent into Stargate deployments", "Deployment", desiredDeployments)
-		return ctrl.Result{}, err
-	}
+	injectVectorAgentForStargate(stargate, desiredDeployments, actualDc.Name, actualDc.Spec.ClusterName, logger)
 
 	for _, desiredDeployment := range desiredDeployments {
 		// Deployment does not exist yet: create a new one

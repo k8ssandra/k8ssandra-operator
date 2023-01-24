@@ -10,9 +10,9 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	stargatepkg "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	StargateMetricsPort = 8084
+	MetricsPort         = 8084
 	VectorContainerName = "stargate-vector-agent"
 )
 
@@ -35,11 +35,11 @@ func (r *StargateReconciler) reconcileVector(
 	namespace := stargate.Namespace
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      api.VectorAgentConfigMapNameStargate(actualDc.Spec.ClusterName, actualDc.Name),
+		Name:      stargatepkg.VectorAgentConfigMapNameStargate(actualDc.Spec.ClusterName, actualDc.Name),
 	}
 	if stargate.Spec.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content
-		toml, err := CreateVectorToml(ctx, stargate.Spec.Telemetry, remoteClient, namespace)
+		toml, err := CreateVectorToml(stargate.Spec.Telemetry)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -52,7 +52,10 @@ func (r *StargateReconciler) reconcileVector(
 
 		if err := remoteClient.Get(ctx, configMapKey, actualVectorConfigMap); err != nil {
 			if errors.IsNotFound(err) {
-				if err := remoteClient.Create(ctx, desiredVectorConfigMap); err != nil {
+				if err := ctrl.SetControllerReference(&stargate, desiredVectorConfigMap, r.Scheme); err != nil {
+					dcLogger.Error(err, "Failed to set controller reference on new Stargate Vector ConfigMap", "ConfigMap", configMapKey)
+					return ctrl.Result{}, err
+				} else if err := remoteClient.Create(ctx, desiredVectorConfigMap); err != nil {
 					if errors.IsAlreadyExists(err) {
 						// the read from the local cache didn't catch that the resource was created
 						// already; simply requeue until the cache is up-to-date
@@ -109,7 +112,7 @@ func deleteConfigMapIfExists(ctx context.Context, remoteClient client.Client, co
 	return nil
 }
 
-func CreateVectorToml(ctx context.Context, telemetrySpec *telemetryapi.TelemetrySpec, remoteClient client.Client, namespace string) (string, error) {
+func CreateVectorToml(telemetrySpec *telemetryapi.TelemetrySpec) (string, error) {
 	vectorConfigToml := `
 [sinks.console]
 type = "console"
@@ -131,7 +134,7 @@ target = "stdout"
 
 	config := telemetry.VectorConfig{
 		Sinks:          vectorConfigToml,
-		ScrapePort:     StargateMetricsPort,
+		ScrapePort:     MetricsPort,
 		ScrapeInterval: scrapeInterval,
 	}
 
@@ -161,7 +164,7 @@ scrape_interval_secs = {{ .ScrapeInterval }}
 	return vectorToml.String(), nil
 }
 
-func InjectVectorAgentForStargate(stargate *api.Stargate, deployments map[string]appsv1.Deployment, dcName, clustername string, logger logr.Logger) error {
+func injectVectorAgentForStargate(stargate *api.Stargate, deployments map[string]appsv1.Deployment, dcName, clustername string, logger logr.Logger) {
 	if stargate.Spec.Telemetry.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Stargate deployments")
 		vectorImage := telemetry.DefaultVectorImage
@@ -190,27 +193,22 @@ func InjectVectorAgentForStargate(stargate *api.Stargate, deployments map[string
 			Name: "stargate-vector-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: api.VectorAgentConfigMapNameStargate(clustername, dcName)},
+					LocalObjectReference: corev1.LocalObjectReference{Name: stargatepkg.VectorAgentConfigMapNameStargate(clustername, dcName)},
 				},
 			},
 		}
 
 		logger.Info("Adding Vector Agent Sidecar to Stargate Deployments", "Stargate Deployments", deployments)
 		for idx, deployment := range deployments {
-			logger.Info("Deploymnet prior to adding container", "Containers", deployment.Spec.Template.Spec.Containers)
-			utils.UpdateContainer(&deployment, VectorContainerName, func(c *corev1.Container) {
+			cassandra.UpdateContainer(&deployment.Spec.Template, VectorContainerName, func(c *corev1.Container) {
 				*c = vectorAgentContainer
 			})
-			logger.Info("Deploymnet after adding container", "Containers", deployment.Spec.Template.Spec.Containers)
-			utils.AddOrUpdateVolume(&deployment, &vectorAgentVolume)
+			cassandra.AddVolumesToPodTemplateSpec(&deployment.Spec.Template, vectorAgentVolume)
 			deployments[idx] = deployment
 		}
-		logger.Info("Vector Agent Sidecar added to Stargate Deployments", "Stargate Deployments", deployments)
 
 		// cassandra.AddVolumesToPodTemplateSpec(dcConfig, vectorAgentVolume)
 	} else {
 		logger.Info("Skipping Vector agent injection for Stargate")
 	}
-
-	return nil
 }

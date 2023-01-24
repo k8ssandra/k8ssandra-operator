@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
@@ -417,8 +415,4 @@ type StargateList struct {
 
 func init() {
 	SchemeBuilder.Register(&Stargate{}, &StargateList{})
-}
-
-func VectorAgentConfigMapNameStargate(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-stargate-vector", clusterName, dcName)
 }

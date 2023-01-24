@@ -407,12 +407,12 @@ func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolum
 
 	// Add extra volumes that do not need to be managed by the statefulset
 	for _, volume := range extraVolumes.Volumes {
-		AddVolumesToPodTemplateSpec(dcConfig, volume)
+		AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, volume)
 	}
 }
 
-func AddVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, volume corev1.Volume) {
-	dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, volume)
+func AddVolumesToPodTemplateSpec(podTemplateSpec *corev1.PodTemplateSpec, volume corev1.Volume) {
+	podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, volume)
 }
 
 func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {

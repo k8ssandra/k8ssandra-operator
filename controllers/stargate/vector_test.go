@@ -1,7 +1,6 @@
 package stargate
 
 import (
-	"context"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -11,7 +10,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
@@ -29,8 +27,7 @@ func TestInjectVectorAgentForStargate(t *testing.T) {
 	deployments["testDeployment"] = deployment
 
 	logger := testlogr.NewTestLogger(t)
-	err := InjectVectorAgentForStargate(stargate, deployments, "testDcName", "testClusterName", logger)
-	require.NoError(t, err)
+	injectVectorAgentForStargate(stargate, deployments, "testDcName", "testClusterName", logger)
 
 	deployment = deployments["testDeployment"]
 
@@ -44,9 +41,8 @@ func TestInjectVectorAgentForStargate(t *testing.T) {
 
 func TestCreateVectorTomlDefault(t *testing.T) {
 	telemetrySpec := &telemetryapi.TelemetrySpec{Vector: &telemetryapi.VectorSpec{Enabled: pointer.Bool(true)}}
-	fakeClient := test.NewFakeClientWRestMapper()
 
-	toml, err := CreateVectorToml(context.Background(), telemetrySpec, fakeClient, "k8ssandra-operator")
+	toml, err := CreateVectorToml(telemetrySpec)
 	if err != nil {
 		t.Errorf("CreateVectorToml() failed with %s", err)
 	}

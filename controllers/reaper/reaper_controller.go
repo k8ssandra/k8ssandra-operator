@@ -185,8 +185,6 @@ func (r *ReaperReconciler) reconcileDeployment(
 
 	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, authVars...)
 
-	// inject Vector
-
 	actualDeployment := &appsv1.Deployment{}
 	if err := r.Get(ctx, deploymentKey, actualDeployment); err != nil {
 		if errors.IsNotFound(err) {

@@ -71,7 +71,7 @@ func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig
 			},
 		}
 
-		cassandra.AddVolumesToPodTemplateSpec(dcConfig, vectorAgentVolume)
+		cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, vectorAgentVolume)
 	}
 
 	return nil

@@ -3,7 +3,7 @@ package nodeconfig
 import (
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -21,7 +21,7 @@ func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 	// add per-node-config init container
 	cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
 	// add per-node config volume to pod spec
-	cassandra.AddVolumesToPodTemplateSpec(dcConfig, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
+	cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
 }
 
 const (
