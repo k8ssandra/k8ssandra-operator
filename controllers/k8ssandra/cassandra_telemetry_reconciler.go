@@ -9,10 +9,8 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	agent "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,18 +70,6 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
 			return result.Error(err)
 		}
-	}
-	if mergedSpec == nil {
-		mergedSpec = &telemetryapi.TelemetrySpec{}
-	}
-	agentCfg := agent.Configurator{
-		TelemetrySpec: *mergedSpec,
-		RemoteClient:  remoteClient,
-		Ctx:           ctx,
-		Kluster:       kc,
-	}
-	if err = agentCfg.ReconcileTelemetryAgentConfig(actualDc); err != nil {
-		return result.Error(err)
 	}
 
 	return result.Continue()
