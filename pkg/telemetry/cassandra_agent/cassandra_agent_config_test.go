@@ -69,6 +69,7 @@ func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 func Test_GetTelemetryAgentConfigMap(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
 	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
+	Cfg.TelemetrySpec = getExampleTelemetrySpec()
 	cm, err := Cfg.GetTelemetryAgentConfigMap()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedCm.Data["metric-collector.yaml"], cm.Data["metric-collector.yaml"])
@@ -132,12 +133,14 @@ func Test_ReconcileTelemetryAgentConfig_CMUpdateSuccess(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "couldn't create ConfigMap")
 	}
+	initialCm.Annotations = make(map[string]string)
 	initialCm.Annotations[k8ssandraapi.ResourceHashAnnotation] = "gobbledegook"
 	initialCm.Data = map[string]string{"gobbledegook": "gobbledegook"}
 	if err := Cfg.RemoteClient.Create(Cfg.Ctx, initialCm); err != nil {
 		assert.Fail(t, "could not create initial ConfigMap")
 	}
 	// Launch reconciliation.
+	Cfg.TelemetrySpec = getExampleTelemetrySpec()
 	recRes := Cfg.ReconcileTelemetryAgentConfig(&dc)
 	assert.True(t, recRes.IsRequeue())
 	// After the update we should see the expected ConfigMap
