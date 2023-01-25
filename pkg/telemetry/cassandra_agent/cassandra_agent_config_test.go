@@ -27,7 +27,7 @@ var (
   address: 127.0.0.1
   port: "10000"
 filters:
-- sourcelabels:
+- sourceLabels:
   - tag1
   - tag2
   separator: ;
