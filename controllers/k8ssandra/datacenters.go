@@ -108,6 +108,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			RemoteClient:  remoteClient,
 			Ctx:           ctx,
 			Kluster:       kc,
+			RequeueDelay:  r.DefaultDelay,
 		}
 		agentRes := agentCfg.ReconcileTelemetryAgentConfig(desiredDc)
 		if agentRes.IsRequeue() {
