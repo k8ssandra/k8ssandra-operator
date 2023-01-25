@@ -11,10 +11,12 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
+	agent "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -95,6 +97,20 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 		if idx > 0 {
 			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
+		}
+
+		mergedTelemetrySpec := kc.Spec.Cassandra.Datacenters[idx].Telemetry.MergeWith(kc.Spec.Cassandra.Telemetry)
+		if mergedTelemetrySpec == nil {
+			mergedTelemetrySpec = &telemetryapi.TelemetrySpec{}
+		}
+		agentCfg := agent.Configurator{
+			TelemetrySpec: *mergedTelemetrySpec,
+			RemoteClient:  remoteClient,
+			Ctx:           ctx,
+			Kluster:       kc,
+		}
+		if err = agentCfg.ReconcileTelemetryAgentConfig(desiredDc); err != nil {
+			return result.Error(err), actualDcs
 		}
 
 		// Note: desiredDc should not be modified from now on
