@@ -1318,6 +1318,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServiceAccount: "dc_account",
+				McacEnabled:    true,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
