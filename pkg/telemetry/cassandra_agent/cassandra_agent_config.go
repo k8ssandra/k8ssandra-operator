@@ -3,13 +3,18 @@ package cassandra_agent
 import (
 	"context"
 	"path/filepath"
+	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -23,12 +28,13 @@ type Configurator struct {
 	Kluster       *k8ssandraapi.K8ssandraCluster
 	Ctx           context.Context
 	RemoteClient  client.Client
+	RequeueDelay  time.Duration
 }
 
-func (c Configurator) GetTelemetryAgentConfigMap() (corev1.ConfigMap, error) {
+func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 	yamlData, err := yaml.Marshal(&c.TelemetrySpec.Cassandra)
 	if err != nil {
-		return corev1.ConfigMap{}, err
+		return &corev1.ConfigMap{}, err
 	}
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -37,20 +43,46 @@ func (c Configurator) GetTelemetryAgentConfigMap() (corev1.ConfigMap, error) {
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): string(yamlData)},
 	}
-	return cm, nil
+	return &cm, nil
 }
 
-func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatacenter) error {
-	cm, err := c.GetTelemetryAgentConfigMap()
+func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatacenter) result.ReconcileResult {
+	//Reconcile the agent's ConfigMap
+	desiredCm, err := c.GetTelemetryAgentConfigMap()
 	if err != nil {
-		return err
+		return result.Error(err)
 	}
-	if err := c.RemoteClient.Create(c.Ctx, &cm); err != nil {
-		return err
+	annotations.AddHashAnnotation(desiredCm)
+	currentCm := &corev1.ConfigMap{}
+
+	err = c.RemoteClient.Get(c.Ctx,
+		types.NamespacedName{Name: c.Kluster.Name + "metrics-agent-config",
+			Namespace: c.Kluster.Namespace}, currentCm)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if err := c.RemoteClient.Create(c.Ctx, desiredCm); err != nil {
+				return result.Error(err)
+			}
+			return result.RequeueSoon(c.RequeueDelay)
+		} else {
+			return result.Error(err)
+		}
 	}
+
+	if !annotations.CompareHashAnnotations(currentCm, desiredCm) {
+		resourceVersion := currentCm.GetResourceVersion()
+		desiredCm.DeepCopyInto(currentCm)
+		currentCm.SetResourceVersion(resourceVersion)
+		if err := c.RemoteClient.Update(c.Ctx, currentCm); err != nil {
+			return result.Error(err)
+		}
+		return result.Continue()
+	}
+
 	c.AddStsVolumes(dc)
 
-	return nil
+	return result.Done()
 }
 
 func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
