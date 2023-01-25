@@ -1,6 +1,9 @@
 package test
 
 import (
+	"context"
+	"errors"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -11,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
@@ -59,4 +63,27 @@ func (rm fakeRESTMapper) KindsFor(_ schema.GroupVersionResource) ([]schema.Group
 func NewFakeClientWRestMapper() client.Client {
 	fakeClient, _ := NewFakeClient()
 	return composedClient{fakeClient}
+}
+
+// CreateFailingFakeClient is a fake client. Calls to .Create on this client will fail after `createFailsAfter` invocations.
+type CreateFailingFakeClient struct {
+	client.Client
+	createFailsAfter int
+	invocations      *int
+}
+
+func (c CreateFailingFakeClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	succeedingClient := NewFakeClientWRestMapper()
+	if *c.invocations > c.createFailsAfter {
+		return errors.New("artificial failure on create function")
+	} else {
+		succeedingClient.Create(ctx, obj, opts...)
+	}
+	c.invocations = pointer.Int(*c.invocations + 1)
+	return nil
+}
+
+func NewCreateFailingFakeClient(createFailsAfter int) client.Client {
+	fakeClient, _ := NewFakeClient()
+	return CreateFailingFakeClient{fakeClient, createFailsAfter, pointer.Int(0)}
 }
