@@ -77,7 +77,7 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 		if err := c.RemoteClient.Update(c.Ctx, currentCm); err != nil {
 			return result.Error(err)
 		}
-		return result.Continue()
+		return result.RequeueSoon(c.RequeueDelay)
 	}
 
 	c.AddStsVolumes(dc)
