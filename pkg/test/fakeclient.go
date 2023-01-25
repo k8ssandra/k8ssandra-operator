@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
@@ -68,22 +67,13 @@ func NewFakeClientWRestMapper() client.Client {
 // CreateFailingFakeClient is a fake client. Calls to .Create on this client will fail after `createFailsAfter` invocations.
 type CreateFailingFakeClient struct {
 	client.Client
-	createFailsAfter int
-	invocations      *int
 }
 
 func (c CreateFailingFakeClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	succeedingClient := NewFakeClientWRestMapper()
-	if *c.invocations > c.createFailsAfter {
-		return errors.New("artificial failure on create function")
-	} else {
-		succeedingClient.Create(ctx, obj, opts...)
-	}
-	c.invocations = pointer.Int(*c.invocations + 1)
-	return nil
+	return errors.New("artificial failure on create function")
 }
 
-func NewCreateFailingFakeClient(createFailsAfter int) client.Client {
+func NewCreateFailingFakeClient() client.Client {
 	fakeClient, _ := NewFakeClient()
-	return CreateFailingFakeClient{fakeClient, createFailsAfter, pointer.Int(0)}
+	return CreateFailingFakeClient{fakeClient}
 }
