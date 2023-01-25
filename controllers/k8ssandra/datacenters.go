@@ -109,8 +109,13 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			Ctx:           ctx,
 			Kluster:       kc,
 		}
-		if err = agentCfg.ReconcileTelemetryAgentConfig(desiredDc); err != nil {
-			return result.Error(err), actualDcs
+		agentRes := agentCfg.ReconcileTelemetryAgentConfig(desiredDc)
+		if agentRes.IsRequeue() {
+			return result.RequeueSoon(r.DefaultDelay), actualDcs
+		}
+
+		if agentRes.IsError() {
+			return agentRes, actualDcs
 		}
 
 		// Note: desiredDc should not be modified from now on
