@@ -27,6 +27,7 @@ const (
 	cassandraConfigPath = "/config/cassandra.yaml"
 	cqlConfigPath       = "/config/" + CqlConfigName
 	cassandraConfigMap  = "cassandra-config"
+	vectorConfigMap     = "stargate-vector"
 )
 
 const (
@@ -496,4 +497,10 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 
 func GeneratedConfigMapName(clusterName, dcName string) string {
 	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
+}
+
+// VectorAgentConfigMapName generates a ConfigMap name based on
+// the K8s sanitized cluster name and datacenter name.
+func VectorAgentConfigMapName(clusterName, dcName string) string {
+	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, vectorConfigMap)
 }

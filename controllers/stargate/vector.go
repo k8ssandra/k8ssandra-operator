@@ -20,11 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	MetricsPort         = 8084
-	VectorContainerName = "stargate-vector-agent"
-)
-
 func (r *StargateReconciler) reconcileVector(
 	ctx context.Context,
 	stargate api.Stargate,
@@ -35,7 +30,7 @@ func (r *StargateReconciler) reconcileVector(
 	namespace := stargate.Namespace
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      stargatepkg.VectorAgentConfigMapNameStargate(actualDc.Spec.ClusterName, actualDc.Name),
+		Name:      stargatepkg.VectorAgentConfigMapName(actualDc.Spec.ClusterName, actualDc.Name),
 	}
 	if stargate.Spec.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content
@@ -134,7 +129,7 @@ target = "stdout"
 
 	config := telemetry.VectorConfig{
 		Sinks:          vectorConfigToml,
-		ScrapePort:     MetricsPort,
+		ScrapePort:     stargatepkg.MetricsPort,
 		ScrapeInterval: scrapeInterval,
 	}
 
@@ -174,7 +169,7 @@ func injectVectorAgentForStargate(stargate *api.Stargate, deployments map[string
 
 		// Create the definition of the Vector agent container
 		vectorAgentContainer := corev1.Container{
-			Name:            VectorContainerName,
+			Name:            stargatepkg.VectorContainerName,
 			Image:           vectorImage,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Env: []corev1.EnvVar{
@@ -193,14 +188,14 @@ func injectVectorAgentForStargate(stargate *api.Stargate, deployments map[string
 			Name: "stargate-vector-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: stargatepkg.VectorAgentConfigMapNameStargate(clustername, dcName)},
+					LocalObjectReference: corev1.LocalObjectReference{Name: stargatepkg.VectorAgentConfigMapName(clustername, dcName)},
 				},
 			},
 		}
 
 		logger.Info("Adding Vector Agent Sidecar to Stargate Deployments", "Stargate Deployments", deployments)
 		for idx, deployment := range deployments {
-			cassandra.UpdateContainer(&deployment.Spec.Template, VectorContainerName, func(c *corev1.Container) {
+			cassandra.UpdateContainer(&deployment.Spec.Template, stargatepkg.VectorContainerName, func(c *corev1.Container) {
 				*c = vectorAgentContainer
 			})
 			cassandra.AddVolumesToPodTemplateSpec(&deployment.Spec.Template, vectorAgentVolume)

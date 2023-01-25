@@ -1,7 +1,6 @@
 package stargate
 
 import (
-	"fmt"
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -11,7 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const CqlConfigName = "stargate-cql.yaml"
+const (
+	CqlConfigName       = "stargate-cql.yaml"
+	MetricsPort         = 8084
+	VectorContainerName = "stargate-vector-agent"
+)
 
 var CassandraYamlRetainedSettings = []string{"server_encryption_options"}
 var CqlYamlRetainedSettings = []string{
@@ -62,7 +65,7 @@ func CreateStargateConfigMap(namespace, cassandraYaml, stargateCqlYaml string, d
 func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      VectorAgentConfigMapNameStargate(dc.Spec.ClusterName, dc.Name),
+			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
 				k8ssandra.NameLabel:                      k8ssandra.NameLabelValue,
@@ -89,10 +92,4 @@ func MergeYamlString(userConfigMap string, generatedConfigMap string) string {
 	}
 
 	return generatedConfigMap
-}
-
-// VectorAgentConfigMapNameStargate generates a ConfigMap name based on
-// the K8s sanitized cluster name and datacenter name.
-func VectorAgentConfigMapNameStargate(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-stargate-vector", cassdcapi.CleanupForKubernetes(clusterName), dcName)
 }

@@ -40,6 +40,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -707,8 +708,6 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
-	f.DeployVectorConfigMap(namespace)
-
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
@@ -724,18 +723,26 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
-	checkVectorAgentPresence(t, ctx, f, dcKey)
+
+	// check that the Cassandra Vector container and config map exist
+	checkVectorAgentPresence(t, ctx, f, dcKey, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
+	// check that the Stargate Vector container and config map exist
+	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-default-stargate-deployment"}}
+	checkVectorAgentPresence(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForStargate, stargate.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
+
 	t.Log("check that if Stargate is deleted directly it gets re-created")
-	stargate := &stargateapi.Stargate{}
-	err = f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
+	apistargate := &stargateapi.Stargate{}
+	err = f.Client.Get(ctx, stargateKey.NamespacedName, apistargate)
 	require.NoError(err, "failed to get Stargate in namespace %s", namespace)
-	err = f.Client.Delete(ctx, stargate)
+	err = f.Client.Delete(ctx, apistargate)
 	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -751,8 +758,8 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	t.Log("check Stargate deleted")
 	require.Eventually(func() bool {
-		stargate := &stargateapi.Stargate{}
-		err := f.Client.Get(ctx, stargateKey.NamespacedName, stargate)
+		apistargate := &stargateapi.Stargate{}
+		err := f.Client.Get(ctx, stargateKey.NamespacedName, apistargate)
 		if err == nil || !errors.IsNotFound(err) {
 			return false
 		}
@@ -800,22 +807,18 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	replication := map[string]int{"dc1": 1}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 
-	t.Log("Disable Vector in k8ssandracluster resource")
+	t.Log("Disable Vector in k8ssandracluster and Stargate resources")
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	vectorPatch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	k8ssandra.Spec.Cassandra.Telemetry.Vector.Enabled = pointer.Bool(false)
+	k8ssandra.Spec.Stargate.Telemetry.Vector.Enabled = pointer.Bool(false)
 	err = f.Client.Patch(ctx, k8ssandra, vectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
-	require.Eventually(func() bool {
-		// Check that vector's configmap is deleted
-		cm := &corev1.ConfigMap{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kcKey.Name, dcKey.Name)}, cm)
-		if err != nil && errors.IsNotFound(err) {
-			return true
-		}
-		return false
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "vector configmap was not deleted")
+	// Check that Cassandra Vector's configmap is deleted
+	checkVectorConfigMapDeleted(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
+	// Check that Stargate Vector's configmap is deleted
+	checkVectorConfigMapDeleted(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 }
 
 // createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter
@@ -989,8 +992,10 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
-	checkVectorAgentPresence(t, ctx, f, dc1Key)
-	checkVectorAgentPresence(t, ctx, f, dc2Key)
+	checkVectorAgentPresence(t, ctx, f, dc1Key, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
+	checkVectorAgentPresence(t, ctx, f, dc2Key, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
@@ -1960,16 +1965,6 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	return nil
 }
 
-func checkVectorAgentPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) {
-	t.Logf("check that vector agent is present in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
-	cassdc := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, cassdc)
-	require.NoError(t, err, "failed to get cassandra datacenter")
-
-	_, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "vector-agent")
-	require.True(t, containerFound, "cannot find vector agent container in pod template spec")
-}
-
 func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {
 	for i, container := range pod.Spec.Containers {
 		t.Logf("checking container %s in pod %s", container.Name, pod.Name)
@@ -1987,4 +1982,61 @@ func checkCassandraClusterName(t *testing.T, ctx context.Context, k8ssandra *api
 	require.NoError(t, err, "failed to get cassdc object")
 
 	require.Equal(t, k8ssandra.Spec.Cassandra.ClusterName, cassdc.Spec.ClusterName, "cassdc cluster name is not the expected one")
+}
+
+func checkVectorConfigMapDeleted(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) {
+	configMapName := types.NamespacedName{
+		Namespace: dcKey.Namespace,
+		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), dcKey.Name)),
+	}
+	t.Logf("check that Vector ConfigMap %s is deleted", configMapName.Name)
+
+	require.Eventually(t, func() bool {
+		// Check that vector's configmap is deleted
+		cm := &corev1.ConfigMap{}
+		err := f.Client.Get(ctx, configMapName, cm)
+		if err != nil && errors.IsNotFound(err) {
+			return true
+		}
+		return false
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not deleted")
+
+}
+
+func getPodTemplateSpecForCassandra(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) *corev1.PodTemplateSpec {
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(t, f.Get(ctx, dcKey, cassdc), "failed to get Cassandra Datacenter")
+
+	return cassdc.Spec.PodTemplateSpec
+}
+
+func getPodTemplateSpecForStargate(t *testing.T, ctx context.Context, f *framework.E2eFramework, stargateDeploymentKey framework.ClusterKey) *corev1.PodTemplateSpec {
+	sg := &appsv1.Deployment{}
+	require.NoError(t, f.Get(ctx, stargateDeploymentKey, sg), "failed to get Stargate Deployment")
+
+	return &sg.Spec.Template
+}
+
+func checkVectorAgentPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) *corev1.PodTemplateSpec, vectorContainerName string) {
+	t.Logf("check that %s contains Vector Agent %s", podKey.Name, vectorContainerName)
+	podTempSpec := specFunction(t, ctx, f, podKey)
+	_, containerFound := cassandra.FindContainer(podTempSpec, vectorContainerName)
+	require.True(t, containerFound, "cannot find Vector agent container in pod template spec")
+}
+
+func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) {
+	configMapName := types.NamespacedName{
+		Namespace: dcKey.Namespace,
+		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), dcKey.Name)),
+	}
+	t.Logf("check that Vector agent config map %v is present", configMapName)
+	require.Eventually(t, func() bool {
+		cm := &corev1.ConfigMap{}
+		err := f.Client.Get(ctx, configMapName, cm)
+		if err != nil {
+			return false
+		}
+		return true
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
+
 }
