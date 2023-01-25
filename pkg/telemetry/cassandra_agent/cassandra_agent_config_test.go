@@ -27,15 +27,12 @@ var (
   address: 127.0.0.1
   port: "10000"
 filters:
-- sourceLabels:
+- action: drop
+  regex: (.*);(b.*)
+  separator: ;
+  sourceLabels:
   - tag1
   - tag2
-  separator: ;
-  targetlabel: ""
-  regex: (.*);(b.*)
-  modulus: 0
-  replacement: ""
-  action: drop
 `
 )
 
