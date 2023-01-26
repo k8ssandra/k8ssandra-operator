@@ -11,9 +11,7 @@ import (
 )
 
 const (
-	CqlConfigName       = "stargate-cql.yaml"
-	MetricsPort         = 8084
-	VectorContainerName = "stargate-vector-agent"
+	CqlConfigName = "stargate-cql.yaml"
 )
 
 var CassandraYamlRetainedSettings = []string{"server_encryption_options"}
@@ -58,26 +56,6 @@ func CreateStargateConfigMap(namespace, cassandraYaml, stargateCqlYaml string, d
 		Data: map[string]string{
 			"cassandra.yaml": cassandraYaml,
 			CqlConfigName:    stargateCqlYaml,
-		},
-	}
-}
-
-func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name),
-			Namespace: namespace,
-			Labels: map[string]string{
-				k8ssandra.NameLabel:                      k8ssandra.NameLabelValue,
-				k8ssandra.PartOfLabel:                    k8ssandra.PartOfLabelValue,
-				k8ssandra.ComponentLabel:                 k8ssandra.ComponentLabelValueStargate,
-				k8ssandra.CreatedByLabel:                 k8ssandra.CreatedByLabelValueK8ssandraClusterController,
-				k8ssandra.K8ssandraClusterNameLabel:      dc.Labels[k8ssandra.K8ssandraClusterNameLabel],
-				k8ssandra.K8ssandraClusterNamespaceLabel: namespace,
-			},
-		},
-		Data: map[string]string{
-			"vector.toml": vectorToml,
 		},
 	}
 }

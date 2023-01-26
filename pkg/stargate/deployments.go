@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -27,7 +28,6 @@ const (
 	cassandraConfigPath = "/config/cassandra.yaml"
 	cqlConfigPath       = "/config/" + CqlConfigName
 	cassandraConfigMap  = "cassandra-config"
-	vectorConfigMap     = "stargate-vector"
 )
 
 const (
@@ -63,7 +63,7 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) map[string]appsv1.Deployment {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
@@ -199,6 +199,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		}
 
 		configureAuth(stargate, deployment)
+		configureVector(stargate, deployment, dc, logger)
 
 		annotations.AddHashAnnotation(deployment)
 		deployments[deploymentName] = *deployment
@@ -497,10 +498,4 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 
 func GeneratedConfigMapName(clusterName, dcName string) string {
 	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
-}
-
-// VectorAgentConfigMapName generates a ConfigMap name based on
-// the K8s sanitized cluster name and datacenter name.
-func VectorAgentConfigMapName(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, vectorConfigMap)
 }

@@ -3,41 +3,12 @@ package stargate
 import (
 	"testing"
 
-	testlogr "github.com/go-logr/logr/testing"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	stargatepkg "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
-
-// InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
-// If the Vector agent is already present, it is not added again.
-func TestInjectVectorAgentForStargate(t *testing.T) {
-	telemetrySpec := &telemetryapi.TelemetrySpec{Vector: &telemetryapi.VectorSpec{Enabled: pointer.Bool(true)}}
-	stargate := &api.Stargate{}
-	stargate.Spec.Telemetry = telemetrySpec
-
-	deployments := make(map[string]v1.Deployment)
-	deployment := v1.Deployment{}
-	deployments["testDeployment"] = deployment
-
-	logger := testlogr.NewTestLogger(t)
-	injectVectorAgentForStargate(stargate, deployments, "testDcName", "testClusterName", logger)
-
-	deployment = deployments["testDeployment"]
-
-	assert.Equal(t, 1, len(deployment.Spec.Template.Spec.Containers))
-	assert.Equal(t, "stargate-vector-agent", deployment.Spec.Template.Spec.Containers[0].Name)
-	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorCpuLimit), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu())
-	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorCpuRequest), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu())
-	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorMemoryLimit), *deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory())
-	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorMemoryRequest), *deployment.Spec.Template.Spec.Containers[0].Resources.Requests.Memory())
-}
 
 func TestCreateVectorTomlDefault(t *testing.T) {
 	telemetrySpec := &telemetryapi.TelemetrySpec{Vector: &telemetryapi.VectorSpec{Enabled: pointer.Bool(true)}}

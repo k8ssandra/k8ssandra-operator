@@ -195,7 +195,14 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Compute the desired deployments
-	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc)
+	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger)
+
+	// reconcile Vector configmap
+	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *stargate, actualDc, r.Client, logger); err != nil {
+		return vectorReconcileResult, err
+	} else if vectorReconcileResult.Requeue {
+		return vectorReconcileResult, nil
+	}
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {
@@ -226,6 +233,9 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// NOTE: Desired deployments need to be updated prior to this point. Once this code path is reached,
+	// any changes to desired deployments may not be applied as they will be deleted below if no changes
+	// are detected.
 	for _, actualDeployment := range actualDeployments.Items {
 		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: actualDeployment.Name}
 		if desiredDeployment, found := desiredDeployments[actualDeployment.Name]; !found {
@@ -257,6 +267,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 				}
 			}
+			logger.Info("Deleting Stargate desired deployment", "Deployment", actualDeployment.Name)
 			delete(desiredDeployments, actualDeployment.Name)
 			replicas += actualDeployment.Status.Replicas
 			readyReplicas += actualDeployment.Status.ReadyReplicas
@@ -264,16 +275,6 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			availableReplicas += actualDeployment.Status.AvailableReplicas
 		}
 	}
-
-	// create Vector configmap
-	if vectorReconcileResult, err := r.reconcileVector(ctx, *stargate, actualDc, r.Client, logger); err != nil {
-		return vectorReconcileResult, err
-	} else if vectorReconcileResult.Requeue {
-		return vectorReconcileResult, nil
-	}
-
-	// inject Vector
-	injectVectorAgentForStargate(stargate, desiredDeployments, actualDc.Name, actualDc.Spec.ClusterName, logger)
 
 	for _, desiredDeployment := range desiredDeployments {
 		// Deployment does not exist yet: create a new one
