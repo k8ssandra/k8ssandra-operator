@@ -1304,6 +1304,28 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Override service account",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServiceAccount: "cluster_account",
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServiceAccount: "dc_account",
+				},
+			},
+			want: &DatacenterConfig{
+				ServiceAccount: "dc_account",
+				McacEnabled:    true,
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "cassandra"}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1386,6 +1408,17 @@ func TestNewDatacenter_Tolerations(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, template.Tolerations, dc.Spec.Tolerations)
+}
+
+func TestNewDatacenter_ServiceAccount(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.ServiceAccount = "svc"
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, template.ServiceAccount, dc.Spec.ServiceAccount)
 }
 
 // TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.

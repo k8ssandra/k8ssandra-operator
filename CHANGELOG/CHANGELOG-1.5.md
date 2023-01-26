@@ -26,6 +26,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#770](https://github.com/k8ssandra/k8ssandra-operator/issues/770) Update to Go 1.19 and Operator SDK 1.25.2
 * [ENHANCEMENT] [#525](https://github.com/k8ssandra/k8ssandra-operator/issues/525) Deep-merge cluster- and dc-level templates
 * [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD
+* [ENHANCEMENT] [#783](https://github.com/k8ssandra/k8ssandra-operator/issues/783) Make ServiceAccount of Cassandra pods configurable
 * [ENHANCEMENT] [#822](https://github.com/k8ssandra/k8ssandra-operator/issues/822) Remove relabelling rules from service monitors when MCAC is disabled
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
