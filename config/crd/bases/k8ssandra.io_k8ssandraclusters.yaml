@@ -7748,6 +7748,10 @@ spec:
                             and 4.0.X - DSE: 6.8.X'
                           pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)
                           type: string
+                        serviceAccount:
+                          description: The k8s service account to use for the Cassandra
+                            pods
+                          type: string
                         size:
                           description: Size is the number Cassandra pods to deploy
                             in this datacenter. This number does not include Stargate
@@ -15752,6 +15756,10 @@ spec:
                       following versions are supported: - Cassandra: 3.11.X and 4.0.X
                       - DSE: 6.8.X'
                     pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)
+                    type: string
+                  serviceAccount:
+                    description: The k8s service account to use for the Cassandra
+                      pods
                     type: string
                   softPodAntiAffinity:
                     description: SoftPodAntiAffinity sets whether multiple Cassandra
