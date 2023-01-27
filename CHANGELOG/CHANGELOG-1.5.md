@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 * [FEATURE] [#783](https://github.com/k8ssandra/k8ssandra-operator/issues/783) Allow disabling MCAC
+* [FEATURE] [#739815](https://github.com/k8ssandra/k8ssandra-operator/issues/815) Add configuration block to CRDs for new Cassandra metrics agent.
 * [FEATURE] [#739](https://github.com/k8ssandra/k8ssandra-operator/issues/739) Add API for cluster-level tasks
 * [FEATURE] [#775](https://github.com/k8ssandra/k8ssandra-operator/issues/775) Add the ability to inject and configure a Vector agent sidecar in the Cassandra pods
 * [FEATURE] [#600](https://github.com/k8ssandra/k8ssandra-operator/issues/600) Disable secrets management and replication with the external secrets provider
