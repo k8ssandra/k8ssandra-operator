@@ -12,27 +12,19 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-const (
-	// CassandraMetricsPortLegacy is the metrics port to scrape for the legacy MCAC stack (Metrics
-	// Collector for Apache Cassandra).
-	CassandraMetricsPortLegacy = 9103
-	// CassandraMetricsPortModern is the metrics port to scrape for the modern stack (metrics
-	// exposed by management-api).
-	CassandraMetricsPortModern = 9000
-)
-
 // Static configuration for ServiceMonitor's endpoints when using the legacy MCAC stack (Metrics
-// Collector for Apache Cassandra).
+// Collector for Apache Cassandra).  This configuration will monitor the legacy 'prometheus' port of
+// the DC's all-pods service, whose number is 9103.
 const endpointStringLegacy = `
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 spec:
   endpoints:
-  - interval: 15s
+  - port: prometheus
+    interval: 15s
     path: /metrics
     scheme: http
     scrapeTimeout: 15s
-    targetPort: %d
     metricRelabelings:
     - regex: collectd_mcac_(meter|histogram).*
       sourceLabels:
@@ -318,17 +310,19 @@ spec:
       regex: prom_name
 `
 
-// Static configuration for ServiceMonitor's endpoints, when using modern metrics endpoints.
+// Static configuration for ServiceMonitor's endpoints, when using modern metrics endpoints. This
+// configuration will monitor the 'metrics' port of the DC's all-pods service, whose number is 9000.
+// Note that in this configuration it is not required to apply relabelings to the exposed metrics.
 const endpointStringModern = `
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 spec:
   endpoints:
-  - interval: 15s
+  - port: metrics
+    interval: 15s
     path: /metrics
     scheme: http
     scrapeTimeout: 15s
-    targetPort: %d
 `
 
 var (
@@ -338,11 +332,11 @@ var (
 
 func init() {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
-	if _, _, err := decode([]byte(fmt.Sprintf(endpointStringLegacy, CassandraMetricsPortLegacy)), nil, cassServiceMonitorTemplateLegacy); err != nil {
+	if _, _, err := decode([]byte(endpointStringLegacy), nil, cassServiceMonitorTemplateLegacy); err != nil {
 		fmt.Println("Fatal error initialising ServiceMonitor template", err)
 		os.Exit(1)
 	}
-	if _, _, err := decode([]byte(fmt.Sprintf(endpointStringModern, CassandraMetricsPortModern)), nil, cassServiceMonitorTemplateModern); err != nil {
+	if _, _, err := decode([]byte(endpointStringModern), nil, cassServiceMonitorTemplateModern); err != nil {
 		fmt.Println("Fatal error initialising ServiceMonitor template", err)
 		os.Exit(1)
 	}

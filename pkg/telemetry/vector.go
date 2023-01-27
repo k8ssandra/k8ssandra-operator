@@ -15,13 +15,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Default resources for Vector agent
 const (
-	// Default resources for Vector agent
 	DefaultVectorCpuRequest    = "100m"
 	DefaultVectorMemoryRequest = "128Mi"
 	DefaultVectorCpuLimit      = "2"
 	DefaultVectorMemoryLimit   = "2Gi"
 	DefaultScrapeInterval      = 30
+	// CassandraMetricsPortLegacy is the metrics port to scrape for the legacy MCAC stack (Metrics
+	// Collector for Apache Cassandra).
+	CassandraMetricsPortLegacy = 9103
+	// CassandraMetricsPortModern is the metrics port to scrape for the modern stack (metrics
+	// exposed by management-api).
+	CassandraMetricsPortModern = 9000
 )
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
