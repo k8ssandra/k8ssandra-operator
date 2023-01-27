@@ -1,0 +1,6 @@
+# Test for presence of expected config for cassandra metrics agent
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-metrics-agent-config
+  namespace: k8ssandra-operator
