@@ -2029,10 +2029,14 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 		Namespace: dcKey.Namespace,
 		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), dcKey.Name)),
 	}
-	t.Logf("check that Vector agent config map %v is present", configMapName)
+	t.Logf("check that Vector agent config map %v is present in cluster %s", configMapName, dcKey.K8sContext)
+	configMapKey := framework.ClusterKey{
+        NamespacedName: configMapName,
+		K8sContext: dcKey.K8sContext,
+	}
 	require.Eventually(t, func() bool {
 		cm := &corev1.ConfigMap{}
-		err := f.Client.Get(ctx, configMapName, cm)
+		err := f.Get(ctx, configMapKey, cm)
 		if err != nil {
 			return false
 		}
