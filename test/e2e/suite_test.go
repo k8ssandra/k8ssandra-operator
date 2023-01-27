@@ -1989,12 +1989,15 @@ func checkVectorConfigMapDeleted(t *testing.T, ctx context.Context, f *framework
 		Namespace: dcKey.Namespace,
 		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), dcKey.Name)),
 	}
-	t.Logf("check that Vector ConfigMap %s is deleted", configMapName.Name)
-
+	t.Logf("check that Vector ConfigMap %s is deleted in cluster %s", configMapName.Name, dcKey.K8sContext)
+	configMapKey := framework.ClusterKey{
+        NamespacedName: configMapName,
+		K8sContext: dcKey.K8sContext,
+	}
 	require.Eventually(t, func() bool {
 		// Check that vector's configmap is deleted
 		cm := &corev1.ConfigMap{}
-		err := f.Client.Get(ctx, configMapName, cm)
+		err := f.Get(ctx, configMapKey, cm)
 		if err != nil && errors.IsNotFound(err) {
 			return true
 		}
