@@ -2,15 +2,15 @@ package k8ssandra
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,6 +30,13 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					Telemetry: &telemetryapi.TelemetrySpec{
+						Vector: &telemetryapi.VectorSpec{
+							Enabled: pointer.Bool(true),
+						},
+					},
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -38,7 +45,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       1,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "3.11.10",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -71,26 +78,26 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
-
 	// Check that we have the right volumes and volume mounts.
-	sts := &appsv1.StatefulSet{}
-	if err := f.Client.Get(ctx, types.NamespacedName{Name: "test-dc1-default-sts", Namespace: namespace}, sts); err != nil {
-		assert.Fail(t, "could not find sts")
+	dc := &cassdcapi.CassandraDatacenter{}
+	f.Get(ctx, dcKey, dc)
+	if err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "dc1"}, dc); err != nil {
+		require.Fail("could not find dc")
 	}
-	_, found := cassandra.FindVolume(&sts.Spec.Template, "metrics-agent-config")
+	_, found := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "metrics-agent-config")
 	if !found {
-		assert.Fail(t, "could not find expected metrics-agent-config volume")
+		require.Fail("could not find expected metrics-agent-config volume")
 	}
-	cassContainerIdx, _ := cassandra.FindContainer(&sts.Spec.Template, "cassandra")
-	volMount := cassandra.FindVolumeMount(&sts.Spec.Template.Spec.Containers[cassContainerIdx], "metrics-agent-config")
+	cassContainerIdx, _ := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
+	volMount := cassandra.FindVolumeMount(&dc.Spec.PodTemplateSpec.Spec.Containers[cassContainerIdx], "metrics-agent-config")
 	if volMount == nil {
-		assert.Fail(t, "could not find expected metrics-agent-config volumeMount")
+		require.Fail("could not find expected metrics-agent-config volumeMount")
 	}
 
 	// check that we have the right ConfigMap
-	agentCmKey := types.NamespacedName{Name: "test" + "-metrics-agent-config", Namespace: namespace}
+	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
 	agentCm := corev1.ConfigMap{}
-	if err := f.Client.Get(ctx, agentCmKey, &agentCm); err != nil {
+	if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
 		assert.Fail(t, "could not find expected metrics-agent-config configmap")
 	}
 
@@ -100,7 +107,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t,
-		framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: agentCmKey},
+		agentCmKey,
 		&corev1.ConfigMap{},
 		timeout,
 		interval)
