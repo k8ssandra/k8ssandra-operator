@@ -10,6 +10,7 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -52,12 +53,13 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	if err != nil {
 		return result.Error(err)
 	}
+	cmObjectKey := types.NamespacedName{Name: c.Kluster.Name + "metrics-agent-config",
+		Namespace: c.Kluster.Namespace}
 	annotations.AddHashAnnotation(desiredCm)
+	labels.SetManagedBy(desiredCm, cmObjectKey)
 	currentCm := &corev1.ConfigMap{}
 
-	err = c.RemoteClient.Get(c.Ctx,
-		types.NamespacedName{Name: c.Kluster.Name + "metrics-agent-config",
-			Namespace: c.Kluster.Namespace}, currentCm)
+	err = c.RemoteClient.Get(c.Ctx, cmObjectKey, currentCm)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
