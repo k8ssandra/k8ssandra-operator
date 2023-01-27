@@ -40,7 +40,7 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: c.Kluster.Namespace,
-			Name:      c.Kluster.Name + "metrics-agent-config",
+			Name:      c.Kluster.Name + "-metrics-agent-config",
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): string(yamlData)},
 	}
@@ -53,7 +53,7 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	if err != nil {
 		return result.Error(err)
 	}
-	cmObjectKey := types.NamespacedName{Name: c.Kluster.Name + "metrics-agent-config",
+	cmObjectKey := types.NamespacedName{Name: c.Kluster.Name + "-metrics-agent-config",
 		Namespace: c.Kluster.Namespace}
 	annotations.AddHashAnnotation(desiredCm)
 	labels.SetManagedBy(desiredCm, cmObjectKey)
@@ -104,7 +104,7 @@ func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
 						},
 					},
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: c.Kluster.Name + "metrics-agent-config",
+						Name: c.Kluster.Name + "-metrics-agent-config",
 					},
 				},
 			},

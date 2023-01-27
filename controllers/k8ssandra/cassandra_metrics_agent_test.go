@@ -88,13 +88,13 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	}
 
 	// check that we have the right ConfigMap
-	agentCmKey := types.NamespacedName{Name: "test" + "metrics-agent-config", Namespace: namespace}
+	agentCmKey := types.NamespacedName{Name: "test" + "-metrics-agent-config", Namespace: namespace}
 	agentCm := corev1.ConfigMap{}
 	if err := f.Client.Get(ctx, agentCmKey, &agentCm); err != nil {
 		assert.Fail(t, "could not find expected metrics-agent-config configmap")
 	}
 
-	// Test cluster deletion
+	// Test cluster deletion, ensuring configmap deleted too.
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
