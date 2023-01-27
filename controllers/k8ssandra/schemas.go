@@ -102,7 +102,10 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 			}
 		}
 	} else {
-		replication = cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
+		// Cassandra 4.1 writes the superuser role with CL=EACH_QUORUM, so we can't reference DCs before they are created.
+		// Only reference the first DC in the replication; for subsequent DCs, the replication will be altered.
+		firstDc := kc.Spec.Cassandra.Datacenters[0]
+		replication = cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, firstDc)
 	}
 
 	bytes, err := json.Marshal(replication)
@@ -140,8 +143,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 		return recResult
 	}
 
-	datacenters := cassandra.GetDatacentersForSystemReplication(kc)
-	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, datacenters...)
+	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.GetInitializedDatacenters()...)
 
 	logger.Info("Preparing to update replication for system keyspaces", "replication", replication)
 

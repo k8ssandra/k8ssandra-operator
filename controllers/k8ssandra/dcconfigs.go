@@ -55,7 +55,9 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// unauthenticated clusters.
 		// DSE doesn't support replicating to unexisting datacenters, even through the system property,
 		// which is why we're doing this for Cassandra only.
-		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
+		// We only set this for the first DC. For subsequent DCs, the replication will be altered and a rebuild
+		// triggered.
+		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra && len(dcConfigs) == 0 {
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 

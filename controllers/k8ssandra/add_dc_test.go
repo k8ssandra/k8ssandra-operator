@@ -190,6 +190,15 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
 	}, timeout, interval, "failed to update dc2 generation")
 
+	kc = &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to read K8ssandraCluster")
+
+	t.Log("check that dc2 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
 	t.Log("wait for the CassandraInitialized condition to be set")
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
@@ -273,13 +282,17 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	err := f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to set dc2 status ready")
 
+	t.Log("check that dc2 was rebuilt")
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
 	verifyReplicationOfSystemKeyspacesUpdated(t, mockMgmtApi, replication, updatedReplication)
 
 	for _, ks := range userKeyspaces {
 		verifyReplicationOfKeyspaceUpdated(t, mockMgmtApi, ks, updatedReplication)
 	}
-
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
 }
@@ -361,7 +374,7 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
-	kc.Annotations[api.RebuildSourceDcAnnotation] = "dc2"
+	annotations.AddAnnotation(kc, api.RebuildSourceDcAnnotation, "dc2")
 	err = f.Client.Update(ctx, kc)
 	require.NoError(err, "failed to add %s annotation to K8ssandraCluster", api.RebuildSourceDcAnnotation)
 
