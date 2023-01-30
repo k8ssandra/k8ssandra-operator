@@ -81,7 +81,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	// Check that we have the right volumes and volume mounts.
 	dc := &cassdcapi.CassandraDatacenter{}
 	f.Get(ctx, dcKey, dc)
-	if err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "dc1"}, dc); err != nil {
+	if err := f.Get(ctx, dcKey, dc); err != nil {
 		require.Fail("could not find dc")
 	}
 	_, found := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "metrics-agent-config")

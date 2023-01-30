@@ -86,8 +86,12 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	}
 	cmObjectKey := types.NamespacedName{Name: c.Kluster.Name + "-metrics-agent-config",
 		Namespace: c.Kluster.Namespace}
-	annotations.AddHashAnnotation(desiredCm)
 	labels.SetManagedBy(desiredCm, cmObjectKey)
+	KlKey := types.NamespacedName{Name: c.Kluster.Name, Namespace: c.Kluster.Namespace}
+	partOfLabels := labels.PartOfLabels(KlKey)
+	desiredCm.SetLabels(partOfLabels)
+	annotations.AddHashAnnotation(desiredCm)
+
 	currentCm := &corev1.ConfigMap{}
 
 	err = c.RemoteClient.Get(c.Ctx, cmObjectKey, currentCm)
