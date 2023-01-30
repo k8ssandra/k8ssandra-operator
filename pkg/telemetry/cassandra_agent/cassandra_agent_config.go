@@ -137,7 +137,8 @@ func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
 			func(c *corev1.Container) {
 				vm := corev1.VolumeMount{
 					Name:      "metrics-agent-config",
-					MountPath: filepath.Base(filepath.Dir(agentConfigLocation)),
+					MountPath: agentConfigLocation,
+					SubPath:   filepath.Base(agentConfigLocation),
 				}
 				c.VolumeMounts = append(c.VolumeMounts, vm)
 			})
