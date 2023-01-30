@@ -15,7 +15,7 @@ func Test_NewCassServiceMonitor(t *testing.T) {
 		name            string
 		cfg             PrometheusResourcer
 		legacyEndpoints bool
-		wantTargetPort  int32
+		wantPort        string
 		wantErr         require.ErrorAssertionFunc
 	}{
 		{
@@ -28,7 +28,7 @@ func Test_NewCassServiceMonitor(t *testing.T) {
 				CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
 			},
 			legacyEndpoints: true,
-			wantTargetPort:  CassandraMetricsPortLegacy,
+			wantPort:        "prometheus",
 			wantErr:         require.NoError,
 		},
 		{
@@ -41,7 +41,7 @@ func Test_NewCassServiceMonitor(t *testing.T) {
 				CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
 			},
 			legacyEndpoints: false,
-			wantTargetPort:  CassandraMetricsPortModern,
+			wantPort:        "metrics",
 			wantErr:         require.NoError,
 		},
 		{
@@ -74,8 +74,7 @@ func Test_NewCassServiceMonitor(t *testing.T) {
 			test.wantErr(t, err)
 			if err == nil {
 				assert.Len(t, actualSM.Spec.Endpoints, 1)
-				assert.Equal(t, "", actualSM.Spec.Endpoints[0].Port)
-				assert.Equal(t, test.wantTargetPort, actualSM.Spec.Endpoints[0].TargetPort.IntVal)
+				assert.Equal(t, test.wantPort, actualSM.Spec.Endpoints[0].Port)
 			}
 		})
 	}
