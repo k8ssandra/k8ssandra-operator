@@ -1,13 +1,11 @@
 package telemetry
 
 import (
-	"context"
+	"github.com/go-logr/logr/testr"
 	"testing"
 
-	testlogr "github.com/go-logr/logr/testing"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +21,7 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 		PodTemplateSpec: corev1.PodTemplateSpec{},
 	}
 
-	logger := testlogr.NewTestLogger(t)
+	logger := testr.New(t)
 
 	err := InjectCassandraVectorAgent(telemetrySpec, dcConfig, "test", logger)
 	require.NoError(t, err)
@@ -38,9 +36,8 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
-	fakeClient := test.NewFakeClientWRestMapper()
 
-	toml, err := CreateCassandraVectorToml(context.Background(), telemetrySpec, fakeClient, "k8ssandra-operator")
+	toml, err := CreateCassandraVectorToml(telemetrySpec, true)
 	if err != nil {
 		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
 	}

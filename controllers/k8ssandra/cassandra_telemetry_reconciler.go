@@ -59,11 +59,11 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	// Determine if we want a cleanup or a resource update.
 	if mergedSpec.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
-		desiredSM, err := cfg.NewCassServiceMonitor()
+		desiredSM, err := cfg.NewCassServiceMonitor(mergedSpec.IsMcacEnabled())
 		if err != nil {
 			return result.Error(err)
 		}
-		if err := cfg.UpdateResources(ctx, remoteClient, actualDc, &desiredSM); err != nil {
+		if err := cfg.UpdateResources(ctx, remoteClient, actualDc, desiredSM); err != nil {
 			return result.Error(err)
 		}
 	} else {

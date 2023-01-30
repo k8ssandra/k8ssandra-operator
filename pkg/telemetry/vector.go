@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"strings"
 	"text/template"
@@ -14,16 +13,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Default resources for Vector agent
 const (
-	// Default resources for Vector agent
 	DefaultVectorCpuRequest    = "100m"
 	DefaultVectorMemoryRequest = "128Mi"
 	DefaultVectorCpuLimit      = "2"
 	DefaultVectorMemoryLimit   = "2Gi"
 	DefaultScrapeInterval      = 30
+	// CassandraMetricsPortLegacy is the metrics port to scrape for the legacy MCAC stack (Metrics
+	// Collector for Apache Cassandra).
+	CassandraMetricsPortLegacy = 9103
+	// CassandraMetricsPortModern is the metrics port to scrape for the modern stack (metrics
+	// exposed by management-api).
+	CassandraMetricsPortModern = 9000
 )
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
@@ -96,7 +100,7 @@ type VectorConfig struct {
 	ScrapeInterval int32
 }
 
-func CreateCassandraVectorToml(ctx context.Context, telemetrySpec *telemetry.TelemetrySpec, remoteClient client.Client, namespace string) (string, error) {
+func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool) (string, error) {
 	vectorConfigToml := `
 [sinks.console]
 type = "console"
@@ -111,6 +115,13 @@ target = "stdout"
 		vectorConfigToml = BuildCustomVectorToml(telemetrySpec)
 	}
 
+	var scrapePort int32
+	if mcacEnabled {
+		scrapePort = CassandraMetricsPortLegacy
+	} else {
+		scrapePort = CassandraMetricsPortModern
+	}
+
 	var scrapeInterval int32 = DefaultScrapeInterval
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
@@ -118,7 +129,7 @@ target = "stdout"
 
 	config := VectorConfig{
 		Sinks:          vectorConfigToml,
-		ScrapePort:     CassandraMetricsPort,
+		ScrapePort:     scrapePort,
 		ScrapeInterval: scrapeInterval,
 	}
 

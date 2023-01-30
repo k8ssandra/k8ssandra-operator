@@ -25,8 +25,14 @@ type PrometheusResourcer struct {
 }
 
 func (cfg PrometheusResourcer) validate() error {
-	if cfg.MonitoringTargetNS == "" || cfg.MonitoringTargetName == "" || cfg.ServiceMonitorName == "" {
-		return TelemetryConfigIncomplete{}
+	if cfg.MonitoringTargetNS == "" {
+		return TelemetryConfigIncomplete{"MonitoringTargetNS"}
+	}
+	if cfg.MonitoringTargetName == "" {
+		return TelemetryConfigIncomplete{"MonitoringTargetName"}
+	}
+	if cfg.ServiceMonitorName == "" {
+		return TelemetryConfigIncomplete{"ServiceMonitorName"}
 	}
 	return nil
 }
@@ -39,7 +45,7 @@ func (cfg PrometheusResourcer) UpdateResources(
 	desiredSM *promapi.ServiceMonitor,
 ) error {
 	if err := cfg.validate(); err != nil {
-		return TelemetryConfigIncomplete{}
+		return err
 	}
 	cfg.Logger.Info("checking whether Prometheus ServiceMonitor for Cassandra already exists")
 	// Logic to handle case where SM does not exist.

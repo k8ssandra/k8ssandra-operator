@@ -12,12 +12,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-const (
-	CassandraMetricsPort = 9103
-)
-
-// Static configuration for ServiceMonitor's endpoints.
-const endpointString = `
+// Static configuration for ServiceMonitor's endpoints when using the legacy MCAC stack (Metrics
+// Collector for Apache Cassandra).  This configuration will monitor the legacy 'prometheus' port of
+// the DC's all-pods service, whose number is 9103.
+const endpointStringLegacy = `
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 spec:
@@ -27,7 +25,6 @@ spec:
     path: /metrics
     scheme: http
     scrapeTimeout: 15s
-    targetPort: %d
     metricRelabelings:
     - regex: collectd_mcac_(meter|histogram).*
       sourceLabels:
@@ -313,29 +310,57 @@ spec:
       regex: prom_name
 `
 
-var cassServiceMonitorTemplate = &promapi.ServiceMonitor{}
+// Static configuration for ServiceMonitor's endpoints, when using modern metrics endpoints. This
+// configuration will monitor the 'metrics' port of the DC's all-pods service, whose number is 9000.
+// Note that in this configuration it is not required to apply relabelings to the exposed metrics.
+const endpointStringModern = `
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+spec:
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    scheme: http
+    scrapeTimeout: 15s
+`
+
+var (
+	cassServiceMonitorTemplateLegacy = &promapi.ServiceMonitor{}
+	cassServiceMonitorTemplateModern = &promapi.ServiceMonitor{}
+)
 
 func init() {
 	decode := scheme.Codecs.UniversalDeserializer().Decode
-	_, _, err := decode([]byte(fmt.Sprintf(endpointString, CassandraMetricsPort)), nil, cassServiceMonitorTemplate)
-	if err != nil {
-		fmt.Println("Fatal error initialising EndpointHolder in pks/telemetry/prometheus_resourcer.go", err)
+	if _, _, err := decode([]byte(endpointStringLegacy), nil, cassServiceMonitorTemplateLegacy); err != nil {
+		fmt.Println("Fatal error initialising ServiceMonitor template", err)
+		os.Exit(1)
+	}
+	if _, _, err := decode([]byte(endpointStringModern), nil, cassServiceMonitorTemplateModern); err != nil {
+		fmt.Println("Fatal error initialising ServiceMonitor template", err)
 		os.Exit(1)
 	}
 }
 
 // NewCassServiceMonitor returns a Prometheus operator ServiceMonitor resource.
-func (cfg PrometheusResourcer) NewCassServiceMonitor() (promapi.ServiceMonitor, error) {
+func (cfg PrometheusResourcer) NewCassServiceMonitor(legacyEndpoints bool) (*promapi.ServiceMonitor, error) {
 	// validate the object we're being passed.
 	if err := cfg.validate(); err != nil {
-		return promapi.ServiceMonitor{}, err
+		return nil, err
 	}
 	clusterName, ok := cfg.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel]
 	if !ok {
-		return promapi.ServiceMonitor{}, TelemetryConfigIncomplete{"PrometheusResourcer.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel]"}
+		return nil, TelemetryConfigIncomplete{"PrometheusResourcer.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel]"}
 	}
+	var cassServiceMonitorTemplate *promapi.ServiceMonitor
+	if legacyEndpoints {
+		cassServiceMonitorTemplate = cassServiceMonitorTemplateLegacy.DeepCopy()
+	} else {
+		cassServiceMonitorTemplate = cassServiceMonitorTemplateModern.DeepCopy()
+	}
+
 	// Overwrite any CommonLabels the user has asked for if they conflict with the labels essential for the functioning of the operator.
-	sm := promapi.ServiceMonitor{
+	sm := &promapi.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.ServiceMonitorName,
 			Namespace: cfg.MonitoringTargetNS,
@@ -362,6 +387,6 @@ func (cfg PrometheusResourcer) NewCassServiceMonitor() (promapi.ServiceMonitor, 
 			Endpoints: cassServiceMonitorTemplate.Spec.Endpoints,
 		},
 	}
-	annotations.AddHashAnnotation(&sm)
+	annotations.AddHashAnnotation(sm)
 	return sm, nil
 }
