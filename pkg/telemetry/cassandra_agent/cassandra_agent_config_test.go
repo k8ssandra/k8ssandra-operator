@@ -92,7 +92,7 @@ func Test_AddStsVolumes(t *testing.T) {
 					},
 				},
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: Cfg.Kluster.Name + "metrics-agent-config",
+					Name: Cfg.Kluster.Name + "-metrics-agent-config",
 				},
 			},
 		},
