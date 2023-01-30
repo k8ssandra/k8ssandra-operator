@@ -19,7 +19,8 @@ const (
 	CassandraMetricsPortLegacy = 9103
 	// CassandraMetricsPortModern is the metrics port to scrape for the modern stack (metrics
 	// exposed by management-api).
-	CassandraMetricsPortModern = 9000)
+	CassandraMetricsPortModern = 9000
+)
 
 type VectorConfig struct {
 	Sinks          string
