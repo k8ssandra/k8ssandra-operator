@@ -12,7 +12,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,22 +24,8 @@ var (
 	agentConfigLocation = "/config/metric-collector.yaml"
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
 		Endpoint: telemetryapi.Endpoint{
-			Port:    "9001",
+			Port:    "9000",
 			Address: "127.0.0.1",
-		},
-		Filters: []promapi.RelabelConfig{
-			{
-				SourceLabels: []string{"__tag1__", "__tag2__"},
-				Separator:    ";",
-				Regex:        "(.*);(b.*)",
-				Action:       "drop",
-			},
-			{
-				SourceLabels: []string{"__tag1__", "__tag2__"},
-				Separator:    ",",
-				Regex:        "^(a|b|c),.*",
-				Action:       "drop",
-			},
 		},
 	}
 )
