@@ -183,7 +183,14 @@ func (r *ReaperReconciler) reconcileDeployment(
 		}
 	}
 
-	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, authVars...)
+	// reconcile Vector configmap
+	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *actualReaper, actualDc, r.Client, logger); err != nil {
+		return vectorReconcileResult, err
+	} else if vectorReconcileResult.Requeue {
+		return vectorReconcileResult, nil
+	}
+
+	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
 
 	actualDeployment := &appsv1.Deployment{}
 	if err := r.Get(ctx, deploymentKey, actualDeployment); err != nil {
