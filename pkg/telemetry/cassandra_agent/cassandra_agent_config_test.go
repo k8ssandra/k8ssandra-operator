@@ -26,6 +26,8 @@ var (
 		Ctx:           context.Background(),
 		RemoteClient:  testutils.NewFakeClientWRestMapper(),
 		RequeueDelay:  time.Second * 1,
+		DcNamespace:   testCluster.Spec.Cassandra.Datacenters[0].Meta.Namespace,
+		DcName:        testCluster.Spec.Cassandra.Datacenters[0].Meta.Name,
 	}
 	expectedYaml string = `endpoint:
   address: 127.0.0.1
@@ -43,8 +45,8 @@ filters:
 func getExpectedConfigMap() corev1.ConfigMap {
 	expectedCm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: Cfg.Kluster.Namespace,
-			Name:      Cfg.Kluster.Name + "-metrics-agent-config",
+			Namespace: Cfg.DcNamespace,
+			Name:      Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): expectedYaml},
 	}
@@ -92,7 +94,7 @@ func Test_AddStsVolumes(t *testing.T) {
 					},
 				},
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: Cfg.Kluster.Name + "-metrics-agent-config",
+					Name: Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
 				},
 			},
 		},
@@ -116,7 +118,7 @@ func Test_ReconcileTelemetryAgentConfig_CMCreateSuccess(t *testing.T) {
 	recRes := Cfg.ReconcileTelemetryAgentConfig(&dc)
 	assert.True(t, recRes.IsRequeue())
 	actualCm := &corev1.ConfigMap{}
-	err := Cfg.RemoteClient.Get(Cfg.Ctx, types.NamespacedName{Name: Cfg.Kluster.Name + "-metrics-agent-config", Namespace: Cfg.Kluster.Namespace}, actualCm)
+	err := Cfg.RemoteClient.Get(Cfg.Ctx, types.NamespacedName{Name: Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config", Namespace: Cfg.DcNamespace}, actualCm)
 	assert.NoError(t, err)
 }
 func Test_ReconcileTelemetryAgentConfig_CMCreateFailed(t *testing.T) {
@@ -147,7 +149,9 @@ func Test_ReconcileTelemetryAgentConfig_CMUpdateSuccess(t *testing.T) {
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}
 	err = Cfg.RemoteClient.Get(Cfg.Ctx,
-		types.NamespacedName{Name: Cfg.Kluster.Name + "-metrics-agent-config", Namespace: Cfg.Kluster.Namespace},
+		types.NamespacedName{
+			Name:      Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
+			Namespace: Cfg.DcNamespace},
 		afterUpdateCM)
 	assert.NoError(t, err)
 
@@ -167,7 +171,10 @@ func Test_ReconcileTelemetryAgentConfig_CMUpdateDone(t *testing.T) {
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}
 	err := Cfg.RemoteClient.Get(Cfg.Ctx,
-		types.NamespacedName{Name: Cfg.Kluster.Name + "-metrics-agent-config", Namespace: Cfg.Kluster.Namespace},
+		types.NamespacedName{
+			Name:      Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
+			Namespace: Cfg.DcNamespace,
+		},
 		afterUpdateCM)
 	assert.NoError(t, err)
 	// If we reconcile again, we should move into the Done state.

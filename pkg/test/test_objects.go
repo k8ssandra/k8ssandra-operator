@@ -40,6 +40,14 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 						},
 					},
 				},
+				Datacenters: []k8ssandraapi.CassandraDatacenterTemplate{
+					{
+						Meta: k8ssandraapi.EmbeddedObjectMeta{
+							Name:      "dc1",
+							Namespace: "dc-namespace",
+						},
+					},
+				},
 			},
 		},
 	}
