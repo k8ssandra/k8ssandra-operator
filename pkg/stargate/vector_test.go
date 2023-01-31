@@ -14,9 +14,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
-// If the Vector agent is already present, it is not added again.
-func TestConfigureStargate(t *testing.T) {
+func TestConfigureVector(t *testing.T) {
 	telemetrySpec := &telemetryapi.TelemetrySpec{Vector: &telemetryapi.VectorSpec{Enabled: pointer.Bool(true)}}
 	stargate := &api.Stargate{}
 	stargate.Spec.Telemetry = telemetrySpec

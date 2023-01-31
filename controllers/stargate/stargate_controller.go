@@ -194,15 +194,15 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	// Compute the desired deployments
-	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger)
-
 	// reconcile Vector configmap
 	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *stargate, actualDc, r.Client, logger); err != nil {
 		return vectorReconcileResult, err
 	} else if vectorReconcileResult.Requeue {
 		return vectorReconcileResult, nil
 	}
+
+	// Compute the desired deployments
+	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger)
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {

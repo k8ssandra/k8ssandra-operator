@@ -86,7 +86,7 @@ func (r *StargateReconciler) reconcileVectorConfigMap(
 		}
 	}
 
-	dcLogger.Info("Stargate Vector Agent ConfigMap successfully reconciled")
+	dcLogger.Info("Stargate Vector Agent ConfigMap reconciliation complete")
 	return ctrl.Result{}, nil
 }
 

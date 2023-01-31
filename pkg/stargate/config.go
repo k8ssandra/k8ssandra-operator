@@ -10,9 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	CqlConfigName = "stargate-cql.yaml"
-)
+const CqlConfigName = "stargate-cql.yaml"
 
 var CassandraYamlRetainedSettings = []string{"server_encryption_options"}
 var CqlYamlRetainedSettings = []string{
