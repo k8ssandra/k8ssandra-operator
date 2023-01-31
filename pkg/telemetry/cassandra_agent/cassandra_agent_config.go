@@ -36,6 +36,8 @@ type Configurator struct {
 	Ctx           context.Context
 	RemoteClient  client.Client
 	RequeueDelay  time.Duration
+	DcNamespace   string
+	DcName        string
 }
 
 func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
@@ -55,8 +57,8 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: c.Kluster.Namespace,
-			Name:      c.Kluster.Name + "-metrics-agent-config",
+			Namespace: c.DcNamespace,
+			Name:      c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): string(yamlData)},
 	}
@@ -69,10 +71,15 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	if err != nil {
 		return result.Error(err)
 	}
-	cmObjectKey := types.NamespacedName{Name: c.Kluster.Name + "-metrics-agent-config",
-		Namespace: c.Kluster.Namespace}
+	cmObjectKey := types.NamespacedName{
+		Name:      c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
+		Namespace: c.DcNamespace,
+	}
 	labels.SetManagedBy(desiredCm, cmObjectKey)
-	KlKey := types.NamespacedName{Name: c.Kluster.Name, Namespace: c.Kluster.Namespace}
+	KlKey := types.NamespacedName{
+		Name:      c.Kluster.Name,
+		Namespace: c.Kluster.Namespace,
+	}
 	partOfLabels := labels.PartOfLabels(KlKey)
 	desiredCm.SetLabels(partOfLabels)
 	annotations.AddHashAnnotation(desiredCm)
@@ -124,7 +131,7 @@ func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
 						},
 					},
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: c.Kluster.Name + "-metrics-agent-config",
+						Name: c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
 					},
 				},
 			},

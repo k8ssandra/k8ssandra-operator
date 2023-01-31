@@ -96,7 +96,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	}
 
 	// check that we have the right ConfigMap
-	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
+	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test-dc1" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
 	agentCm := corev1.ConfigMap{}
 	if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
 		assert.Fail(t, "could not find expected metrics-agent-config configmap")
