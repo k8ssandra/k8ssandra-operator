@@ -152,4 +152,14 @@ spec:
             timeoutSeconds: 20
           cassandraConfigMapRef:
             name: cassandra-config
+          telemetry:
+            vector:
+              enabled: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 100m
+                  memory: 512Mi
     mgmtAPIHeap: 64Mi

@@ -1,11 +1,13 @@
 package telemetry
 
 import (
-	"github.com/go-logr/logr/testr"
 	"testing"
+
+	"github.com/go-logr/logr/testr"
 
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -28,10 +30,10 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, "vector-agent", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
-	assert.Equal(t, resource.MustParse(DefaultVectorCpuLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu())
-	assert.Equal(t, resource.MustParse(DefaultVectorCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu())
-	assert.Equal(t, resource.MustParse(DefaultVectorMemoryLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory())
-	assert.Equal(t, resource.MustParse(DefaultVectorMemoryRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory())
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
@@ -53,7 +55,7 @@ func TestBuildVectorAgentConfigMap(t *testing.T) {
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
 }
 
-func TestBuildVectorToml(t *testing.T) {
+func TestBuildCustomVectorToml(t *testing.T) {
 	tests := []struct {
 		name  string
 		tspec *telemetry.TelemetrySpec

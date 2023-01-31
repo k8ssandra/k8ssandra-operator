@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -62,7 +63,7 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) map[string]appsv1.Deployment {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
@@ -198,6 +199,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) m
 		}
 
 		configureAuth(stargate, deployment)
+		configureVector(stargate, deployment, dc, logger)
 
 		annotations.AddHashAnnotation(deployment)
 		deployments[deploymentName] = *deployment

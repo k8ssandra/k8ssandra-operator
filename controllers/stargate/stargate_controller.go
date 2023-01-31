@@ -194,8 +194,15 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
+	// reconcile Vector configmap
+	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *stargate, actualDc, r.Client, logger); err != nil {
+		return vectorReconcileResult, err
+	} else if vectorReconcileResult.Requeue {
+		return vectorReconcileResult, nil
+	}
+
 	// Compute the desired deployments
-	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc)
+	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger)
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {
@@ -226,6 +233,9 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// NOTE: Desired deployments need to be updated prior to this point. Once this code path is reached,
+	// any changes to desired deployments may not be applied as they will be deleted below if no changes
+	// are detected.
 	for _, actualDeployment := range actualDeployments.Items {
 		deploymentKey := client.ObjectKey{Namespace: req.Namespace, Name: actualDeployment.Name}
 		if desiredDeployment, found := desiredDeployments[actualDeployment.Name]; !found {
@@ -257,6 +267,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					return ctrl.Result{RequeueAfter: r.ReconcilerConfig.LongDelay}, nil
 				}
 			}
+			logger.Info("Deleting Stargate desired deployment", "Deployment", actualDeployment.Name)
 			delete(desiredDeployments, actualDeployment.Name)
 			replicas += actualDeployment.Status.Replicas
 			readyReplicas += actualDeployment.Status.ReadyReplicas
