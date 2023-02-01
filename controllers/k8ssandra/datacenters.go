@@ -101,7 +101,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 		mergedTelemetrySpec := kc.Spec.Cassandra.Datacenters[idx].Telemetry.MergeWith(kc.Spec.Cassandra.Telemetry)
 		if mergedTelemetrySpec == nil {
-			mergedTelemetrySpec = &telemetryapi.TelemetrySpec{}
+			mergedTelemetrySpec = &telemetryapi.CassandraTelemetrySpec{}
 		}
 		agentCfg := agent.Configurator{
 			TelemetrySpec: *mergedTelemetrySpec,

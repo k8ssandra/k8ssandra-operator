@@ -32,9 +32,11 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					Telemetry: &telemetryapi.TelemetrySpec{
-						Vector: &telemetryapi.VectorSpec{
-							Enabled: pointer.Bool(true),
+					Telemetry: &telemetryapi.CassandraTelemetrySpec{
+						TelemetrySpec: &telemetryapi.TelemetrySpec{
+							Vector: &telemetryapi.VectorSpec{
+								Enabled: pointer.Bool(true),
+							},
 						},
 					},
 				},

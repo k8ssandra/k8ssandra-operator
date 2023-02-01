@@ -53,7 +53,7 @@ func getExpectedConfigMap() corev1.ConfigMap {
 	return expectedCm
 }
 
-func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
+func getExampleTelemetrySpec() telemetryapi.CassandraTelemetrySpec {
 	tspec := &Cfg.TelemetrySpec
 	tspec.Cassandra.Filters = []promapi.RelabelConfig{
 		{

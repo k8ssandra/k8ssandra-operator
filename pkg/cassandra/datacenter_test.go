@@ -355,7 +355,7 @@ func TestCoalesce(t *testing.T) {
 				Size: 3,
 				DatacenterOptions: api.DatacenterOptions{
 					MgmtAPIHeap: &mgmtAPIHeap,
-					Telemetry: &v1alpha1.TelemetrySpec{
+					Telemetry: &v1alpha1.CassandraTelemetrySpec{
 						Mcac: &v1alpha1.McacTelemetrySpec{
 							Enabled: pointer.Bool(false),
 						},
