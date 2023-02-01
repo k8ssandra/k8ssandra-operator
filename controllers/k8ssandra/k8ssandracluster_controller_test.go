@@ -2510,6 +2510,9 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 							{
 								Name:      "injected-volume",
 								MountPath: "/etc/injected",
+								VolumeSource: &corev1.VolumeSource{
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
 							},
 						},
 					},
