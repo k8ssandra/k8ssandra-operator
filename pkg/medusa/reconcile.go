@@ -381,7 +381,7 @@ func UpdateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.M
 		backupVolume := &v1beta1.AdditionalVolumes{
 			Name:      "medusa-backups",
 			MountPath: "/mnt/backups",
-			PVCSpec: corev1.PersistentVolumeClaimSpec{
+			PVCSpec: &corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClassName,
 				AccessModes:      accessModes,
 				Resources: corev1.ResourceRequirements{
