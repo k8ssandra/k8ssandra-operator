@@ -16,8 +16,6 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -40,10 +38,9 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	// check that the Reaper Vector container and config map exist
-	checkVectorAgentPresence(t, ctx, f, reaperKey, getPodTemplateSpecForReaper, reaper.VectorContainerName)
+	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
-	// check that if vector is disabled on reaper, the agent and configmap are deleted
 	t.Logf("check that if Reaper Vector is disabled, the agent and configmap are deleted")
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
@@ -53,10 +50,9 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkVectorAgentDeleted(t, ctx, f, reaperKey, getPodTemplateSpecForReaper, reaper.VectorContainerName)
+	checkContainerDeleted(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
-	// check that if vector is re-enabled on reaper, the agent and configmap are re-added
 	t.Logf("check that if Reaper Vector is enabled, the agent and configmap are re-created")
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
@@ -66,7 +62,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkVectorAgentPresence(t, ctx, f, reaperKey, getPodTemplateSpecForReaper, reaper.VectorContainerName)
+	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Log("check Reaper keyspace created")
@@ -439,11 +435,4 @@ func waitForOneSegmentToBeDone(t *testing.T, ctx context.Context, repairId uuid.
 		}
 		return false
 	}, polling.reaperReady.timeout, polling.reaperReady.interval, "No repair segment was fully processed within timeout")
-}
-
-func getPodTemplateSpecForReaper(t *testing.T, ctx context.Context, f *framework.E2eFramework, reaperDeploymentKey framework.ClusterKey) *corev1.PodTemplateSpec {
-	sg := &appsv1.Deployment{}
-	require.NoError(t, f.Get(ctx, reaperDeploymentKey, sg), "failed to get Reaper Deployment")
-
-	return &sg.Spec.Template
 }
