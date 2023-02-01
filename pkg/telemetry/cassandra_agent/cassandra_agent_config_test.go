@@ -106,8 +106,8 @@ func Test_AddStsVolumes(t *testing.T) {
 	}
 	expectedVm := corev1.VolumeMount{
 		Name:      "metrics-agent-config",
-		MountPath: agentConfigLocation,
-		SubPath:   filepath.Base(agentConfigLocation),
+		MountPath: "/opt/management-api/configs/metric-collector.yaml",
+		SubPath:   "metric-collector.yaml",
 	}
 	assert.Contains(t, dc.Spec.PodTemplateSpec.Spec.Containers[cassContainer].VolumeMounts, expectedVm)
 }
