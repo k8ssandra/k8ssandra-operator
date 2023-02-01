@@ -78,10 +78,12 @@ target = "stdout"
 	}
 
 	var scrapePort int32
+	metricsEndpoint := ""
 	if mcacEnabled {
 		scrapePort = vector.CassandraMetricsPortLegacy
 	} else {
 		scrapePort = vector.CassandraMetricsPortModern
+		metricsEndpoint = "/metrics"
 	}
 
 	var scrapeInterval int32 = vector.DefaultScrapeInterval
@@ -93,6 +95,7 @@ target = "stdout"
 		Sinks:          vectorConfigToml,
 		ScrapePort:     scrapePort,
 		ScrapeInterval: scrapeInterval,
+		ScrapeEndpoint: metricsEndpoint,
 	}
 
 	vectorTomlTemplate := `
@@ -103,7 +106,7 @@ enabled = false
   
 [sources.cassandra_metrics]
 type = "prometheus_scrape"
-endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
+endpoints = [ "http://localhost:{{ .ScrapePort }}{{ .ScrapeEndpoint }}" ]
 scrape_interval_secs = {{ .ScrapeInterval }}
 
 {{ .Sinks }}`

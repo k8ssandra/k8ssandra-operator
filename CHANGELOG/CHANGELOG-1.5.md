@@ -30,6 +30,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD
 * [ENHANCEMENT] [#783](https://github.com/k8ssandra/k8ssandra-operator/issues/783) Make ServiceAccount of Cassandra pods configurable
 * [ENHANCEMENT] [#822](https://github.com/k8ssandra/k8ssandra-operator/issues/822) Remove relabelling rules from service monitors when MCAC is disabled
+* [BUGFIX] [#844](https://github.com/k8ssandra/k8ssandra-operator/issues/844) Point Vector to the right path when the new metrics endpoint is used
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
