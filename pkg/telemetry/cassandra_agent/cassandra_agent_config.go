@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	agentConfigLocation = "/opt/management-api/metric-collector.yaml"
+	agentConfigLocation = "/opt/management-api/configs/metric-collector.yaml"
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
 		Endpoint: telemetryapi.Endpoint{
 			Port:    "9000",
