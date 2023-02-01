@@ -31,7 +31,7 @@ var (
 )
 
 type Configurator struct {
-	TelemetrySpec telemetryapi.TelemetrySpec
+	TelemetrySpec telemetryapi.CassandraTelemetrySpec
 	Kluster       *k8ssandraapi.K8ssandraCluster
 	Ctx           context.Context
 	RemoteClient  client.Client

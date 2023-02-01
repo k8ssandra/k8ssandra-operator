@@ -51,10 +51,12 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 				Name:      cassDC.Name,
 			},
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
-				Telemetry: &telemetryapi.TelemetrySpec{
-					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled:      pointer.Bool(true),
-						CommonLabels: map[string]string{"test-label": "test"},
+				Telemetry: &telemetryapi.CassandraTelemetrySpec{
+					TelemetrySpec: &telemetryapi.TelemetrySpec{
+						Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+							Enabled:      pointer.Bool(true),
+							CommonLabels: map[string]string{"test-label": "test"},
+						},
 					},
 				},
 			},

@@ -47,7 +47,12 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	if err != nil {
 		return result.Error(err)
 	}
-	validConfig := telemetry.SpecIsValid(mergedSpec, promInstalled)
+	validConfig := false
+	if mergedSpec != nil && mergedSpec.TelemetrySpec != nil {
+		validConfig = telemetry.SpecIsValid(mergedSpec.TelemetrySpec, promInstalled)
+	} else {
+		validConfig = true
+	}
 	if !validConfig {
 		return result.Error(errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it"))
 	}
@@ -56,7 +61,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		return result.Continue()
 	}
 	// Determine if we want a cleanup or a resource update.
-	if mergedSpec.IsPrometheusEnabled() {
+	if mergedSpec != nil && mergedSpec.TelemetrySpec != nil && mergedSpec.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
 		desiredSM, err := cfg.NewCassServiceMonitor(mergedSpec.IsMcacEnabled())
 		if err != nil {

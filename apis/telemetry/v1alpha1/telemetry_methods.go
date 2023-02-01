@@ -7,6 +7,11 @@ func (in *TelemetrySpec) MergeWith(clusterTemplate *TelemetrySpec) *TelemetrySpe
 	return goalesceutils.MergeCRs(clusterTemplate, in)
 }
 
+// MergeWith merges the given cluster-level template into this (DC-level) template.
+func (in *CassandraTelemetrySpec) MergeWith(clusterTemplate *CassandraTelemetrySpec) *CassandraTelemetrySpec {
+	return goalesceutils.MergeCRs(clusterTemplate, in)
+}
+
 func (in *TelemetrySpec) IsPrometheusEnabled() bool {
 	return in != nil && in.Prometheus != nil && in.Prometheus.Enabled != nil && *in.Prometheus.Enabled
 }

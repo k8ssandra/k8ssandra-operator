@@ -10,9 +10,13 @@ import (
 
 type TelemetrySpec struct {
 	Prometheus *PrometheusTelemetrySpec `json:"prometheus,omitempty"`
-	Mcac       *McacTelemetrySpec       `json:"mcac,omitempty"`
 	Vector     *VectorSpec              `json:"vector,omitempty"`
-	Cassandra  *CassandraAgentSpec      `json:"cassandra,omitempty"`
+}
+
+type CassandraTelemetrySpec struct {
+	*TelemetrySpec `json:"inline"`
+	Mcac           *McacTelemetrySpec  `json:"mcac,omitempty"`
+	Cassandra      *CassandraAgentSpec `json:"cassandra,omitempty"`
 }
 
 type PrometheusTelemetrySpec struct {

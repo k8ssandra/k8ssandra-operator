@@ -21,7 +21,7 @@ import (
 var (
 	testCluster k8ssandraapi.K8ssandraCluster = testutils.NewK8ssandraCluster("test-cluster", "test-namespace")
 	Cfg         Configurator                  = Configurator{
-		TelemetrySpec: telemetry.NewTelemetrySpec(),
+		TelemetrySpec: telemetry.NewCassandraTelemetrySpec(),
 		Kluster:       &testCluster,
 		Ctx:           context.Background(),
 		RemoteClient:  testutils.NewFakeClientWRestMapper(),

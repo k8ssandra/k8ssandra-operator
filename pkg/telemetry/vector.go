@@ -17,8 +17,8 @@ import (
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
 // If the Vector agent is already present, it is not added again.
-func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
-	if telemetrySpec.IsVectorEnabled() {
+func InjectCassandraVectorAgent(telemetrySpec *telemetry.CassandraTelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
+	if telemetrySpec != nil && telemetrySpec.TelemetrySpec != nil && telemetrySpec.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Cassandra pods")
 		vectorImage := vector.DefaultVectorImage
 		if telemetrySpec.Vector.Image != "" {

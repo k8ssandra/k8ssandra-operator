@@ -364,7 +364,7 @@ type DatacenterOptions struct {
 	// If telemetry configurations are defined, telemetry resources will be deployed to integrate with
 	// a user-provided monitoring solution (at present, only support for Prometheus is available).
 	// +optional
-	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
+	Telemetry *telemetryapi.CassandraTelemetrySpec `json:"telemetry,omitempty"`
 
 	// CDC defines the desired state for CDC integrations. It can be used to feed mutation events from Cassandra into an Apache Pulsar cluster,
 	// from where they can be expored to external systems.

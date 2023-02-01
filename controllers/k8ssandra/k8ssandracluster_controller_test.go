@@ -269,9 +269,11 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
-		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.CassandraTelemetrySpec{
+		TelemetrySpec: &telemetryapi.TelemetrySpec{
+			Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+				Enabled: pointer.Bool(true),
+			},
 		},
 	}
 	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {

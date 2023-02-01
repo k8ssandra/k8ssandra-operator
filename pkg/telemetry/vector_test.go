@@ -18,7 +18,7 @@ import (
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
 // If the Vector agent is already present, it is not added again.
 func TestInjectCassandraVectorAgent(t *testing.T) {
-	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
+	telemetrySpec := &telemetry.CassandraTelemetrySpec{TelemetrySpec: &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}}
 	dcConfig := &cassandra.DatacenterConfig{
 		PodTemplateSpec: corev1.PodTemplateSpec{},
 	}

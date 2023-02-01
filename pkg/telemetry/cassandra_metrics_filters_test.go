@@ -1,9 +1,10 @@
 package telemetry
 
 import (
-	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
+
+	"k8s.io/utils/pointer"
 
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -26,14 +27,16 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 		},
 	}
 
-	telemetrySpec := &telemetry.TelemetrySpec{
-		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
-		},
+	telemetrySpec := &telemetry.CassandraTelemetrySpec{
 		Mcac: &telemetry.McacTelemetrySpec{
 			MetricFilters: &[]string{
 				"deny:org.apache.cassandra.metrics.Table",
 				"deny:org.apache.cassandra.metrics.table"},
+		},
+		TelemetrySpec: &telemetry.TelemetrySpec{
+			Prometheus: &telemetry.PrometheusTelemetrySpec{
+				Enabled: pointer.Bool(true),
+			},
 		},
 	}
 
@@ -59,9 +62,11 @@ func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 		},
 	}
 
-	telemetrySpec := &telemetry.TelemetrySpec{
-		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+	telemetrySpec := &telemetry.CassandraTelemetrySpec{
+		TelemetrySpec: &telemetry.TelemetrySpec{
+			Prometheus: &telemetry.PrometheusTelemetrySpec{
+				Enabled: pointer.Bool(true),
+			},
 		},
 	}
 
@@ -86,7 +91,7 @@ func Test_InjectCassandraTelemetryFilters_Empty(t *testing.T) {
 	}
 
 	// Test with an empty filters slice, which should result in an empty env variable to be injected
-	telemetrySpec := &telemetry.TelemetrySpec{
+	telemetrySpec := &telemetry.CassandraTelemetrySpec{
 		Mcac: &telemetry.McacTelemetrySpec{
 			MetricFilters: &[]string{},
 		},

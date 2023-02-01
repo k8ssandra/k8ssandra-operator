@@ -248,7 +248,7 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 	}
 	if in.Telemetry != nil {
 		in, out := &in.Telemetry, &out.Telemetry
-		*out = new(telemetryv1alpha1.TelemetrySpec)
+		*out = new(telemetryv1alpha1.CassandraTelemetrySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.CDC != nil {

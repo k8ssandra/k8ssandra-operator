@@ -27,7 +27,7 @@ var (
 
 // InjectCassandraTelemetryFilters adds MCAC filters to the cassandra container as an env variable.
 // If filter list is set to nil, the default filters are used, otherwise the provided filters are used.
-func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig) {
+func InjectCassandraTelemetryFilters(telemetrySpec *telemetry.CassandraTelemetrySpec, dcConfig *cassandra.DatacenterConfig) {
 	filtersEnvVar := v1.EnvVar{}
 	if telemetrySpec == nil || telemetrySpec.Mcac == nil || telemetrySpec.Mcac.MetricFilters == nil {
 		// Default filters are applied

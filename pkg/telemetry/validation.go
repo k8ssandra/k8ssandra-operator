@@ -2,11 +2,12 @@ package telemetry
 
 import (
 	"errors"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
