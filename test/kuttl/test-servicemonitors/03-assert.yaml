@@ -7,8 +7,7 @@ spec:
   template:
     spec:
       containers:
-        - name: cassandra
-          env:
+        - env:
             - name: LOCAL_JMX
               value: "no"
             - name: METRIC_FILTERS
@@ -22,6 +21,16 @@ spec:
                 allow:org.apache.cassandra.metrics.table.coordinator allow:org.apache.cassandra.metrics.table.dropped_mutations
             - name: MGMT_API_DISABLE_MCAC
               value: "true"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
             - name: DS_LICENSE
               value: accept
             - name: DSE_AUTO_CONF_OFF
@@ -32,7 +41,9 @@ spec:
               value: "true"
             - name: DSE_MGMT_EXPLICIT_START
               value: "true"
-        - name: server-system-logger
+          name: cassandra
+        - image: k8ssandra/system-logger:latest
+          name: server-system-logger
 status:
   readyReplicas: 1
 ---
