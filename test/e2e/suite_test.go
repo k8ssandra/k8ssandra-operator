@@ -720,7 +720,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkCassandraClusterName(t, ctx, k8ssandra, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
-	require.NoError(checkMetricsFiltersPresence(t, ctx, f, dcKey))
+	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
 
@@ -1924,8 +1924,8 @@ func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context
 	}
 }
 
-func checkMetricsFiltersPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
-	t.Logf("check that metric filters are present on dc %s in cluster %s", dcKey.Name, dcKey.K8sContext)
+func checkMetricsFiltersAbsence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
+	t.Logf("check that metric filters are absent on dc %s in cluster %s", dcKey.Name, dcKey.K8sContext)
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, cassdc)
 	if err != nil {
@@ -1934,8 +1934,8 @@ func checkMetricsFiltersPresence(t *testing.T, ctx context.Context, f *framework
 
 	if containerIndex, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "cassandra"); containerFound {
 		envVariables := cassdc.Spec.PodTemplateSpec.Spec.Containers[containerIndex].Env
-		require.True(t, len(envVariables) > 0, "no env variables found in cassandra container")
-		require.NotNil(t, utils.FindEnvVar(envVariables, "METRIC_FILTERS"), "METRIC_FILTERS env variable not found in cassandra container")
+		// METRIC_FILTERS env variable should be absent as MCAC is disabled
+		require.Nil(t, utils.FindEnvVar(envVariables, "METRIC_FILTERS"), "METRIC_FILTERS env variable was found in cassandra container")
 	} else {
 		return fmt.Errorf("cannot find cassandra container in pod template spec")
 	}

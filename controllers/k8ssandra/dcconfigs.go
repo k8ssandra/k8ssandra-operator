@@ -73,7 +73,9 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		}
 
 		// Inject MCAC metrics filters
-		telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		if kc.Spec.Cassandra.Telemetry.IsMcacEnabled() {
+			telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		}
 
 		// Inject Vector agent
 		if err = telemetry.InjectCassandraVectorAgent(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {

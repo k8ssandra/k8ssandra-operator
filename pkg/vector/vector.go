@@ -26,6 +26,7 @@ type VectorConfig struct {
 	Sinks          string
 	ScrapePort     int32
 	ScrapeInterval int32
+	ScrapeEndpoint string
 }
 
 func VectorContainerResources(telemetrySpec *telemetry.TelemetrySpec) corev1.ResourceRequirements {
