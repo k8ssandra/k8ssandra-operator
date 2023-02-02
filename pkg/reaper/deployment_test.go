@@ -3,6 +3,7 @@ package reaper
 import (
 	"testing"
 
+	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -49,8 +50,8 @@ func TestNewDeployment(t *testing.T) {
 
 	labels := createServiceAndDeploymentLabels(reaper)
 	podLabels := utils.MergeMap(labels, reaper.Spec.ResourceMeta.Pods.Labels)
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"))
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"), logger)
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)
@@ -173,7 +174,7 @@ func TestNewDeployment(t *testing.T) {
 
 	reaper.Spec.Keyspace = "ks1"
 
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 6)
@@ -184,7 +185,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	reaper.Spec.AutoScheduling.Enabled = true
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 16)
@@ -254,7 +255,8 @@ func TestReadinessProbe(t *testing.T) {
 		},
 		InitialDelaySeconds: 123,
 	}
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -278,7 +280,8 @@ func TestLivenessProbe(t *testing.T) {
 		},
 		InitialDelaySeconds: 123,
 	}
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -297,7 +300,8 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.InitContainerImage = nil
 		reaper.Spec.ContainerImage = nil
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+		logger := testlogr.NewTestLogger(t)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -312,7 +316,8 @@ func TestImages(t *testing.T) {
 			Tag:        DefaultVersion,
 		}
 		reaper.Spec.ContainerImage = nil
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+		logger := testlogr.NewTestLogger(t)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -329,7 +334,8 @@ func TestImages(t *testing.T) {
 		}
 		reaper.Spec.InitContainerImage = image
 		reaper.Spec.ContainerImage = image
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+		logger := testlogr.NewTestLogger(t)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -357,8 +363,8 @@ func TestTolerations(t *testing.T) {
 
 	reaper := newTestReaper()
 	reaper.Spec.Tolerations = tolerations
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	assert.ElementsMatch(t, tolerations, deployment.Spec.Template.Spec.Tolerations)
 }
 
@@ -382,8 +388,8 @@ func TestAffinity(t *testing.T) {
 	}
 	reaper := newTestReaper()
 	reaper.Spec.Affinity = affinity
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	assert.EqualValues(t, affinity, deployment.Spec.Template.Spec.Affinity, "affinity does not match")
 }
 
@@ -394,8 +400,8 @@ func TestContainerSecurityContext(t *testing.T) {
 	}
 	reaper := newTestReaper()
 	reaper.Spec.SecurityContext = securityContext
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.Len(t, podSpec.Containers, 1, "Expected a single container to exist")
@@ -415,8 +421,8 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.SecurityContext = nonInitContainerSecurityContext
 	reaper.Spec.InitContainerSecurityContext = initContainerSecurityContext
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.Equal(t, podSpec.InitContainers[0].Name, "reaper-schema-init")
@@ -431,8 +437,8 @@ func TestPodSecurityContext(t *testing.T) {
 	}
 	reaper := newTestReaper()
 	reaper.Spec.PodSecurityContext = podSecurityContext
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec := deployment.Spec.Template.Spec
 
 	assert.EqualValues(t, podSecurityContext, podSpec.SecurityContext, "podSecurityContext expected at pod level")
@@ -441,7 +447,8 @@ func TestPodSecurityContext(t *testing.T) {
 func TestSkipSchemaMigration(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.SkipSchemaMigration = true
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
@@ -495,7 +502,8 @@ func newTestDatacenter() *cassdcapi.CassandraDatacenter {
 
 func TestDefaultResources(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -529,8 +537,8 @@ func TestCustomResources(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("2Gi"),
 		},
 	}
-
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse("1Gi"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -545,7 +553,8 @@ func TestCustomResources(t *testing.T) {
 
 func TestLabelsAnnotations(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil)
+	logger := testlogr.NewTestLogger(t)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 
 	deploymentLabels := map[string]string{
 		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
