@@ -31,7 +31,7 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 	}
 	if kc.Spec.Cassandra.Telemetry != nil && kc.Spec.Cassandra.Telemetry.TelemetrySpec != nil && kc.Spec.Cassandra.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content
-		toml, err := telemetry.CreateCassandraVectorToml(kc.Spec.Cassandra.Telemetry, dcConfig.McacEnabled)
+		toml, err := telemetry.CreateCassandraVectorToml(kc.Spec.Cassandra.Telemetry.TelemetrySpec, dcConfig.McacEnabled)
 		if err != nil {
 			return result.Error(err)
 		}

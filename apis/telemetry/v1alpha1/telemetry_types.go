@@ -14,7 +14,7 @@ type TelemetrySpec struct {
 }
 
 type CassandraTelemetrySpec struct {
-	*TelemetrySpec `json:"inline"`
+	*TelemetrySpec `json:",inline"`
 	Mcac           *McacTelemetrySpec  `json:"mcac,omitempty"`
 	Cassandra      *CassandraAgentSpec `json:"cassandra,omitempty"`
 }

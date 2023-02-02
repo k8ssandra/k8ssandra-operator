@@ -38,7 +38,7 @@ func InjectCassandraVectorAgent(telemetrySpec *telemetry.CassandraTelemetrySpec,
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "vector-config", MountPath: "/etc/vector"},
 			},
-			Resources: vector.VectorContainerResources(telemetrySpec),
+			Resources: vector.VectorContainerResources(telemetrySpec.TelemetrySpec),
 		}
 
 		logger.Info("Updating Vector agent in Cassandra pods")
