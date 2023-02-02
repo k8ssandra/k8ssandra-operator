@@ -45,6 +45,18 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 	}
 
 	assert.Contains(t, toml, "[sinks.console]")
+	assert.NotContains(t, toml, "http://localhost:9000/metrics")
+}
+
+func TestCreateCassandraVectorTomlMcacDisabled(t *testing.T) {
+	telemetrySpec := &telemetry.TelemetrySpec{Mcac: &telemetry.McacTelemetrySpec{Enabled: pointer.Bool(false)}, Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
+
+	toml, err := CreateCassandraVectorToml(telemetrySpec, false)
+	if err != nil {
+		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
+	}
+
+	assert.Contains(t, toml, "http://localhost:9000/metrics")
 }
 
 func TestBuildVectorAgentConfigMap(t *testing.T) {

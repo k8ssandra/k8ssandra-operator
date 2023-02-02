@@ -21,6 +21,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#501](https://github.com/k8ssandra/k8ssandra-operator/issues/501) Allow configuring annotations and labels on services, statefulsets, deployments and pods
 * [FEATURE] [#790](https://github.com/k8ssandra/k8ssandra-operator/issues/790) Deploy Vector agent to scrape Stargate metrics
 * [FEATURE] [#789](https://github.com/k8ssandra/k8ssandra-operator/issues/789) Deploy Vector agent for Reaper metrics scraping
+* [ENHANCEMENT] Upgrade cass-operator to v1.14.0
 * [ENHANCEMENT] [#817](https://github.com/k8ssandra/k8ssandra-operator/issues/817) Allow configuring the Vector agent sidecar in the CRD
 * [ENHANCEMENT] [#796](https://github.com/k8ssandra/k8ssandra-operator/issues/796) Enable smart token allocation by default for DSE
 * [ENHANCEMENT] [#765](https://github.com/k8ssandra/k8ssandra-operator/issues/765) Add GitHub workflow to test various k8s versions
@@ -30,6 +31,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#781](https://github.com/k8ssandra/k8ssandra-operator/issues/781) Expose perNodeConfigInitContainer.Image through CRD
 * [ENHANCEMENT] [#783](https://github.com/k8ssandra/k8ssandra-operator/issues/783) Make ServiceAccount of Cassandra pods configurable
 * [ENHANCEMENT] [#822](https://github.com/k8ssandra/k8ssandra-operator/issues/822) Remove relabelling rules from service monitors when MCAC is disabled
+* [BUGFIX] [#844](https://github.com/k8ssandra/k8ssandra-operator/issues/844) Point Vector to the right path when the new metrics endpoint is used
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
