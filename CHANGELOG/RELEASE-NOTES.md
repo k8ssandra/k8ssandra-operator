@@ -5,7 +5,7 @@
 
 ### New Metrics Endpoint
 
-As of v1.5.0, we are introducing a new metrics endpoint which will replace MCAC in an upcoming release and is built directly in the Management API.  
+As of v1.5.0, we are introducing a new metrics endpoint which will replace the [Metrics Collector for Apache Cassandra (MCAC)](Metrics Collector for Apache Cassandra) in an upcoming release and is built directly in the Management API.  
 MCAC's architecture is not well suited for Kubernetes and the presence of collectd was both creating bugs and adding maintenance complexity.  
 MCAC is still enabled by default in v1.5.0 and can be disabled by setting `.spec.cassandra.telemetry.mcac.enabled` to `false`. This will disable the MCAC agent and modify the service monitors/vector config to point to the new metrics endpoint.  
 
