@@ -14,6 +14,8 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
 ## unreleased
+
+## v1.5.0 - 2023-02-03
 * [FEATURE] [#783](https://github.com/k8ssandra/k8ssandra-operator/issues/783) Allow disabling MCAC
 * [FEATURE] [#739](https://github.com/k8ssandra/k8ssandra-operator/issues/739) Add API for cluster-level tasks
 * [FEATURE] [#775](https://github.com/k8ssandra/k8ssandra-operator/issues/775) Add the ability to inject and configure a Vector agent sidecar in the Cassandra pods
@@ -34,5 +36,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#844](https://github.com/k8ssandra/k8ssandra-operator/issues/844) Point Vector to the right path when the new metrics endpoint is used
 * [BUGFIX] [#726](https://github.com/k8ssandra/k8ssandra-operator/issues/726) Don't propagate Cassandra tolerations to the Stargate deployment
 * [BUGFIX] [#778](https://github.com/k8ssandra/k8ssandra-operator/issues/778) Fix Stargate deployments on k8s clusters using a custom domain name
+* [TESTING] Pin Kustomize to v4 in CI
 * [TESTING] [#761](https://github.com/k8ssandra/k8ssandra-operator/issues/761) Stabilize integration and e2e tests
 * [TESTING] [#799](https://github.com/k8ssandra/k8ssandra-operator/issues/799) Fix GHA CI failures with Kustomize install being rate limited
