@@ -1,9 +1,12 @@
 ---
 title: "Configure Traefik ingress"
 linkTitle: "Traefik ingress"
+toc_hide: true
 simple_list: true
 description: "Provide access to your Apache Cassandra® database and utilities using a Kubernetes ingress."
 ---
+
+{{< tbs >}}
 
 External connectivity can be tricky with Kubernetes. There are many solutions in this space, ranging from some that focus on pure HTTP workloads, to others that allow for custom TCP and UDP routing. 
 

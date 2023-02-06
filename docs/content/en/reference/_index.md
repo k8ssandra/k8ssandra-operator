@@ -1,7 +1,7 @@
 ---
-title: "K8ssandra reference"
+title: "K8ssandra Operator reference"
 linkTitle: "Reference"
 weight: 6
 description: >
-  Reference content for K8ssandra users including the YAML properties of each deployed Helm chart, plus a Glossary.
+  Reference topics for K8ssandra Operator including Cassandra Custom Resource Definitions (CRDs) and the single Helm chart. 
 ---

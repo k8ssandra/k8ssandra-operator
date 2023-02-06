@@ -1,8 +1,11 @@
 ---
 title: "Deploy K8ssandra and Traefik with Kind"
 linkTitle: "Kind Deployment"
+toc_hide: true
 description: "Deploy Apache Cassandra® on Kubernetes in a local Kind cluster with Traefik ingress installed and configured."
 ---
+
+{{< tbs >}}
 
 When configuring Kind to use Traefik, additional configuration options are required. The following guide walks through standing up a Kind k8s cluster with Traefik configured for ingress on ports other than the standard `80` and `443`.
 

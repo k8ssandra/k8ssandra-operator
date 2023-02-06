@@ -1,4 +1,4 @@
-module github.com/k8ssandra/k8ssandra
+module github.com/k8ssandra/k8ssandra-operator
 
 go 1.19
 
