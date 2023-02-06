@@ -11,20 +11,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type Reconcilable interface {
+type k8sResource interface {
 	client.Object
+	annotations.Annotated
 	DeepCopy()
 	DeepCopyInto(out *client.Object)
 }
 
-func ReconcileObject[G Reconcilable](ctx context.Context, desiredObj G, client client.Client, requeueDelay time.Duration) result.ReconcileResult {
+func ReconcileObject[G k8sResource](ctx context.Context,
+	desiredObj k8sResource,
+	currentObj *k8sResource,
+	client client.Client,
+	requeueDelay time.Duration) result.ReconcileResult {
 	objectKey := types.NamespacedName{
 		Name:      desiredObj.GetName(),
 		Namespace: desiredObj.GetNamespace(),
 	}
 	annotations.AddHashAnnotation(desiredObj)
-	var currentObj G
-	err := client.Get(ctx, objectKey, currentObj)
+	err := client.Get(ctx, objectKey, *currentObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := client.Create(ctx, desiredObj); err != nil {
@@ -36,9 +40,9 @@ func ReconcileObject[G Reconcilable](ctx context.Context, desiredObj G, client c
 		}
 	}
 
-	if !annotations.CompareHashAnnotations(currentObj, desiredObj) {
-		resourceVersion := (currentObj).GetResourceVersion()
-		desiredObj.DeepCopyInto((*currentObj))
+	if !annotations.CompareHashAnnotations(*currentObj, desiredObj) {
+		resourceVersion := (*currentObj).GetResourceVersion()
+		desiredObj.DeepCopyInto(currentObj)
 		currentObj.SetResourceVersion(resourceVersion)
 		if err := client.Update(ctx, currentObj); err != nil {
 			return result.Error(err)
