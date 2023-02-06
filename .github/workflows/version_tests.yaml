@@ -22,16 +22,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -50,7 +50,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           outputs: type=docker,dest=/tmp/k8ssandra-k8ssandra-operator.tar
       - name: Upload k8ssandra-operator image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-k8ssandra-operator.tar
@@ -70,31 +70,31 @@ jobs:
         kuttl-test:
           - test-cassandra-versions
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
-        if: github.event_name == 'pull_request'
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
-        if: github.event_name != 'pull_request'
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: "go.mod"
-          cache: true
-      - name: Kind kube-proxy issue workaround
-        run: sudo sysctl net/netfilter/nf_conntrack_max=524288
-      - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v2
-        with:
-          name: k8ssandra-operator
-          path: /tmp
-      - name: Load Docker images
-        run: |
-          docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
-      - name: Install kustomize
-        uses: imranismail/setup-kustomize@v2
-        with:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v3
+      if: github.event_name == 'pull_request'
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    - uses: actions/checkout@v3
+      if: github.event_name != 'pull_request'
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version-file: 'go.mod'
+        cache: true
+    - name: Kind kube-proxy issue workaround
+      run: sudo sysctl net/netfilter/nf_conntrack_max=524288
+    - name: Download k8ssandra-operator image
+      uses: actions/download-artifact@v3
+      with:
+        name: k8ssandra-operator
+        path: /tmp
+    - name: Load Docker images
+      run: |
+        docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
+    - name: Install kustomize
+      uses: imranismail/setup-kustomize@v2
+      with:
           kustomize-version: 4.x
       - name: Log kustomize version
         run: kustomize version

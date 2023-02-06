@@ -24,11 +24,11 @@ jobs:
       image_tag: ${{ steps.parse_image_tag.outputs.image_tag }}
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
       - name: Install yq
         run: |
@@ -37,11 +37,11 @@ jobs:
           sudo mv yq_linux_amd64.tar.gz /usr/bin
       - name: Parse image version
         id: parse_image_tag
-        run: echo "::set-output name=image_tag::$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)"
+        run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -60,7 +60,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           outputs: type=docker,dest=/tmp/k8ssandra-k8ssandra-operator.tar
       - name: Upload k8ssandra-operator image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-k8ssandra-operator.tar
@@ -77,11 +77,11 @@ jobs:
           - test-all-deployments
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -91,7 +91,7 @@ jobs:
       - name: Kind kube-proxy issue workaround
         run: sudo sysctl net/netfilter/nf_conntrack_max=524288
       - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: k8ssandra-operator
           path: /tmp
