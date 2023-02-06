@@ -15,7 +15,7 @@ metadata:
   namespace: k8ssandra-cluster
 spec:
   cassandra
-    serverVersion: "4.0.3"
+    serverVersion: "4.0.4"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -63,7 +63,7 @@ metadata:
     k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 spec:
   cassandra:
-    serverVersion: "4.0.3"
+    serverVersion: "4.0.4"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

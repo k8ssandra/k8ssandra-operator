@@ -90,16 +90,16 @@ func TestCoalesce(t *testing.T) {
 			name: "Override ServerVersion",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.0",
+					ServerVersion: "4.0.4",
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.1",
+					ServerVersion: "4.0.4",
 				},
 			},
 			want: &DatacenterConfig{
-				ServerVersion: semver.MustParse("4.0.1"),
+				ServerVersion: semver.MustParse("4.0.4"),
 				McacEnabled:   true,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
@@ -1504,7 +1504,7 @@ func GetDatacenterConfig() DatacenterConfig {
 	storageClass := "default"
 	return DatacenterConfig{
 		Cluster:       "k8ssandra",
-		ServerVersion: semver.MustParse("4.0.3"),
+		ServerVersion: semver.MustParse("4.0.4"),
 		ServerType:    "cassandra",
 		Meta: api.EmbeddedObjectMeta{
 			Namespace: "k8ssandra",

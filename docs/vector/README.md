@@ -15,7 +15,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.6
+    serverVersion: 4.0.4
     telemetry:
       vector:
         enabled: true
@@ -87,7 +87,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.6
+    serverVersion: 4.0.4
     telemetry:
       vector:
         enabled: true

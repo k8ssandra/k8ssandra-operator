@@ -1,12 +1,13 @@
 package k8ssandra
 
 import (
+	"testing"
+
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var (
@@ -108,21 +109,21 @@ func sortNoChangeTest(t *testing.T) {
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc1",
 		},
-		ServerVersion: semver.MustParse("4.0.0"),
+		ServerVersion: semver.MustParse("4.0.4"),
 	}
 
 	cassandraDc2 := &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc2",
 		},
-		ServerVersion: semver.MustParse("4.0.0"),
+		ServerVersion: semver.MustParse("4.0.4"),
 	}
 
 	cassandraDc3 := &cassandra.DatacenterConfig{
 		Meta: api.EmbeddedObjectMeta{
 			Name: "dc3",
 		},
-		ServerVersion: semver.MustParse("4.0.0"),
+		ServerVersion: semver.MustParse("4.0.4"),
 	}
 
 	var datacenters []*cassandra.DatacenterConfig

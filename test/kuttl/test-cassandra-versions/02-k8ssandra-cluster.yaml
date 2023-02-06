@@ -1,6 +1,6 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
-commands: 
-- script: |- 
-    kustomize build './config' | sed -e "s/serverVersion: .*/serverVersion: ${SERVERVERSION:-4.0.1}/g"  | kubectl apply -n $NAMESPACE --server-side -f - 
-  ignoreFailure: false 
+commands:
+  - script: |-
+      kustomize build './config' | sed -e "s/serverVersion: .*/serverVersion: ${SERVERVERSION:-4.0.4}/g"  | kubectl apply -n $NAMESPACE --server-side -f -
+    ignoreFailure: false

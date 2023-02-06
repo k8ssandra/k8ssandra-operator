@@ -45,7 +45,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: 4.0.6
+    serverVersion: 4.0.4
     networking:
       hostNetwork: true
     datacenters:

@@ -108,7 +108,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.4"
     datacenters:
       - metadata:
           name: dc1
@@ -264,7 +264,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.4"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -478,7 +478,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.4"
     datacenters:
       - metadata:
           name: dc1
@@ -925,7 +925,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.4"
     datacenters:
       - metadata:
           name: dc1
@@ -1226,7 +1226,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.4"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

@@ -752,7 +752,7 @@ func testImages(t *testing.T) {
 		stargate := stargate.DeepCopy()
 		stargate.Spec.ContainerImage = nil
 		dc := dc.DeepCopy()
-		dc.Spec.ServerVersion = "4.0.1"
+		dc.Spec.ServerVersion = "4.0.4"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
@@ -782,7 +782,7 @@ func testImages(t *testing.T) {
 			Tag:        "v" + DefaultVersion,
 		}
 		dc := dc.DeepCopy()
-		dc.Spec.ServerVersion = "4.0.1"
+		dc.Spec.ServerVersion = "4.0.4"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
@@ -817,7 +817,7 @@ func testImages(t *testing.T) {
 		}
 		stargate.Spec.ContainerImage = image
 		dc := dc.DeepCopy()
-		dc.Spec.ServerVersion = "4.0.1"
+		dc.Spec.ServerVersion = "4.0.4"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)

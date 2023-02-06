@@ -26,7 +26,7 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 		Spec: k8ssandraapi.K8ssandraClusterSpec{
 			Cassandra: &k8ssandraapi.CassandraClusterTemplate{
 				DatacenterOptions: k8ssandraapi.DatacenterOptions{
-					ServerVersion:   "4.0.0",
+					ServerVersion:   "4.0.4",
 					CassandraConfig: nil,
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
@@ -66,7 +66,7 @@ func NewCassandraDatacenter(name string, namespace string) cassdcapi.CassandraDa
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:          1,
-			ServerVersion: "4.0.0",
+			ServerVersion: "4.0.4",
 			ServerType:    "cassandra",
 			StorageConfig: cassdcapi.StorageConfig{
 				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{

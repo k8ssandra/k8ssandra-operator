@@ -124,8 +124,8 @@ func TestCreateJsonConfig(t *testing.T) {
 
 	tests := []test{
 		{
-			name:          "[4.0.0] simple",
-			serverVersion: semver.MustParse("4.0.0"),
+			name:          "[4.0.4] simple",
+			serverVersion: semver.MustParse("4.0.4"),
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				CassandraYaml: unstructured.Unstructured{
@@ -145,8 +145,8 @@ func TestCreateJsonConfig(t *testing.T) {
            }`,
 		},
 		{
-			name:          "[4.0.0] system replication",
-			serverVersion: semver.MustParse("4.0.0"),
+			name:          "[4.0.4] system replication",
+			serverVersion: semver.MustParse("4.0.4"),
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
@@ -179,8 +179,8 @@ func TestCreateJsonConfig(t *testing.T) {
            }`,
 		},
 		{
-			name:          "[4.0.0] GC",
-			serverVersion: semver.MustParse("4.0.0"),
+			name:          "[4.0.4] GC",
+			serverVersion: semver.MustParse("4.0.4"),
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
