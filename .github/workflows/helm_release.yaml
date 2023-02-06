@@ -1,0 +1,134 @@
+name: K8ssandra Operator Helm Release
+
+on:
+  workflow_call:
+    inputs:
+      helm_repo:
+        description: 'Helm repository to use'
+        default: 'next'
+        required: false
+        type: string
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_SA_KEY:
+        required: true
+      GCP_HELM_BUCKET_NAME:
+        required: true
+
+jobs:
+  helm-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Update PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+      - name: Create env variables
+        run: ./.github/scripts/env_variables.sh
+
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install yq
+        run: |
+          sudo rm /bin/yq
+          wget https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64.tar.gz
+          tar -xzf yq_linux_amd64.tar.gz
+          sudo mv ./yq_linux_amd64 /usr/bin/yq
+
+      - name: Update chart dependencies
+        run: |
+          scripts/update-helm-deps.sh
+
+      - name: Compute release chart version
+        id: compute_next_version
+        run: |
+          DATE_TIME=$(date '+%Y%m%d%H%M%S')
+          RELEASE_VERSION=$(echo $(yq e '.version' charts/k8ssandra-operator/Chart.yaml) | sed "s/-.*/-${DATE_TIME}-${GITHUB_SHA::8}/")
+          echo "Release version is: $RELEASE_VERSION"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update Helm chart version
+        run: |
+          yq eval ".version |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
+          yq eval ".appVersion |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
+          cat charts/k8ssandra-operator/Chart.yaml
+      
+      - name: Prepare Helm release
+        run: |
+          make prepare-helm-release
+
+      - name: Create working directory and copy charts
+        run: |
+          mkdir -p build/$RELEASE_VERSION/k8ssandra-operator
+          cp -rv charts/* build/$RELEASE_VERSION
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-integ-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Generate package archives
+        run: |
+          helm package k8ssandra-operator
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      # Helm Release
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Download current index from Google Cloud
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          echo "Downloading index.yaml from gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml"
+          gsutil cp gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml ./
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      - name: Regenerate Helm index
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          echo "Generating Helm index for gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml"
+          helm repo index . --merge index.yaml --url "https://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/"
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      - name: Upload packages and index
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          gsutil cp ./*.tgz gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/
+          gsutil cp ./index.yaml gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
