@@ -22,7 +22,7 @@ metadata:
 spec:
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: "3.11.11"
+    serverVersion: "3.11.14"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -92,7 +92,7 @@ spec:
             nodeAffinity:
               requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
-                    - matchExpressions:
+                  - matchExpressions:
                       - key: topology.kubernetes.io/zone
                         operator: In
                         values:

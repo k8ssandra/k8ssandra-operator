@@ -46,7 +46,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       1,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,

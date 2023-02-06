@@ -2,6 +2,9 @@ package control
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	casscontrol "github.com/k8ssandra/cass-operator/controllers/control"
@@ -19,8 +22,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
-	"time"
 )
 
 const (
@@ -400,7 +401,7 @@ func newDc(name string, k8sContext string) k8capi.CassandraDatacenterTemplate {
 		K8sContext: k8sContext,
 		Size:       1,
 		DatacenterOptions: k8capi.DatacenterOptions{
-			ServerVersion: "3.11.10",
+			ServerVersion: "3.11.14",
 			StorageConfig: &cassdcapi.StorageConfig{
 				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 					StorageClassName: &defaultStorageClass,

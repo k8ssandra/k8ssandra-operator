@@ -159,7 +159,7 @@ metadata:
   name: cluster1
 spec:
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "3.11.14"
     softPodAntiAffinity: true
     mgmtAPIHeap: 64Mi
     resources:
@@ -231,7 +231,7 @@ spec:
         k8sContext: data-plane3
         size: 3
         # dc-level configuration for dc3 goes here (only the properties that we want to override)
-        serverVersion: "3.11.12"
+        serverVersion: "3.11.14"
         softPodAntiAffinity: false
         mgmtAPIHeap: 128Mi
         resources:

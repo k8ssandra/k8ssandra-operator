@@ -139,7 +139,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       1,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -774,7 +774,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -789,7 +789,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -1157,7 +1157,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -1177,7 +1177,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -1428,7 +1428,7 @@ func changeNumTokensValue(t *testing.T, ctx context.Context, f *framework.Framew
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       1,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -2310,7 +2310,7 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       1,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
