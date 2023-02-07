@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -42,7 +43,7 @@ var defaultImage = images.Image{
 	Tag:        DefaultVersion,
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
@@ -237,6 +238,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		},
 	}
 	addAuthEnvVars(deployment, authVars)
+	configureVector(reaper, deployment, dc, logger)
 	annotations.AddHashAnnotation(deployment)
 	return deployment
 }

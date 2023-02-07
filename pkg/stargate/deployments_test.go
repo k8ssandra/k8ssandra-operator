@@ -32,7 +32,7 @@ var (
 			Name:      "dc1",
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ServerVersion: "3.11.11",
+			ServerVersion: "3.11.14",
 			ClusterName:   "cluster1",
 		},
 	}

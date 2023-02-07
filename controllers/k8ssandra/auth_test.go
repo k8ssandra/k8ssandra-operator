@@ -36,7 +36,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 					K8sContext: f.DataPlaneContexts[1],
 					Size:       1,
 					DatacenterOptions: api.DatacenterOptions{
-						ServerVersion: "3.11.10",
+						ServerVersion: "3.11.14",
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 								StorageClassName: &defaultStorageClass,
@@ -146,7 +146,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 					K8sContext: f.DataPlaneContexts[1],
 					Size:       1,
 					DatacenterOptions: api.DatacenterOptions{
-						ServerVersion: "3.11.10",
+						ServerVersion: "3.11.14",
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 								StorageClassName: &defaultStorageClass,
@@ -260,7 +260,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 					K8sContext: f.DataPlaneContexts[1],
 					Size:       1,
 					DatacenterOptions: api.DatacenterOptions{
-						ServerVersion: "3.11.10",
+						ServerVersion: "3.11.14",
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 								StorageClassName: &defaultStorageClass,

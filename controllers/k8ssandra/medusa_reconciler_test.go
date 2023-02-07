@@ -43,7 +43,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -58,7 +58,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 						K8sContext: f.DataPlaneContexts[1],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
