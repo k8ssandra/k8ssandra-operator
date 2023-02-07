@@ -18,13 +18,13 @@ type Reconcilable[G client.Object] interface {
 	DeepCopyInto(out G)
 }
 
-type ReconcileWrapper[G Reconcilable[G]] struct {
+type ReconcileDecorator[G Reconcilable[G]] struct {
 	desiredObj G
 	currentObj G
 }
 
-func NewReconcileWrapper[G Reconcilable[G]](desiredObj G) ReconcileWrapper[G] {
-	out := ReconcileWrapper[G]{
+func NewReconcileDecorator[G Reconcilable[G]](desiredObj G) ReconcileDecorator[G] {
+	out := ReconcileDecorator[G]{
 		desiredObj: desiredObj,
 		currentObj: *new(G),
 	}
@@ -33,18 +33,18 @@ func NewReconcileWrapper[G Reconcilable[G]](desiredObj G) ReconcileWrapper[G] {
 
 // ReconcileObject takes a desired k8s resource and an empty object of the same type
 // and reconciles it into the desired state, returning a ReconcileResult according to the outcome of the reconciliation.
-func (wrapper ReconcileWrapper[G]) ReconcileObject(ctx context.Context,
+func (decorator ReconcileDecorator[G]) ReconcileObject(ctx context.Context,
 	kClient client.Client,
 	requeueDelay time.Duration) result.ReconcileResult {
 	objectKey := types.NamespacedName{
-		Name:      wrapper.desiredObj.GetName(),
-		Namespace: wrapper.desiredObj.GetNamespace(),
+		Name:      decorator.desiredObj.GetName(),
+		Namespace: decorator.desiredObj.GetNamespace(),
 	}
-	annotations.AddHashAnnotation(wrapper.desiredObj)
-	err := kClient.Get(ctx, objectKey, wrapper.currentObj)
+	annotations.AddHashAnnotation(decorator.desiredObj)
+	err := kClient.Get(ctx, objectKey, decorator.currentObj)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if err := kClient.Create(ctx, wrapper.desiredObj); err != nil {
+			if err := kClient.Create(ctx, decorator.desiredObj); err != nil {
 				return result.Error(err)
 			}
 			return result.RequeueSoon(requeueDelay)
@@ -53,11 +53,11 @@ func (wrapper ReconcileWrapper[G]) ReconcileObject(ctx context.Context,
 		}
 	}
 
-	if !annotations.CompareHashAnnotations(wrapper.currentObj, wrapper.desiredObj) {
-		resourceVersion := (wrapper.currentObj).GetResourceVersion()
-		wrapper.desiredObj.DeepCopyInto(wrapper.currentObj)
-		wrapper.currentObj.SetResourceVersion(resourceVersion)
-		if err := kClient.Update(ctx, wrapper.currentObj); err != nil {
+	if !annotations.CompareHashAnnotations(decorator.currentObj, decorator.desiredObj) {
+		resourceVersion := (decorator.currentObj).GetResourceVersion()
+		decorator.desiredObj.DeepCopyInto(decorator.currentObj)
+		decorator.currentObj.SetResourceVersion(resourceVersion)
+		if err := kClient.Update(ctx, decorator.currentObj); err != nil {
 			return result.Error(err)
 		}
 		return result.RequeueSoon(requeueDelay)
