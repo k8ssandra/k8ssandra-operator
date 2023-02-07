@@ -75,7 +75,6 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 		Name:      c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
 		Namespace: c.DcNamespace,
 	}
-	labels.SetManagedBy(desiredCm, cmObjectKey)
 	KlKey := types.NamespacedName{
 		Name:      c.Kluster.Name,
 		Namespace: c.Kluster.Namespace,
