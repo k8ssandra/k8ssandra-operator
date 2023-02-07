@@ -1,0 +1,34 @@
+{
+  "name": "k8ssandra-docs-v2",
+  "version": "0.1.0",
+  "description": "K8ssandra website and technical documentation.",
+  "main": "none.js",
+  "scripts": {
+    "start": "hugo server --environment development --noHTTPCache --disableFastRender --bind 0.0.0.0",
+    "clean:public": "del-cli --force public",
+    "clean:resources": "del-cli --force resources",
+    "clean": "npm run clean:public && npm run clean:resources",
+    "build:dev": "hugo --environment development",
+    "build:staging-v2": "hugo --environment staging-v2",
+    "build:production-v2": "hugo --environment production-v2",
+    "deploy:staging-v2": "hugo deploy --environment staging-v2 --target staging-v2 --verbose",
+    "deploy:production-v2": "hugo deploy --environment production-v2 --target production-v2 --verbose"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k8ssandra/k8ssandra.git"
+  },
+  "author": "K8ssandra",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/k8ssandra/k8ssandra/issues"
+  },
+  "homepage": "https://github.com/k8ssandra/k8ssandra/tree/main/docs#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "del-cli": "^4.0.1",
+    "hugo-extended": "^0.89.4",
+    "postcss": "^8.3.11",
+    "postcss-cli": "^8.3.1"
+  }
+}
