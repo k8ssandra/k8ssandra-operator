@@ -61,6 +61,7 @@ import (
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
+	secretswebhook "github.com/k8ssandra/k8ssandra-operator/controllers/secrets-webhook"
 	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
 	// +kubebuilder:scaffold:imports
 )
@@ -291,11 +292,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	secretswebhook.SetupSecretsInjectorWebhook(mgr)
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+
 }
 
 // getWatchNamespace returns the Namespace the operator should be watching for changes
