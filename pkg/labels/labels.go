@@ -58,6 +58,35 @@ func ManagedByLabels(klusterKey client.ObjectKey) map[string]string {
 	}
 }
 
+// SetReplicatedBy sets the required labels that make a Secret selectable by a ReplicatedSecret for a given
+// K8ssandraCluster.
+// klusterKey specifies the namespace and name of the K8ssandraCluster.
+func SetReplicatedBy(component Labeled, klusterKey client.ObjectKey) {
+	AddLabel(component, k8ssandraapi.ReplicatedByLabel, k8ssandraapi.ReplicatedByLabelValue)
+	AddLabel(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name)
+	AddLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
+}
+
+// IsReplicatedBy checks whether the given component (which in practice will be Secret) is selectable by a
+// ReplicatedSecret for the given K8ssandraCluster.
+// klusterKey specifies the namespace and name of the K8ssandraCluster.
+func IsReplicatedBy(component Labeled, klusterKey client.ObjectKey) bool {
+	return HasLabelWithValue(component, k8ssandraapi.ReplicatedByLabel, k8ssandraapi.ReplicatedByLabelValue) &&
+		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
+		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
+}
+
+// ReplicatedByLabels returns the labels used to make a Secret selectable by a ReplicatedSecret for the given
+// K8ssandraCluster.
+// klusterKey specifies the namespace and name of the K8ssandraCluster.
+func ReplicatedByLabels(klusterKey client.ObjectKey) map[string]string {
+	return map[string]string{
+		k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
+		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
+		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+	}
+}
+
 // IsPartOf returns true if this component was created by the k8ssandra-cluster controller, and belongs to the
 // K8ssandraCluster resource specified by klusterKey. klusterKey refers to the namespace and name of the
 // K8ssandraCluster.
