@@ -1,6 +1,0 @@
-[submodule "docs/k8ssandra"]
-	path = docs/k8ssandra
-	url = https://github.com/k8ssandra/k8ssandra.git
-[submodule "docs/wowchemy-hugo-themes"]
-	path = docs/wowchemy-hugo-themes
-	url = https://github.com/wowchemy/wowchemy-hugo-themes.git
