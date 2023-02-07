@@ -164,8 +164,8 @@ func TestCreateJsonConfig(t *testing.T) {
            }`,
 		},
 		{
-			name:          "[3.11.11] GC",
-			serverVersion: semver.MustParse("3.11.11"),
+			name:          "[3.11.14] GC",
+			serverVersion: semver.MustParse("3.11.14"),
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{

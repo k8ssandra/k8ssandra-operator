@@ -4,17 +4,17 @@ on:
   push:
     branches:
       - main
-      - 'release/**'
+      - "release/**"
     paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
+      - "docs/**"
+      - "CHANGELOG/**"
   pull_request:
     branches:
       - main
-      - 'release/**'
+      - "release/**"
     paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'
+      - "docs/**"
+      - "CHANGELOG/**"
 
 jobs:
   build_image:
@@ -60,63 +60,63 @@ jobs:
     name: Run kuttl tests
     strategy:
       matrix:
-        k8s_version: 
-        - "1.21"
-        - "1.22"
-        - "1.23"
-        serverVersion: 
-        - 3.11.12
-        - 4.0.3
+        k8s_version:
+          - "1.21"
+          - "1.22"
+          - "1.23"
+        serverVersion:
+          - 3.11.14
+          - 4.0.3
         kuttl-test:
-        - test-cassandra-versions
+          - test-cassandra-versions
     steps:
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
-      if: github.event_name == 'pull_request'
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
-    - uses: actions/checkout@v2
-      if: github.event_name != 'pull_request'
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version-file: 'go.mod'
-        cache: true
-    - name: Kind kube-proxy issue workaround
-      run: sudo sysctl net/netfilter/nf_conntrack_max=524288
-    - name: Download k8ssandra-operator image
-      uses: actions/download-artifact@v2
-      with:
-        name: k8ssandra-operator
-        path: /tmp
-    - name: Load Docker images
-      run: |
-        docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
-    - name: Install kustomize
-      uses: imranismail/setup-kustomize@v2
-      with:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@v2
+        if: github.event_name != 'pull_request'
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: "go.mod"
+          cache: true
+      - name: Kind kube-proxy issue workaround
+        run: sudo sysctl net/netfilter/nf_conntrack_max=524288
+      - name: Download k8ssandra-operator image
+        uses: actions/download-artifact@v2
+        with:
+          name: k8ssandra-operator
+          path: /tmp
+      - name: Load Docker images
+        run: |
+          docker load --input /tmp/k8ssandra-k8ssandra-operator.tar
+      - name: Install kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
           kustomize-version: 4.x
-    - name: Log kustomize version
-      run: kustomize version
-    - name: Install kuttl
-      run: |
-        make install-kuttl
-    - name: Create kind cluster
-      run: |
-        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
-        make cert-manager
-        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
-    - name: Run kuttl test
-      run: |
-        # We are running tests against k8s 1.21
-        # Additional versions must be added in kind config files under ./test/config/kind
+      - name: Log kustomize version
+        run: kustomize version
+      - name: Install kuttl
+        run: |
+          make install-kuttl
+      - name: Create kind cluster
+        run: |
+          kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+          make cert-manager
+          make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
+      - name: Run kuttl test
+        run: |
+          # We are running tests against k8s 1.21
+          # Additional versions must be added in kind config files under ./test/config/kind
 
-        # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
-        # release process. The following changes have been made to stay as close as possible
-        # to the existing behavior with kuttl tests while supporting the ability to use a release
-        # image tag of the operator.
-        
-        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
-    - name: Delete kind cluster
-      run: |
-        kind delete cluster --name k8ssandra-0
+          # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
+          # release process. The following changes have been made to stay as close as possible
+          # to the existing behavior with kuttl tests while supporting the ability to use a release
+          # image tag of the operator.
+
+          SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
+      - name: Delete kind cluster
+        run: |
+          kind delete cluster --name k8ssandra-0

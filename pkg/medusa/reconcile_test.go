@@ -37,7 +37,7 @@ func testMedusaIniFull(t *testing.T) {
 						K8sContext: "k8sCtx0",
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 						},
 					},
 				},
@@ -103,7 +103,7 @@ func testMedusaIniNoPrefix(t *testing.T) {
 						K8sContext: "k8sCtx0",
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 						},
 					},
 				},
@@ -167,7 +167,7 @@ func testMedusaIniSecured(t *testing.T) {
 						K8sContext: "k8sCtx0",
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 						},
 					},
 				},
@@ -231,7 +231,7 @@ func testMedusaIniUnsecured(t *testing.T) {
 						K8sContext: "k8sCtx0",
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 						},
 					},
 				},
@@ -295,7 +295,7 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 						K8sContext: "k8sCtx0",
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 						},
 					},
 				},

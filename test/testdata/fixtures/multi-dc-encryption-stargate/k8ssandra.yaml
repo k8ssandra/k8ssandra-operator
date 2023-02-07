@@ -21,7 +21,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "3.11.14"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -54,10 +54,10 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
         server_encryption_options:
-            internode_encryption: all
-            require_client_auth: true
+          internode_encryption: all
+          require_client_auth: true
         client_encryption_options:
-            enabled: true
+          enabled: true
       jvmOptions:
         heapSize: 512Mi
         heapNewGenSize: 256Mi

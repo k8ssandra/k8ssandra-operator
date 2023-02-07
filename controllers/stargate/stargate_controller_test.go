@@ -3,9 +3,10 @@ package stargate
 import (
 	"context"
 	"encoding/json"
-	"k8s.io/utils/pointer"
 	"testing"
 	"time"
+
+	"k8s.io/utils/pointer"
 
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
@@ -90,7 +91,7 @@ func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient 
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:          1,
-			ServerVersion: "3.11.10",
+			ServerVersion: "3.11.14",
 			ServerType:    "cassandra",
 			ClusterName:   "test",
 			StorageConfig: cassdcapi.StorageConfig{
@@ -285,7 +286,7 @@ func testCreateStargateMultiRack(t *testing.T, ctx context.Context, testClient c
 					NodeAffinityLabels: map[string]string{"topology.kubernetes.io/zone": "us-east-1c"},
 				},
 			},
-			ServerVersion: "3.11.10",
+			ServerVersion: "3.11.14",
 			ServerType:    "cassandra",
 			ClusterName:   "cluster1",
 			StorageConfig: cassdcapi.StorageConfig{
@@ -545,7 +546,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:          1,
-			ServerVersion: "3.11.10",
+			ServerVersion: "3.11.14",
 			ServerType:    "cassandra",
 			ClusterName:   "test",
 			StorageConfig: cassdcapi.StorageConfig{
@@ -821,7 +822,7 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:          1,
-			ServerVersion: "3.11.10",
+			ServerVersion: "3.11.14",
 			ServerType:    "cassandra",
 			ClusterName:   "test",
 			StorageConfig: cassdcapi.StorageConfig{
