@@ -181,8 +181,9 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				break
 			}
 		}
+		patch := client.MergeFrom(kTask.DeepCopy())
 		kTask.RefreshGlobalStatus(len(dcs))
-		if err = r.Status().Update(ctx, kTask); err != nil {
+		if err = r.Status().Patch(ctx, kTask, patch); err != nil {
 			return ctrl.Result{}, err
 		}
 		// If the status update set a completion time, we want to reconcile again in order to handle the TTL. But
