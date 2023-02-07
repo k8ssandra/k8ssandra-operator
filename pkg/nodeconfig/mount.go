@@ -21,7 +21,7 @@ func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 	// add per-node-config init container
 	cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
 	// add per-node config volume to pod spec
-	cassandra.AddVolumesToPodTemplateSpec(dcConfig, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
+	cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
 }
 
 const (

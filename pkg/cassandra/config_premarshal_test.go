@@ -1,12 +1,13 @@
 package cassandra
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
-	"reflect"
-	"testing"
 )
 
 func Test_preMarshalConfig(t *testing.T) {
@@ -72,7 +73,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"nil simple",
 			reflect.ValueOf((*simple)(nil)),
-			semver.MustParse("3.11.12"),
+			semver.MustParse("3.11.14"),
 			"cassandra",
 			nil,
 			assert.NoError,
@@ -80,7 +81,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"zero simple",
 			reflect.ValueOf(&simple{}),
-			semver.MustParse("3.11.12"),
+			semver.MustParse("3.11.14"),
 			"cassandra",
 			map[string]interface{}{},
 			assert.NoError,
@@ -88,7 +89,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"zero complex 3.11.x",
 			reflect.ValueOf(&komplex{}),
-			semver.MustParse("3.11.12"),
+			semver.MustParse("3.11.14"),
 			"cassandra",
 			map[string]interface{}{"foo": map[string]interface{}{"retain-zero": false}},
 			assert.NoError,
@@ -104,7 +105,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"simple",
 			reflect.ValueOf(&simple{Simple1: pointer.String("foo"), Simple2: true}),
-			semver.MustParse("3.11.12"),
+			semver.MustParse("3.11.14"),
 			"cassandra",
 			map[string]interface{}{"foo": map[string]interface{}{"simple1": pointer.String("foo"), "simple2": true}},
 			assert.NoError,
@@ -147,7 +148,7 @@ func Test_preMarshalConfig(t *testing.T) {
 					Simple2: true,
 				},
 			}),
-			semver.MustParse("3.11.12"),
+			semver.MustParse("3.11.14"),
 			"cassandra",
 			map[string]interface{}{
 				"foo": map[string]interface{}{

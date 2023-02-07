@@ -1,8 +1,9 @@
 package result
 
 import (
-	ctrl "sigs.k8s.io/controller-runtime"
 	"time"
+
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // Copyright DataStax, Inc.
@@ -11,6 +12,9 @@ import (
 type ReconcileResult interface {
 	Completed() bool
 	Output() (ctrl.Result, error)
+	IsError() bool
+	IsRequeue() bool
+	IsDone() bool
 }
 
 type continueReconcile struct{}
@@ -22,6 +26,18 @@ func (c continueReconcile) Output() (ctrl.Result, error) {
 	panic("there was no Result to return")
 }
 
+func (continueReconcile) IsDone() bool {
+	return false
+}
+
+func (continueReconcile) IsError() bool {
+	return false
+}
+
+func (continueReconcile) IsRequeue() bool {
+	return false
+}
+
 type done struct{}
 
 func (d done) Completed() bool {
@@ -29,6 +45,18 @@ func (d done) Completed() bool {
 }
 func (d done) Output() (ctrl.Result, error) {
 	return ctrl.Result{}, nil
+}
+
+func (done) IsDone() bool {
+	return true
+}
+
+func (done) IsError() bool {
+	return false
+}
+
+func (done) IsRequeue() bool {
+	return false
 }
 
 type callBackSoon struct {
@@ -42,6 +70,18 @@ func (c callBackSoon) Output() (ctrl.Result, error) {
 	return ctrl.Result{Requeue: true, RequeueAfter: c.after}, nil
 }
 
+func (callBackSoon) IsDone() bool {
+	return false
+}
+
+func (callBackSoon) IsError() bool {
+	return false
+}
+
+func (callBackSoon) IsRequeue() bool {
+	return true
+}
+
 type errorOut struct {
 	err error
 }
@@ -51,6 +91,18 @@ func (e errorOut) Completed() bool {
 }
 func (e errorOut) Output() (ctrl.Result, error) {
 	return ctrl.Result{}, e.err
+}
+
+func (errorOut) IsDone() bool {
+	return false
+}
+
+func (errorOut) IsError() bool {
+	return true
+}
+
+func (errorOut) IsRequeue() bool {
+	return false
 }
 
 func Continue() ReconcileResult {

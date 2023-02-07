@@ -37,6 +37,12 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      - name: Install yq
+        run: |
+          sudo rm /bin/yq
+          wget https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64.tar.gz
+          tar -xzf yq_linux_amd64.tar.gz
+          sudo mv ./yq_linux_amd64 /usr/bin/yq
       - name: Run unit and integration tests
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH

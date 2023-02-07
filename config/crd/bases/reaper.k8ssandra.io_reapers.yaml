@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: reapers.reaper.k8ssandra.io
 spec:
@@ -2078,8 +2078,66 @@ spec:
                   to deploy targeting the Reaper pods for all DCs in this cluster
                   (unless overriden by DC specific settings)
                 properties:
+                  cassandra:
+                    properties:
+                      endpoint:
+                        properties:
+                          address:
+                            type: string
+                          port:
+                            type: string
+                        type: object
+                      filters:
+                        items:
+                          description: 'RelabelConfig allows dynamic rewriting of
+                            the label set, being applied to samples before ingestion.
+                            It defines `<metric_relabel_configs>`-section of Prometheus
+                            configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs'
+                          properties:
+                            action:
+                              description: Action to perform based on regex matching.
+                                Default is 'replace'
+                              type: string
+                            modulus:
+                              description: Modulus to take of the hash of the source
+                                label values.
+                              format: int64
+                              type: integer
+                            regex:
+                              description: Regular expression against which the extracted
+                                value is matched. Default is '(.*)'
+                              type: string
+                            replacement:
+                              description: Replacement value against which a regex
+                                replace is performed if the regular expression matches.
+                                Regex capture groups are available. Default is '$1'
+                              type: string
+                            separator:
+                              description: Separator placed between concatenated source
+                                label values. default is ';'.
+                              type: string
+                            sourceLabels:
+                              description: The source labels select values from existing
+                                labels. Their content is concatenated using the configured
+                                separator and matched against the configured regular
+                                expression for the replace, keep, and drop actions.
+                              items:
+                                type: string
+                              type: array
+                            targetLabel:
+                              description: Label to which the resulting value is written
+                                in a replace action. It is mandatory for replace actions.
+                                Regex capture groups are available.
+                              type: string
+                          type: object
+                        type: array
+                    type: object
                   mcac:
                     properties:
+                      enabled:
+                        description: enabled sets whether MCAC (legacy metrics endpoint)
+                          is enabled. This is considered true by default.
+                        type: boolean
                       metricFilters:
                         description: 'MetricFilters allows passing filters to MCAC
                           in order to reduce the amount of extracted metrics. Not

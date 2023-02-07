@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
@@ -17,8 +16,8 @@ import (
 
 func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	dcTemplate api.CassandraDatacenterTemplate,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
 	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 	remoteClient client.Client,
@@ -59,11 +58,11 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	// Determine if we want a cleanup or a resource update.
 	if mergedSpec.IsPrometheusEnabled() {
 		logger.Info("Prometheus config found", "mergedSpec", mergedSpec)
-		desiredSM, err := cfg.NewCassServiceMonitor()
+		desiredSM, err := cfg.NewCassServiceMonitor(mergedSpec.IsMcacEnabled())
 		if err != nil {
 			return result.Error(err)
 		}
-		if err := cfg.UpdateResources(ctx, remoteClient, actualDc, &desiredSM); err != nil {
+		if err := cfg.UpdateResources(ctx, remoteClient, actualDc, desiredSM); err != nil {
 			return result.Error(err)
 		}
 	} else {
@@ -72,6 +71,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 			return result.Error(err)
 		}
 	}
+
 	return result.Continue()
 }
 

@@ -1,11 +1,12 @@
 package goalesceutils
 
 import (
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
-	"testing"
 )
 
 func TestMergeCRs(t *testing.T) {
@@ -108,9 +109,9 @@ func TestMergeCRs(t *testing.T) {
 		},
 		{
 			name:    "additional volumes",
-			cluster: []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "foo", PVCSpec: corev1.PersistentVolumeClaimSpec{}}},
+			cluster: []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "foo", PVCSpec: &corev1.PersistentVolumeClaimSpec{}}},
 			dc:      []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "bar"}},
-			want:    []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "bar", PVCSpec: corev1.PersistentVolumeClaimSpec{}}},
+			want:    []cassdcapi.AdditionalVolumes{{Name: "foo", MountPath: "bar", PVCSpec: &corev1.PersistentVolumeClaimSpec{}}},
 		},
 		// tests for the EnvVar type merger
 		{

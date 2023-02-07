@@ -3,6 +3,38 @@ kind: StatefulSet
 metadata:
   name: test-dc1-default-sts
   namespace: k8ssandra-operator
+spec:
+  template:
+    spec:
+      containers:
+        - env:
+            - name: LOCAL_JMX
+              value: "no"
+            - name: MGMT_API_DISABLE_MCAC
+              value: "true"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: DS_LICENSE
+              value: accept
+            - name: DSE_AUTO_CONF_OFF
+              value: all
+            - name: USE_MGMT_API
+              value: "true"
+            - name: MGMT_API_EXPLICIT_START
+              value: "true"
+            - name: DSE_MGMT_EXPLICIT_START
+              value: "true"
+          name: cassandra
+        - image: k8ssandra/system-logger:latest
+          name: server-system-logger
 status:
   readyReplicas: 1
 ---

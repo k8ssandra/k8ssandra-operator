@@ -26,7 +26,7 @@ spec:
     certificatesSecretRef:
       name: client-certificates
   cassandra:
-    serverVersion: 3.11.11
+    serverVersion: 3.11.14
     datacenters:
       - metadata:
           name: dc1

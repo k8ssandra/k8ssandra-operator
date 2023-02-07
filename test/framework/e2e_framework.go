@@ -298,20 +298,6 @@ func (f *E2eFramework) DeployCassandraConfigMap(namespace string) error {
 	return nil
 }
 
-func (f *E2eFramework) DeployVectorConfigMap(namespace string) error {
-	path := filepath.Join("..", "testdata", "fixtures", "vector-custom-config.yaml")
-
-	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Create Vector ConfigMap", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) error {
 	for _, storeType := range []encryption.StoreType{encryption.StoreTypeServer, encryption.StoreTypeClient} {
 		path := filepath.Join("..", "testdata", "fixtures", fmt.Sprintf("%s-encryption-secret.yaml", storeType))

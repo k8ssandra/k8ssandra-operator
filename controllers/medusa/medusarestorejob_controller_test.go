@@ -38,7 +38,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 						K8sContext: k8sCtx0,
 						Size:       3,
 						DatacenterOptions: k8ss.DatacenterOptions{
-							ServerVersion: "3.11.10",
+							ServerVersion: "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,

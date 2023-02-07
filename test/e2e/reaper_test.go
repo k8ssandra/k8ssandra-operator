@@ -10,6 +10,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,6 +36,34 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	// check that the Reaper Vector container and config map exist
+	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
+
+	t.Logf("check that if Reaper Vector is disabled, the agent and configmap are deleted")
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	reaperVectorPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Reaper.Telemetry.Vector.Enabled = pointer.Bool(false)
+	err = f.Client.Patch(ctx, kc, reaperVectorPatch)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	checkReaperReady(t, f, ctx, reaperKey)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+	checkContainerDeleted(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkVectorConfigMapDeleted(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
+
+	t.Logf("check that if Reaper Vector is enabled, the agent and configmap are re-created")
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	reaperVectorPatch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Reaper.Telemetry.Vector.Enabled = pointer.Bool(true)
+	err = f.Client.Patch(ctx, kc, reaperVectorPatch)
+	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
+	checkReaperReady(t, f, ctx, reaperKey)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Log("check Reaper keyspace created")
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")

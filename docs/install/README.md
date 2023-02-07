@@ -767,7 +767,7 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "3.11.14"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

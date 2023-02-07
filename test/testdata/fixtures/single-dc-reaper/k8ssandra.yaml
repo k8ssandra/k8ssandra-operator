@@ -7,8 +7,18 @@ spec:
     heapSize: 256Mi
     autoScheduling:
       enabled: false
+    telemetry:
+      vector:
+        enabled: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 512Mi
   cassandra:
-    serverVersion: "3.11.11"
+    serverVersion: "3.11.14"
     jmxInitContainerImage:
       repository: library
       name: busybox

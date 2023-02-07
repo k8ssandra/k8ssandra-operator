@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"strings"
 	"text/template"
@@ -11,19 +10,9 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	// Default resources for Vector agent
-	DefaultVectorCpuRequest    = "100m"
-	DefaultVectorMemoryRequest = "128Mi"
-	DefaultVectorCpuLimit      = "2"
-	DefaultVectorMemoryLimit   = "2Gi"
-	DefaultScrapeInterval      = 30
 )
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
@@ -31,7 +20,7 @@ const (
 func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
 	if telemetrySpec.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Cassandra pods")
-		vectorImage := defaultVectorImage
+		vectorImage := vector.DefaultVectorImage
 		if telemetrySpec.Vector.Image != "" {
 			vectorImage = telemetrySpec.Vector.Image
 		}
@@ -49,7 +38,7 @@ func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "vector-config", MountPath: "/etc/vector"},
 			},
-			Resources: vectorContainerResources(telemetrySpec),
+			Resources: vector.VectorContainerResources(telemetrySpec),
 		}
 
 		logger.Info("Updating Vector agent in Cassandra pods")
@@ -67,36 +56,13 @@ func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig
 			},
 		}
 
-		cassandra.AddVolumesToPodTemplateSpec(dcConfig, vectorAgentVolume)
+		cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, vectorAgentVolume)
 	}
 
 	return nil
 }
 
-func vectorContainerResources(telemetrySpec *telemetry.TelemetrySpec) corev1.ResourceRequirements {
-	if telemetrySpec.Vector.Resources != nil {
-		return *telemetrySpec.Vector.Resources
-	}
-
-	return corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(DefaultVectorCpuRequest),
-			corev1.ResourceMemory: resource.MustParse(DefaultVectorMemoryRequest),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse(DefaultVectorMemoryLimit),
-			corev1.ResourceCPU:    resource.MustParse(DefaultVectorCpuLimit),
-		},
-	}
-}
-
-type VectorConfig struct {
-	Sinks          string
-	ScrapePort     int32
-	ScrapeInterval int32
-}
-
-func CreateCassandraVectorToml(ctx context.Context, telemetrySpec *telemetry.TelemetrySpec, remoteClient client.Client, namespace string) (string, error) {
+func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool) (string, error) {
 	vectorConfigToml := `
 [sinks.console]
 type = "console"
@@ -111,15 +77,25 @@ target = "stdout"
 		vectorConfigToml = BuildCustomVectorToml(telemetrySpec)
 	}
 
-	var scrapeInterval int32 = DefaultScrapeInterval
+	var scrapePort int32
+	metricsEndpoint := ""
+	if mcacEnabled {
+		scrapePort = vector.CassandraMetricsPortLegacy
+	} else {
+		scrapePort = vector.CassandraMetricsPortModern
+		metricsEndpoint = "/metrics"
+	}
+
+	var scrapeInterval int32 = vector.DefaultScrapeInterval
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}
 
-	config := VectorConfig{
+	config := vector.VectorConfig{
 		Sinks:          vectorConfigToml,
-		ScrapePort:     CassandraMetricsPort,
+		ScrapePort:     scrapePort,
 		ScrapeInterval: scrapeInterval,
+		ScrapeEndpoint: metricsEndpoint,
 	}
 
 	vectorTomlTemplate := `
@@ -130,7 +106,7 @@ enabled = false
   
 [sources.cassandra_metrics]
 type = "prometheus_scrape"
-endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
+endpoints = [ "http://localhost:{{ .ScrapePort }}{{ .ScrapeEndpoint }}" ]
 scrape_interval_secs = {{ .ScrapeInterval }}
 
 {{ .Sinks }}`
