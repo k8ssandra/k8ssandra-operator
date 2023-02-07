@@ -14,7 +14,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.4
+    serverVersion: 4.0.3
     datacenters:
       - metadata:
           name: dc1
@@ -47,7 +47,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.4
+    serverVersion: 4.0.3
     datacenters:
       - metadata:
           name: dc1
@@ -110,7 +110,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.4
+    serverVersion: 4.0.3
     datacenters:
       - metadata:
           name: dc1

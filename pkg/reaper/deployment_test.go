@@ -495,7 +495,7 @@ func newTestDatacenter() *cassdcapi.CassandraDatacenter {
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			ClusterName:   clusterName,
-			ServerVersion: "4.0.4",
+			ServerVersion: "4.0.1",
 		},
 	}
 }

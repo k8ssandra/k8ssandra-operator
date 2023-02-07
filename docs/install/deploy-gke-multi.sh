@@ -53,8 +53,8 @@ metadata:
 spec:
   cassandra:
     cluster: demo
-    serverVersion: "4.0.4"
-    serverImage: k8ssandra/cass-management-api:4.0.4-v0.1.29
+    serverVersion: "4.0.0"
+    serverImage: k8ssandra/cass-management-api:4.0.0-v0.1.29
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

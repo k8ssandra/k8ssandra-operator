@@ -2,8 +2,6 @@ package k8ssandra
 
 import (
 	"context"
-	"testing"
-
 	"github.com/go-logr/logr/testr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -21,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"testing"
 )
 
 func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) {
@@ -171,7 +170,7 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 						Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 						Size:       5,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "4.0.1",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},
@@ -187,7 +186,7 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 						Meta:       api.EmbeddedObjectMeta{Name: "dc2"},
 						Size:       10,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "4.0.1",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},
@@ -310,7 +309,7 @@ func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *frame
 						Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "4.0.1",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},

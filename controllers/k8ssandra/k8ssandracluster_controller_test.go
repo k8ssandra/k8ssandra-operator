@@ -335,7 +335,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 
 	clusterName := "cluster-configs"
 	superUserSecretName := "test-superuser"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(6)
 	dc2Size := int32(12)
 
@@ -448,7 +448,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert := assert.New(t)
 
 	clusterName := "cluster-configs"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(12)
 	dc2Size := int32(30)
 
@@ -614,7 +614,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert := assert.New(t)
 
 	clusterName := "cluster-configs"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(12)
 	dc2Size := int32(30)
 
@@ -1009,7 +1009,7 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "4.0.6",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -1521,7 +1521,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	assert := assert.New(t)
 
 	clusterName := "cluster-with-encryption"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(3)
 
 	// Create the client keystore and truststore secrets
@@ -1779,7 +1779,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	require := require.New(t)
 
 	clusterName := "cluster-with-encryption"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(3)
 	dc2Size := int32(3)
 
@@ -1916,7 +1916,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	assert := assert.New(t)
 
 	clusterName := "cluster-with-encryption"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(3)
 
 	// Create the client keystore and truststore secrets
@@ -2396,7 +2396,7 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 
 	clusterName := "cluster-with-encryption"
 	newClusterName := "cluster-with-encryption-new"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(3)
 
 	// Create the cluster template with encryption enabled for both server and client, but missing client encryption stores
@@ -2471,7 +2471,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	require := require.New(t)
 
 	clusterName := "cluster-with-injection"
-	serverVersion := "4.0.4"
+	serverVersion := "4.0.0"
 	dc1Size := int32(3)
 
 	// Create the cluster template with encryption enabled for both server and client, but missing client encryption stores

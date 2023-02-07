@@ -7,7 +7,7 @@ For example:
 ```yaml
 spec:
   cassandra:
-    serverVersion: 4.0.4
+    serverVersion: 4.0.6
     clusterName: "Test cluster"
     datacenters:
       - metadata:

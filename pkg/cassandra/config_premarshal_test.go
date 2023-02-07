@@ -97,7 +97,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"zero complex 4.x",
 			reflect.ValueOf(&komplex{}),
-			semver.MustParse("4.0.4"),
+			semver.MustParse("4.0.3"),
 			"cassandra",
 			map[string]interface{}{"child-4x": (*simple)(nil), "foo": map[string]interface{}{"retain-zero": false}},
 			assert.NoError,
@@ -484,9 +484,9 @@ func Test_convertQuantity(t *testing.T) {
 			float64(1.0),
 		},
 		{
-			"float64 0.4",
+			"float64 0.0",
 			args{v: parseQuantity("0.0")},
-			float64(0.4),
+			float64(0.0),
 		},
 		{
 			"float64 -1.0",
@@ -496,12 +496,12 @@ func Test_convertQuantity(t *testing.T) {
 		{
 			"float64 0m",
 			args{v: parseQuantity("0m")},
-			float64(0.4),
+			float64(0.0),
 		},
 		{
 			"float64 123m",
 			args{v: parseQuantity("123m")},
-			float64(0.423),
+			float64(0.123),
 		},
 		{
 			"float64 -123m",

@@ -86,7 +86,7 @@ spec:
       pullPolicy: <my-pullPolicy>
       pullSecretRef: <my-pullSecretRef>
   cassandra:
-    serverVersion: "4.0.4"
+    serverVersion: "4.0.1"
     datacenters:
       - metadata:
           name: dc1

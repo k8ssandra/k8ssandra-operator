@@ -55,7 +55,7 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.4",
+					ServerVersion: "4.0.1",
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 					},

@@ -64,7 +64,7 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.4",
+							ServerVersion: "4.0.1",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -126,7 +126,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 			Cassandra: &api.CassandraClusterTemplate{
 				ServerType: "cassandra",
 				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.4",
+					ServerVersion: "4.0.1",
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &defaultStorageClass,
@@ -745,7 +745,7 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 		K8sContext: dcKey.K8sContext,
 		Size:       3,
 		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "4.0.4",
+			ServerVersion: "4.0.1",
 			StorageConfig: &cassdcapi.StorageConfig{
 				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 					StorageClassName: &defaultStorageClass,

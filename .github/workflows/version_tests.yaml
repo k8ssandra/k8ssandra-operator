@@ -66,7 +66,7 @@ jobs:
           - "1.23"
         serverVersion:
           - 3.11.14
-          - 4.0.4
+          - 4.0.3
         kuttl-test:
           - test-cassandra-versions
     steps:

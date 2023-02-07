@@ -66,13 +66,13 @@ We can be rigid about the mapping and expect the same dc and rack names exclusiv
   {
     "in_place": false,
     "host_map": {
-        "172.24.0.4": {
+        "172.24.0.6": {
             "source": [
                 "10.64.7.48"
             ],
             "seed": false
         },
-        "172.24.0.4": {
+        "172.24.0.3": {
             "source": [
                 "10.64.1.60"
             ],
@@ -147,3 +147,4 @@ The new procedure will assume that a cassandradatacenter has been created alread
 
 **The Restore chart should allow overriding the prefix of the storage backend.**
 The remote cluster needs to be able to read from the backup storage bucket and point to the right folder in case multi-tenancy is enabled, despite using a different namespace name.
+
