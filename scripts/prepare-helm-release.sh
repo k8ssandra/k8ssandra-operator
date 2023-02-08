@@ -6,7 +6,10 @@
 #    - kustomize
 #    - yq
 
+set -e
+
 mkdir -p build/helm
+# Generate the CRDs
 kustomize build config/crd > charts/k8ssandra-operator/crds/k8ssandra-operator-crds.yaml
 # Generate the role.yaml and clusterrole.yaml files using the RBAC generated manifests
 kustomize build config/rbac > build/helm/k8ssandra-operator-rbac.yaml

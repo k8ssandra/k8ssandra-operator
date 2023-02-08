@@ -31,12 +31,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - name: Create env variables
-        run: ./.github/scripts/env_variables.sh
       - name: Install yq
         run: |
           sudo rm /bin/yq
-          wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.tar.gz
+          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
           tar -xzf yq_linux_amd64.tar.gz
           sudo mv ./yq_linux_amd64 /usr/bin/yq
       - name: Run unit and integration tests
@@ -46,7 +44,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:
-    name: Publish image to Docker Hub
+    name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     steps:
@@ -93,6 +91,7 @@ jobs:
     uses: ./.github/workflows/helm_release.yaml
     with:
       helm_repo: stable
+      prerelease: true
     secrets:
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}

@@ -8,6 +8,11 @@ on:
         default: 'next'
         required: false
         type: string
+      prerelease:
+        description: 'Whether we are publishing a pre-release'
+        default: 'true'
+        required: false
+        type: string
     secrets:
       GCP_PROJECT_ID:
         required: true
@@ -28,21 +33,6 @@ jobs:
         run: |
           echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
 
-      - name: Create env variables
-        run: ./.github/scripts/env_variables.sh
-
-      - name: Install Helm
-        uses: azure/setup-helm@v1
-        with:
-          version: ${{ env.HELM_VERSION }}
-
-      - name: Install yq
-        run: |
-          sudo rm /bin/yq
-          wget https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv ./yq_linux_amd64 /usr/bin/yq
-
       - name: Update chart dependencies
         run: |
           scripts/update-helm-deps.sh
@@ -60,6 +50,13 @@ jobs:
         run: |
           yq eval ".version |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
           yq eval ".appVersion |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
+          if [ "${{ inputs.prerelease }}" == "true" ]; then
+            ## For a release, we want to use the git tag name as the image tag
+            yq eval ".image.tag |= \"${GITHUB_SHA::8}\"" charts/k8ssandra-operator/values.yaml -i
+          else
+            ## For a release, we want to use the short SHA as the image tag
+            yq eval ".image.tag |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/values.yaml -i
+          fi
           cat charts/k8ssandra-operator/Chart.yaml
       
       - name: Prepare Helm release
@@ -71,32 +68,10 @@ jobs:
           mkdir -p build/$RELEASE_VERSION/k8ssandra-operator
           cp -rv charts/* build/$RELEASE_VERSION
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-integ-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-
       - name: Generate package archives
         run: |
           helm package k8ssandra-operator
         working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.8'
 
       # Helm Release
       - id: 'auth'

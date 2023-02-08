@@ -29,14 +29,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
-      - name: Create env variables
-        run: ./.github/scripts/env_variables.sh
-      - name: Install yq
-        run: |
-          sudo rm /bin/yq
-          wget https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv ./yq_linux_amd64 /usr/bin/yq
       - name: Parse image version
         id: parse_image_tag
         run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
