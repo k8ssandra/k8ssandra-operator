@@ -9,10 +9,8 @@
     "clean:resources": "del-cli --force resources",
     "clean": "npm run clean:public && npm run clean:resources",
     "build:dev": "hugo --environment development",
-    "build:staging-v2": "hugo --environment staging-v2",
-    "build:production-v2": "hugo --environment production-v2",
-    "deploy:staging-v2": "hugo deploy --environment staging-v2 --target staging-v2 --verbose",
-    "deploy:production-v2": "hugo deploy --environment production-v2 --target production-v2 --verbose"
+    "build:staging": "hugo --environment staging",
+    "deploy:staging": "hugo deploy --environment staging --target staging --verbose"
   },
   "repository": {
     "type": "git",
