@@ -87,6 +87,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
   helm_release:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     name: Helm release
     needs: unit_integration_tests
     uses: ./.github/workflows/helm_release.yaml
