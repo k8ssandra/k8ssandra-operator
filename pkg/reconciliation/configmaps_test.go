@@ -28,7 +28,26 @@ var (
 	requeueDelay = time.Second
 )
 
-func Test_ReconcileTelemetryAgentConfig_CMCreateSuccess(t *testing.T) {
+func Test_ReconcileConfigMap_UpdateDone(t *testing.T) {
+	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
+	// Launch reconciliation.
+	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	assert.True(t, recRes.IsRequeue())
+	// After the update we should see the expected ConfigMap
+	afterUpdateCM := &corev1.ConfigMap{}
+	err := kClient.Get(ctx,
+		types.NamespacedName{
+			Name:      desiredObject.Name,
+			Namespace: desiredObject.Namespace,
+		},
+		afterUpdateCM)
+	assert.NoError(t, err)
+	// If we reconcile again, we should move into the Done state.
+	recRes = ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	assert.True(t, recRes.IsDone())
+}
+
+func Test_ReconcileConfigMap_CreateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsRequeue())
@@ -36,14 +55,14 @@ func Test_ReconcileTelemetryAgentConfig_CMCreateSuccess(t *testing.T) {
 	err := kClient.Get(ctx, types.NamespacedName{Name: desiredObject.Name, Namespace: desiredObject.Namespace}, actualCm)
 	assert.NoError(t, err)
 }
-func Test_ReconcileTelemetryAgentConfig_CMCreateFailed(t *testing.T) {
+func Test_ReconcileConfigMap_CreateFailed(t *testing.T) {
 
 	kClient := testutils.NewCreateFailingFakeClient() // Reset the Client
 	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsError())
 }
 
-func Test_ReconcileTelemetryAgentConfig_CMUpdateSuccess(t *testing.T) {
+func Test_ReconcileConfigMap_UpdateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	// Create an initial ConfigMap with the same name.
 	initialCm := desiredObject.DeepCopy()
@@ -77,22 +96,3 @@ func Test_ReconcileTelemetryAgentConfig_CMUpdateSuccess(t *testing.T) {
 	assert.Equal(t, desiredObject.Namespace, afterUpdateCM.Namespace)
 }
 
-func Test_ReconcileTelemetryAgentConfig_CMUpdateDone(t *testing.T) {
-
-	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
-	// Launch reconciliation.
-	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsRequeue())
-	// After the update we should see the expected ConfigMap
-	afterUpdateCM := &corev1.ConfigMap{}
-	err := kClient.Get(ctx,
-		types.NamespacedName{
-			Name:      desiredObject.Name,
-			Namespace: desiredObject.Namespace,
-		},
-		afterUpdateCM)
-	assert.NoError(t, err)
-	// If we reconcile again, we should move into the Done state.
-	recRes = ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsDone())
-}
