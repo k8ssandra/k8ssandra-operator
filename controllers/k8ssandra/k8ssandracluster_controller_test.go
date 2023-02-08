@@ -928,7 +928,7 @@ func createSuperuserSecret(ctx context.Context, t *testing.T, f *framework.Frame
 		},
 		Data: map[string][]byte{},
 	}
-	labels.SetManagedBy(secret, kcKey)
+	labels.SetWatchedByK8ssandraCluster(secret, kcKey)
 
 	err := f.Client.Create(ctx, secret)
 	require.NoError(t, err, "failed to create superuser secret")
@@ -942,7 +942,7 @@ func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Fram
 		},
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.ManagedByLabels(kcKey),
+				MatchLabels: labels.WatchedByK8ssandraClusterLabels(kcKey),
 			},
 			ReplicationTargets: []replicationapi.ReplicationTarget{},
 		},
@@ -955,7 +955,7 @@ func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Fram
 			},
 		},
 	}
-	labels.SetManagedBy(rsec, kcKey)
+	labels.SetWatchedByK8ssandraCluster(rsec, kcKey)
 
 	for _, val := range replicationTargets {
 		rsec.Spec.ReplicationTargets = append(rsec.Spec.ReplicationTargets, replicationapi.ReplicationTarget{
@@ -2233,10 +2233,7 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 		return err == nil
 	}, timeout, interval, "failed to get ReplicatedSecret")
 
-	val, exists := rsec.Labels[api.ManagedByLabel]
-	assert.True(t, exists)
-	assert.Equal(t, api.NameLabelValue, val)
-	val, exists = rsec.Labels[api.K8ssandraClusterNameLabel]
+	val, exists := rsec.Labels[api.K8ssandraClusterNameLabel]
 	assert.True(t, exists)
 	assert.Equal(t, kc.Name, val)
 	val, exists = rsec.Labels[api.K8ssandraClusterNamespaceLabel]

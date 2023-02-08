@@ -168,7 +168,7 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kcKey.Name,
 			Namespace: kcKey.Namespace,
-			Labels:    labels.ManagedByLabels(kcKey),
+			Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
 		},
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{

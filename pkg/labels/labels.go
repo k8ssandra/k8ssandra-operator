@@ -32,27 +32,25 @@ func HasLabelWithValue(component Labeled, labelKey string, labelValue string) bo
 	return GetLabel(component, labelKey) == labelValue
 }
 
-// SetManagedBy sets the required labels for making a component managed by K8ssandra.
+// SetWatchedByK8ssandraCluster sets the required labels for making a component watched by the K8ssandraCluster, i.e. a
+// modification of the component will trigger a reconciliation loop in K8ssandraClusterReconciler.
 // klusterKey specifies the namespace and name of the K8ssandraCluster.
-func SetManagedBy(component Labeled, klusterKey client.ObjectKey) {
-	AddLabel(component, k8ssandraapi.ManagedByLabel, k8ssandraapi.NameLabelValue)
+func SetWatchedByK8ssandraCluster(component Labeled, klusterKey client.ObjectKey) {
 	AddLabel(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name)
 	AddLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
 }
 
-// IsManagedBy checks whether the given component is managed by K8ssandra, and belongs to the K8ssandraCluster resource
-// specified by klusterKey which specifies the namespace and name of the K8ssandraCluster.
-func IsManagedBy(component Labeled, klusterKey client.ObjectKey) bool {
-	return HasLabelWithValue(component, k8ssandraapi.ManagedByLabel, k8ssandraapi.NameLabelValue) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
+// IsWatchedByK8ssandraCluster checks whether the given component is watched by a K8ssandraCluster.
+// klusterKey specifies the namespace and name of the K8ssandraCluster.
+func IsWatchedByK8ssandraCluster(component Labeled, klusterKey client.ObjectKey) bool {
+	return HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
 		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
 }
 
-// ManagedByLabels returns the labels used to identify a component managed by K8ssandra.
+// WatchedByK8ssandraClusterLabels returns the labels used to make a component watched by a K8ssandraCluster.
 // klusterKey specifies the namespace and name of the K8ssandraCluster.
-func ManagedByLabels(klusterKey client.ObjectKey) map[string]string {
+func WatchedByK8ssandraClusterLabels(klusterKey client.ObjectKey) map[string]string {
 	return map[string]string{
-		k8ssandraapi.ManagedByLabel:                 k8ssandraapi.NameLabelValue,
 		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 	}
