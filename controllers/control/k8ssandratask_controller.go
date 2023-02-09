@@ -289,14 +289,10 @@ func newCassandraTask(kTask *api.K8ssandraTask, namespace string, dcName string)
 			Namespace:   namespace,
 			Name:        cassandraTaskName(kTask, dcName),
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				k8capi.NameLabel:                k8capi.NameLabelValue,
-				k8capi.PartOfLabel:              k8capi.PartOfLabelValue,
-				k8capi.ComponentLabel:           k8capi.ComponentLabelValueCassandra,
-				k8capi.CreatedByLabel:           k8capi.CreatedByLabelValueK8ssandraTaskController,
-				api.K8ssandraTaskNameLabel:      kTask.Name,
-				api.K8ssandraTaskNamespaceLabel: kTask.Namespace,
-			},
+			Labels: labels.MapOf(
+				labels.CassandraCommon,
+				labels.WatchedByK8ssandraTask(kTask),
+			),
 		},
 		Spec: cassapi.CassandraTaskSpec{
 			Datacenter:            corev1.ObjectReference{Namespace: namespace, Name: dcName},

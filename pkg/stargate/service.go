@@ -5,6 +5,7 @@ import (
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -34,9 +35,7 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 				{Port: 8090, Name: "grpc"},
 				{Port: 9042, Name: "cassandra"},
 			},
-			Selector: map[string]string{
-				api.StargateLabel: stargate.Name,
-			},
+			Selector: labels.MapOf(labels.StargateName(stargate.Name)),
 		},
 	}
 
@@ -52,13 +51,10 @@ func NewService(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter) *core
 }
 
 func createServiceMeta(stargate *api.Stargate) meta.Tags {
-	labels := map[string]string{
-		coreapi.NameLabel:      coreapi.NameLabelValue,
-		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-		api.StargateLabel:      stargate.Name,
-	}
+	labels := labels.MapOf(
+		labels.StargateCommon,
+		labels.StargateName(stargate.Name),
+	)
 
 	var annotations map[string]string
 	if meta := stargate.Spec.ResourceMeta; meta != nil {

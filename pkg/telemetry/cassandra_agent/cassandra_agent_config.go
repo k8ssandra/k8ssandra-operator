@@ -152,8 +152,7 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 		Name:      c.Kluster.Name,
 		Namespace: c.Kluster.Namespace,
 	}
-	partOfLabels := labels.PartOfLabels(KlKey)
-	desiredCm.SetLabels(partOfLabels)
+	desiredCm.SetLabels(labels.MapOf(labels.CleanedUpByK8ssandraCluster(KlKey)))
 
 	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
 	switch {

@@ -70,7 +70,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
 					Namespace: kcKey.Namespace,
-					Labels:    labels.ReplicatedByLabels(kcKey),
+					Labels:    labels.MapOf(labels.ReplicatedBy(kcKey)),
 				},
 				Type: "Opaque",
 				// Immutable feature is only available from 1.21 and up (beta in 1.19 and up)
@@ -88,8 +88,8 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 	}
 
 	// It exists or was created: ensure it has proper annotations
-	if !labels.IsReplicatedBy(currentSec, kcKey) {
-		labels.SetReplicatedBy(currentSec, kcKey)
+	if !labels.ReplicatedBy(kcKey).IsPresent(currentSec) {
+		labels.ReplicatedBy(kcKey).AddTo(currentSec)
 		annotations.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}
@@ -169,11 +169,11 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kcKey.Name,
 			Namespace: kcKey.Namespace,
-			Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
+			Labels:    labels.MapOf(labels.WatchedByK8ssandraCluster(kcKey)),
 		},
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.ReplicatedByLabels(kcKey),
+				MatchLabels: labels.MapOf(labels.ReplicatedBy(kcKey)),
 			},
 			ReplicationTargets: replicationTargets,
 		},

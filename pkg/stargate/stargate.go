@@ -6,6 +6,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -68,14 +69,10 @@ func NewStargate(
 }
 
 func createResourceMeta(stargateTemplate *stargateapi.StargateDatacenterTemplate, kc *api.K8ssandraCluster) meta.Tags {
-	labels := map[string]string{
-		api.NameLabel:                      api.NameLabelValue,
-		api.PartOfLabel:                    api.PartOfLabelValue,
-		api.ComponentLabel:                 api.ComponentLabelValueStargate,
-		api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
-		api.K8ssandraClusterNameLabel:      kc.Name,
-		api.K8ssandraClusterNamespaceLabel: kc.Namespace,
-	}
+	labels := labels.MapOf(
+		labels.StargateCommon,
+		labels.CleanedUpByK8ssandraCluster(utils.GetKey(kc)),
+	)
 
 	var annotations map[string]string
 	if m := stargateTemplate.ResourceMeta; m != nil {

@@ -82,7 +82,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 	} else if desiredPerNodeConfig != nil {
 
 		// Update
-		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
+		if !k8ssandralabels.CleanedUpByK8ssandraCluster(kcKey).IsPresent(actualPerNodeConfig) {
 			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to update per-node configuration")
 			return result.Error(err)
 
@@ -100,7 +100,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 	} else {
 
 		// Delete
-		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
+		if !k8ssandralabels.CleanedUpByK8ssandraCluster(kcKey).IsPresent(actualPerNodeConfig) {
 			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to delete per-node configuration")
 			return result.Error(err)
 
@@ -143,13 +143,13 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 
 	if err == nil {
 
-		if !k8ssandralabels.IsWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey) {
+		if !k8ssandralabels.WatchedByK8ssandraCluster(kcKey).IsPresent(actualPerNodeConfig) {
 
 			// We set the configmap as managed by the operator so that we are notified of changes to
 			// its contents. Note that we do NOT set the configmap as owned by the operator, nor do
 			// we set our controller reference on it.
 			patch := client.MergeFromWithOptions(actualPerNodeConfig.DeepCopy())
-			k8ssandralabels.SetWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey)
+			k8ssandralabels.WatchedByK8ssandraCluster(kcKey).AddTo(actualPerNodeConfig)
 			if err = remoteClient.Patch(ctx, actualPerNodeConfig, patch); err != nil {
 				dcLogger.Error(err, "Failed to set user-provided per-node config managed by k8ssandra-operator")
 				return result.Error(err)

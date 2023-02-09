@@ -96,7 +96,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				logger.Error(err, "Failed to get Stargate")
 				return result.Error(err)
 			}
-		} else if labels.IsPartOf(actualStargate, kcKey) {
+		} else if labels.CleanedUpByK8ssandraCluster(kcKey).IsPresent(actualStargate) {
 			if err := remoteClient.Delete(ctx, actualStargate); err != nil {
 				logger.Error(err, "Failed to delete Stargate")
 				return result.Error(err)

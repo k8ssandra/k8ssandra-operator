@@ -2,12 +2,13 @@ package telemetry
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
@@ -291,15 +292,11 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      VectorAgentConfigMapName(k8cName, dcName),
-			Namespace: namespace,
-			Labels: map[string]string{
-				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
-				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
-				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
-				k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
-				k8ssandraapi.K8ssandraClusterNameLabel:      k8cName,
-				k8ssandraapi.K8ssandraClusterNamespaceLabel: k8cNamespace,
-			},
+			Namespace: k8cNamespace,
+			Labels: labels.MapOf(
+				labels.CassandraCommon,
+				labels.CleanedUpByK8ssandraCluster(client.ObjectKey{Namespace: k8cNamespace, Name: k8cName}),
+			),
 		},
 		Data: map[string]string{
 			"vector.toml": vectorToml,

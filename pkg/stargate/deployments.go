@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"strconv"
 	"strings"
 
@@ -112,9 +113,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 				Replicas: &replicas,
 
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						api.StargateDeploymentLabel: deploymentName,
-					},
+					MatchLabels: labels.MapOf(labels.ManagedByStargateDeployment(deploymentName)),
 				},
 
 				Template: corev1.PodTemplateSpec{
@@ -463,13 +462,10 @@ func configureAuth(stargate *api.Stargate, deployment *appsv1.Deployment) {
 }
 
 func createDeploymentLabels(stargate *api.Stargate) map[string]string {
-	commonLabels := map[string]string{
-		coreapi.NameLabel:      coreapi.NameLabelValue,
-		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
-		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
-		api.StargateLabel:      stargate.Name,
-	}
+	commonLabels := labels.MapOf(
+		labels.StargateCommon,
+		labels.StargateName(stargate.Name),
+	)
 
 	if m := stargate.Spec.ResourceMeta; m != nil && m.CommonLabels != nil {
 		return utils.MergeMap(commonLabels, m.CommonLabels)
@@ -478,14 +474,11 @@ func createDeploymentLabels(stargate *api.Stargate) map[string]string {
 }
 
 func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
-	labels := map[string]string{
-		coreapi.NameLabel:           coreapi.NameLabelValue,
-		coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
-		coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
-		api.StargateLabel:           stargate.Name,
-		api.StargateDeploymentLabel: deploymentName,
-	}
+	labels := labels.MapOf(
+		labels.StargateCommon,
+		labels.StargateName(stargate.Name),
+		labels.ManagedByStargateDeployment(deploymentName),
+	)
 
 	var annotations map[string]string
 	if m := stargate.Spec.ResourceMeta; m != nil {

@@ -164,7 +164,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 				logger.Error(err, "Failed to get Reaper resource")
 				return result.Error(err)
 			}
-		} else if k8ssandralabels.IsPartOf(actualReaper, kcKey) {
+		} else if k8ssandralabels.CleanedUpByK8ssandraCluster(kcKey).IsPresent(actualReaper) {
 			if err = remoteClient.Delete(ctx, actualReaper); err != nil {
 				logger.Error(err, "Failed to delete Reaper resource")
 				return result.Error(err)
@@ -187,7 +187,7 @@ func (r *K8ssandraClusterReconciler) deleteReapers(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	selector := k8ssandralabels.MapOf(k8ssandralabels.CleanedUpByK8ssandraCluster(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}))
 	reaperList := &reaperapi.ReaperList{}
 	options := client.ListOptions{
 		Namespace:     namespace,

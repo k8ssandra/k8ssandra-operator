@@ -5,6 +5,7 @@ package stargate
 import (
 	"context"
 	"errors"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
@@ -78,14 +79,17 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
 func mustLabels(stargateName string, additionalLabels map[string]string) map[string]string {
+	builtInLabels := labels.MapOf(
+		labels.StargateCommon,
+		labels.ManagedByStargateServiceMonitor(stargateName),
+	)
 	if additionalLabels == nil {
-		additionalLabels = make(map[string]string)
+		additionalLabels = builtInLabels
+	} else {
+		for k, v := range builtInLabels {
+			additionalLabels[k] = v
+		}
 	}
-	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
-	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
-	additionalLabels[stargateapi.StargateLabel] = stargateName
-	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
-	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
 	return additionalLabels
 
 }

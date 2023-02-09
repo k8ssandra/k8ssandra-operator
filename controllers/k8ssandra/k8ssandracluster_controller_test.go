@@ -946,7 +946,7 @@ func createSuperuserSecret(ctx context.Context, t *testing.T, f *framework.Frame
 		},
 		Data: map[string][]byte{},
 	}
-	labels.SetWatchedByK8ssandraCluster(secret, kcKey)
+	labels.WatchedByK8ssandraCluster(kcKey).AddTo(secret)
 
 	err := f.Client.Create(ctx, secret)
 	require.NoError(t, err, "failed to create superuser secret")
@@ -960,7 +960,7 @@ func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Fram
 		},
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.WatchedByK8ssandraClusterLabels(kcKey),
+				MatchLabels: labels.MapOf(labels.WatchedByK8ssandraCluster(kcKey)),
 			},
 			ReplicationTargets: []replicationapi.ReplicationTarget{},
 		},
@@ -973,7 +973,7 @@ func createReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Fram
 			},
 		},
 	}
-	labels.SetWatchedByK8ssandraCluster(rsec, kcKey)
+	labels.WatchedByK8ssandraCluster(kcKey).AddTo(rsec)
 
 	for _, val := range replicationTargets {
 		rsec.Spec.ReplicationTargets = append(rsec.Spec.ReplicationTargets, replicationapi.ReplicationTarget{

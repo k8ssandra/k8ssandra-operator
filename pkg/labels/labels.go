@@ -1,7 +1,9 @@
 package labels
 
 import (
+	k8ssandrataskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,83 +34,128 @@ func HasLabelWithValue(component Labeled, labelKey string, labelValue string) bo
 	return GetLabel(component, labelKey) == labelValue
 }
 
-// SetWatchedByK8ssandraCluster sets the required labels for making a component watched by the K8ssandraCluster, i.e. a
-// modification of the component will trigger a reconciliation loop in K8ssandraClusterReconciler.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func SetWatchedByK8ssandraCluster(component Labeled, klusterKey client.ObjectKey) {
-	AddLabel(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name)
-	AddLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
+// LabelSet represents a set of labels keys and values that are applied to a K8ssandra component.
+type LabelSet map[string]string
+
+func newLabelSet(m map[string]string) *LabelSet {
+	l := LabelSet(m)
+	return &l
 }
 
-// IsWatchedByK8ssandraCluster checks whether the given component is watched by a K8ssandraCluster.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func IsWatchedByK8ssandraCluster(component Labeled, klusterKey client.ObjectKey) bool {
-	return HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
-}
-
-// WatchedByK8ssandraClusterLabels returns the labels used to make a component watched by a K8ssandraCluster.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func WatchedByK8ssandraClusterLabels(klusterKey client.ObjectKey) map[string]string {
-	return map[string]string{
-		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
-		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+// AddTo adds the labels to the given component.
+func (l *LabelSet) AddTo(component Labeled) {
+	for key, value := range *l {
+		AddLabel(component, key, value)
 	}
 }
 
-// SetReplicatedBy sets the required labels that make a Secret selectable by a ReplicatedSecret for a given
-// K8ssandraCluster.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func SetReplicatedBy(component Labeled, klusterKey client.ObjectKey) {
-	AddLabel(component, k8ssandraapi.ReplicatedByLabel, k8ssandraapi.ReplicatedByLabelValue)
-	AddLabel(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name)
-	AddLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
+// IsPresent checks whether the labels are present on the given component.
+func (l *LabelSet) IsPresent(component Labeled) bool {
+	for key, value := range *l {
+		if !HasLabelWithValue(component, key, value) {
+			return false
+		}
+	}
+	return true
 }
 
-// IsReplicatedBy checks whether the given component (which in practice will be Secret) is selectable by a
-// ReplicatedSecret for the given K8ssandraCluster.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func IsReplicatedBy(component Labeled, klusterKey client.ObjectKey) bool {
-	return HasLabelWithValue(component, k8ssandraapi.ReplicatedByLabel, k8ssandraapi.ReplicatedByLabelValue) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
+// MapOf builds a map with the labels from all the given sets.
+func MapOf(ls ...*LabelSet) map[string]string {
+	m := make(map[string]string)
+	for _, l := range ls {
+		for key, value := range *l {
+			m[key] = value
+		}
+	}
+	return m
 }
 
-// ReplicatedByLabels returns the labels used to make a Secret selectable by a ReplicatedSecret for the given
-// K8ssandraCluster.
-// klusterKey specifies the namespace and name of the K8ssandraCluster.
-func ReplicatedByLabels(klusterKey client.ObjectKey) map[string]string {
-	return map[string]string{
+// CassandraCommon is a set of common Kubernetes labels, for resources belonging to the "Cassandra" component.
+var CassandraCommon = newLabelSet(map[string]string{
+	k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+	k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+	k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueCassandra,
+})
+
+// WatchedByK8ssandraCluster returns the labels for making a component watched by a K8ssandraCluster. In other words, a
+// modification of the component will trigger a reconciliation loop in K8ssandraClusterReconciler.
+func WatchedByK8ssandraCluster(klusterKey client.ObjectKey) *LabelSet {
+	return newLabelSet(map[string]string{
+		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
+		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+	})
+}
+
+// WatchedByK8ssandraTask returns the labels for making a component watched by a K8ssandraTask. In other words, a
+// modification of the component will trigger a reconciliation loop in K8ssandraTaskReconciler.
+func WatchedByK8ssandraTask(kTask *k8ssandrataskapi.K8ssandraTask) *LabelSet {
+	return newLabelSet(map[string]string{
+		k8ssandrataskapi.K8ssandraTaskNameLabel:      kTask.Name,
+		k8ssandrataskapi.K8ssandraTaskNamespaceLabel: kTask.Namespace,
+	})
+}
+
+// ReplicatedBy returns the labels that make a Secret selectable by a ReplicatedSecret for a K8ssandraCluster.
+// This is a superset of WatchedByK8ssandraCluster.
+func ReplicatedBy(klusterKey client.ObjectKey) *LabelSet {
+	return newLabelSet(map[string]string{
 		k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
 		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
-	}
+	})
 }
 
-// IsPartOf returns true if this component was created by the k8ssandra-cluster controller, and belongs to the
-// K8ssandraCluster resource specified by klusterKey. klusterKey refers to the namespace and name of the
-// K8ssandraCluster.
-func IsPartOf(component Labeled, klusterKey client.ObjectKey) bool {
-	return HasLabelWithValue(component, k8ssandraapi.CreatedByLabel, k8ssandraapi.CreatedByLabelValueK8ssandraClusterController) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNameLabel, klusterKey.Name) &&
-		HasLabelWithValue(component, k8ssandraapi.K8ssandraClusterNamespaceLabel, klusterKey.Namespace)
-}
-
-// PartOfLabels returns the labels used to identify a component created by the k8ssandra-cluster controller, and
-// belonging to the K8ssandraCluster resource specified by klusterKey, which is namespace and name of the
-// K8ssandraCluster.
-func PartOfLabels(klusterKey client.ObjectKey) map[string]string {
-	// TODO add k8ssandraapi.PartOfLabel entry here, already done for telemetry objects elsewhere
-	return map[string]string{
+// CleanedUpByK8ssandraCluster returns the labels that mark a component to be cleaned up when a K8ssandraCluster gets
+// deleted.
+// This is a superset of WatchedByK8ssandraCluster.
+func CleanedUpByK8ssandraCluster(klusterKey client.ObjectKey) *LabelSet {
+	return newLabelSet(map[string]string{
 		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 		k8ssandraapi.K8ssandraClusterNameLabel:      klusterKey.Name,
 		k8ssandraapi.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
-	}
+	})
 }
 
 // IsOwnedByK8ssandraController returns true if this component was created by the k8ssandra-cluster controller.
 func IsOwnedByK8ssandraController(component Labeled) bool {
+	// This is equivalent to CleanedUpByK8ssandraCluster(<any cluster>).IsPresent(component).
+	// Which is kind of a hack because this only gets called for Stargate resources, and we know the controller
+	// always sets these labels for those.
 	return HasLabelWithValue(component, k8ssandraapi.CreatedByLabel, k8ssandraapi.CreatedByLabelValueK8ssandraClusterController) &&
 		HasLabel(component, k8ssandraapi.K8ssandraClusterNameLabel) &&
 		HasLabel(component, k8ssandraapi.K8ssandraClusterNamespaceLabel)
+}
+
+// StargateCommon is a set of common Kubernetes labels, for resources belonging to the "Stargate" component.
+var StargateCommon = newLabelSet(map[string]string{
+	k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+	k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+	k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueStargate,
+	// Unlike K8ssandraCluster, there's no particular semantic meaning for Stargate, except in
+	// ManagedByStargateServiceMonitor.
+	k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueStargateController,
+})
+
+// StargateName returns the label used to identify components as parts of a given Stargate resource.
+// In most case, this label is purely informational, but it is also used to match Deployments, as well as in the
+// selector for the Stargate Service.
+func StargateName(stargateName string) *LabelSet {
+	return newLabelSet(map[string]string{
+		stargateapi.StargateLabel: stargateName,
+	})
+}
+
+// ManagedByStargateDeployment returns the label used in the Stargate deployment's selector.
+func ManagedByStargateDeployment(deploymentName string) *LabelSet {
+	return newLabelSet(map[string]string{
+		stargateapi.StargateDeploymentLabel: deploymentName,
+	})
+}
+
+// ManagedByStargateServiceMonitor returns the labels used in the Stargate ServiceMonitor's selector.
+func ManagedByStargateServiceMonitor(stargateName string) *LabelSet {
+	return newLabelSet(map[string]string{
+		stargateapi.StargateLabel:   stargateName,
+		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueStargateController,
+	})
 }

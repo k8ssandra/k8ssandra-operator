@@ -2,6 +2,8 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -153,14 +155,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				api.NameLabel:                      api.NameLabelValue,
-				api.PartOfLabel:                    api.PartOfLabelValue,
-				api.ComponentLabel:                 api.ComponentLabelValueCassandra,
-				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
-				api.K8ssandraClusterNameLabel:      klusterKey.Name,
-				api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
-			},
+			Labels: labels.MapOf(
+				labels.CassandraCommon,
+				labels.CleanedUpByK8ssandraCluster(klusterKey),
+			),
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                template.Size,

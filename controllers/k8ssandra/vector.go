@@ -37,7 +37,7 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		}
 
 		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), dcConfig.Meta.Name, kc.Namespace, toml)
-		k8ssandralabels.SetWatchedByK8ssandraCluster(desiredVectorConfigMap, kcKey)
+		k8ssandralabels.WatchedByK8ssandraCluster(kcKey).AddTo(desiredVectorConfigMap)
 
 		// Check if the vector config map already exists
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)

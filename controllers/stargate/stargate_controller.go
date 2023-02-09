@@ -228,7 +228,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		ctx,
 		actualDeployments,
 		client.InNamespace(req.Namespace),
-		client.MatchingLabels{api.StargateLabel: stargate.Name},
+		client.MatchingLabels(labels.MapOf(labels.StargateName(stargate.Name))),
 	); err != nil {
 		logger.Error(err, "Failed to list Stargate Deployments", "Stargate", req.NamespacedName)
 		return ctrl.Result{}, err
