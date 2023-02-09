@@ -31,6 +31,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: Create temporary directory for yq install
+        run: |
+          mkdir ${{ runner.temp }}/yq
       - name: Install yq
         working-directory: ${{ runner.temp }}/yq
         run: |
