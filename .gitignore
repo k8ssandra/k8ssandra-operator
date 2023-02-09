@@ -31,3 +31,6 @@ clientconfig
 kind-log*/
 kubeconfig
 vendor/
+
+# Helm chart dependencies
+charts/*/charts/*.tgz

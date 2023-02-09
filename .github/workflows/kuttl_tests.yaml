@@ -30,11 +30,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
-      - name: Install yq
-        run: |
-          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv yq_linux_amd64.tar.gz /usr/bin
       - name: Parse image version
         id: parse_image_tag
         run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
