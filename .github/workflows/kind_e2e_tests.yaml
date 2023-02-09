@@ -81,7 +81,6 @@ jobs:
           - CreateStargateAndDatacenter
           - CreateSingleReaper
           - CreateReaperAndDatacenter
-          - CreateSingleMedusaOld
           - CreateSingleMedusaJob
           - ConfigControllerRestarts
           - SingleDcEncryptionWithStargate

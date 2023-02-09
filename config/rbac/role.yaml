@@ -198,20 +198,9 @@ rules:
   - cassandrabackups
   verbs:
   - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - cassandrabackups/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - medusa.k8ssandra.io
   resources:
@@ -220,25 +209,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - cassandrarestores
-  verbs:
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - cassandrarestores/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - medusa.k8ssandra.io
   resources:

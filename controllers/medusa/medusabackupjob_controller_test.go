@@ -3,19 +3,31 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"sync"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	medusaImageRepo     = "test/medusa"
+	cassandraUserSecret = "medusa-secret"
+	defaultBackupName   = "backup1"
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -211,4 +223,175 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
 	return true
+}
+
+func reconcileReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Framework, kc *k8ss.K8ssandraCluster) {
+	t.Log("check ReplicatedSecret reconciled")
+
+	rsec := &replicationapi.ReplicatedSecret{}
+	replSecretKey := types.NamespacedName{Name: kc.Name, Namespace: kc.Namespace}
+
+	assert.Eventually(t, func() bool {
+		err := f.Client.Get(ctx, replSecretKey, rsec)
+		return err == nil
+	}, timeout, interval, "failed to get ReplicatedSecret")
+
+	conditions := make([]replicationapi.ReplicationCondition, 0)
+	now := metav1.Now()
+
+	for _, target := range rsec.Spec.ReplicationTargets {
+		conditions = append(conditions, replicationapi.ReplicationCondition{
+			Cluster:            target.K8sContextName,
+			Type:               replicationapi.ReplicationDone,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: &now,
+		})
+	}
+	rsec.Status.Conditions = conditions
+	err := f.Client.Status().Update(ctx, rsec)
+
+	require.NoError(t, err, "Failed to update ReplicationSecret status")
+}
+
+// Creates a fake ip address with the pod's original index from the StatefulSet
+func getPodIpAddress(index int) string {
+	return "192.168.1." + strconv.Itoa(50+index)
+}
+
+type fakeMedusaClientFactory struct {
+	clientsMutex sync.Mutex
+	clients      map[string]*fakeMedusaClient
+}
+
+func NewMedusaClientFactory() *fakeMedusaClientFactory {
+	return &fakeMedusaClientFactory{clients: make(map[string]*fakeMedusaClient, 0)}
+}
+
+func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, error) {
+	f.clientsMutex.Lock()
+	defer f.clientsMutex.Unlock()
+	_, ok := f.clients[address]
+	if !ok {
+		f.clients[address] = newFakeMedusaClient()
+	}
+	return f.clients[address], nil
+}
+
+func (f *fakeMedusaClientFactory) GetRequestedBackups() map[string][]string {
+	f.clientsMutex.Lock()
+	defer f.clientsMutex.Unlock()
+	requestedBackups := make(map[string][]string)
+	for k, v := range f.clients {
+		requestedBackups[k] = v.RequestedBackups
+	}
+	return requestedBackups
+}
+
+type fakeMedusaClient struct {
+	RequestedBackups []string
+}
+
+func newFakeMedusaClient() *fakeMedusaClient {
+	return &fakeMedusaClient{RequestedBackups: make([]string, 0)}
+}
+
+func (c *fakeMedusaClient) Close() error {
+	return nil
+}
+
+func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backupType string) error {
+	c.RequestedBackups = append(c.RequestedBackups, name)
+	return nil
+}
+
+func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
+	backups := make([]*medusa.BackupSummary, 0)
+	for _, name := range c.RequestedBackups {
+		backup := &medusa.BackupSummary{
+			BackupName: name,
+			StartTime:  0,
+			FinishTime: 10,
+			Status:     *medusa.StatusType_SUCCESS.Enum(),
+		}
+		backups = append(backups, backup)
+	}
+	return backups, nil
+}
+
+func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
+	return nil, nil
+}
+
+func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+	response := &medusa.PurgeBackupsResponse{
+		NbBackupsPurged:           2,
+		NbObjectsPurged:           10,
+		TotalObjectsWithinGcGrace: 0,
+		TotalPurgedSize:           1000,
+	}
+	return response, nil
+}
+
+func (c *fakeMedusaClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*medusa.PrepareRestoreResponse, error) {
+	return nil, nil
+}
+
+func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
+	for _, condition := range status.Conditions {
+		if condition.Type == condType {
+			return &condition
+		}
+	}
+	return nil
+}
+
+func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
+	for i := int32(0); i < dc.Spec.Size; i++ {
+		pod := &corev1.Pod{}
+		podName := fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i)
+		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
+		err := f.Get(ctx, podKey, pod)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				t.Logf("pod %s-%d not found", dc.Spec.ClusterName, i)
+				pod = &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: dc.Namespace,
+						Name:      podName,
+						Labels: map[string]string{
+							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
+							cassdcapi.DatacenterLabel: dc.Name,
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "cassandra",
+								Image: "cassandra",
+							},
+							{
+								Name:  shared.BackupSidecarName,
+								Image: shared.BackupSidecarName,
+							},
+						},
+					},
+				}
+				err = f.Create(ctx, podKey, pod)
+				require.NoError(t, err, "failed to create datacenter pod")
+
+				patch := client.MergeFrom(pod.DeepCopy())
+				pod.Status.PodIP = getPodIpAddress(int(i))
+
+				err = f.PatchStatus(ctx, pod, patch, podKey)
+				require.NoError(t, err, "failed to patch datacenter pod status")
+			}
+		}
+	}
+}
+
+func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Framework, key framework.ClusterKey, obj client.Object) {
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, key, obj)
+		return err != nil && errors.IsNotFound(err)
+	}, timeout, interval, "failed to verify object does not exist", key)
 }

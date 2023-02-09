@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +39,13 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+)
+
+const (
+	restoreContainerName = "medusa-restore"
+	backupNameEnvVar     = "BACKUP_NAME"
+	restoreKeyEnvVar     = "RESTORE_KEY"
 )
 
 // MedusaRestoreJobReconciler reconciles a MedusaRestoreJob object
@@ -224,11 +232,11 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 			return false, nil
 		}
 
-		if !containerHasEnvVar(container, backupNameEnvVar, req.MedusaBackup.ObjectMeta.Name) {
+		if !utils.ContainerHasEnvVar(container, backupNameEnvVar, req.MedusaBackup.ObjectMeta.Name) {
 			return false, nil
 		}
 
-		if !containerHasEnvVar(container, restoreKeyEnvVar, req.RestoreJob.Status.RestoreKey) {
+		if !utils.ContainerHasEnvVar(container, restoreKeyEnvVar, req.RestoreJob.Status.RestoreKey) {
 			return false, nil
 		}
 	}
@@ -309,4 +317,66 @@ func (r *MedusaRestoreJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&medusav1alpha1.MedusaRestoreJob{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
+}
+
+func getRestoreInitContainerFromStatefulSet(statefulset *appsv1.StatefulSet) *corev1.Container {
+	for _, container := range statefulset.Spec.Template.Spec.InitContainers {
+		if container.Name == restoreContainerName {
+			return &container
+		}
+	}
+	return nil
+}
+
+func setBackupNameInRestoreContainer(backupName string, cassdc *cassdcapi.CassandraDatacenter) error {
+	index, err := getRestoreInitContainerIndex(cassdc)
+	if err != nil {
+		return err
+	}
+
+	restoreContainer := &cassdc.Spec.PodTemplateSpec.Spec.InitContainers[index]
+	envVars := restoreContainer.Env
+	envVarIdx := utils.GetEnvVarIndex(backupNameEnvVar, envVars)
+
+	if envVarIdx > -1 {
+		envVars[envVarIdx].Value = backupName
+	} else {
+		envVars = append(envVars, corev1.EnvVar{Name: backupNameEnvVar, Value: backupName})
+	}
+	restoreContainer.Env = envVars
+
+	return nil
+}
+
+func setRestoreKeyInRestoreContainer(restoreKey string, dc *cassdcapi.CassandraDatacenter) error {
+	index, err := getRestoreInitContainerIndex(dc)
+	if err != nil {
+		return err
+	}
+
+	restoreContainer := &dc.Spec.PodTemplateSpec.Spec.InitContainers[index]
+	envVars := restoreContainer.Env
+	envVarIdx := utils.GetEnvVarIndex(restoreKeyEnvVar, envVars)
+
+	if envVarIdx > -1 {
+		envVars[envVarIdx].Value = restoreKey
+	} else {
+		envVars = append(envVars, corev1.EnvVar{Name: restoreKeyEnvVar, Value: restoreKey})
+	}
+	restoreContainer.Env = envVars
+
+	return nil
+}
+
+func getRestoreInitContainerIndex(dc *cassdcapi.CassandraDatacenter) (int, error) {
+	spec := dc.Spec.PodTemplateSpec
+	initContainers := &spec.Spec.InitContainers
+
+	for i, container := range *initContainers {
+		if container.Name == restoreContainerName {
+			return i, nil
+		}
+	}
+
+	return 0, fmt.Errorf("restore initContainer (%s) not found", restoreContainerName)
 }

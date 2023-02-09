@@ -65,7 +65,6 @@ jobs:
           - CreateMultiStargateAndDatacenter
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
-          - CreateMultiMedusaOld
           - CreateMultiMedusaJob
           - MultiDcAuthOnOff
           - MultiDcEncryptionWithStargate
