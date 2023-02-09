@@ -9,7 +9,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	stargatepkg "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
@@ -39,47 +39,11 @@ func (r *StargateReconciler) reconcileVectorConfigMap(
 		}
 
 		desiredVectorConfigMap := stargatepkg.CreateVectorConfigMap(namespace, toml, *actualDc)
-		annotations.AddHashAnnotation(desiredVectorConfigMap)
-
-		// Check if the vector config map already exists
-		actualVectorConfigMap := &corev1.ConfigMap{}
-
-		if err := remoteClient.Get(ctx, configMapKey, actualVectorConfigMap); err != nil {
-			if errors.IsNotFound(err) {
-				if err := ctrl.SetControllerReference(&stargate, desiredVectorConfigMap, r.Scheme); err != nil {
-					dcLogger.Error(err, "Failed to set controller reference on new Stargate Vector ConfigMap", "ConfigMap", configMapKey)
-					return ctrl.Result{}, err
-				} else if err := remoteClient.Create(ctx, desiredVectorConfigMap); err != nil {
-					if errors.IsAlreadyExists(err) {
-						// the read from the local cache didn't catch that the resource was created
-						// already; simply requeue until the cache is up-to-date
-						dcLogger.Info("Stargate Vector Agent configuration already exists, requeueing")
-						return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-					} else {
-						dcLogger.Error(err, "Failed to create Stargate Vector Agent ConfigMap")
-						return ctrl.Result{}, err
-					}
-				}
-				// Requeue to ensure the config map can be retrieved
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-			} else {
-				dcLogger.Error(err, "Failed to get Stargate Vector Agent ConfigMap")
-				return ctrl.Result{}, err
-			}
+		if err := ctrl.SetControllerReference(&stargate, desiredVectorConfigMap, r.Scheme); err != nil {
+			dcLogger.Error(err, "Failed to set controller reference on new Stargate Vector ConfigMap", "ConfigMap", configMapKey)
+			return ctrl.Result{}, err
 		}
-
-		actualVectorConfigMap = actualVectorConfigMap.DeepCopy()
-
-		if !annotations.CompareHashAnnotations(actualVectorConfigMap, desiredVectorConfigMap) {
-			resourceVersion := actualVectorConfigMap.GetResourceVersion()
-			desiredVectorConfigMap.DeepCopyInto(actualVectorConfigMap)
-			actualVectorConfigMap.SetResourceVersion(resourceVersion)
-			if err := remoteClient.Update(ctx, actualVectorConfigMap); err != nil {
-				dcLogger.Error(err, "Failed to update Stargate Vector Agent ConfigMap resource")
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-		}
+		reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
 	} else {
 		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
 			return ctrl.Result{}, err
