@@ -8,12 +8,11 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,41 +70,19 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	if err != nil {
 		return result.Error(err)
 	}
-	cmObjectKey := types.NamespacedName{
-		Name:      c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
-		Namespace: c.DcNamespace,
-	}
 	KlKey := types.NamespacedName{
 		Name:      c.Kluster.Name,
 		Namespace: c.Kluster.Namespace,
 	}
 	partOfLabels := labels.PartOfLabels(KlKey)
 	desiredCm.SetLabels(partOfLabels)
-	annotations.AddHashAnnotation(desiredCm)
 
-	currentCm := &corev1.ConfigMap{}
-
-	err = c.RemoteClient.Get(c.Ctx, cmObjectKey, currentCm)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			if err := c.RemoteClient.Create(c.Ctx, desiredCm); err != nil {
-				return result.Error(err)
-			}
-			return result.RequeueSoon(c.RequeueDelay)
-		} else {
-			return result.Error(err)
-		}
-	}
-
-	if !annotations.CompareHashAnnotations(currentCm, desiredCm) {
-		resourceVersion := currentCm.GetResourceVersion()
-		desiredCm.DeepCopyInto(currentCm)
-		currentCm.SetResourceVersion(resourceVersion)
-		if err := c.RemoteClient.Update(c.Ctx, currentCm); err != nil {
-			return result.Error(err)
-		}
-		return result.RequeueSoon(c.RequeueDelay)
+	recRes := reconciliation.ReconcileConfigMap(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
+	switch {
+	case recRes.IsError():
+		return recRes
+	case recRes.IsRequeue():
+		return recRes
 	}
 
 	c.AddStsVolumes(dc)

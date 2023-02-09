@@ -15,6 +15,7 @@ type ReconcileResult interface {
 	IsError() bool
 	IsRequeue() bool
 	IsDone() bool
+	GetError() error
 }
 
 type continueReconcile struct{}
@@ -38,6 +39,10 @@ func (continueReconcile) IsRequeue() bool {
 	return false
 }
 
+func (continueReconcile) GetError() error {
+	return nil
+}
+
 type done struct{}
 
 func (d done) Completed() bool {
@@ -57,6 +62,10 @@ func (done) IsError() bool {
 
 func (done) IsRequeue() bool {
 	return false
+}
+
+func (done) GetError() error {
+	return nil
 }
 
 type callBackSoon struct {
@@ -81,6 +90,9 @@ func (callBackSoon) IsError() bool {
 func (callBackSoon) IsRequeue() bool {
 	return true
 }
+func (callBackSoon) GetError() error {
+	return nil
+}
 
 type errorOut struct {
 	err error
@@ -103,6 +115,10 @@ func (errorOut) IsError() bool {
 
 func (errorOut) IsRequeue() bool {
 	return false
+}
+
+func (r errorOut) GetError() error {
+	return r.err
 }
 
 func Continue() ReconcileResult {
