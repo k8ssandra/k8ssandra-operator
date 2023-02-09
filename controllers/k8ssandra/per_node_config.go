@@ -143,13 +143,13 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 
 	if err == nil {
 
-		if !k8ssandralabels.IsManagedBy(actualPerNodeConfig, kcKey) {
+		if !k8ssandralabels.IsWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey) {
 
 			// We set the configmap as managed by the operator so that we are notified of changes to
 			// its contents. Note that we do NOT set the configmap as owned by the operator, nor do
 			// we set our controller reference on it.
 			patch := client.MergeFromWithOptions(actualPerNodeConfig.DeepCopy())
-			k8ssandralabels.SetManagedBy(actualPerNodeConfig, kcKey)
+			k8ssandralabels.SetWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey)
 			if err = remoteClient.Patch(ctx, actualPerNodeConfig, patch); err != nil {
 				dcLogger.Error(err, "Failed to set user-provided per-node config managed by k8ssandra-operator")
 				return result.Error(err)

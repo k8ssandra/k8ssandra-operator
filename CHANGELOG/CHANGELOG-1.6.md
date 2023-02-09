@@ -17,4 +17,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] [#848](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Perform Helm releases in the release workflow
 * [FEATURE] [#815](https://github.com/k8ssandra/k8ssandra-operator/issues/815) Add configuration block to CRDs for new Cassandra metrics agent.
+* [ENHANCEMENT] [#859](https://github.com/k8ssandra/k8ssandra-operator/issues/859) Remove current usages of managed-by label
 * [BUGFIX] [#854](https://github.com/k8ssandra/k8ssandra-operator/issues/854) Use Patch() to update K8ssandraTask status.

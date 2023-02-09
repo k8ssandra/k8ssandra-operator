@@ -66,8 +66,12 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 			}
 
 			sec := &corev1.Secret{
-				ObjectMeta: getManagedObjectMeta(secretName, kcKey),
-				Type:       "Opaque",
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: kcKey.Namespace,
+					Labels:    labels.ReplicatedByLabels(kcKey),
+				},
+				Type: "Opaque",
 				// Immutable feature is only available from 1.21 and up (beta in 1.19 and up)
 				// Immutable:  true,
 				Data: map[string][]byte{
@@ -83,8 +87,8 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 	}
 
 	// It exists or was created: ensure it has proper annotations
-	if !labels.IsManagedBy(currentSec, kcKey) {
-		labels.SetManagedBy(currentSec, kcKey)
+	if !labels.IsReplicatedBy(currentSec, kcKey) {
+		labels.SetReplicatedBy(currentSec, kcKey)
 		annotations.AddAnnotation(currentSec, OrphanResourceAnnotation, "true")
 		return c.Update(ctx, currentSec)
 	}
@@ -161,10 +165,14 @@ func HasReplicatedSecrets(ctx context.Context, c client.Client, kcKey client.Obj
 
 func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []replicationapi.ReplicationTarget) *replicationapi.ReplicatedSecret {
 	return &replicationapi.ReplicatedSecret{
-		ObjectMeta: getManagedObjectMeta(kcKey.Name, kcKey),
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kcKey.Name,
+			Namespace: kcKey.Namespace,
+			Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
+		},
 		Spec: replicationapi.ReplicatedSecretSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels.ManagedByLabels(kcKey),
+				MatchLabels: labels.ReplicatedByLabels(kcKey),
 			},
 			ReplicationTargets: replicationTargets,
 		},
@@ -200,12 +208,4 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 	}
 
 	return false
-}
-
-func getManagedObjectMeta(name string, kcKey client.ObjectKey) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Name:      name,
-		Namespace: kcKey.Namespace,
-		Labels:    labels.ManagedByLabels(kcKey),
-	}
 }
