@@ -43,7 +43,13 @@ func (r *StargateReconciler) reconcileVectorConfigMap(
 			dcLogger.Error(err, "Failed to set controller reference on new Stargate Vector ConfigMap", "ConfigMap", configMapKey)
 			return ctrl.Result{}, err
 		}
-		reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
+		recRes := reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
+		switch {
+		case recRes.IsError():
+			return ctrl.Result{}, recRes.GetError()
+		case recRes.IsRequeue():
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		}
 	} else {
 		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
 			return ctrl.Result{}, err

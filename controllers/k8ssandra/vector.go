@@ -40,7 +40,13 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		k8ssandralabels.SetManagedBy(desiredVectorConfigMap, kcKey)
 
 		// Check if the vector config map already exists
-		reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
+		recRes := reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
+		switch {
+		case recRes.IsError():
+			return recRes
+		case recRes.IsRequeue():
+			return recRes
+		}
 	} else {
 		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
 			return result.Error(err)
