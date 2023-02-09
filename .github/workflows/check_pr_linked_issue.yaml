@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+name: Check linked issues
 on:
   pull_request_target:
     types: [opened, edited, reopened, synchronize]
@@ -20,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Check linked issues
     steps:
-      - uses: nearform/github-action-check-linked-issues@v1
+      - uses: nearform-actions/github-action-check-linked-issues@v1
         id: check-linked-issues
         with:
-          exclude-branches: "dependabot/**"
+          exclude-branches: "dependabot/**, upgrade/**, noissue/**"
           comment: true
