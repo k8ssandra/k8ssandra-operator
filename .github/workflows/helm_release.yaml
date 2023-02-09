@@ -1,0 +1,109 @@
+name: K8ssandra Operator Helm Release
+
+on:
+  workflow_call:
+    inputs:
+      helm_repo:
+        description: 'Helm repository to use'
+        default: 'next'
+        required: false
+        type: string
+      prerelease:
+        description: 'Whether we are publishing a pre-release'
+        default: 'true'
+        required: false
+        type: string
+    secrets:
+      GCP_PROJECT_ID:
+        required: true
+      GCP_SA_KEY:
+        required: true
+      GCP_HELM_BUCKET_NAME:
+        required: true
+
+jobs:
+  helm-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Update PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+
+      - name: Update chart dependencies
+        run: |
+          scripts/update-helm-deps.sh
+
+      - name: Compute release chart version
+        id: compute_next_version
+        run: |
+          DATE_TIME=$(date '+%Y%m%d%H%M%S')
+          RELEASE_VERSION=$(echo $(yq e '.version' charts/k8ssandra-operator/Chart.yaml) | sed "s/-.*/-${DATE_TIME}-${GITHUB_SHA::8}/")
+          echo "Release version is: $RELEASE_VERSION"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update Helm chart version
+        run: |
+          yq eval ".version |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
+          yq eval ".appVersion |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/Chart.yaml -i
+          if [ "${{ inputs.prerelease }}" == "true" ]; then
+            ## When publishing a prerelease from the main branch, we want to use the short SHA as the image tag
+            yq eval ".image.tag |= \"${GITHUB_SHA::8}\"" charts/k8ssandra-operator/values.yaml -i
+          else
+            ## For a release, we want to use the git tag name as the image tag
+            yq eval ".image.tag |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/values.yaml -i
+          fi
+          cat charts/k8ssandra-operator/Chart.yaml
+      
+      - name: Prepare Helm release
+        run: |
+          make prepare-helm-release
+
+      - name: Create working directory and copy charts
+        run: |
+          mkdir -p build/$RELEASE_VERSION/k8ssandra-operator
+          cp -rv charts/* build/$RELEASE_VERSION
+
+      - name: Generate package archives
+        run: |
+          helm package k8ssandra-operator
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      # Helm Release
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Download current index from Google Cloud
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          echo "Downloading index.yaml from gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml"
+          gsutil cp gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml ./
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      - name: Regenerate Helm index
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          echo "Generating Helm index for gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/index.yaml"
+          helm repo index . --merge index.yaml --url "https://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/"
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}
+
+      - name: Upload packages and index
+        env:
+          GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
+        run: |
+          gsutil cp ./*.tgz gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/
+          gsutil cp ./index.yaml gs://$GCP_HELM_BUCKET_NAME/${{ inputs.helm_repo }}/
+        working-directory: build/${{ steps.compute_next_version.outputs.RELEASE_VERSION }}

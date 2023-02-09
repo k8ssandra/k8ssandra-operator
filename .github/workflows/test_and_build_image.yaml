@@ -34,7 +34,7 @@ jobs:
       - name: Install yq
         run: |
           sudo rm /bin/yq
-          wget https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64.tar.gz
+          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
           tar -xzf yq_linux_amd64.tar.gz
           sudo mv ./yq_linux_amd64 /usr/bin/yq
       - name: Run unit and integration tests
@@ -84,3 +84,15 @@ jobs:
           platforms: linux/amd64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
+  helm_release:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    name: Helm release
+    needs: unit_integration_tests
+    uses: ./.github/workflows/helm_release.yaml
+    with:
+      helm_repo: stable
+      prerelease: true
+    secrets:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+      GCP_HELM_BUCKET_NAME: ${{ secrets.GCP_HELM_BUCKET_NAME }}
