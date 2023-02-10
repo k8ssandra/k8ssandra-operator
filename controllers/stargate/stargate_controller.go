@@ -27,6 +27,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	stargateutil "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"gopkg.in/yaml.v2"
@@ -441,33 +442,15 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 	desiredConfigMap := stargate.CreateStargateConfigMap(namespace, cassandraYaml, cqlYaml, dc)
 	// Compute a hash which will allow to compare desired and actual configMaps
 	annotations.AddHashAnnotation(desiredConfigMap)
-	actualConfigMap := &corev1.ConfigMap{}
-
-	if err = r.Get(ctx, configMapKey, actualConfigMap); err != nil {
-		if errors.IsNotFound(err) {
-			if err = controllerutil.SetControllerReference(stargateObject, desiredConfigMap, r.Scheme); err != nil {
-				return ctrl.Result{}, err
-			}
-			logger.Info("Stargate configMap doesn't exist, creating it")
-			if err := r.Create(ctx, desiredConfigMap); err != nil {
-				logger.Error(err, "Failed to create Stargate ConfigMap")
-				return ctrl.Result{}, err
-			} else {
-				actualConfigMap = desiredConfigMap
-			}
-		}
+	if err = controllerutil.SetControllerReference(stargateObject, desiredConfigMap, r.Scheme); err != nil {
+		return ctrl.Result{}, err
 	}
 
-	actualConfigMap = actualConfigMap.DeepCopy()
-
-	if !annotations.CompareHashAnnotations(actualConfigMap, desiredConfigMap) {
-		resourceVersion := actualConfigMap.GetResourceVersion()
-		desiredConfigMap.DeepCopyInto(actualConfigMap)
-		actualConfigMap.SetResourceVersion(resourceVersion)
-		if err = r.Update(ctx, actualConfigMap); err != nil {
-			logger.Error(err, "Failed to update Stargate ConfigMap resource")
-			return ctrl.Result{}, err
-		}
+	recRes := reconciliation.ReconcileConfigMap(ctx, r.Client, r.DefaultDelay, *desiredConfigMap)
+	switch {
+	case recRes.IsError():
+		return ctrl.Result{}, recRes.GetError()
+	case recRes.IsRequeue():
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 	logger.Info("Stargate ConfigMap successfully reconciled")

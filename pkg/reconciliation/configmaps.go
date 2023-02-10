@@ -26,6 +26,9 @@ func ReconcileConfigMap(ctx context.Context, kClient client.Client, requeueDelay
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := kClient.Create(ctx, &desiredObject); err != nil {
+				if errors.IsAlreadyExists(err) {
+					return result.RequeueSoon(requeueDelay)
+				}
 				return result.Error(err)
 			}
 			return result.RequeueSoon(requeueDelay)

@@ -6,14 +6,12 @@ import (
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -96,38 +94,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	logger.Info("Reconciling Medusa configMap on namespace : " + namespace)
 	if kc.Spec.Medusa != nil {
 		medusaIni := medusa.CreateMedusaIni(kc)
-		configMapKey := client.ObjectKey{
-			Namespace: kc.Namespace,
-			Name:      fmt.Sprintf("%s-medusa", kc.SanitizedName()),
-		}
-
-		logger := logger.WithValues("MedusaConfigMap", configMapKey)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
-		// Compute a hash which will allow to compare desired and actual configMaps
-		annotations.AddHashAnnotation(desiredConfigMap)
-		actualConfigMap := &corev1.ConfigMap{}
-
-		if err := remoteClient.Get(ctx, configMapKey, actualConfigMap); err != nil {
-			if errors.IsNotFound(err) {
-				if err := remoteClient.Create(ctx, desiredConfigMap); err != nil {
-					logger.Error(err, "Failed to create Medusa ConfigMap")
-					return result.Error(err)
-				}
-			}
-		}
-
-		actualConfigMap = actualConfigMap.DeepCopy()
-
-		if !annotations.CompareHashAnnotations(actualConfigMap, desiredConfigMap) {
-			logger.Info("Updating configMap on namespace " + actualConfigMap.ObjectMeta.Namespace)
-			resourceVersion := actualConfigMap.GetResourceVersion()
-			desiredConfigMap.DeepCopyInto(actualConfigMap)
-			actualConfigMap.SetResourceVersion(resourceVersion)
-			if err := remoteClient.Update(ctx, actualConfigMap); err != nil {
-				logger.Error(err, "Failed to update Medusa ConfigMap resource")
-				return result.Error(err)
-			}
-			return result.RequeueSoon(r.DefaultDelay)
+		recRes := reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
+		switch {
+		case recRes.IsError():
+			return recRes
+		case recRes.IsRequeue():
+			return recRes
 		}
 	}
 	logger.Info("Medusa ConfigMap successfully reconciled")
