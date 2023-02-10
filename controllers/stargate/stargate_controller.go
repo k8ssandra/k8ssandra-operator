@@ -446,7 +446,13 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 		return ctrl.Result{}, err
 	}
 
-	reconciliation.ReconcileConfigMap(ctx, r.Client, r.DefaultDelay, *desiredConfigMap)
+	recRes := reconciliation.ReconcileConfigMap(ctx, r.Client, r.DefaultDelay, *desiredConfigMap)
+	switch {
+	case recRes.IsError():
+		return ctrl.Result{}, recRes.GetError()
+	case recRes.IsRequeue():
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+	}
 	logger.Info("Stargate ConfigMap successfully reconciled")
 	return ctrl.Result{}, nil
 }
