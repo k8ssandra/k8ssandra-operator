@@ -12,9 +12,3 @@ url_latest_version = "http://localhost:1313/"
   fullversion = "k8ssandra-v1"
   githubbranch = "docs-v1"
   url = "http://localhost:1313"
-
-[[params.versions]]
-  version = "v2"
-  fullversion = "k8ssandra-operator-v1"
-  githubbranch = "docs-v2"
-  url = "http://localhost:1313"
