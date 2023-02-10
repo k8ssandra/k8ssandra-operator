@@ -26,6 +26,11 @@ func ReconcileConfigMap(ctx context.Context, kClient client.Client, requeueDelay
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if err := kClient.Create(ctx, &desiredObject); err != nil {
+				if errors.IsAlreadyExists(err) {
+					// the read from the local cache didn't catch that the resource was created
+					// already; simply requeue until the cache is up-to-date
+					dcLogger.Info("Reaper Vector Agent configuration already exists, requeueing")
+					return result.RequeueSoon(requeueDelay)
 				return result.Error(err)
 			}
 			return result.RequeueSoon(requeueDelay)
