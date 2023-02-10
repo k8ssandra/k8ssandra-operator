@@ -38,6 +38,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	repoName  = "k8ssandra"
+	relName   = "k8ssandra-operator"
+	chartName = "k8ssandra-operator"
+	repoURL   = "https://helm.k8ssandra.io/stable"
+)
+
 type E2eFramework struct {
 	*Framework
 	cqlshBin string
@@ -111,13 +118,18 @@ func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client
 func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) error {
 	controlPlaneDir := "control-plane"
 	dataPlaneDir := "data-plane"
-
+	config.ControlPlaneComponent = "../../../../config/deployments/control-plane"
+	config.DataPlaneComponent = "../../../../config/deployments/data-plane"
+	if config.ImageTag != "latest" {
+		config.ControlPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane?ref=" + config.ImageTag
+		config.DataPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/data-plane?ref=" + config.ImageTag
+	}
 	controlPlaneTmpl := `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../../../config/deployments/control-plane
+- {{ .ControlPlaneComponent }}
 
 images:
   - name: k8ssandra/k8ssandra-operator
@@ -174,7 +186,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- ../../../../config/deployments/data-plane
+- {{ .DataPlaneComponent }}
 
 images:
   - name: k8ssandra/k8ssandra-operator
@@ -326,10 +338,12 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 }
 
 type OperatorDeploymentConfig struct {
-	Namespace     string
-	ClusterScoped bool
-	ImageName     string
-	ImageTag      string
+	Namespace             string
+	ClusterScoped         bool
+	ImageName             string
+	ImageTag              string
+	ControlPlaneComponent string
+	DataPlaneComponent    string
 }
 
 // DeployK8ssandraOperator deploys k8ssandra-operator both in the control plane cluster and
@@ -344,6 +358,7 @@ func (f *E2eFramework) DeployK8ssandraOperator(config OperatorDeploymentConfig) 
 		dataPlane    string
 	)
 
+	// Kustomize based installation
 	if config.ClusterScoped {
 		baseDir = filepath.Join("..", "..", "config", "deployments")
 		controlPlane = filepath.Join(baseDir, "control-plane", "cluster-scope")
@@ -497,7 +512,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
 			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
-				"ReplicatedSecret", "ClientConfig", "CassandraTask", "CassandraBackup", "CassandraRestore", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask"} {
+				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
 				}
@@ -638,24 +653,6 @@ func (f *E2eFramework) deleteAllResources(
 		}
 		return true, nil
 	})
-}
-
-func (f *E2eFramework) UndeployK8ssandraOperator(namespace string) error {
-	dir, err := filepath.Abs("../testdata/k8ssandra-operator")
-	if err != nil {
-		return err
-	}
-
-	f.logger.Info("Undeploy k8ssandra-operator", "Namespace", namespace)
-
-	buf, err := kustomize.BuildDir(dir)
-	if err != nil {
-		return err
-	}
-
-	options := kubectl.Options{Namespace: namespace}
-
-	return kubectl.Delete(options, buf)
 }
 
 // GetNodeToolStatus Executes nodetool status against the Cassandra pod and returns a

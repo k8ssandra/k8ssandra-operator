@@ -84,8 +84,8 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 	}
 
 	reqLogger := f.Log.WithValues(
-		"CassandraRestore", restoreKey,
-		"CassandraBackup", backupKey,
+		"MedusaRestoreJob", restoreKey,
+		"MedusaBackup", backupKey,
 		"CassandraDatacenter", dcKey)
 
 	restoreHash := utils.DeepHashString(restore.Status)

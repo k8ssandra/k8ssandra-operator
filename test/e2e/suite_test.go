@@ -319,7 +319,7 @@ func TestOperator(t *testing.T) {
 	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
 		testFunc:       createSingleDatacenterClusterWithUpgrade,
 		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
-		initialVersion: pointer.String("v1.0.0"),
+		initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
 	}))
 	t.Run("StargateJwt", e2eTest(ctx, &e2eTestOpts{
 		testFunc: stargateJwt,
@@ -652,7 +652,6 @@ func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {
 }
 
 func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
-
 	namespaces := make([]string, 0)
 	namespaces = append(namespaces, opts.operatorNamespace)
 	if !utils.SliceContains(namespaces, opts.sutNamespace) {

@@ -92,7 +92,7 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
 	require := require.New(t)
-	t.Log("creating CassandraBackup")
+	t.Log("creating MedusaBackupJob")
 
 	backup := &medusa.MedusaBackupJob{
 		ObjectMeta: metav1.ObjectMeta{

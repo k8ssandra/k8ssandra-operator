@@ -7,8 +7,6 @@ resources:
 - bases/config.k8ssandra.io_clientconfigs.yaml
 - bases/replication.k8ssandra.io_replicatedsecrets.yaml
 - bases/reaper.k8ssandra.io_reapers.yaml
-- bases/medusa.k8ssandra.io_cassandrabackups.yaml
-- bases/medusa.k8ssandra.io_cassandrarestores.yaml
 - bases/medusa.k8ssandra.io_medusatasks.yaml
 - bases/medusa.k8ssandra.io_medusabackups.yaml
 - bases/medusa.k8ssandra.io_medusabackupjobs.yaml
@@ -24,8 +22,6 @@ patchesStrategicMerge:
 #- patches/webhook_in_stargates.yaml
 #- patches/webhook_in_replicatedsecrets.yaml
 #- patches/webhook_in_reapers.yaml
-#- patches/webhook_in_cassandrabackups.yaml
-#- patches/webhook_in_cassandrarestores.yaml
 #- patches/webhook_in_MedusaTasks.yaml
 #- patches/webhook_in_medusabackups.yaml
 #- patches/webhook_in_medusabackupjobs.yaml
@@ -40,8 +36,6 @@ patchesStrategicMerge:
 #- patches/cainjection_in_stargates.yaml
 #- patches/cainjection_in_replicatedsecrets.yaml
 #- patches/cainjection_in_reapers.yaml
-#- patches/cainjection_in_cassandrabackups.yaml
-#- patches/cainjection_in_cassandrarestores.yaml
 #- patches/cainjection_in_MedusaTasks.yaml
 #- patches/cainjection_in_medusabackups.yaml
 #- patches/cainjection_in_medusabackupjobs.yaml

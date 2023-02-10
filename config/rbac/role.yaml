@@ -195,15 +195,6 @@ rules:
 - apiGroups:
   - medusa.k8ssandra.io
   resources:
-  - cassandrabackups
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
   - cassandradatacenters
   verbs:
   - get

@@ -29,7 +29,7 @@ type MedusaBackupScheduleSpec struct {
 	// Disabled if set ensures this job is not scheduling anything
 	Disabled bool `json:"disabled,omitempty"`
 
-	// BackupSpec defines the CassandraBackup to be created for this job
+	// BackupSpec defines the MedusaBackup to be created for this job
 	BackupSpec MedusaBackupJobSpec `json:"backupSpec"`
 }
 

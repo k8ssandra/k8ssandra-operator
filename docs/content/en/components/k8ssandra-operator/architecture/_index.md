@@ -24,8 +24,8 @@ Other controllers run in both the control plane and in the data plane. This incl
 * CassandraDataCenter
 * Stargate
 * Reaper
-* CassandraBackup
-* CassandraRestore
+* MedusaBackupJob
+* MedusaRestoreJob
 
 ## Cassandra Datacenters
 The `cassandra.datacenters` property is an array. K8ssandra Operator creates a `CassandraDatacenter` for each element. Here is the relevant portion of the manifest from the diagram:
@@ -121,7 +121,7 @@ The presence of the `reaper` property tells the operator to enable and configure
 After the K8ssadraCluster controller creates the Reaper object, the Reaper controller creates a Deployment. After the Deployment is created, the Deployment controller, which is part of Kubernetes itself, creates the Reaper pod. This pod runs the Reaper process.
 
 # Medusa
-K8ssandra Operator provides CassandraBackup and CassandraRestore CRDs for performing backup/restore operations with Medusa. CassandraBackup and CassandraRestore objects are managed by their own, respective controllers.
+K8ssandra Operator provides MedusaBackupJob and MedusaRestoreJob CRDs for performing backup/restore operations with Medusa. MedusaBackupJob and MedusaRestoreJob objects are managed by their own, respective controllers.
 
 Here is the relevant portion of the manifest for the `medusa` property:
 
