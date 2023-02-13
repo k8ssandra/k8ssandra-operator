@@ -92,7 +92,6 @@ type DatacenterConfig struct {
 	Size                      int32
 	Stopped                   bool
 	Resources                 *corev1.ResourceRequirements
-	SystemReplication         SystemReplication
 	StorageConfig             *cassdcapi.StorageConfig
 	Racks                     []cassdcapi.Rack
 	CassandraConfig           api.CassandraConfig

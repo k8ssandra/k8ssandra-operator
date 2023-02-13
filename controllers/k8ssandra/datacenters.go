@@ -235,12 +235,8 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 
 func datacenterAddedToExistingCluster(kc *api.K8ssandraCluster, dcName string) bool {
 	_, found := kc.Status.Datacenters[dcName]
-	if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
-		// Only request rebuild for the datacenter if it's not already in the cluster and if we have at least one datacenter already initialized.
-		return !found && len(kc.Status.Datacenters) > 0
-	} else {
-		return kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue && !found
-	}
+	// Only request rebuild for the datacenter if it's not already in the cluster and if we have at least one datacenter already initialized.
+	return !found && len(kc.Status.Datacenters) > 0
 }
 
 func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8ssandraCluster) (string, error) {

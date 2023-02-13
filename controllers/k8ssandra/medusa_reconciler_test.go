@@ -177,6 +177,11 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
 	}, timeout, interval, "failed to update dc2 generation")
 
+	t.Log("check that dc2 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
 
 	t.Log("check that the K8ssandraCluster status is updated")

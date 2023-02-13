@@ -99,6 +99,11 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(t, err, "failed to set dc2 status ready")
 
+	t.Log("check that dc2 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
 	t.Log("wait for the CassandraInitialized condition to be set")
 	require.Eventually(t, func() bool {
 		err := f.Client.Get(ctx, kcKey, kc)
