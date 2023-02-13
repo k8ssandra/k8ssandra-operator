@@ -36,7 +36,7 @@ spec:
             description: MedusaRestoreJobSpec defines the desired state of MedusaRestoreJob
             properties:
               backup:
-                description: The name of the CassandraBackup to restore.
+                description: The name of the MedusaBackup to restore.
                 type: string
               cassandraDatacenter:
                 description: Name of the Cassandra datacenter to perform the restore

@@ -22,29 +22,17 @@ jobs:
       image_tag: ${{ steps.parse_image_tag.outputs.image_tag }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
-      - name: Install yq
-        run: |
-          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv yq_linux_amd64.tar.gz /usr/bin
       - name: Parse image version
         id: parse_image_tag
-        run: echo "::set-output name=image_tag::$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)"
+        run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v1
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-integ-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-integ-
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
@@ -58,7 +46,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Upload k8ssandra-operator image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-operator.tar
@@ -81,11 +69,11 @@ jobs:
         run: |
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         if: github.event_name != 'pull_request'
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -107,7 +95,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: k8ssandra-operator
           path: /tmp
@@ -132,7 +120,7 @@ jobs:
           echo "uploaddir_name=$uploaddir_name" >> $GITHUB_ENV
       - name: Archive k8s logs
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: k8s-logs-${{ env.uploaddir_name }}
           path: ./build/test

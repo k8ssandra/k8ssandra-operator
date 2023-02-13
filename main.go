@@ -20,9 +20,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	controlcontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/control"
 	"os"
 	"strings"
+
+	controlcontrollers "github.com/k8ssandra/k8ssandra-operator/controllers/control"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctl "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -222,24 +223,6 @@ func main() {
 		NewManager:       reaper.NewManager,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Reaper")
-		os.Exit(1)
-	}
-
-	if err = (&medusactrl.CassandraBackupReconciler{
-		ReconcilerConfig: reconcilerConfig,
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		ClientFactory:    &medusa.DefaultFactory{},
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CassandraBackup")
-		os.Exit(1)
-	}
-	if err = (&medusactrl.CassandraRestoreReconciler{
-		ReconcilerConfig: reconcilerConfig,
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "CassandraRestore")
 		os.Exit(1)
 	}
 	if err = (&medusactrl.MedusaTaskReconciler{

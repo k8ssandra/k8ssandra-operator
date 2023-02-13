@@ -14,7 +14,6 @@ func TestLabelIsSet(t *testing.T) {
 	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
 	repSec := generateReplicatedSecret(kcKey, targets)
 
-	assert.Equal(t, k8ssandraapi.NameLabelValue, repSec.Labels[k8ssandraapi.ManagedByLabel])
 	assert.Equal(t, repSec.Labels[k8ssandraapi.K8ssandraClusterNamespaceLabel], kcKey.Namespace)
 	assert.Equal(t, repSec.Labels[k8ssandraapi.K8ssandraClusterNameLabel], kcKey.Name)
 }

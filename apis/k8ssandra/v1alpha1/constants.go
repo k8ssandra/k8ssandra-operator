@@ -58,6 +58,10 @@ const (
 	PartOfLabel      = "app.kubernetes.io/part-of"
 	PartOfLabelValue = "k8ssandra"
 
+	// ReplicatedByLabel is used to label secrets that should be selected for replication by a ReplicatedSecret.
+	ReplicatedByLabel      = "k8ssandra.io/replicated-by"
+	ReplicatedByLabelValue = "k8ssandracluster-controller"
+
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
 
