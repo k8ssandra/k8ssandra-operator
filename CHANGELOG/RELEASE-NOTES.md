@@ -1,5 +1,11 @@
 # k8ssandra-operator - Release Notes
 
+## v1.6.0
+
+### Removal of the CassandraBackup and CassandraRestore APIs
+
+The CassandraBackup and CassandraRestore APIs have been removed. The functionality provided by these APIs is now provided by the MedusaBackupJob and MedusaRestoreJob APIs.
+
 ## v1.5.0
 
 

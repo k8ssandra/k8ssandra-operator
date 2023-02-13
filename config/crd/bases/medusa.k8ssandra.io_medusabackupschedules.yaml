@@ -54,8 +54,8 @@ spec:
             description: MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
             properties:
               backupSpec:
-                description: BackupSpec defines the CassandraBackup to be created
-                  for this job
+                description: BackupSpec defines the MedusaBackup to be created for
+                  this job
                 properties:
                   backupType:
                     default: differential

@@ -337,7 +337,7 @@ The above `CronJob` will be scheduled to run every day at midnight, and trigger 
 
 ## Deprecation Notice
 
-The `CassandraBackup` and `CassandraRestore` CRDs are deprecated in K8ssandra-operator v1.1 and will be removed in a future version of the operator.
+The `CassandraBackup` and `CassandraRestore` CRDs are removed in v1.6.0.
 
 ## Next steps
 

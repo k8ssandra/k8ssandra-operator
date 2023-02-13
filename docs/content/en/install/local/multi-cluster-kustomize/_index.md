@@ -94,9 +94,7 @@ This installs the operator in the `k8ssandra-operator` namespace.
 
 Verify that the following CRDs are installed:
 
-* `cassandrabackups.medusa.k8ssandra.io`
 * `cassandradatacenters.cassandra.datastax.com`
-* `cassandrarestores.medusa.k8ssandra.io`
 * `cassandratasks.control.k8ssandra.io`
 * `clientconfigs.config.k8ssandra.io`
 * `k8ssandraclusters.k8ssandra.io`
@@ -147,9 +145,7 @@ This installs the operator in the `k8ssandra-operator` namespace.
 
 Verify that the following CRDs are installed:
 
-* `cassandrabackups.medusa.k8ssandra.io`
 * `cassandradatacenters.cassandra.datastax.com`
-* `cassandrarestores.medusa.k8ssandra.io`
 * `cassandratasks.control.k8ssandra.io`
 * `clientconfigs.config.k8ssandra.io`
 * `k8ssandraclusters.k8ssandra.io`

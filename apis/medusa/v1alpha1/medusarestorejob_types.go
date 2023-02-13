@@ -25,7 +25,7 @@ import (
 
 // MedusaRestoreJobSpec defines the desired state of MedusaRestoreJob
 type MedusaRestoreJobSpec struct {
-	// The name of the CassandraBackup to restore.
+	// The name of the MedusaBackup to restore.
 	Backup string `json:"backup"`
 
 	// Name of the Cassandra datacenter to perform the restore on.
