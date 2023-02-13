@@ -35,9 +35,6 @@ K8ssandra's Medusa supports:
 
 ## Next steps
 
-* Backup and restore Cassandra with S3-compatible [MinIO]({{< relref "/tasks/backup-restore/minio/" >}}).
-* Backup and restore Cassandra with [Amazon S3]({{< relref "/tasks/backup-restore/amazon-s3/" >}}).
-* Backup and restore Cassandra with [Google Cloud Storage]({{< relref "/tasks/backup-restore/gcs/" >}}).
 * For information about using a superuser and secrets with Medusa authentication, see [Medusa security]({{< relref "/tasks/secure/#medusa-security" >}}).
 * For reference details, see the K8ssandra Operator [Custom Resource Definitions (CRDs)]({{< relref "reference" >}}).
 * Also see the topics covering other [components]({{< relref "/components/" >}}) deployed by K8ssandra Operator. 
