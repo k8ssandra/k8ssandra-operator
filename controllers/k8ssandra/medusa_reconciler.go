@@ -95,7 +95,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	if kc.Spec.Medusa != nil {
 		medusaIni := medusa.CreateMedusaIni(kc)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
-		recRes := reconciliation.ReconcileConfigMap(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
 		switch {
 		case recRes.IsError():
 			return recRes
