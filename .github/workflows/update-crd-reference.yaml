@@ -36,12 +36,12 @@ jobs:
         run: |
           set -x
           # Compute the md5 sum of the current CRD reference directory contents. Will be used to decide if a PR is needed.
-          crd_dir_current_hash=$(find k8ssandra/k8ssandra-operator/docs/content/en/reference/crd/ -type f -exec md5sum {} + | LC_ALL=C sort | md5sum | head -c 8)
+          crd_dir_current_hash=$(find k8ssandra-operator/docs/content/en/reference/crd/ -type f -exec md5sum {} + | LC_ALL=C sort | md5sum | head -c 8)
 
           # Cleanup the CRD reference directory.
-          rm -rf k8ssandra/k8ssandra-operator/docs/content/en/reference/crd/*/
-          mkdir -p k8ssandra/k8ssandra-operator/docs/content/en/reference/crd/releases
-          cp k8ssandra/k8ssandra-operator/docs/config/crdoc-templates/_index_releases.md k8ssandra/k8ssandra-operator/docs/content/en/reference/crd/releases/_index.md
+          rm -rf k8ssandra-operator/docs/content/en/reference/crd/*/
+          mkdir -p k8ssandra-operator/docs/content/en/reference/crd/releases
+          cp k8ssandra-operator/docs/config/crdoc-templates/_index_releases.md k8ssandra-operator/docs/content/en/reference/crd/releases/_index.md
           
           # Fetch and cycle through K8ssandra-operator release branches to generate CRD references.
           cd k8ssandra-operator
