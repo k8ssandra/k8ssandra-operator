@@ -11,10 +11,6 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'  
-  push:
-    branches:
-      - main
-      - 874-crd_docs_update_workflow
 
 jobs:
   update-crd-reference:
