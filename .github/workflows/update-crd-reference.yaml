@@ -9,6 +9,10 @@ jobs:
   update-crd-reference:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup tmate session
+        if: "failure()"
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30 
       - name: Checkout K8ssandra-operator
         uses: actions/checkout@v2
         with:
@@ -92,11 +96,7 @@ jobs:
             echo "PR_EXISTS=no" >> $GITHUB_ENV
           else
             echo "PR_EXISTS=yes" >> $GITHUB_ENV
-          fi
-      - name: Setup tmate session
-        if: "failure()"
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30              
+          fi              
       - name: Send CRD reference update PR
         if: ${{ env.PR_EXISTS == 'no' }}
         uses: peter-evans/create-pull-request@v3
