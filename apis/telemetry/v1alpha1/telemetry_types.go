@@ -130,7 +130,7 @@ type McacTelemetrySpec struct {
 }
 
 type CassandraAgentSpec struct {
-	Endpoint Endpoint                `json:"endpoint,omitempty"`
+	Endpoint *Endpoint               `json:"endpoint,omitempty"`
 	Filters  []promapi.RelabelConfig `json:"filters,omitempty"`
 }
 

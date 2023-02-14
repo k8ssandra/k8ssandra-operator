@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
+	"github.com/adutra/goalesce"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -24,7 +24,7 @@ import (
 var (
 	agentConfigLocation = "/opt/management-api/configs/metrics-collector.yaml"
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
-		Endpoint: telemetryapi.Endpoint{
+		Endpoint: &telemetryapi.Endpoint{
 			Port:    "9000",
 			Address: "127.0.0.1",
 		},
@@ -130,8 +130,8 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 	var yamlData []byte
 	var err error
 	if c.TelemetrySpec.Cassandra != nil {
-		goalesceutils.MergeCRs(defaultAgentConfig, *c.TelemetrySpec.Cassandra)
-		yamlData, err = yaml.Marshal(&c.TelemetrySpec.Cassandra)
+		mergedSpec := goalesce.MustDeepMerge(&defaultAgentConfig, c.TelemetrySpec.Cassandra)
+		yamlData, err = yaml.Marshal(&mergedSpec)
 		if err != nil {
 			return &corev1.ConfigMap{}, err
 		}
