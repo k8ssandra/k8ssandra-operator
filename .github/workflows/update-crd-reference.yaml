@@ -1,6 +1,10 @@
 name: Update CRD Reference
 
 on:
+  push:
+    branches:
+      - main
+      - 'release/**'
   schedule:
     - cron:  '0 1 * * *'
   workflow_dispatch:
@@ -9,10 +13,6 @@ jobs:
   update-crd-reference:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup tmate session
-        if: "failure()"
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30 
       - name: Checkout K8ssandra-operator
         uses: actions/checkout@v2
         with:
@@ -109,4 +109,4 @@ jobs:
           base: docs
           title: Upgrade CRD reference ${{ env.PR_BRANCH }}
           body: |
-            This is an auto-generated PR from the K8ssandra CRD reference update GHA workflow.
+            This is an auto-generated PR from the K8ssandra CRD reference update GHA workflow. 
