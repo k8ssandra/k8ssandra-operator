@@ -874,6 +874,11 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to set dc2 status ready")
 
+	t.Log("check that dc2 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
 		kc := &api.K8ssandraCluster{}
@@ -1285,6 +1290,11 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	t.Log("update dc2 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to update dc2 status to ready")
+
+	t.Log("check that dc2 was rebuilt")
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	t.Log("check that stargate sg1 is created")
 	require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
@@ -2187,7 +2197,7 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster) func() bool {
 	return func() bool {
 		key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-		expectedReplication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters...)
+		expectedReplication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.Spec.Cassandra.Datacenters[0])
 		kc = &api.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, key, kc); err != nil {
 			t.Logf("Failed to check system replication annotation. Could not retrieve the K8ssandraCluster: %v", err)

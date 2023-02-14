@@ -33,23 +33,6 @@ func DatacenterStopping(dc *cassdcapi.CassandraDatacenter) bool {
 	return dc.GetConditionStatus(cassdcapi.DatacenterStopped) == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressUpdating
 }
 
-// GetDatacentersForSystemReplication determines the DCs that should be included for
-// replication. This function should only be used for system keyspaces. Replication for
-// system keyspaces is initially set through the management-api, not CQL. This allows us
-// to specify non-existent DCs for replication even though Cassandra 4 does not allow that.
-// That cannot be done when configuring replication through CQL which is why this func
-// should only be used for system keyspaces.
-func GetDatacentersForSystemReplication(kc *api.K8ssandraCluster) []api.CassandraDatacenterTemplate {
-	if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
-		return kc.GetInitializedDatacenters()
-	}
-	if initialized := kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue; initialized {
-		return kc.GetInitializedDatacenters()
-	} else {
-		return kc.Spec.Cassandra.Datacenters
-	}
-}
-
 // ComputeReplication computes the desired replication for each dc, taking into account the desired maximum replication
 // per dc.
 func ComputeReplication(maxReplicationPerDc int, datacenters ...*cassdcapi.CassandraDatacenter) map[string]int {

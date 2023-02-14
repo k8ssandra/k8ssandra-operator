@@ -10,13 +10,13 @@ import (
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
 	desiredObject = corev1.ConfigMap{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cm",
 			Namespace: "test-namespace",
 		},
@@ -28,10 +28,10 @@ var (
 	requeueDelay = time.Second
 )
 
-func Test_ReconcileConfigMap_UpdateDone(t *testing.T) {
+func Test_ReconcileObject_UpdateDone(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	// Launch reconciliation.
-	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsRequeue())
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}
@@ -43,26 +43,26 @@ func Test_ReconcileConfigMap_UpdateDone(t *testing.T) {
 		afterUpdateCM)
 	assert.NoError(t, err)
 	// If we reconcile again, we should move into the Done state.
-	recRes = ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	recRes = ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsDone())
 }
 
-func Test_ReconcileConfigMap_CreateSuccess(t *testing.T) {
+func Test_ReconcileObject_CreateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
-	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsRequeue())
 	actualCm := &corev1.ConfigMap{}
 	err := kClient.Get(ctx, types.NamespacedName{Name: desiredObject.Name, Namespace: desiredObject.Namespace}, actualCm)
 	assert.NoError(t, err)
 }
-func Test_ReconcileConfigMap_CreateFailed(t *testing.T) {
+func Test_ReconcileObject_CreateFailed(t *testing.T) {
 
 	kClient := testutils.NewCreateFailingFakeClient() // Reset the Client
-	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsError())
 }
 
-func Test_ReconcileConfigMap_UpdateSuccess(t *testing.T) {
+func Test_ReconcileObject_UpdateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	// Create an initial ConfigMap with the same name.
 	initialCm := desiredObject.DeepCopy()
@@ -74,7 +74,7 @@ func Test_ReconcileConfigMap_UpdateSuccess(t *testing.T) {
 		assert.Fail(t, "could not create initial ConfigMap")
 	}
 	// Launch reconciliation.
-	recRes := ReconcileConfigMap(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsRequeue())
 	annotations.AddHashAnnotation(&desiredObject)
 	// After the update we should see the expected ConfigMap
@@ -95,4 +95,3 @@ func Test_ReconcileConfigMap_UpdateSuccess(t *testing.T) {
 	assert.Equal(t, desiredObject.Name, afterUpdateCM.Name)
 	assert.Equal(t, desiredObject.Namespace, afterUpdateCM.Namespace)
 }
-
