@@ -28,10 +28,6 @@ jobs:
           repository: k8ssandra/cass-operator
           ref: master
           path: cass-operator
-      - name: Setup tmate session
-        if: "failure()"
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30 
       - name: Install crdoc
         run: |
           go install fybrik.io/crdoc@latest
