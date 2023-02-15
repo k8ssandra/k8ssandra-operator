@@ -28,10 +28,6 @@ jobs:
           repository: k8ssandra/cass-operator
           ref: master
           path: cass-operator
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
       - name: Install crdoc
         run: |
           go install fybrik.io/crdoc@latest
