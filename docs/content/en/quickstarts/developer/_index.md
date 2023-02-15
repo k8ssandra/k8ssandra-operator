@@ -1,7 +1,7 @@
 ---
 title: "Quickstart for developers"
 linkTitle: "Developers"
-weight: 1
+weight: 2
 description: "Get up and coding with K8ssandra Operator by exposing access to Stargate and CQL APIs!"
 ---
 
