@@ -11,7 +11,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'CHANGELOG/**'  
-
+ 
 jobs:
   update-crd-reference:
     runs-on: ubuntu-latest
