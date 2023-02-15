@@ -125,13 +125,8 @@ type DatacenterConfig struct {
 	InitialTokensByPodName map[string][]string
 }
 
-// SanitizedName returns a sanitized version of the name returned by CassClusterName()
-func (in *DatacenterConfig) SanitizedName() string {
-	return cassdcapi.CleanupForKubernetes(in.CassDcName())
-}
-
-// CassClusterName returns the Cassandra cluster name override if it exists,
-// otherwise the k8c object name.
+// CassDcName returns the Cassandra datacenter name override if it exists,
+// otherwise the cassdc object name.
 func (in *DatacenterConfig) CassDcName() string {
 	if in.DatacenterName != "" {
 		return in.DatacenterName
