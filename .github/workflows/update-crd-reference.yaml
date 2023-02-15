@@ -89,9 +89,9 @@ jobs:
           crd_dir_new_hash=$(find ./docs/content/en/reference/crd/ -type f -exec md5sum {} + | LC_ALL=C sort | md5sum | head -c 8)
           echo "PR_BRANCH=$crd_dir_current_hash-$crd_dir_new_hash" >> $GITHUB_ENV
       - name: Setup tmate session
-        if: "failure()"
         uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30 
+        with:
+          limit-access-to-actor: true
       - name: Check if a closed PR exists for the same version
         run: |
           set -x
