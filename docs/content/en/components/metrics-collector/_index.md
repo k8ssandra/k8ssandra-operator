@@ -5,9 +5,11 @@ weight: 5
 description: Metrics Collector for Apache Cassandra&reg; provides K8ssandra monitoring capabilities with Prometheus and Grafana.
 ---
 
+
+
 ## Introduction
 
-When running applications in Kubernetes, observability is key. K8ssandra includes [Prometheus](http://prometheus.io) and [Grafana](http://grafana.com) for storage and visualization of metrics associated with the Cassandra cluster.
+When running applications in Kubernetes, observability is key. K8ssandra easily connects to [Prometheus](http://prometheus.io) and [Grafana](http://grafana.com) for storage and visualization of metrics associated with the Cassandra cluster.
 
 ![Monitoring Overview](monitoring-overview.png)
 
@@ -34,6 +36,8 @@ MCAC aggregates OS and Cassandra metrics along with diagnostic events to facilit
 
 * Supported versions of Apache Cassandra: 2.2+ (2.2.X, 3.0.X, 3.11.X, 4.0) 
 
+**Note**: Since v1.5.0, we introduced a new metrics endpoint and a [Vector](https://vector.dev) integration which aim at replacing MCAC.
+
 ### Sample overview metrics in Grafana
 
 Cassandra node-level metrics are reported in the Prometheus format, covering everything from operations per second and latency, to compaction throughput and heap usage. Example:
@@ -49,10 +53,6 @@ Cassandra node-level metrics are reported in the Prometheus format, covering eve
 ![Cluster metrics ](grafana-cluster-metrics.png)
 
 ## Architecture details
-
-K8ssandra uses the [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack), a Helm chart from the [Prometheus Community](https://prometheus.io/community/) project, to deploy Prometheus and Grafana and connect them to Cassandra, as shown in the figure below.
-
-![Monitoring Architecture](monitoring-architecture.png)
 
 Let's walk through this architecture from left to right. We'll provide links to the Kubernetes documentation so you can dig into those concepts more if you'd like to.
 

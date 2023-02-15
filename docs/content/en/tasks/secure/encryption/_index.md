@@ -1,9 +1,9 @@
 ---
 title: "Enabling encryption"
 linkTitle: "Enabling encryption"
-toc_hide: true
-no_list: true
-weight: 1
+toc_hide: false
+no_list: false
+weight: 6
 description: Setting up encryption in K8ssandra clusters.
 ---
 

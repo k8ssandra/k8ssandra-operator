@@ -9,7 +9,7 @@ K8ssandra Operator provides multi-cluster and multi-region support for Apache Ca
 
 You can [install](https://docs-v2.k8ssandra.io/install/local/) K8ssandra Operator in:
 
-* A local Kubernetes 1.19+ environment, such as kind, K3D, or minikube
+* A local Kubernetes 1.21+ environment, such as kind, K3D, or minikube
 * A supported cloud provider's Kubernetes environment
 
 ## Architecture
