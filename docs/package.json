@@ -8,9 +8,10 @@
     "clean:public": "del-cli --force public",
     "clean:resources": "del-cli --force resources",
     "clean": "npm run clean:public && npm run clean:resources",
-    "build:dev": "hugo --environment development",
     "build:staging": "hugo --environment staging",
-    "deploy:staging": "hugo deploy --environment staging --target staging --verbose"
+    "build:production": "hugo --environment production",
+    "deploy:staging": "hugo deploy --environment staging --target staging --verbose",
+    "deploy:production": "hugo deploy --environment production --target production --verbose"
   },
   "repository": {
     "type": "git",
