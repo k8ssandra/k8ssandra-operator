@@ -28,10 +28,6 @@ jobs:
           repository: k8ssandra/cass-operator
           ref: master
           path: cass-operator
-      - name: Setup tmate session
-        if: "failure()"
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30 
       - name: Install crdoc
         run: |
           go install fybrik.io/crdoc@latest
@@ -116,3 +112,7 @@ jobs:
           title: Upgrade CRD reference ${{ env.PR_BRANCH }}
           body: |
             This is an auto-generated PR from the K8ssandra CRD reference update GHA workflow. 
+      - name: Setup tmate session
+        if: "failure()"
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30        
