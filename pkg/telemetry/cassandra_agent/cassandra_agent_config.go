@@ -28,7 +28,7 @@ var (
 			Port:    "9000",
 			Address: "127.0.0.1",
 		},
-		Filters: []promapi.RelabelConfig{
+		Relabels: []promapi.RelabelConfig{
 			{
 				SourceLabels: []string{"__origname__"},
 				Regex:        "org\\.apache\\.cassandra\\.metrics\\.Table.*",

@@ -31,7 +31,7 @@ var (
 	allDefinedYaml string = `endpoint:
   address: 127.0.0.1
   port: "10000"
-filters:
+relabels:
 - action: drop
   regex: (.*);(b.*)
   separator: ;
@@ -42,7 +42,7 @@ filters:
 	endpointDefinedYaml string = `endpoint:
   address: 192.168.1.10
   port: "50000"
-filters:
+relabels:
 - regex: org\.apache\.cassandra\.metrics\.Table.*
   replacement: "true"
   sourceLabels:
@@ -113,10 +113,10 @@ filters:
   sourceLabels:
   - should_drop
 `
-	filtersDefinedYaml = `endpoint:
+	relabelsDefinedYaml = `endpoint:
   address: 127.0.0.1
   port: "9000"
-filters:
+relabels:
 - action: drop
   regex: (.*);(b.*)
   separator: ;
@@ -139,7 +139,7 @@ func getExpectedConfigMap() corev1.ConfigMap {
 
 func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 	tspec := &Cfg.TelemetrySpec
-	tspec.Cassandra.Filters = []promapi.RelabelConfig{
+	tspec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
 			SourceLabels: []string{"tag1", "tag2"},
 			Separator:    ";",
@@ -154,7 +154,7 @@ func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 	return *tspec
 }
 
-// Make sure when both endpoint and filters are defined they come through to yaml.
+// Make sure when both endpoint and relabels are defined they come through to yaml.
 func Test_GetTelemetryAgentConfigMapAllDefined(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
 	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
@@ -166,13 +166,13 @@ func Test_GetTelemetryAgentConfigMapAllDefined(t *testing.T) {
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
 }
 
-// Make sure we get default filters when only endpoint is defined in spec.
+// Make sure we get default relabels when only endpoint is defined in spec.
 func Test_GetTelemetryAgentConfigMapWithDefinedEndpoint(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
 	expectedCm.Data[filepath.Base(agentConfigLocation)] = endpointDefinedYaml
 	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
 	Cfg.TelemetrySpec = getExampleTelemetrySpec()
-	Cfg.TelemetrySpec.Cassandra.Filters = nil
+	Cfg.TelemetrySpec.Cassandra.Relabels = nil
 	Cfg.TelemetrySpec.Cassandra.Endpoint = &telemetryapi.Endpoint{
 		Address: "192.168.1.10",
 		Port:    "50000",
@@ -185,12 +185,12 @@ func Test_GetTelemetryAgentConfigMapWithDefinedEndpoint(t *testing.T) {
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
 }
 
-func Test_GetTelemetryAgentConfigMapWithDefinedFilters(t *testing.T) {
+func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
-	expectedCm.Data[filepath.Base(agentConfigLocation)] = filtersDefinedYaml
+	expectedCm.Data[filepath.Base(agentConfigLocation)] = relabelsDefinedYaml
 	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
 	Cfg.TelemetrySpec = getExampleTelemetrySpec()
-	Cfg.TelemetrySpec.Cassandra.Filters = []promapi.RelabelConfig{
+	Cfg.TelemetrySpec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
 			SourceLabels: []string{"tag1", "tag2"},
 			Separator:    ";",

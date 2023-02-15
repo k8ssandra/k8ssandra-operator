@@ -35,8 +35,8 @@ func (in *CassandraAgentSpec) DeepCopyInto(out *CassandraAgentSpec) {
 		*out = new(Endpoint)
 		**out = **in
 	}
-	if in.Filters != nil {
-		in, out := &in.Filters, &out.Filters
+	if in.Relabels != nil {
+		in, out := &in.Relabels, &out.Relabels
 		*out = make([]monitoringv1.RelabelConfig, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

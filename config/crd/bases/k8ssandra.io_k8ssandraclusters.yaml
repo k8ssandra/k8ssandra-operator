@@ -13740,7 +13740,7 @@ spec:
                                               port:
                                                 type: string
                                             type: object
-                                          filters:
+                                          relabels:
                                             items:
                                               description: 'RelabelConfig allows dynamic
                                                 rewriting of the label set, being
@@ -14259,7 +14259,7 @@ spec:
                                         port:
                                           type: string
                                       type: object
-                                    filters:
+                                    relabels:
                                       items:
                                         description: 'RelabelConfig allows dynamic
                                           rewriting of the label set, being applied
@@ -16841,7 +16841,7 @@ spec:
                                     port:
                                       type: string
                                   type: object
-                                filters:
+                                relabels:
                                   items:
                                     description: 'RelabelConfig allows dynamic rewriting
                                       of the label set, being applied to samples before
@@ -25518,7 +25518,7 @@ spec:
                               port:
                                 type: string
                             type: object
-                          filters:
+                          relabels:
                             items:
                               description: 'RelabelConfig allows dynamic rewriting
                                 of the label set, being applied to samples before
@@ -28195,7 +28195,7 @@ spec:
                               port:
                                 type: string
                             type: object
-                          filters:
+                          relabels:
                             items:
                               description: 'RelabelConfig allows dynamic rewriting
                                 of the label set, being applied to samples before
@@ -29864,7 +29864,7 @@ spec:
                               port:
                                 type: string
                             type: object
-                          filters:
+                          relabels:
                             items:
                               description: 'RelabelConfig allows dynamic rewriting
                                 of the label set, being applied to samples before
