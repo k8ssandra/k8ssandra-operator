@@ -43,70 +43,65 @@ relabels:
   address: 192.168.1.10
   port: "50000"
 relabels:
-- regex: org\.apache\.cassandra\.metrics\.Table.*
+- regex: .+
   replacement: "true"
   sourceLabels:
-  - __origname__
+  - table
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table.*
-  replacement: "true"
-  sourceLabels:
-  - __origname__
-  targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.live_ss_table_count
+- regex: org_apache_cassandra_metrics_table_live_ss_table_count
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.Table\.LiveSSTableCount
+- regex: org_apache_cassandra_metrics_table_live_disk_space_used
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.live_disk_space_used
+- regex: org_apache_cassandra_metrics_table_memtable.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.LiveDiskSpaceUsed
+- regex: org_apache_cassandra_metrics_table_all_memtables.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.Table\.Memtable
+- regex: org_apache_cassandra_metrics_table_compaction_bytes_written
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.Table\.Compaction
+- regex: org_apache_cassandra_metrics_table_pending_compactions
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.read
+- regex: org_apache_cassandra_metrics_table_read_.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.write
+- regex: org_apache_cassandra_metrics_table_write_.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.range
+- regex: org_apache_cassandra_metrics_table_range.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.coordinator
+- regex: org_apache_cassandra_metrics_table_coordinator_.*
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
-- regex: org\.apache\.cassandra\.metrics\.table\.dropped_mutations
+- regex: org_apache_cassandra_metrics_table_dropped_mutations
   replacement: "false"
   sourceLabels:
-  - __origname__
+  - __name__
   targetLabel: should_drop
 - action: drop
   regex: "true"
