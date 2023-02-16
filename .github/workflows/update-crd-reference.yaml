@@ -50,7 +50,7 @@ jobs:
           do 
             git checkout -f $branch
             version=$(echo $branch | sed 's/origin\/release\///g')
-            pwd
+            ls -l
             mkdir -p ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version > /dev/null 2>&1
             ~/go/bin/crdoc --resources config/crd/bases --output ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version/_index.md --template ./docs/config/crdoc-templates/k8c.tmpl
             sed -i "s/RELEASE_VERSION/$version/g" ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version/_index.md
