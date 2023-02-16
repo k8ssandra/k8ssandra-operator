@@ -50,6 +50,7 @@ jobs:
           do 
             git checkout -f $branch
             version=$(echo $branch | sed 's/origin\/release\///g')
+            pwd
             mkdir -p ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version > /dev/null 2>&1
             ~/go/bin/crdoc --resources config/crd/bases --output ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version/_index.md --template ./docs/config/crdoc-templates/k8c.tmpl
             sed -i "s/RELEASE_VERSION/$version/g" ./docs/content/en/reference/crd/releases/k8ssandra-operator-releases/k8ssandra-operator-crds-$version/_index.md
@@ -57,7 +58,6 @@ jobs:
 
           # Generate CRD reference for K8ssandra-operator main branch (latest)
           git checkout -f main
-          pwd
           mkdir -p ./docs/content/en/reference/crd/k8ssandra-operator-crds-latest/ > /dev/null 2>&1
           ~/go/bin/crdoc --resources config/crd/bases --output ./docs/content/en/reference/crd/k8ssandra-operator-crds-latest/_index.md --template ./docs/config/crdoc-templates/k8c.tmpl
           sed -i "s/vRELEASE_VERSION/latest build/g" ./docs/content/en/reference/crd/k8ssandra-operator-crds-latest/_index.md
