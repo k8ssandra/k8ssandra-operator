@@ -180,7 +180,7 @@ func Test_GetTelemetryAgentConfigMapWithDefinedEndpoint(t *testing.T) {
 	cm, err := Cfg.GetTelemetryAgentConfigMap()
 	println(cm.Data)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedCm.Data["metric-collector.yaml"], cm.Data["metric-collector.yaml"])
+	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
 }
@@ -202,7 +202,7 @@ func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 	cm, err := Cfg.GetTelemetryAgentConfigMap()
 	println(cm.Data)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedCm.Data["metric-collector.yaml"], cm.Data["metric-collector.yaml"])
+	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
 }
@@ -234,8 +234,8 @@ func Test_AddStsVolumes(t *testing.T) {
 	}
 	expectedVm := corev1.VolumeMount{
 		Name:      "metrics-agent-config",
-		MountPath: "/opt/management-api/configs/metric-collector.yaml",
-		SubPath:   "metric-collector.yaml",
+		MountPath: "/opt/management-api/configs/metrics-collector.yaml",
+		SubPath:   "metrics-collector.yaml",
 	}
 	assert.Contains(t, dc.Spec.PodTemplateSpec.Spec.Containers[cassContainer].VolumeMounts, expectedVm)
 }

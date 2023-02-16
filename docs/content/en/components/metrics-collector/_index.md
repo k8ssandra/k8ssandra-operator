@@ -82,7 +82,7 @@ Ingress or port forwarding can be used to expose access to the Prometheus and Gr
 
   2. How can I filter out metrics I don't care about?
 
-     Please read the [metric-collector.yaml](https://github.com/datastax/metric-collector-for-apache-cassandra/blob/master/config/metric-collector.yaml) section in the MCAC GitHub repo on how to add filtering rules.
+     Please read the [metrics-collector.yaml](https://github.com/datastax/metric-collector-for-apache-cassandra/blob/master/config/metrics-collector.yaml) section in the MCAC GitHub repo on how to add filtering rules.
 
   3. What is the datalog? And what is it for?
 
