@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#831](https://github.com/k8ssandra/k8ssandra-operator/issues/831) Add CLUSTER_NAME, DATACENTER_NAME and RACK_NAME environment variables to the vector container
 * [ENHANCEMENT] [#859](https://github.com/k8ssandra/k8ssandra-operator/issues/859) Remove current usages of managed-by label
 * [BUGFIX] [#854](https://github.com/k8ssandra/k8ssandra-operator/issues/854) Use Patch() to update K8ssandraTask status.
+* [CHANGE] [#887](https://github.com/k8ssandra/k8ssandra-operator/issues/887) Fix CVE-2022-32149)
