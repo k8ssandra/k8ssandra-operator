@@ -709,7 +709,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	dcPrefix := DcPrefix(t, f, dcKey)
 	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
-	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
+	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 3))
 
 	// check that the Cassandra Vector container and config map exist
 	checkContainerPresence(t, ctx, f, dcKey, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
