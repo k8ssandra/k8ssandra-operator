@@ -8,7 +8,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
@@ -20,7 +19,7 @@ import (
 )
 
 var (
-	agentConfigLocation = "/opt/management-api/configs/metric-collector.yaml"
+	agentConfigLocation = "/opt/management-api/configs/metrics-collector.yaml"
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
 		Endpoint: telemetryapi.Endpoint{
 			Port:    "9000",
@@ -80,52 +79,34 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
 	switch {
 	case recRes.IsError():
-		return recRes
+		fallthrough
 	case recRes.IsRequeue():
 		return recRes
 	}
 
-	c.AddStsVolumes(dc)
+	c.AddVolumeSource(dc)
 
 	return result.Done()
 }
 
-func (c Configurator) AddStsVolumes(dc *cassdcapi.CassandraDatacenter) error {
-	if dc.Spec.PodTemplateSpec == nil {
-		dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-	_, found := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "metrics-agent-config")
-	if !found {
-		v := corev1.Volume{
-			Name: "metrics-agent-config",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					Items: []corev1.KeyToPath{
-						{
-							Key:  filepath.Base(agentConfigLocation),
-							Path: filepath.Base(agentConfigLocation),
-						},
-					},
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
+func (c Configurator) AddVolumeSource(dc *cassdcapi.CassandraDatacenter) error {
+	dc.Spec.StorageConfig.AdditionalVolumes = append(dc.Spec.StorageConfig.AdditionalVolumes, cassdcapi.AdditionalVolumes{
+		Name:      "metrics-agent-config",
+		MountPath: "/opt/management-api/configs",
+		VolumeSource: &corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				Items: []corev1.KeyToPath{
+					{
+						Key:  filepath.Base(agentConfigLocation),
+						Path: filepath.Base(agentConfigLocation),
 					},
 				},
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
+				},
 			},
-		}
-		// We don't check that the volume mount exists before appending because we assume that the existence of the volume
-		// is a sufficient signal that reconciliation has run.
-		dc.Spec.PodTemplateSpec.Spec.Volumes = append(dc.Spec.PodTemplateSpec.Spec.Volumes, v)
-		cassandra.UpdateCassandraContainer(
-			dc.Spec.PodTemplateSpec,
-			func(c *corev1.Container) {
-				vm := corev1.VolumeMount{
-					Name:      "metrics-agent-config",
-					MountPath: agentConfigLocation,
-					SubPath:   filepath.Base(agentConfigLocation),
-				}
-				c.VolumeMounts = append(c.VolumeMounts, vm)
-			})
+		},
+	})
 
-	}
 	return nil
 }

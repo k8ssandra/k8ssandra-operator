@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -85,15 +84,6 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	if err := f.Get(ctx, dcKey, dc); err != nil {
 		require.Fail("could not find dc")
 	}
-	_, found := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "metrics-agent-config")
-	if !found {
-		require.Fail("could not find expected metrics-agent-config volume")
-	}
-	cassContainerIdx, _ := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
-	volMount := cassandra.FindVolumeMount(&dc.Spec.PodTemplateSpec.Spec.Containers[cassContainerIdx], "metrics-agent-config")
-	if volMount == nil {
-		require.Fail("could not find expected metrics-agent-config volumeMount")
-	}
 
 	// check that we have the right ConfigMap
 	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test-dc1" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
@@ -101,6 +91,19 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
 		assert.Fail(t, "could not find expected metrics-agent-config configmap")
 	}
+
+	// Verify the ConfigMap is set to be mounted
+	require.True(len(dc.Spec.StorageConfig.AdditionalVolumes) > 0)
+
+	mapMounted := false
+	for _, additionalVolume := range dc.Spec.StorageConfig.AdditionalVolumes {
+		if additionalVolume.Name == "metrics-agent-config" {
+			require.NotNil(additionalVolume.VolumeSource.ConfigMap)
+			require.Equal(agentCm.GetName(), additionalVolume.VolumeSource.ConfigMap.Name)
+			mapMounted = true
+		}
+	}
+	require.True(mapMounted)
 
 	// Test cluster deletion, ensuring configmap deleted too.
 	t.Log("deleting K8ssandraCluster")
