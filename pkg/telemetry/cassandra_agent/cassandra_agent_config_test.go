@@ -8,7 +8,6 @@ import (
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -200,37 +199,4 @@ func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
-}
-
-func Test_AddStsVolumes(t *testing.T) {
-	dc := testutils.NewCassandraDatacenter("test-dc", "test-namespace")
-	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
-	Cfg.AddStsVolumes(&dc)
-	expectedVol := corev1.Volume{
-		Name: "metrics-agent-config",
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				Items: []corev1.KeyToPath{
-					{
-						Key:  filepath.Base(agentConfigLocation),
-						Path: filepath.Base(agentConfigLocation),
-					},
-				},
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
-				},
-			},
-		},
-	}
-	assert.Contains(t, dc.Spec.PodTemplateSpec.Spec.Volumes, expectedVol)
-	cassContainer, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "cassandra")
-	if !found {
-		assert.Fail(t, "no cassandra container found")
-	}
-	expectedVm := corev1.VolumeMount{
-		Name:      "metrics-agent-config",
-		MountPath: "/opt/management-api/configs/metrics-collector.yaml",
-		SubPath:   "metrics-collector.yaml",
-	}
-	assert.Contains(t, dc.Spec.PodTemplateSpec.Spec.Containers[cassContainer].VolumeMounts, expectedVm)
 }

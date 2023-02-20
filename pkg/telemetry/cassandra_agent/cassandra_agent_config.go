@@ -162,7 +162,7 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
 	switch {
 	case recRes.IsError():
-		fallthrough
+		return recRes
 	case recRes.IsRequeue():
 		return recRes
 	}
