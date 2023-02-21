@@ -16,6 +16,7 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	secretswebhook "github.com/k8ssandra/k8ssandra-operator/controllers/secrets-webhook"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
@@ -259,6 +260,8 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	if err != nil {
 		return err
 	}
+
+	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
 
 	go func() {
 		err = k8sManager.Start(ctx)
