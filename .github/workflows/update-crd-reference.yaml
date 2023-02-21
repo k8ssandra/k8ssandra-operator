@@ -3,14 +3,7 @@ name: Update CRD Reference
 on:
   schedule:
     - cron:  '0 1 * * *'
-  workflow_dispatch:
-  pull_request:
-    branches:
-      - main
-      - 'release/**'
-    paths-ignore:
-      - 'docs/**'
-      - 'CHANGELOG/**'  
+  workflow_dispatch:  
  
 jobs:
   update-crd-reference:
