@@ -89,27 +89,27 @@ jobs:
         uses: imranismail/setup-kustomize@v2
         with:
           kustomize-version: 4.x
-    - name: Log kustomize version
-      run: kustomize version
-    - name: Install kuttl
-      run: |
-        make install-kuttl
-    - name: Create kind cluster
-      run: |
-        kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
-        make cert-manager
-        make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
-    - name: Run kuttl test
-      run: |
-        # We are running tests against k8s 1.21
-        # Additional versions must be added in kind config files under ./test/config/kind
+      - name: Log kustomize version
+        run: kustomize version
+      - name: Install kuttl
+        run: |
+          make install-kuttl
+      - name: Create kind cluster
+        run: |
+          kind create cluster --name k8ssandra-0 --config ./test/kuttl/config/kind/w3k${{ matrix.k8s_version }}.yaml
+          make cert-manager
+          make IMG="k8ssandra/k8ssandra-operator:latest" kind-load-image
+      - name: Run kuttl test
+        run: |
+          # We are running tests against k8s 1.21
+          # Additional versions must be added in kind config files under ./test/config/kind
 
-        # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
-        # release process. The following changes have been made to stay as close as possible
-        # to the existing behavior with kuttl tests while supporting the ability to use a release
-        # image tag of the operator.
-        
-        SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
-    - name: Delete kind cluster
-      run: |
-        kind delete cluster --name k8ssandra-0
+          # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
+          # release process. The following changes have been made to stay as close as possible
+          # to the existing behavior with kuttl tests while supporting the ability to use a release
+          # image tag of the operator.
+          
+          SERVERVERSION=${{ matrix.serverVersion }} ./bin/kubectl-kuttl test --kind-context=k8ssandra-0 --start-kind=false --test ${{ matrix.kuttl-test }}
+      - name: Delete kind cluster
+        run: |
+          kind delete cluster --name k8ssandra-0
