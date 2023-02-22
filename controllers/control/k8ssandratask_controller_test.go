@@ -267,6 +267,7 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 	require.Eventually(func() bool {
 		k8Task = &api.K8ssandraTask{}
 		require.NoError(f.Get(ctx, newClusterKey(f.ControlPlaneContext, namespace, "upgradesstables"), k8Task))
+		t.Log("Checking completion", "k8Task", k8Task, "completionTime1", completionTime1, "completionTime2", completionTime2, "k8Task.Status.CompletionTime", k8Task.Status.CompletionTime, "JobRunning", k8Task.GetConditionStatus(cassapi.JobRunning) == corev1.ConditionFalse, "JobComplete", k8Task.GetConditionStatus(cassapi.JobComplete) == corev1.ConditionTrue)
 		return k8Task.Status.Active == 0 &&
 			k8Task.Status.Succeeded == 2 &&
 			k8Task.Status.CompletionTime.Equal(&completionTime2) &&
