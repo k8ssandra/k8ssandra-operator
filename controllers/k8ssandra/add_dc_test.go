@@ -747,29 +747,31 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 	t.Logf("add %s to cluster", dcKey.Name)
 
 	key := utils.GetKey(kc)
-	err := f.Client.Get(ctx, key, kc)
-	require.NoError(t, err, "failed to get K8ssandraCluster")
+	require.Eventually(t, func() bool {
+		err := f.Client.Get(ctx, key, kc)
+		require.NoError(t, err, "failed to get K8ssandraCluster")
 
-	kc.Spec.Cassandra.Datacenters = append(kc.Spec.Cassandra.Datacenters, api.CassandraDatacenterTemplate{
-		Meta: api.EmbeddedObjectMeta{
-			Name:      dcKey.Name,
-			Namespace: dcKey.Namespace,
-		},
-		K8sContext: dcKey.K8sContext,
-		Size:       3,
-		DatacenterOptions: api.DatacenterOptions{
-			ServerVersion: "4.0.1",
-			StorageConfig: &cassdcapi.StorageConfig{
-				CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-					StorageClassName: &defaultStorageClass,
+		kc.Spec.Cassandra.Datacenters = append(kc.Spec.Cassandra.Datacenters, api.CassandraDatacenterTemplate{
+			Meta: api.EmbeddedObjectMeta{
+				Name:      dcKey.Name,
+				Namespace: dcKey.Namespace,
+			},
+			K8sContext: dcKey.K8sContext,
+			Size:       3,
+			DatacenterOptions: api.DatacenterOptions{
+				ServerVersion: "4.0.1",
+				StorageConfig: &cassdcapi.StorageConfig{
+					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+						StorageClassName: &defaultStorageClass,
+					},
 				},
 			},
-		},
-	})
-	annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
+		})
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
 
-	err = f.Client.Update(ctx, kc)
-	require.NoError(t, err, "failed to add dc to K8ssandraCluster")
+		err = f.Client.Update(ctx, kc)
+		return err == nil
+	}, timeout, interval, "failed to add dc to K8ssandraCluster")
 }
 
 func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
