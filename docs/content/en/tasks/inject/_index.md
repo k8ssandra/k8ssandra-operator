@@ -104,7 +104,8 @@ cass-operator will generate the following containers in this order:
 Extra volumes can be injected into the Cassandra pods through the `.spec.cassandra.extraVolumes` field.
 This field allows to specify two types of volumes:
 
-- standard volume definitions that will be added to the Cassandra pods (`.spec.cassandra.extraVolumes.volumes`), and require to be mounted explicitly in the containers. - PVC volumes which will be mounted automatically by cass-operator and managed by the Cassandra statefulset (`.spec.cassandra.extraVolumes.pvcs`).
+- standard volume definitions that will be added to the Cassandra pods (`.spec.cassandra.extraVolumes.volumes`), and required to be mounted explicitly in the containers.
+ - PVC volumes which will be mounted automatically by cass-operator and managed by the Cassandra statefulset (`.spec.cassandra.extraVolumes.pvcs`).
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1

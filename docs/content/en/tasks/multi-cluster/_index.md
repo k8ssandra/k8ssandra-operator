@@ -89,9 +89,9 @@ data:
 ## ClientConfig
 K8ssandra Operator uses a kubeconfig file to create a remote client connection. A service account provides authentication and authorization with the api server. The operator accesses the kubeconfig file via a secret.
 
-A ClientConfig is a reference to a kubeconfig secret. At startup the operator queries for all ClientConfigs in the namespace it is configured to watch. It iterates through the ClientConfigs and creating a remote client for each one. 
+A ClientConfig is a reference to a kubeconfig secret. At startup the operator queries for all ClientConfigs in the namespace it is configured to watch. It iterates through the ClientConfigs and creates a remote client for each one. 
 
-a kubeconfile can contain access to multiple clusters. The operator only creates a remote client for the kube context specified by the ClientConfig.
+A kubeconfile can contain access to multiple clusters. The operator only creates a remote client for the kube context specified by the ClientConfig.
 
 The operator stores the remote clients in a cache that persists for the lifetime of the operator and is used across all K8ssandraClusters. 
 
@@ -158,7 +158,7 @@ As stated earlier, the operator only processes ClientConfigs at startup. If you 
 Proceed with caution before deleting a ClientConfig. If there are any K8ssandraClusters that use the kube config provided by the ClientConfig, then the operator won't be able to properly manage them.
 
 #### Creating a ClientConfig
-Creating a ClientConfig involves creating the kubeconfig file and secret. This can be error prone to do by hand. Instead use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
+Creating a ClientConfig involves creating the kubeconfig file and secret. This can be error prone if done by hand. Instead use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
 
 The operator should already be installed in the remote cluster for which you want to create a ClientConfig. The operator service account is created when the operator is installed. Creating the ClientConfig requires access to that service account.
 
@@ -171,7 +171,7 @@ Here is a brief summary of what the script does:
 * Create a secret for the kubeconfig in the control plane custer
 * Create a ClientConfig in the control plane cluster that references the secret.
 
-Suppose we have two clusters with context names `kind-k8ssandra-0` and `kind-k8ssandra-1`. The control plane is running
+Suppose we have two clusters with context names `kind-k8ssandra-0` and `kind-k8ssandra-1` and the control plane is running
 in `kind-k8ssandra-0`. We want to create a ClientConfig for `kind-k8ssandra-1`. This can be accomplished by running the
 following:
 

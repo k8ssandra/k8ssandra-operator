@@ -14,7 +14,7 @@ Often users find it necessary to configure various properties of the images they
 
 cass-operator manages the Cassandra pod's images. While the K8ssandraCluster field `serverImage` can be used to set the Cassandra image, other images (especially config-builder and system-server-logger can only be set via cass-operator.
 
-cass-operator allows the user to provide a [`ImageConfig`](https://github.com/k8ssandra/cass-operator/blob/master/config/manager/image_config.yaml) to the operator via a ConfigMap, which contains a yaml representation of an `ImageConfig` specifying image sources. 
+cass-operator allows the user to provide an [`ImageConfig`](https://github.com/k8ssandra/cass-operator/blob/master/config/manager/image_config.yaml) to the operator via a ConfigMap, which contains a yaml representation of an `ImageConfig` specifying image sources. 
 
 The location of the mounted ConfigMap is then referenced in the [`OperatorConfig`](https://github.com/k8ssandra/cass-operator/blob/master/config/manager/controller_manager_config.yaml#L1).
 

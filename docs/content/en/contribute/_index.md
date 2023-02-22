@@ -11,15 +11,15 @@ We welcome contributions from the K8ssandra community!
 
 The overall procedure:
 
-1. Start on https://github.com/k8ssandra/k8ssandra-operator.
+1. Start at https://github.com/k8ssandra/k8ssandra-operator.
 2. Fork the repo by clicking the **Fork** button in the GitHub UI.
 3. Make your changes locally on your fork. Git commit and push only to your fork.
 4. Wait for CI to run successfully in GitHub Actions before submitting a PR.
 5. Submit a Pull Request (PR) with your forked updates.
 6. If you're not yet ready for a review, put it in Draft mode to indicate it's a work in progress.  
-7. Wait for the automated PR workflow to do some checks. Members of the K8ssandra community will review your PR and decide whether to approve and merge it.
+7. Wait for the automated PR workflow to complete its checks. Members of the K8ssandra community will review your PR and decide whether to approve and merge it.
 
-Also, we encourage you to submit Issues, starting from https://github.com/k8ssandra/k8ssandra-operator/issues. Add a label to help categorize the issue, such as the complexity level, component name, and other labels you'll find in the repo's Issues display. 
+Also, we encourage you to submit Issues at https://github.com/k8ssandra/k8ssandra-operator/issues. Add labels to help categorize the issue, such as the complexity level, component name, and other labels you'll find in the repo's Issues display. 
 
 ## Documentation contributions and build environment
 
@@ -30,18 +30,18 @@ Hugo is an open-source static site generator that provides us with templates, co
 All submissions, including submissions by project members, require review. We use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more information on using pull requests.
 
-Most of the documentation source files are authored in [markdown](https://daringfireball.net/projects/markdown/) plus some special properties unique to Hugo.
+Most of the documentation source files are authored in [markdown](https://daringfireball.net/projects/markdown/) with some special properties unique to Hugo.
 
 ### Deploying to K8ssandra.io
 
-Here's a quick guide to updating the docs. It assumes you're familiar with the GitHub workflow and you're happy to use the automated preview of your doc updates:
+Here's a quick guide to updating the docs. It assumes you're familiar with the GitHub workflow and you'd like to use the automated preview of your doc updates:
 
 1. **Fork** the [K8ssandra docs repo](https://github.com/k8ssandra/k8ssandra-operator.git) on GitHub. 
 1. Make your changes and send a pull request (PR).
 1. If you're not yet ready for a review, put the PR in Draft mode to indicate 
   it's a work in progress. (**Don't** add the Hugo property 
   "draft = true" to the page front matter.)
-1. Wait for the automated PR workflow to do some checks.
+1. Wait for the automated PR workflow to complete its checks.
 1. Continue updating your doc and pushing your changes until you're happy with 
   the content.
 1. When you're ready for a review, add a comment to the PR, and remove it from Draft mode.
@@ -87,7 +87,7 @@ If you've found a problem in the docs, but you're not sure how to fix it yoursel
 ## Custom Resource Definitions
 
 ### Type definitions
-The Go type definition for custom resources live under the `api` directory in files with a `_types.go` suffix. The CRDs are derived from the structs defined in these files.
+The Go type definitions for custom resources live under the `api` directory in files with a `_types.go` suffix. The CRDs are derived from the structs defined in these files.
 
 ### Updating CRDs
 As mentioned previously, the CRDs are generated based off the contents of the `_types.go` files. The CRDs live under `config/crd`.
@@ -118,7 +118,7 @@ Build the operator image with:
 make docker-build
 ```
 
-This will build `k8ssandra/k8ssandra-operator:latest`. You can build different image coordinates by setting the `IMG` var:
+This will build `k8ssandra/k8ssandra-operator:latest`. You can build different image coordinates by setting the `IMG` environment variable:
 
 ```
 make IMG=jsanda/k8ssandra-operator:latest docker-build
@@ -210,7 +210,7 @@ You can then run a test:
 make E2E_TEST=TestOperator/CreateMultiDatacenterCluster e2e-test
 ```
 
-There is also a target that does all of the above in a single step (this will destroy and recreate the clusters every
+There is also a target that does all of the above in a single step (**NOTE:** this will destroy and recreate the clusters every
 time, so probably not the one to use if you're running a test repeatedly):
 
 ```shell
@@ -234,7 +234,7 @@ make E2E_TEST=TestOperator/SingleDatacenterCluster kind-single-e2e-test
 ```
 
 ## Updating Dependencies
-Updating library, i.e., module dependencies requires updating `go.mod`. This can be done by running `go get`. 
+Updating libraries, i.e., module dependencies, requires updating `go.mod`. This can be done by running `go get`. 
 
 Suppose we have a dependency on `github.com/example/example` at v1.0.0 and we want to upgrade to v1.1.0. This can be done by running `go get "github.com/example/example@v1.1.0"`.
 

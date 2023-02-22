@@ -135,7 +135,7 @@ spec:
 ```
 
 This will deploy a single Reaper pod in each datacenter. This is necessary if Reaper instances cannot access all Cassandra pods through JMX (including pods in the other datacenters).
-In case cross DC JMX access is possible, you can deploy a single Reaper instance in the first DC using the following configuration:
+If cross DC JMX access is possible, you can deploy a single Reaper instance in the first DC using the following configuration:
 
 ```yaml
 spec:
@@ -143,7 +143,7 @@ spec:
     deploymentMode: SINGLE
 ```
 
-The list of available configuration options is available in the [Reaper CRD]({{< relref "/reference/crd/k8ssandra-operator-crds-latest/#k8ssandraclusterspecreaper" >}}).
+The list of available configuration options can be found in the [Reaper CRD]({{< relref "/reference/crd/k8ssandra-operator-crds-latest/#k8ssandraclusterspecreaper" >}}).
 
 ## Next steps
 
