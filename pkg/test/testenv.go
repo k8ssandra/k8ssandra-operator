@@ -105,6 +105,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	if err != nil {
 		return err
 	}
+	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
 
 	go func() {
 		err = k8sManager.Start(ctx)
@@ -260,7 +261,6 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	if err != nil {
 		return err
 	}
-
 	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
 
 	go func() {
