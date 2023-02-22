@@ -15,6 +15,10 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.5.2 - 2023-02-22
+
+* [BUGFIX] Fix helm release process version tag update in values file which is missing the `v` prefix 
+
 ## v1.5.1 - 2023-02-21
 
 * [CHANGE] [#891](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Update golang.org/x/net to fix several CVEs.
