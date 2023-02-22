@@ -55,7 +55,7 @@ jobs:
             yq eval ".image.tag |= \"${GITHUB_SHA::8}\"" charts/k8ssandra-operator/values.yaml -i
           else
             ## For a release, we want to use the git tag name as the image tag
-            yq eval ".image.tag |= \"${RELEASE_VERSION}\"" charts/k8ssandra-operator/values.yaml -i
+            yq eval ".image.tag |= \"v${RELEASE_VERSION}\"" charts/k8ssandra-operator/values.yaml -i
           fi
           cat charts/k8ssandra-operator/Chart.yaml
       
