@@ -96,7 +96,7 @@ spec:
     autoScheduling:
       enabled: true
 ```
-# Deploy CassandraDatacenter
+## Deploy CassandraDatacenter
 After the K8ssandraCluster spec is updated, the operator creates the new 
 CassandraDatacenter, `dc2`, in the `k8ssandra-operator` namespace in the `west` cluster. 
 
@@ -107,7 +107,7 @@ that a rebuild operation (i.e., `nodetool rebuild`) is needed.
  
 The operator will requeue reconciliation requests until the CassandraDatacenter is ready.
 
-# Update Replication of Keyspaces
+## Update Replication of Keyspaces
 After `dc2` becomes ready the operator updates the replication strategy of *internal* 
 keyspaces to include replicas in `dc2`. Internal keyspaces includes the following:
 
@@ -117,7 +117,7 @@ keyspaces to include replicas in `dc2`. Internal keyspaces includes the followin
 * `data_endpoint_auth`
 * `reaper_db`
 
-## User Defined Keyspaces
+### User Defined Keyspaces
 Next the operator updates the replication strategy of user-defined keyspaces. The 
 `k8ssandra.io/dc-replication` annotation must be set in order for the operator to update 
 user-defined keyspaces. The value should be valid JSON. 
@@ -153,7 +153,7 @@ annotations:
 The operator will ignore `dc3`. If we later add `dc3` to the cluster, then the operator 
 will apply the replication changes for it and the settings for `dc2` will be ignored.
 
-# Rebuild Datacenter
+## Rebuild Datacenter
 At this point the operator has updated replication strategies of keyspaces such that 
 `dc2` is now receiving writes. It proceeds to rebuild `dc2` by creating a CassandraTask 
 object that looks like this:
@@ -182,7 +182,7 @@ The operator requeues reconciliation requests until the rebuild is finished.
 
 **Note:** Upon successful completion Cass Operator deletes the CassandraTask.
 
-## Choose Source Datacenter for Streaming
+### Choose Source Datacenter for Streaming
 Suppose our K8ssandraCluster already has `dc1` and `dc2`, and now we want to add `dc3`. 
 There will be replicas in each datacenter. When a new datacenter is brought online, data 
 needs to synced across replicas. This is typically done with rebuild operations which 
@@ -204,13 +204,13 @@ metadata:
     k8ssandra.io/rebuild-src-dc: dc2
 ```
 
-# Deploy Stargate
+## Deploy Stargate
 Next K8ssandra Operator creates a Stargate object, `test-dc2-stargate`, in the 
 `k8ssandra-operator` namesapce in the `west` cluster.
 
 The operator requeues reconciliation requests until Stargate is ready.
 
-# Deploy Reaper
+## Deploy Reaper
 Lastly, K8ssandra Operator creates a Reaper object, `test-dc2-reaper`, in the 
 `k8ssandra-operator` namespace in the `west` cluster.
 
