@@ -48,6 +48,7 @@ They should be performed using the k8ssandra/k8ssandra-operator repo as origin (
 * Update image tag in `config/deployments/default/kustomization.yaml`
     * The image tag should match the git tag
     * If the git tag is `v1.1.2`, then the image tag should also be `v1.1.2`.
+    * Update the `version` to `1.1.2` in `charts/k8ssandra-operator/Chart.yaml`
     * Commit changes
 * Push commits
 * Wait for GitHub Actions (GHA) workflows to complete
