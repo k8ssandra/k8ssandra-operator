@@ -77,7 +77,7 @@ If you've found a problem in the docs, but you're not sure how to fix it yoursel
 ## Technical requirements
 * Go >= 1.18
 * kubectl >= 1.23
-* kustomize >= 4.5.7 
+* kustomize >= 4.5.7, < 5.0.0
 * kind >= 0.15.0
 * Docker
 
@@ -125,7 +125,15 @@ make IMG=jsanda/k8ssandra-operator:latest docker-build
 ```
 
 ### Load the operator image into kind clusters
-Assuming you have two kind clusters, load the operator image with `make kind-load-image`:
+If you have a single kind cluster (named `k8ssandra-0`), you can load the operator image with:
+
+```
+make kind-load-image
+```
+
+
+If you have multiple kind clusters, load the operator image in each with `make kind-load-image` by specifying the `KIND_CLUSTER` variable.
+For example, if you have two kind clusters named `k8ssandra-0` and `k8ssandra-1`, you would run:
 
 ```
 make KIND_CLUSTER=k8ssandra-0 kind-load-image
@@ -268,7 +276,7 @@ images:
     newTag: v1.12.0
 ```
 
-In this example the `resources` entry happens to specify a commit hash. Note that the full hash must be specified. The images transform specifies the corresponding image tag.
+In this example the `resources` entry happens to specify a release tag. When referencing specific commits, the full hash must be specified. The images transform specifies the corresponding image tag.
 
 Similar changes need to be made in `config/cass-operator/{cluster-scoped,ns-scoped}/kustomization.yaml` and `test/framework/e2e_framework.go` (on line 140).
 
