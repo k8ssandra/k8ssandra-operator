@@ -10,7 +10,7 @@ import (
 	log "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func TestInjectSecretsc(t *testing.T) {
+func TestMutatePodsSingleSecret(t *testing.T) {
 	want := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
@@ -53,7 +53,7 @@ func TestInjectSecretsc(t *testing.T) {
 
 	p := &podSecretsInjector{}
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestInjectSecretsc(t *testing.T) {
 	assert.Equal(t, want, pod)
 }
 
-func TestInjectSecretsMultiMutate(t *testing.T) {
+func TestMutatePodsMutliSecret(t *testing.T) {
 	injectionAnnotation := `[{"secretName": "mySecret", "path": "/my/secret/path"},
 	 {"secretName": "myOtherSecret", "path": "/my/other/secret/path"}]`
 
@@ -124,7 +124,7 @@ func TestInjectSecretsMultiMutate(t *testing.T) {
 
 	p := &podSecretsInjector{}
 
-	ctx := context.TODO()
+	ctx := context.Background()
 	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
