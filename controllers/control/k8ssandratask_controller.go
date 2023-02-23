@@ -150,7 +150,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
 		return r.reportInvalidSpec(ctx, kTask, err.Error())
 	} else {
-		patch := client.MergeFrom(kTask.DeepCopy())
+		patch := client.MergeFromWithOptions(kTask.DeepCopy(), client.MergeFromWithOptimisticLock{})
 		for _, dc := range dcs {
 			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
 			desiredCTask := newCassandraTask(kTask, dcNamespace, dc.Meta.Name)
