@@ -60,7 +60,7 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-// e.g. k8ssandra.io/inject-secret=[{secretName=my-secret, path=/etc/credentials/cassandra}]
+// e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
 const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
 
 type SecretInjection struct {
@@ -71,19 +71,23 @@ type SecretInjection struct {
 // mutatePods injects the secret mounting configuration into the pod
 func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error {
 	if pod.Annotations == nil {
-		logger.Info("no annotations exist")
+		logger.Info("no annotations exist", "podName", pod.Name, "namespace", pod.Namespace)
 		return nil
 	}
 
 	secretsStr := pod.Annotations[secretInjectionAnnotation]
 	if len(secretsStr) == 0 {
-		logger.Info("no secret annotation exists")
+		logger.Info("no secret annotation exists", "podName", pod.Name, "namespace", pod.Namespace)
 		return nil
 	}
 
 	var secrets []SecretInjection
 	if err := json.Unmarshal([]byte(secretsStr), &secrets); err != nil {
-		logger.Error(err, "unable to unmarhsal secrets annotation", "annotation", secretsStr)
+		logger.Error(err, "unable to unmarhsal secrets annotation",
+			"annotation", secretsStr,
+			"podName", pod.Name,
+			"namespace", pod.Namespace,
+		)
 		return err
 	}
 
@@ -94,6 +98,8 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		logger.Info("creating volume and volume mount for secret",
 			"secret", secretName,
 			"secret path", mountPath,
+			"podName", pod.Name,
+			"namespace", pod.Namespace,
 		)
 
 		volume := corev1.Volume{
@@ -114,6 +120,8 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		logger.Info("added volume and volumeMount to podSpec",
 			"secret", secretName,
 			"secret path", mountPath,
+			"podName", pod.Name,
+			"namespace", pod.Namespace,
 		)
 	}
 
