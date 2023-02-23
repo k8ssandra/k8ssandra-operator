@@ -709,7 +709,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	dcPrefix := DcPrefix(t, f, dcKey)
 	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
-	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 2))
+	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 3))
 
 	// check that the Cassandra Vector container and config map exist
 	checkContainerPresence(t, ctx, f, dcKey, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
@@ -1988,6 +1988,22 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	require.Equal(t, "/var/lib/extra", volumeMount.MountPath, "expected sts-extra-vol mount path")
 
 	return nil
+}
+
+func checkVectorAgentPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+	t.Logf("check that vector agent is present in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, cassdc)
+	require.NoError(t, err, "failed to get cassandra datacenter")
+
+	vectorContainerIdx, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "vector-agent")
+	require.True(t, containerFound, "cannot find vector agent container in pod template spec")
+	clusterNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "CLUSTER_NAME")
+	require.NotNil(t, clusterNameEnvVar, "cannot find CLUSTER_NAME env var in vector agent container")
+	dcNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "DATACENTER_NAME")
+	require.NotNil(t, dcNameEnvVar, "cannot find DATACENTER_NAME env var in vector agent container")
+	rackNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "RACK_NAME")
+	require.NotNil(t, rackNameEnvVar, "cannot find RACK_NAME env var in vector agent container")
 }
 
 func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {

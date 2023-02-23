@@ -34,6 +34,9 @@ func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig
 				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
 				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
 				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+				{Name: "CLUSTER_NAME", Value: dcConfig.Cluster},
+				{Name: "DATACENTER_NAME", Value: dcConfig.CassDcName()},
+				{Name: "RACK_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.labels['cassandra.datastax.com/rack']"}}},
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "vector-config", MountPath: "/etc/vector"},

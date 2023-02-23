@@ -1,14 +1,14 @@
-baseURL = "http://localhost:1313/"
-url_latest_version = "http://localhost:1313/"
+baseURL = "https://docs.k8ssandra.io/"
+url_latest_version = "https://docs.k8ssandra.io"
 
 [[params.versions]]
   version = "k8ssandra-operator (current)"
   fullversion = "k8ssandra-operator"
   githubbranch = "docs"
-  url = "http://localhost:1313"
+  url = "https://docs.k8ssandra.io"
 
 [[params.versions]]
   version = "K8ssandra v1 (deprecated)"
-  fullversion = "K8ssandra v1"
+  fullversion = "k8ssandra-v1"
   githubbranch = "docs-v1"
-  url = "http://localhost:1313"
+  url = "https://docs-v1.k8ssandra.io"

@@ -116,12 +116,22 @@ type DatacenterConfig struct {
 	ServiceAccount            string
 	ExternalSecrets           bool
 	McacEnabled               bool
+	DatacenterName            string
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
 	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
 	// presence affects the PodTemplateSpec.
 	InitialTokensByPodName map[string][]string
+}
+
+// CassDcName returns the Cassandra datacenter name override if it exists,
+// otherwise the cassdc object name.
+func (in *DatacenterConfig) CassDcName() string {
+	if in.DatacenterName != "" {
+		return in.DatacenterName
+	}
+	return in.Meta.Name
 }
 
 const (
@@ -216,6 +226,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		// MCAC needs to be disabled
 		setMcacDisabled(dc, template)
 	}
+
+	dc.Spec.DatacenterName = template.DatacenterName
 
 	return dc, nil
 }
@@ -318,6 +330,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.Stopped = dcTemplate.Stopped
 	dcConfig.PerNodeConfigMapRef = dcTemplate.PerNodeConfigMapRef
 	dcConfig.CDC = dcTemplate.CDC
+	dcConfig.DatacenterName = dcTemplate.DatacenterName
 
 	mergedOptions := goalesceutils.MergeCRs(clusterTemplate.DatacenterOptions, dcTemplate.DatacenterOptions)
 

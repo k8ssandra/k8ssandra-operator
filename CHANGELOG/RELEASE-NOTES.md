@@ -15,7 +15,7 @@ As of v1.5.0, we are introducing a new metrics endpoint which will replace the [
 MCAC's architecture is not well suited for Kubernetes and the presence of collectd was both creating bugs and adding maintenance complexity.  
 MCAC is still enabled by default in v1.5.0 and can be disabled by setting `.spec.cassandra.telemetry.mcac.enabled` to `false`. This will disable the MCAC agent and modify the service monitors/vector config to point to the new metrics endpoint.  
 
-Note that the new metrics endpoint uses names for the metrics which are much closer to the names of the Cassandra metrics. For example, Client Requests latencies for the LOCAL_ONE consistency level will be found in the `org_apache_cassandra_metrics_client_request_latency_read_local_one` metric.
+Note that the new metrics endpoint uses names for the metrics which are much closer to the names of the Cassandra metrics. For example, Client Requests latencies for the LOCAL_ONE consistency level will be found in the `org_apache_cassandra_metrics_client_request_latency{request_type="read",cl="local_one"}` metric.
 Another example, the SSTables per read percentile metrics for the system_traces keyspace can be found here:
 
 ```

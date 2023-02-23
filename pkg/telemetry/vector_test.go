@@ -5,8 +5,10 @@ import (
 
 	"github.com/go-logr/logr/testr"
 
+	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,6 +22,10 @@ import (
 func TestInjectCassandraVectorAgent(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
 	dcConfig := &cassandra.DatacenterConfig{
+		Meta: k8ssandra.EmbeddedObjectMeta{
+			Name: "dc1",
+		},
+		Cluster:         "test1",
 		PodTemplateSpec: corev1.PodTemplateSpec{},
 	}
 
@@ -34,6 +40,11 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu())
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory())
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory())
+	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "CLUSTER_NAME"))
+	assert.Equal(t, "test1", utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "CLUSTER_NAME").Value)
+	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "DATACENTER_NAME"))
+	assert.Equal(t, "dc1", utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "DATACENTER_NAME").Value)
+	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "RACK_NAME"))
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {

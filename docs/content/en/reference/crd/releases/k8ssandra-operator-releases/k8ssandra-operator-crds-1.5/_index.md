@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.5"
+linkTitle: "K8ssandra-operator CRDs v1.5"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.5.  
 ---
 
 Packages:
@@ -930,13 +930,6 @@ Cassandra is a specification of the Cassandra cluster. This includes everything 
         <td>[]object</td>
         <td>
           Containers defines containers to be deployed in each Cassandra pod. K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to override specific settings, such as mounts or resources request/limits for example. Example: containers: - name: server-system-logger - name: custom-container image: busybox - name: cassandra<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>datacenterName</b></td>
-        <td>string</td>
-        <td>
-          DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value. It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself. This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC. Use cautiously.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -4381,13 +4374,6 @@ VolumeMount describes a mounting of a Volume within a container.
         <td>[]object</td>
         <td>
           Containers defines containers to be deployed in each Cassandra pod. K8ssandra-operator and cass-operator will create their own containers, which can be referenced here to override specific settings, such as mounts or resources request/limits for example. Example: containers: - name: server-system-logger - name: custom-container image: busybox - name: cassandra<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>datacenterName</b></td>
-        <td>string</td>
-        <td>
-          DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value. It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself. This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC. Use cautiously.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22561,13 +22547,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -22586,145 +22565,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -23463,13 +23303,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -23488,145 +23321,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargatetelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -27477,13 +27171,6 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -27502,145 +27189,6 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindextelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindextelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindextelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -42219,13 +41767,6 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandratelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -42244,145 +41785,6 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandratelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandratelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandratelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -46964,13 +46366,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecreapertelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -46989,145 +46384,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.reaper.telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspecreapertelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.reaper.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspecreapertelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.reaper.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspecreapertelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -49922,13 +49178,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecstargatetelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -49947,145 +49196,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.stargate.telemetry.cassandra
-<sup><sup>[↩ Parent](#k8ssandraclusterspecstargatetelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.stargate.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#k8ssandraclusterspecstargatetelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.stargate.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspecstargatetelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -69692,7 +68802,7 @@ MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
         <td><b><a href="#medusabackupschedulespecbackupspec">backupSpec</a></b></td>
         <td>object</td>
         <td>
-          BackupSpec defines the MedusaBackup to be created for this job<br/>
+          BackupSpec defines the CassandraBackup to be created for this job<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -69718,7 +68828,7 @@ MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
 
 
 
-BackupSpec defines the MedusaBackup to be created for this job
+BackupSpec defines the CassandraBackup to be created for this job
 
 <table>
     <thead>
@@ -69861,7 +68971,7 @@ MedusaRestoreJobSpec defines the desired state of MedusaRestoreJob
         <td><b>backup</b></td>
         <td>string</td>
         <td>
-          The name of the MedusaBackup to restore.<br/>
+          The name of the CassandraBackup to restore.<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -74481,13 +73591,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#reaperspectelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#reaperspectelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -74506,145 +73609,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Reaper.spec.telemetry.cassandra
-<sup><sup>[↩ Parent](#reaperspectelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#reaperspectelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#reaperspectelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Reaper.spec.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#reaperspectelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Reaper.spec.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#reaperspectelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -80346,13 +79310,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#stargatespecracksindextelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#stargatespecracksindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -80371,145 +79328,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.racks[index].telemetry.cassandra
-<sup><sup>[↩ Parent](#stargatespecracksindextelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#stargatespecracksindextelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#stargatespecracksindextelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.racks[index].telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#stargatespecracksindextelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.racks[index].telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#stargatespecracksindextelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -81248,13 +80066,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#stargatespectelemetrycassandra">cassandra</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#stargatespectelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
@@ -81273,145 +80084,6 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>object</td>
         <td>
           <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.telemetry.cassandra
-<sup><sup>[↩ Parent](#stargatespectelemetry)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#stargatespectelemetrycassandraendpoint">endpoint</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#stargatespectelemetrycassandrafiltersindex">filters</a></b></td>
-        <td>[]object</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.telemetry.cassandra.endpoint
-<sup><sup>[↩ Parent](#stargatespectelemetrycassandra)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>address</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>port</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### Stargate.spec.telemetry.cassandra.filters[index]
-<sup><sup>[↩ Parent](#stargatespectelemetrycassandra)</sup></sup>
-
-
-
-RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>action</b></td>
-        <td>string</td>
-        <td>
-          Action to perform based on regex matching. Default is 'replace'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>modulus</b></td>
-        <td>integer</td>
-        <td>
-          Modulus to take of the hash of the source label values.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>regex</b></td>
-        <td>string</td>
-        <td>
-          Regular expression against which the extracted value is matched. Default is '(.*)'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>replacement</b></td>
-        <td>string</td>
-        <td>
-          Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>separator</b></td>
-        <td>string</td>
-        <td>
-          Separator placed between concatenated source label values. default is ';'.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>sourceLabels</b></td>
-        <td>[]string</td>
-        <td>
-          The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>targetLabel</b></td>
-        <td>string</td>
-        <td>
-          Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.<br/>
         </td>
         <td>false</td>
       </tr></tbody>

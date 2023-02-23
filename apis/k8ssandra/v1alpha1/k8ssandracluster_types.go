@@ -422,6 +422,13 @@ type DatacenterOptions struct {
 
 	// The k8s service account to use for the Cassandra pods
 	ServiceAccount string `json:"serviceAccount,omitempty"`
+
+	// DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value.
+	// It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself.
+	// This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC.
+	// Use cautiously.
+	// +optional
+	DatacenterName string `json:"datacenterName,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
