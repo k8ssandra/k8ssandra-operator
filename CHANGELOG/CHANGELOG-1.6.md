@@ -24,3 +24,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#854](https://github.com/k8ssandra/k8ssandra-operator/issues/854) Use Patch() to update K8ssandraTask status.
 * [CHANGE] [#887](https://github.com/k8ssandra/k8ssandra-operator/issues/887) Fix CVE-2022-32149.
 * [CHANGE] [#891](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Update golang.org/x/net to fix several CVEs.
+* [FEATURE] [#598](https://github.com/k8ssandra/k8ssandra-operator/issues/598) Create a mutating webhook for the internal secrets provider
