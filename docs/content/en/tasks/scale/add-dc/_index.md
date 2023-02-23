@@ -19,7 +19,7 @@ metadata:
   name: test
   namespace: k8ssandra-cluster
 spec:
-  cassandra
+  cassandra:
     serverVersion: "4.0.3"
     storageConfig:
       cassandraDataVolumeClaimSpec:
