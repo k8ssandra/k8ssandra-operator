@@ -31,12 +31,56 @@ Here's how the modules fit together:
 
 ![How the Stargate modules fit together](stargate-modules3.png)
 
+## Deploying Stargate
+
+In order to deploy Stargate, you'll need to include the Stargate component in your K8ssandraCluster custom resource (CR). For example:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    ...
+  stargate:
+    size: 1
+```
+
+The above manifest will deploy one Stargate pod per datacenter. The Stargate pods will be deployed in the same Kubernetes namespace as the Cassandra pods. The Stargate pods will be exposed via a Kubernetes service of type `LoadBalancer`. The service will be named `<clusterName>-<dcName>-stargate-service`.
+
+Stargate's configuration can be set at the datacenter level, or at the cluster level. The following example shows how to set the configuration at the datacenter level:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    serverVersion: 4.0
+    datacenters:
+    - metadata:
+        name: dc1
+      size: 3
+      stargate:
+        size: 1
+    - metadata:
+        name: dc2
+      size: 3
+      stargate:
+        size: 2
+```
+
+The above example will deploy one Stargate pod in dc1 and two Stargate pods in dc2, along with 3 Cassandra pods in each datacenter.
+
+
 ## Next steps
 
 * For comprehensive information about Stargate, visit the [stargate.io](https://stargate.io/) site.
 * For details on the API calls, see the Stargate [API reference](https://stargate.io/docs/stargate/1.0/api.html).
 * For an introduction to using Stargate with K8ssandra, see [Develop with Stargate APIs]({{< relref "/tasks/develop/" >}}). 
-* For reference details, see the K8ssandra Operator [Custom Resource Definitions (CRDs)]({{< relref "/reference/" >}}).
+* For reference details, see the K8ssandra Operator [Custom Resource Definitions (CRDs)]({{< relref "/reference/crd/" >}}).
 * For information about using a superuser and secrets with Stargate authentication, see [Stargate security]({{< relref "/tasks/secure/#stargate-security" >}}).
 * Also see the topics covering other [components]({{< relref "/components/" >}}) deployed by K8ssandra. 
 * For information on using the deployed components, see the [Tasks]({{< relref "/tasks/" >}}) topics.

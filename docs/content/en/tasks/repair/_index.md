@@ -17,24 +17,20 @@ The requirement for your environment may vary considerably, however the general 
 
 ## Prerequisites
 
-1. Kubernetes cluster with the following elements deployed:
-   * If you haven't already installed a K8ssandraCluster using K8ssandra Operator, see the [local install]({{< relref "/install/local" >}}) topic.
-
-Access to the Reaper web interface requires either:  
-
-* setting up a custom Ingress resource
-* or modifying Reaper's Kubernetes service as a LoadBalancer (in cloud environments), which will expose it over a public IP
-* or using port forwarding, which is another way to provide external access to resources that have been deployed by K8ssandra Operator in your Kubernetes environment:  
-  * Developers, see [Set up port forwarding]({{< relref "/quickstarts/developer/#set-up-port-forwarding" >}}).  
-  * Site reliability engineers, see [Configure port forwarding]({{< relref "/quickstarts/site-reliability-engineer/#port-forwarding" >}}).
+* Kubernetes cluster with the following elements deployed:
+  * If you haven't already installed a K8ssandraCluster using K8ssandra Operator, see the [local install]({{< relref "/install/local" >}}) topic.
+  * A K8ssandraCluster with Reaper enabled, see the [Deploying Reaper in k8ssandra-operator]({{< relref "/components/reaper/#deploying-reaper-in-k8ssandra-operator" >}}) topic.
+  
+* Access to the Reaper web interface requires either:  
+  * setting up a custom Ingress resource
+  * or modifying Reaper's Kubernetes service as a LoadBalancer (in cloud environments), which will expose it over a public IP
+  * or using port forwarding, which is another way to provide external access to resources that have been deployed by K8ssandra Operator in your Kubernetes environment:  
+    * Developers, see [Set up port forwarding]({{< relref "/quickstarts/developer/#set-up-port-forwarding" >}}).  
+    * Site reliability engineers, see [Configure port forwarding]({{< relref "/quickstarts/site-reliability-engineer/#port-forwarding" >}}).
 
 ## Access the Reaper web interface
 
 ![Reaper UI](reaper-main-ui.png)
-
-With the prerequisites satisfied the Reaper web interface should be available at the following address:
-
-http://REAPER_DOMAIN/webui
 
 Check that the pods are running. Example:
 
@@ -54,6 +50,41 @@ k8ssandra-dc1-default-sts-2                                  3/3     Running   0
 k8ssandra-dc1-reaper-58cd6b795b-dw9dw                        1/1     Running   0          10d
 k8ssandra-operator-6d4dd9fb8f-5kzl6                          1/1     Running   0          10d
 ```
+
+The Reaper interface is secured by default. The default username is `<k8c name>-reaper-ui` with a randomized password (here it would be `k8ssandra-reaper-ui`).
+Read the corresponding secret content to get the password and authenticate to the UI:
+
+```bash
+kubectl get secret k8ssandra-reaper-ui -o jsonpath='{.data.password}' | base64 --decode
+```
+
+List the services to identify the Reaper service:
+
+```bash
+kubectl get services
+```
+
+**Output:**
+
+```bash
+NAME                               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                                                  AGE
+k8ssandra-dc1-all-pods-service     ClusterIP   None            <none>        9042/TCP                                                 10d
+k8ssandra-dc1-service              ClusterIP   None           <none>         9042/TCP,9142/TCP,8080/TCP,9103/TCP,9000/TCP,9160/TCP    10d
+...
+k8ssandra-dc1-reaper-service       ClusterIP   10.96.39.160    <none>        8080/TCP,8081/TCP                                        10d
+...
+```
+
+Assuming you choose to port forward the Reaper service, use the following command (adjust according to your cluster name and settings):
+
+```bash
+% kubectl port-forward svc/k8ssandra-dc1-reaper-service 8080
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+```
+
+Then, the Reaper UI should be accessible at the following URL: [http://127.0.0.1:8080/webui](http://127.0.0.1:8080/webui)
+
 
 ## What can I do in Reaper?
 
@@ -108,7 +139,7 @@ Users with access to the Reaper web interface can pause or delete scheduled repa
 
 When you enable the autoschedule feature, Reaper dynamically schedules repairs for all non-system keyspaces in a cluster. A cluster's keyspaces are monitored and any modifications (additions or removals) are detected. When a new keyspace is created, a new repair schedule is created automatically for that keyspace. Conversely, when a keyspace is removed, the corresponding repair schedule is deleted.
 
-To enable autoschedule in Reaper, set the property `reaper.autoScheduling.enabled` to `true`. 
+To enable autoschedule in Reaper, set the property `.spec.reaper.autoScheduling.enabled` to `true`. 
 
 ### Run a cluster repair
 

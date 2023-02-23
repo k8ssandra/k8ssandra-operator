@@ -7,6 +7,37 @@ description: "Troubleshooting tips for K8ssandra Operator users."
 The best place to start when troubleshooting a K8ssandra cluster deployment is its status. The status of a K8ssandra
 cluster reports useful information about each of its components (CassandraDatacenter, Stargate, Reaper, etc.)
 
+
+## Checking reconcile errors
+
+If the last reconcile failed, the error will show up in the `.status.error` field of the `K8ssandraCluster` resource, which is displayed by default when listing K8ssandraCluster resources:
+
+```bash
+kubectl get k8c 
+```
+
+**Output:**
+
+```bash
+NAME      ERROR
+demo      None
+```
+
+If the error is `None`, then the last reconcile was successful. Otherwise, the error message will be displayed.
+
+Reconcile errors are also notified in the Kubernetes events:
+
+```bash
+% kubectl describe k8c demo
+Name:        demo
+...
+...
+Events:
+  Type     Reason  Age   From                     Message
+  ----     ------  ----  ----                     -------
+  Warning  Error   2m    k8ssandra-operator 1.0  reconcile failed: failed to create CassandraDatacenter: admission webhook "cassandra.datastax.com" denied the request: CassandraDatacenter.cassandra.datastax.com "demo-dc1" is invalid: spec.serverType: Unsupported value: "bogus": supported values: "dse", "cassandra"
+```
+
 ## Inspecting the cluster status
 
 The cluster status can be obtained with the following command (executed in the appropriate namespace):

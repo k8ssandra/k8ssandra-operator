@@ -35,7 +35,7 @@ git clone https://github.com/k8ssandra/k8ssandra-operator.git
 cd k8ssandra-operator
 ```
 
-Invoke `make` with the following parameters: 
+Run the following command: 
 
 ```bash
 scripts/setup-kind-multicluster.sh --clusters 3 --kind-worker-nodes 4

@@ -124,6 +124,27 @@ Reaper can use Postgres and Cassandra itself as a storage backend for its data, 
 In order to make Reaper more efficient, segment orchestration was recently revamped and modernized. It opened for a long awaited feature: fully concurrent repairs for different keyspaces and tables.
 These changes also introduced a long awaited feature by allowing fully concurrent repairs for different keyspaces/tables.
 
+## Deploying Reaper in k8ssandra-operator
+
+Reaper is not deployed by default by k8ssandra-operator.  
+In order to deploy it with the default settings, you'll need to add the following section to your `K8ssandraCluster` manifest:
+
+```yaml
+spec:
+  reaper: {}
+```
+
+This will deploy a single Reaper pod in each datacenter. This is necessary if Reaper instances cannot access all Cassandra pods through JMX (including pods in the other datacenters).
+If cross DC JMX access is possible, you can deploy a single Reaper instance in the first DC using the following configuration:
+
+```yaml
+spec:
+  reaper:
+    deploymentMode: SINGLE
+```
+
+The list of available configuration options can be found in the [Reaper CRD]({{< relref "/reference/crd/k8ssandra-operator-crds-latest/#k8ssandraclusterspecreaper" >}}).
+
 ## Next steps
 
 * For the steps to set up repair operations using the Reaper Web UI, see [Repair Cassandra with Reaper]({{< relref "/tasks/repair/" >}}). 

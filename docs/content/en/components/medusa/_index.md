@@ -35,6 +35,7 @@ K8ssandra's Medusa supports:
 
 ## Next steps
 
+* For information about deploying Medusa and using it to backup and restore Cassandra data, see [Medusa backup and restore]({{< relref "/tasks/backup-restore" >}}).
 * For information about using a superuser and secrets with Medusa authentication, see [Medusa security]({{< relref "/tasks/secure/#medusa-security" >}}).
 * For reference details, see the K8ssandra Operator [Custom Resource Definitions (CRDs)]({{< relref "reference" >}}).
 * Also see the topics covering other [components]({{< relref "/components/" >}}) deployed by K8ssandra Operator. 
