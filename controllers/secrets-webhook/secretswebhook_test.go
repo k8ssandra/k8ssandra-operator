@@ -19,12 +19,7 @@ import (
 )
 
 func TestHandleSinceSecretSuccess(t *testing.T) {
-	p := &podSecretsInjector{}
-	d, err := admission.NewDecoder(scheme.Scheme)
-	if err != nil {
-		t.Fatal(err)
-	}
-	p.InjectDecoder(d)
+	p := setupSecretsInjector(t)
 
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
@@ -39,22 +34,7 @@ func TestHandleSinceSecretSuccess(t *testing.T) {
 			}},
 		},
 	}
-	pBytes, err := json.Marshal(pod)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := webhook.AdmissionRequest{AdmissionRequest: admissionv1.AdmissionRequest{
-		UID:       "test123",
-		Name:      "foo",
-		Namespace: "bar",
-		Resource: metav1.GroupVersionResource{
-			Version:  "v1",
-			Resource: "pods",
-		},
-		Operation: "CREATE",
-		Object:    runtime.RawExtension{Raw: pBytes},
-	}}
+	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
 	fmt.Println(fmt.Sprintf("%v", resp))
@@ -68,12 +48,7 @@ func TestHandleSinceSecretSuccess(t *testing.T) {
 }
 
 func TestHandleSinceSecretNoPatch(t *testing.T) {
-	p := &podSecretsInjector{}
-	d, err := admission.NewDecoder(scheme.Scheme)
-	if err != nil {
-		t.Fatal(err)
-	}
-	p.InjectDecoder(d)
+	p := setupSecretsInjector(t)
 
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
@@ -88,22 +63,7 @@ func TestHandleSinceSecretNoPatch(t *testing.T) {
 			}},
 		},
 	}
-	pBytes, err := json.Marshal(pod)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := webhook.AdmissionRequest{AdmissionRequest: admissionv1.AdmissionRequest{
-		UID:       "test123",
-		Name:      "foo",
-		Namespace: "bar",
-		Resource: metav1.GroupVersionResource{
-			Version:  "v1",
-			Resource: "pods",
-		},
-		Operation: "CREATE",
-		Object:    runtime.RawExtension{Raw: pBytes},
-	}}
+	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
 	fmt.Println(fmt.Sprintf("%v", resp))
@@ -233,4 +193,33 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 	}
 
 	assert.Equal(t, want, pod)
+}
+
+func setupSecretsInjector(t *testing.T) *podSecretsInjector {
+	p := &podSecretsInjector{}
+	d, err := admission.NewDecoder(scheme.Scheme)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.InjectDecoder(d)
+	return p
+}
+
+func createRequest(t *testing.T, pod *corev1.Pod) webhook.AdmissionRequest {
+	pBytes, err := json.Marshal(pod)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return webhook.AdmissionRequest{AdmissionRequest: admissionv1.AdmissionRequest{
+		UID:       "test123",
+		Name:      "foo",
+		Namespace: "bar",
+		Resource: metav1.GroupVersionResource{
+			Version:  "v1",
+			Resource: "pods",
+		},
+		Operation: "CREATE",
+		Object:    runtime.RawExtension{Raw: pBytes},
+	}}
 }
