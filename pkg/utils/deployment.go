@@ -35,14 +35,18 @@ func FindVolumeMount(container *corev1.Container, name string) *corev1.VolumeMou
 
 func FindVolume(deployment *appsv1.Deployment, name string) (int, bool) {
 	if deployment != nil {
-		for i, volume := range deployment.Spec.Template.Spec.Volumes {
-			if volume.Name == name {
-				return i, true
-			}
+		return ContainsVolume(deployment.Spec.Template.Spec.Volumes, name)
+	}
+	return -1, false
+}
+
+func ContainsVolume(volumes []corev1.Volume, name string) (int, bool) {
+	for i, volume := range volumes {
+		if volume.Name == name {
+			return i, true
 		}
 	}
 	return -1, false
-
 }
 
 func FindAndGetVolume(deployment *appsv1.Deployment, name string) *corev1.Volume {

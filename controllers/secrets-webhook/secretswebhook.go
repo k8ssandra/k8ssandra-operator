@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
@@ -130,7 +131,7 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 
 // injectVolume attaches a volume to the pod spec
 func injectVolume(pod *corev1.Pod, volume corev1.Volume) {
-	if !hasVolume(pod.Spec.Volumes, volume) {
+	if _, found := utils.ContainsVolume(pod.Spec.Volumes, volume.Name); !found {
 		pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
 	}
 }
@@ -138,33 +139,13 @@ func injectVolume(pod *corev1.Pod, volume corev1.Volume) {
 // injectVolumeMount attaches a volumeMount to all containers in the pod spec
 func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount) {
 	for i, container := range pod.Spec.Containers {
-		if !hasVolumeMount(container, volumeMount) {
+		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
 			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
 		}
 	}
 	for i, container := range pod.Spec.InitContainers {
-		if !hasVolumeMount(container, volumeMount) {
+		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
 			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
 		}
 	}
-}
-
-// hasVolume returns true if volume exists, false otherwise
-func hasVolume(volumes []corev1.Volume, volume corev1.Volume) bool {
-	for _, v := range volumes {
-		if v.Name == volume.Name {
-			return true
-		}
-	}
-	return false
-}
-
-// hasVolumeMount returns true if volume mount exists, false otherwise
-func hasVolumeMount(container corev1.Container, volumeMount corev1.VolumeMount) bool {
-	for _, mount := range container.VolumeMounts {
-		if mount.Name == volumeMount.Name {
-			return true
-		}
-	}
-	return false
 }
