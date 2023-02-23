@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func TestHandleSinceSecretSuccess(t *testing.T) {
+func TestHandleInjectSecretSuccess(t *testing.T) {
 	p := setupSecretsInjector(t)
 
 	pod := &corev1.Pod{
@@ -47,7 +47,7 @@ func TestHandleSinceSecretSuccess(t *testing.T) {
 	assert.Equal(t, resp.Patches[1].Path, "/spec/containers/0/volumeMounts")
 }
 
-func TestHandleSinceSecretNoPatch(t *testing.T) {
+func TestHandleInjectSecretNoPatch(t *testing.T) {
 	p := setupSecretsInjector(t)
 
 	pod := &corev1.Pod{
