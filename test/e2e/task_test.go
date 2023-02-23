@@ -85,7 +85,9 @@ func createMultiDatacenterTask(t *testing.T, ctx context.Context, namespace stri
 	kTaskKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, "restart-task")
 	require.Eventually(func() bool {
 		require.NoError(f.Get(ctx, kTaskKey, kTask))
-		return !kTask.Status.CompletionTime.IsZero()
+		return !kTask.Status.CompletionTime.IsZero() &&
+			kTask.Status.Active == 0 &&
+			kTask.Status.Succeeded == 2
 	}, polling.datacenterReady.timeout, polling.datacenterReady.interval)
 
 	t.Log("delete dc1")
