@@ -31,7 +31,11 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: Create temporary directory for yq install
+        run: |
+          mkdir ${{ runner.temp }}/yq
       - name: Install yq
+        working-directory: ${{ runner.temp }}/yq
         run: |
           sudo rm /bin/yq
           wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
@@ -41,6 +45,12 @@ jobs:
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
           make envtest test
+      - name: Check that the build did not generate additional git changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status
+            exit 1
+          fi
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:
