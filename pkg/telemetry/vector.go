@@ -7,6 +7,8 @@ import (
 	"text/template"
 
 	"github.com/go-logr/logr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -15,51 +17,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
-// If the Vector agent is already present, it is not added again.
-func InjectCassandraVectorAgent(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
+// InjectCassandraVectorAgentConfig adds a override Vector agent config to the Cassandra pods, overwriting the default in the cass-operator
+func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
 	if telemetrySpec.IsVectorEnabled() {
-		logger.Info("Injecting Vector agent into Cassandra pods")
-		vectorImage := vector.DefaultVectorImage
-		if telemetrySpec.Vector.Image != "" {
-			vectorImage = telemetrySpec.Vector.Image
-		}
-
-		// Create the definition of the Vector agent container
-		vectorAgentContainer := corev1.Container{
-			Name:            cassandra.VectorContainerName,
-			Image:           vectorImage,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Env: []corev1.EnvVar{
-				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
-				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
-				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
-				{Name: "CLUSTER_NAME", Value: dcConfig.Cluster},
-				{Name: "DATACENTER_NAME", Value: dcConfig.CassDcName()},
-				{Name: "RACK_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.labels['cassandra.datastax.com/rack']"}}},
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{Name: "vector-config", MountPath: "/etc/vector"},
-			},
+		logger.V(1).Info("Injecting Vector agent into Cassandra pods")
+		// vectorImage := vector.DefaultVectorImage
+		loggerContainer := corev1.Container{
+			Name:      reconciliation.SystemLoggerContainerName,
 			Resources: vector.VectorContainerResources(telemetrySpec),
+
+			// Add the VolumeMount (of the config) to the AdditionalVolumes part (to override the /etc/vector/vector.toml)
 		}
 
-		logger.Info("Updating Vector agent in Cassandra pods")
-		cassandra.UpdateVectorContainer(&dcConfig.PodTemplateSpec, func(container *corev1.Container) {
-			*container = vectorAgentContainer
-		})
+		if dcConfig.StorageConfig == nil {
+			dcConfig.StorageConfig = &cassdcapi.StorageConfig{}
+		}
 
-		// Create the definition of the Vector agent config map volume
-		vectorAgentVolume := corev1.Volume{
-			Name: "vector-config",
-			VolumeSource: corev1.VolumeSource{
+		dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, cassdcapi.AdditionalVolumes{
+			Name:      "vector-config",
+			MountPath: "/etc/vector",
+			VolumeSource: &corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(k8cName, dcConfig.Meta.Name)},
 				},
 			},
+		})
+
+		if telemetrySpec.Vector.Image != "" {
+			loggerContainer.Image = telemetrySpec.Vector.Image
 		}
 
-		cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, vectorAgentVolume)
+		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
+		cassandra.UpdateLoggerContainer(&dcConfig.PodTemplateSpec, func(container *corev1.Container) {
+			*container = loggerContainer
+		})
 	}
 
 	return nil

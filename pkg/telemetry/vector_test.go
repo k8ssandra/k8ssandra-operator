@@ -8,7 +8,6 @@ import (
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,20 +30,15 @@ func TestInjectCassandraVectorAgent(t *testing.T) {
 
 	logger := testr.New(t)
 
-	err := InjectCassandraVectorAgent(telemetrySpec, dcConfig, "test", logger)
+	err := InjectCassandraVectorAgentConfig(telemetrySpec, dcConfig, "test", logger)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
-	assert.Equal(t, "vector-agent", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
+	assert.Equal(t, "server-system-logger", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu())
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu())
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory())
 	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory())
-	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "CLUSTER_NAME"))
-	assert.Equal(t, "test1", utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "CLUSTER_NAME").Value)
-	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "DATACENTER_NAME"))
-	assert.Equal(t, "dc1", utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "DATACENTER_NAME").Value)
-	assert.NotNil(t, utils.FindEnvVarInContainer(&dcConfig.PodTemplateSpec.Spec.Containers[0], "RACK_NAME"))
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
