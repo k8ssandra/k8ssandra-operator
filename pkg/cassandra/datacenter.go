@@ -20,10 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const (
-	VectorContainerName = "vector-agent"
-)
-
 // SystemReplication represents the replication factor of the system_auth, system_traces,
 // and system_distributed keyspaces. This is applied to each datacenter. The replication
 // is configured per DC.
@@ -259,11 +255,9 @@ func UpdateCassandraContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Contai
 	UpdateContainer(p, reconciliation.CassandraContainerName, f)
 }
 
-// UpdateVectorContainer finds the vector container, passes it to f, and then adds it
-// back to the PodTemplateSpec. The Container object is created if necessary before calling
-// f. Only the Name field is initialized.
-func UpdateVectorContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
-	UpdateContainer(p, VectorContainerName, f)
+// UpdateLoggerContainer updates the PodTemplateSpec part for server-system-logger
+func UpdateLoggerContainer(p *corev1.PodTemplateSpec, f func(c *corev1.Container)) {
+	UpdateContainer(p, reconciliation.SystemLoggerContainerName, f)
 }
 
 // UpdateContainer finds the container with the given name, passes it to f, and then adds it

@@ -2,10 +2,10 @@ package k8ssandra
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -154,10 +154,6 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 		assert.Fail(t, "error setting status ready", err)
 	}
 
-	// Check that the Vector agent was injected in the cassandra pod
-	_, foundVector := cassandra.FindContainer(dc.Spec.PodTemplateSpec, cassandra.VectorContainerName)
-	require.True(foundVector, fmt.Sprintf("Vector container not found in Cassandra pod: %v", dc.Spec.PodTemplateSpec.Spec.Containers))
-
 	// Check that the Vector config map was created
 	vectorConfigMapKey := types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kc.Name, dc1Key.Name)}
 	vectorConfigMap := &corev1.ConfigMap{}
@@ -169,6 +165,24 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 		}
 		return true
 	}, timeout, interval, "timed out waiting for Vector config map")
+
+	// Check that Vector configuration was set to the SystemLoggerContainer
+	loggerContainerIndex, foundLogger := cassandra.FindContainer(dc.Spec.PodTemplateSpec, reconciliation.SystemLoggerContainerName)
+	require.True(foundLogger)
+	loggerContainer := dc.Spec.PodTemplateSpec.Spec.Containers[loggerContainerIndex]
+	_, foundCPURequest := loggerContainer.Resources.Requests[corev1.ResourceCPU]
+	require.True(foundCPURequest)
+
+	// Check that the AdditionalVolumes has VolumeSource
+	foundVectorConfig := false
+	for _, vol := range dc.Spec.StorageConfig.AdditionalVolumes {
+		if vol.Name == "vector-config" {
+			foundVectorConfig = true
+			require.Equal("/etc/vector", vol.MountPath)
+			require.NotNil(vol.VolumeSource)
+		}
+	}
+	require.True(foundVectorConfig)
 
 	// Test cluster deletion
 	t.Log("deleting K8ssandraCluster")

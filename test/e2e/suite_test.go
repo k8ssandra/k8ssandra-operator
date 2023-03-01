@@ -712,7 +712,6 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 3))
 
 	// check that the Cassandra Vector container and config map exist
-	checkContainerPresence(t, ctx, f, dcKey, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
 
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
@@ -838,7 +837,6 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	// Check that Cassandra Vector's configmap is deleted
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
-	checkContainerDeleted(t, ctx, f, dcKey, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
 	// Check that Stargate Vector's configmap is deleted
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
@@ -1017,9 +1015,7 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
-	checkContainerPresence(t, ctx, f, dc1Key, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
-	checkContainerPresence(t, ctx, f, dc2Key, getPodTemplateSpecForCassandra, cassandra.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
 
 	t.Log("retrieve database credentials")
