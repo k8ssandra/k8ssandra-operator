@@ -27,6 +27,11 @@ replacements:
         kind: ValidatingWebhookConfiguration
       fieldPaths:
       - webhooks.0.clientConfig.service.namespace
+    - select:
+        name: k8ssandra-operator-mutating-webhook-configuration
+        kind: MutatingWebhookConfiguration
+      fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
 patchesStrategicMerge:
 - |-
   apiVersion: v1

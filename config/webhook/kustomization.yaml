@@ -20,3 +20,24 @@ patchesJson6902:
     - op: replace
       path: /webhooks/0/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
+
+# adding the objectSelector prevents the bootstrapping problem
+# where the mutation request for the operator pod would be 
+# sent before the operator pod is created
+patchesJson6902:
+- target:
+    group: admissionregistration.k8s.io
+    version: v1
+    name: k8ssandra-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |-
+    - op: replace
+      path: /webhooks/0/clientConfig/service/name
+      value: k8ssandra-operator-webhook-service
+    - op: add
+      path: /webhooks/0/objectSelector
+      value:
+        matchExpressions:
+          - key: control-plane
+            operator: NotIn
+            values: ["k8ssandra-operator"]

@@ -9,6 +9,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
+	secretswebhook "github.com/k8ssandra/k8ssandra-operator/controllers/secrets-webhook"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -81,7 +82,15 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{Scheme: scheme.Scheme})
+			dataPlaneMgr, err := ctrl.NewManager(
+				env.Config,
+				ctrl.Options{
+					Scheme:  scheme.Scheme,
+					Host:    env.WebhookInstallOptions.LocalServingHost,
+					Port:    env.WebhookInstallOptions.LocalServingPort,
+					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				},
+			)
 			if err != nil {
 				return err
 			}
@@ -94,6 +103,8 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			if err != nil {
 				return err
 			}
+			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
+
 			go func() {
 				err := dataPlaneMgr.Start(ctx)
 				if err != nil {
@@ -214,7 +225,15 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{Scheme: scheme.Scheme})
+			dataPlaneMgr, err := ctrl.NewManager(
+				env.Config,
+				ctrl.Options{
+					Scheme:  scheme.Scheme,
+					Host:    env.WebhookInstallOptions.LocalServingHost,
+					Port:    env.WebhookInstallOptions.LocalServingPort,
+					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				},
+			)
 			if err != nil {
 				return err
 			}
@@ -233,6 +252,8 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 				Scheme:           scheme.Scheme,
 				ClientFactory:    medusaClientFactory,
 			}).SetupWithManager(dataPlaneMgr)
+			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
+
 			if err != nil {
 				return err
 			}
