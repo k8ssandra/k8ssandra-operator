@@ -18,7 +18,7 @@ import (
 
 // InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
 // If the Vector agent is already present, it is not added again.
-func TestInjectCassandraVectorAgent(t *testing.T) {
+func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
 	dcConfig := &cassandra.DatacenterConfig{
 		Meta: k8ssandra.EmbeddedObjectMeta{
@@ -49,7 +49,7 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
 	}
 
-	assert.Contains(t, toml, "[sinks.console]")
+	assert.Contains(t, toml, "[sinks.console_log]")
 	assert.NotContains(t, toml, "http://localhost:9000/metrics")
 }
 
@@ -86,7 +86,7 @@ func TestBuildCustomVectorToml(t *testing.T) {
 					Components: &telemetry.VectorComponentsSpec{
 						Sinks: []telemetry.VectorSinkSpec{
 							{
-								Name: "console_sink",
+								Name: "console",
 								Type: "console",
 								Inputs: []string{
 									"test",
@@ -98,7 +98,7 @@ func TestBuildCustomVectorToml(t *testing.T) {
 				},
 			},
 			`
-[sinks.console_sink]
+[sinks.console]
 type = "console"
 inputs = ["test", "test2"]
 `,
@@ -177,4 +177,176 @@ inputs = ["test", "test2"]
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestBuildCustomConfigWithDefaults(t *testing.T) {
+	assert := assert.New(t)
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Vector: &telemetry.VectorSpec{
+			Enabled: pointer.Bool(true),
+			Components: &telemetry.VectorComponentsSpec{
+				Sinks: []telemetry.VectorSinkSpec{
+					{
+						Name: "console",
+						Type: "console",
+						Inputs: []string{
+							"cassandra_metrics",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expectedOutput := `
+[sources.systemlog]
+type = "file"
+include = [ "/var/log/cassandra/system.log" ]
+read_from = "beginning"
+fingerprint.strategy = "device_and_inode"
+[sources.systemlog.multiline]
+start_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+mode = "halt_before"
+timeout_ms = 10000
+
+
+[sources.cassandra_metrics]
+type = "prometheus_scrape"
+endpoints = [ "http://localhost:9000/metrics" ]
+scrape_interval_secs = 30
+
+[transforms.parse_cassandra_log]
+type = "remap"
+inputs = ["systemlog"]
+source = '''
+del(.source_type)
+. |= parse_groks!(.message, patterns: [
+  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
+  ]
+)
+pod_name, err = get_env_var("POD_NAME")
+if err == null {
+  .pod_name = pod_name
+}
+node_name, err = get_env_var("NODE_NAME")
+if err == null {
+  .node_name = node_name
+}
+cluster, err = get_env_var("CLUSTER_NAME")
+if err == null {
+  .cluster = cluster
+}
+datacenter, err = get_env_var("DATACENTER_NAME")
+if err == null {
+  .datacenter = datacenter
+}
+rack, err = get_env_var("RACK_NAME")
+if err == null {
+  .rack = rack
+}
+'''
+
+
+[sinks.console]
+type = "console"
+inputs = ["cassandra_metrics"]
+
+[sinks.console_log]
+type = "console"
+inputs = ["parse_cassandra_log"]
+target = "stdout"
+encoding.codec = "text"
+
+`
+
+	output, err := CreateCassandraVectorToml(telemetrySpec, false)
+	assert.NoError(err)
+	assert.Equal(expectedOutput, output)
+}
+
+func TestDefaultRemoveUnusedSources(t *testing.T) {
+	assert := assert.New(t)
+	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	assert.Equal(2, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(1, len(sinks))
+
+	sources, transformers = FilterUnusedPipelines(sources, transformers, sinks)
+
+	assert.Equal(1, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(1, len(sinks))
+}
+
+func TestRemoveUnusedSourcesModified(t *testing.T) {
+	assert := assert.New(t)
+	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	assert.Equal(2, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(1, len(sinks))
+
+	sinks = append(sinks, telemetry.VectorSinkSpec{Name: "a", Inputs: []string{"cassandra_metrics"}})
+
+	sources, transformers = FilterUnusedPipelines(sources, transformers, sinks)
+
+	assert.Equal(2, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(2, len(sinks))
+}
+
+func TestRemoveUnusedTransformers(t *testing.T) {
+	assert := assert.New(t)
+	sources := []telemetry.VectorSourceSpec{
+		{
+			Name: "a",
+		},
+	}
+
+	transformers := []telemetry.VectorTransformSpec{
+		{
+			Name:   "b",
+			Inputs: []string{"a"},
+		},
+		{
+			Name:   "c",
+			Inputs: []string{"b"},
+		},
+		{
+			Name:   "d",
+			Inputs: []string{"b"},
+		},
+	}
+
+	sinks := []telemetry.VectorSinkSpec{
+		{
+			Name:   "e",
+			Inputs: []string{"c"},
+		},
+		{
+			Name:   "f",
+			Inputs: []string{"d"},
+		},
+	}
+
+	filteredSources, filteredTransformers := FilterUnusedPipelines(sources, transformers, sinks)
+
+	assert.Equal(sources, filteredSources)
+	assert.Equal(transformers, filteredTransformers)
+
+	// Remove f, we should get rid of transformer d, but not b,c
+	sinks = sinks[:1]
+
+	filteredSources, filteredTransformers = FilterUnusedPipelines(sources, transformers, sinks)
+
+	assert.Equal(1, len(filteredSources))
+	assert.Equal(2, len(filteredTransformers))
+
+	// Remove e, we should get rid of everything
+	sinks = []telemetry.VectorSinkSpec{}
+
+	filteredSources, filteredTransformers = FilterUnusedPipelines(sources, transformers, sinks)
+
+	assert.Equal(0, len(filteredSources))
+	assert.Equal(0, len(filteredTransformers))
 }

@@ -1,10 +1,8 @@
 package telemetry
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
-	"text/template"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -20,13 +18,10 @@ import (
 // InjectCassandraVectorAgentConfig adds a override Vector agent config to the Cassandra pods, overwriting the default in the cass-operator
 func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
 	if telemetrySpec.IsVectorEnabled() {
-		logger.V(1).Info("Injecting Vector agent into Cassandra pods")
-		// vectorImage := vector.DefaultVectorImage
+		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
 		loggerContainer := corev1.Container{
 			Name:      reconciliation.SystemLoggerContainerName,
 			Resources: vector.VectorContainerResources(telemetrySpec),
-
-			// Add the VolumeMount (of the config) to the AdditionalVolumes part (to override the /etc/vector/vector.toml)
 		}
 
 		if dcConfig.StorageConfig == nil {
@@ -47,7 +42,6 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 			loggerContainer.Image = telemetrySpec.Vector.Image
 		}
 
-		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
 		cassandra.UpdateLoggerContainer(&dcConfig.PodTemplateSpec, func(container *corev1.Container) {
 			*container = loggerContainer
 		})
@@ -57,20 +51,6 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 }
 
 func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool) (string, error) {
-	vectorConfigToml := `
-[sinks.console]
-type = "console"
-inputs = [ "cassandra_metrics" ]
-target = "stdout"
-
-  [sinks.console.encoding]
-  codec = "json"`
-
-	if telemetrySpec.Vector.Components != nil {
-		// Vector components are provided in the Telemetry spec, build the Vector sink config from them
-		vectorConfigToml = BuildCustomVectorToml(telemetrySpec)
-	}
-
 	var scrapePort int32
 	metricsEndpoint := ""
 	if mcacEnabled {
@@ -86,36 +66,165 @@ target = "stdout"
 	}
 
 	config := vector.VectorConfig{
-		Sinks:          vectorConfigToml,
 		ScrapePort:     scrapePort,
 		ScrapeInterval: scrapeInterval,
 		ScrapeEndpoint: metricsEndpoint,
 	}
 
-	vectorTomlTemplate := `
-data_dir = "/var/lib/vector"
+	defaultSources, defaultTransformers, defaultSinks := BuildDefaultVectorComponents(config)
 
-[api]
-enabled = false
-  
-[sources.cassandra_metrics]
-type = "prometheus_scrape"
-endpoints = [ "http://localhost:{{ .ScrapePort }}{{ .ScrapeEndpoint }}" ]
-scrape_interval_secs = {{ .ScrapeInterval }}
-
-{{ .Sinks }}`
-
-	t, err := template.New("toml").Parse(vectorTomlTemplate)
-	if err != nil {
-		panic(err)
+	if telemetrySpec.Vector.Components == nil {
+		telemetrySpec.Vector.Components = &telemetry.VectorComponentsSpec{}
 	}
-	vectorToml := new(bytes.Buffer)
-	err = t.Execute(vectorToml, config)
-	if err != nil {
-		panic(err)
+	telemetrySpec.Vector.Components.Sources = append(telemetrySpec.Vector.Components.Sources, defaultSources...)
+	telemetrySpec.Vector.Components.Sinks = append(telemetrySpec.Vector.Components.Sinks, defaultSinks...)
+	telemetrySpec.Vector.Components.Transforms = append(telemetrySpec.Vector.Components.Transforms, defaultTransformers...)
+
+	// Vector components are provided in the Telemetry spec, build the Vector sink config from them
+	vectorConfigToml := BuildCustomVectorToml(telemetrySpec)
+	return vectorConfigToml, nil
+}
+
+func BuildDefaultVectorComponents(config vector.VectorConfig) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
+	sources := make([]telemetry.VectorSourceSpec, 0, 2)
+	transformers := make([]telemetry.VectorTransformSpec, 0, 1)
+	sinks := make([]telemetry.VectorSinkSpec, 0, 1)
+
+	systemLogInput := telemetry.VectorSourceSpec{
+		Name: "systemlog",
+		Type: "file",
+		Config: `include = [ "/var/log/cassandra/system.log" ]
+read_from = "beginning"
+fingerprint.strategy = "device_and_inode"
+[sources.systemlog.multiline]
+start_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+mode = "halt_before"
+timeout_ms = 10000
+`,
 	}
 
-	return vectorToml.String(), nil
+	metricsInput := telemetry.VectorSourceSpec{
+		Name:   "cassandra_metrics",
+		Type:   "prometheus_scrape",
+		Config: fmt.Sprintf("endpoints = [ \"http://localhost:%v%s\" ]\nscrape_interval_secs = %v", config.ScrapePort, config.ScrapeEndpoint, config.ScrapeInterval),
+	}
+
+	sources = append(sources, systemLogInput, metricsInput)
+
+	systemLogParser := telemetry.VectorTransformSpec{
+		Name:   "parse_cassandra_log",
+		Type:   "remap",
+		Inputs: []string{"systemlog"},
+		Config: `source = '''
+del(.source_type)
+. |= parse_groks!(.message, patterns: [
+  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
+  ]
+)
+pod_name, err = get_env_var("POD_NAME")
+if err == null {
+  .pod_name = pod_name
+}
+node_name, err = get_env_var("NODE_NAME")
+if err == null {
+  .node_name = node_name
+}
+cluster, err = get_env_var("CLUSTER_NAME")
+if err == null {
+  .cluster = cluster
+}
+datacenter, err = get_env_var("DATACENTER_NAME")
+if err == null {
+  .datacenter = datacenter
+}
+rack, err = get_env_var("RACK_NAME")
+if err == null {
+  .rack = rack
+}
+'''
+`,
+	}
+
+	transformers = append(transformers, systemLogParser)
+
+	systemLogSink := telemetry.VectorSinkSpec{
+		Name:   "console_log",
+		Type:   "console",
+		Inputs: []string{"parse_cassandra_log"},
+		Config: `target = "stdout"
+encoding.codec = "text"
+`,
+	}
+
+	sinks = append(sinks, systemLogSink)
+
+	return sources, transformers, sinks
+}
+
+func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []telemetry.VectorTransformSpec, sinks []telemetry.VectorSinkSpec) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec) {
+
+	// Every source must be mapped to at least one transformer or sink
+
+	sinkInputs := make(map[string]bool)
+	for _, sink := range sinks {
+		for _, input := range sink.Inputs {
+			sinkInputs[input] = true
+		}
+	}
+
+	transformerInputs := make(map[string]map[string]bool)
+	for _, transformer := range transformers {
+		for _, input := range transformer.Inputs {
+			// Overwrite is fine
+			if transformerInputs[input] == nil {
+				transformerInputs[input] = make(map[string]bool)
+			}
+			transformerInputs[input][transformer.Name] = true
+		}
+	}
+
+	// All transformer must have a sink input or another transformer input (thus, if you create a loop, this won't detect it as failure)
+	// All sources must have sink input or transformer input
+
+Clean:
+	for {
+		for i := 0; i < len(transformers); i++ {
+			trans := transformers[i]
+			_, foundSinkOutput := sinkInputs[trans.Name]
+			_, foundTransformerOut := transformerInputs[trans.Name]
+
+			if !foundSinkOutput && !foundTransformerOut {
+				// Can no longer be an output for another
+				for k, v := range transformerInputs {
+					if _, found := v[trans.Name]; found {
+						delete(v, trans.Name)
+						if len(v) == 0 {
+							// No more outputs for this key at all
+							delete(transformerInputs, k)
+						}
+					}
+				}
+				transformers = append(transformers[:i], transformers[i+1:]...)
+				continue Clean
+			}
+		}
+		break
+	}
+
+	safeSources := make([]telemetry.VectorSourceSpec, 0, len(sources))
+
+	for _, source := range sources {
+		_, foundSinkOutput := sinkInputs[source.Name]
+		_, foundTransformerOut := transformerInputs[source.Name]
+
+		if foundSinkOutput || foundTransformerOut {
+			// This source can be used
+			safeSources = append(safeSources, source)
+		}
+	}
+
+	return safeSources, transformers
 }
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
