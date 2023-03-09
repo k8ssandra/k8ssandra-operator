@@ -22616,7 +22616,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -22660,7 +22660,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
 </table>
 
 
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandra)</sup></sup>
 
 
@@ -23518,7 +23518,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -23562,7 +23562,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
 </table>
 
 
-#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandra)</sup></sup>
 
 
@@ -27532,7 +27532,7 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -27576,7 +27576,7 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
 </table>
 
 
-#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindextelemetrycassandra)</sup></sup>
 
 
@@ -42274,7 +42274,7 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -42318,7 +42318,7 @@ Telemetry defines the desired state for telemetry resources in this datacenter. 
 </table>
 
 
-#### K8ssandraCluster.spec.cassandra.telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.cassandra.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspeccassandratelemetrycassandra)</sup></sup>
 
 
@@ -47019,7 +47019,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -47063,7 +47063,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
 </table>
 
 
-#### K8ssandraCluster.spec.reaper.telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.reaper.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspecreapertelemetrycassandra)</sup></sup>
 
 
@@ -49977,7 +49977,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -50021,7 +50021,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
 </table>
 
 
-#### K8ssandraCluster.spec.stargate.telemetry.cassandra.filters[index]
+#### K8ssandraCluster.spec.stargate.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#k8ssandraclusterspecstargatetelemetrycassandra)</sup></sup>
 
 
@@ -74536,7 +74536,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#reaperspectelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#reaperspectelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -74580,7 +74580,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
 </table>
 
 
-#### Reaper.spec.telemetry.cassandra.filters[index]
+#### Reaper.spec.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#reaperspectelemetrycassandra)</sup></sup>
 
 
@@ -80401,7 +80401,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#stargatespecracksindextelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#stargatespecracksindextelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -80445,7 +80445,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
 </table>
 
 
-#### Stargate.spec.racks[index].telemetry.cassandra.filters[index]
+#### Stargate.spec.racks[index].telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#stargatespecracksindextelemetrycassandra)</sup></sup>
 
 
@@ -81303,7 +81303,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#stargatespectelemetrycassandrafiltersindex">filters</a></b></td>
+        <td><b><a href="#stargatespectelemetrycassandrarelabelsindex">relabels</a></b></td>
         <td>[]object</td>
         <td>
           <br/>
@@ -81347,7 +81347,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
 </table>
 
 
-#### Stargate.spec.telemetry.cassandra.filters[index]
+#### Stargate.spec.telemetry.cassandra.relabels[index]
 <sup><sup>[↩ Parent](#stargatespectelemetrycassandra)</sup></sup>
 
 
