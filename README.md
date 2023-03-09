@@ -34,7 +34,7 @@ The data plane deploys and manages pods. Moreover, the data plane may interact d
 
 In this diagram you can see a small example of a multi-cluster deployment.
 
-![](docs/img/k8ssandra-cluster-architecture.png)
+![](docs/static/images/k8ssandra-cluster-architecture.png)
 
 ### Requirements
 It is required to have routable pod IPs between Kubernetes clusters; however this requirement may be relaxed in the future.
