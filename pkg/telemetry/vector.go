@@ -80,6 +80,10 @@ func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabl
 	telemetrySpec.Vector.Components.Sinks = append(telemetrySpec.Vector.Components.Sinks, defaultSinks...)
 	telemetrySpec.Vector.Components.Transforms = append(telemetrySpec.Vector.Components.Transforms, defaultTransformers...)
 
+	sources, transformers := FilterUnusedPipelines(telemetrySpec.Vector.Components.Sources, telemetrySpec.Vector.Components.Transforms, telemetrySpec.Vector.Components.Sinks)
+	telemetrySpec.Vector.Components.Sources = sources
+	telemetrySpec.Vector.Components.Transforms = transformers
+
 	// Vector components are provided in the Telemetry spec, build the Vector sink config from them
 	vectorConfigToml := BuildCustomVectorToml(telemetrySpec)
 	return vectorConfigToml, nil

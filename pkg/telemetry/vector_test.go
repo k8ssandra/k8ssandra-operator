@@ -16,8 +16,6 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-// InjectCassandraVectorAgent adds the Vector agent container to the Cassandra pods.
-// If the Vector agent is already present, it is not added again.
 func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
 	dcConfig := &cassandra.DatacenterConfig{
@@ -54,7 +52,18 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 }
 
 func TestCreateCassandraVectorTomlMcacDisabled(t *testing.T) {
-	telemetrySpec := &telemetry.TelemetrySpec{Mcac: &telemetry.McacTelemetrySpec{Enabled: pointer.Bool(false)}, Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
+	telemetrySpec := &telemetry.TelemetrySpec{Mcac: &telemetry.McacTelemetrySpec{Enabled: pointer.Bool(false)},
+		Vector: &telemetry.VectorSpec{
+			Enabled: pointer.Bool(true),
+			Components: &telemetry.VectorComponentsSpec{
+				Sinks: []telemetry.VectorSinkSpec{
+					{
+						Name:   "metrics_output",
+						Inputs: []string{"cassandra_metrics"},
+					},
+				},
+			},
+		}}
 
 	toml, err := CreateCassandraVectorToml(telemetrySpec, false)
 	if err != nil {
