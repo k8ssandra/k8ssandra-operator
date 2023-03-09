@@ -281,7 +281,7 @@ func TestDefaultRemoveUnusedSources(t *testing.T) {
 	assert.Equal(1, len(transformers))
 	assert.Equal(1, len(sinks))
 
-	sources, transformers = FilterUnusedPipelines(sources, transformers, sinks)
+	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(1, len(sources))
 	assert.Equal(1, len(transformers))
@@ -297,7 +297,7 @@ func TestRemoveUnusedSourcesModified(t *testing.T) {
 
 	sinks = append(sinks, telemetry.VectorSinkSpec{Name: "a", Inputs: []string{"cassandra_metrics"}})
 
-	sources, transformers = FilterUnusedPipelines(sources, transformers, sinks)
+	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(2, len(sources))
 	assert.Equal(1, len(transformers))
@@ -338,24 +338,52 @@ func TestRemoveUnusedTransformers(t *testing.T) {
 		},
 	}
 
-	filteredSources, filteredTransformers := FilterUnusedPipelines(sources, transformers, sinks)
+	filteredSources, filteredTransformers, filteredSinks := FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(sources, filteredSources)
 	assert.Equal(transformers, filteredTransformers)
+	assert.Equal(sinks, filteredSinks)
 
 	// Remove f, we should get rid of transformer d, but not b,c
 	sinks = sinks[:1]
 
-	filteredSources, filteredTransformers = FilterUnusedPipelines(sources, transformers, sinks)
+	filteredSources, filteredTransformers, filteredSinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(1, len(filteredSources))
 	assert.Equal(2, len(filteredTransformers))
+	assert.Equal(sinks, filteredSinks)
 
 	// Remove e, we should get rid of everything
 	sinks = []telemetry.VectorSinkSpec{}
 
-	filteredSources, filteredTransformers = FilterUnusedPipelines(sources, transformers, sinks)
+	filteredSources, filteredTransformers, filteredSinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(0, len(filteredSources))
 	assert.Equal(0, len(filteredTransformers))
+	assert.Equal(sinks, filteredSinks)
+}
+
+func TestOverrideSourcePossible(t *testing.T) {
+	assert := assert.New(t)
+	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	assert.Equal(2, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(1, len(sinks))
+
+	newSources := []telemetry.VectorSourceSpec{
+		{
+			Name: "systemlog",
+			Type: "stdin",
+		},
+	}
+
+	newSources = append(newSources, sources...)
+
+	sources, transformers, sinks = FilterUnusedPipelines(newSources, transformers, sinks)
+
+	assert.Equal(1, len(sources))
+	assert.Equal(1, len(transformers))
+	assert.Equal(1, len(sinks))
+
+	assert.Equal("stdin", sources[0].Type)
 }

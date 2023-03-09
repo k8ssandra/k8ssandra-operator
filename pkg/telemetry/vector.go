@@ -76,13 +76,16 @@ func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabl
 	if telemetrySpec.Vector.Components == nil {
 		telemetrySpec.Vector.Components = &telemetry.VectorComponentsSpec{}
 	}
+
 	telemetrySpec.Vector.Components.Sources = append(telemetrySpec.Vector.Components.Sources, defaultSources...)
 	telemetrySpec.Vector.Components.Sinks = append(telemetrySpec.Vector.Components.Sinks, defaultSinks...)
 	telemetrySpec.Vector.Components.Transforms = append(telemetrySpec.Vector.Components.Transforms, defaultTransformers...)
 
-	sources, transformers := FilterUnusedPipelines(telemetrySpec.Vector.Components.Sources, telemetrySpec.Vector.Components.Transforms, telemetrySpec.Vector.Components.Sinks)
+	// Remove defaults if overrides are used and filter incorrect sources without sink destination
+	sources, transformers, sinks := FilterUnusedPipelines(telemetrySpec.Vector.Components.Sources, telemetrySpec.Vector.Components.Transforms, telemetrySpec.Vector.Components.Sinks)
 	telemetrySpec.Vector.Components.Sources = sources
 	telemetrySpec.Vector.Components.Transforms = transformers
+	telemetrySpec.Vector.Components.Sinks = sinks
 
 	// Vector components are provided in the Telemetry spec, build the Vector sink config from them
 	vectorConfigToml := BuildCustomVectorToml(telemetrySpec)
@@ -166,8 +169,8 @@ encoding.codec = "text"
 	return sources, transformers, sinks
 }
 
-func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []telemetry.VectorTransformSpec, sinks []telemetry.VectorSinkSpec) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec) {
-
+// FilterUnusedPipelines removes sources that have no destination in the sinks. If there are duplicate transformer, source or sink names, only the first occurence wins
+func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []telemetry.VectorTransformSpec, sinks []telemetry.VectorSinkSpec) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
 	// Every source must be mapped to at least one transformer or sink
 
 	sinkInputs := make(map[string]bool)
@@ -193,12 +196,14 @@ func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []
 
 Clean:
 	for {
+		transSet := make(map[string]bool, len(transformers))
 		for i := 0; i < len(transformers); i++ {
 			trans := transformers[i]
 			_, foundSinkOutput := sinkInputs[trans.Name]
 			_, foundTransformerOut := transformerInputs[trans.Name]
+			_, addedAlready := transSet[trans.Name]
 
-			if !foundSinkOutput && !foundTransformerOut {
+			if !foundSinkOutput && !foundTransformerOut || addedAlready {
 				// Can no longer be an output for another
 				for k, v := range transformerInputs {
 					if _, found := v[trans.Name]; found {
@@ -212,23 +217,38 @@ Clean:
 				transformers = append(transformers[:i], transformers[i+1:]...)
 				continue Clean
 			}
+			transSet[trans.Name] = true
 		}
 		break
 	}
 
+	sourceSet := make(map[string]bool, len(sources))
 	safeSources := make([]telemetry.VectorSourceSpec, 0, len(sources))
 
 	for _, source := range sources {
 		_, foundSinkOutput := sinkInputs[source.Name]
 		_, foundTransformerOut := transformerInputs[source.Name]
+		_, added := sourceSet[source.Name]
 
-		if foundSinkOutput || foundTransformerOut {
+		if (foundSinkOutput || foundTransformerOut) && !added {
 			// This source can be used
 			safeSources = append(safeSources, source)
+			sourceSet[source.Name] = true
 		}
 	}
 
-	return safeSources, transformers
+	sinkSet := make(map[string]bool, len(sinks))
+	safeSinks := make([]telemetry.VectorSinkSpec, 0, len(sinks))
+	for _, sink := range sinks {
+		_, added := sinkSet[sink.Name]
+
+		if !added {
+			safeSinks = append(safeSinks, sink)
+			sinkSet[sink.Name] = true
+		}
+	}
+
+	return safeSources, transformers, safeSinks
 }
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
