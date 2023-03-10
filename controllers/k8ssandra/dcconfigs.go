@@ -80,7 +80,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		}
 
 		// Inject Vector agent
-		if err = telemetry.InjectCassandraVectorAgent(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
+		if err = telemetry.InjectCassandraVectorAgentConfig(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
 			return nil, err
 		}
 
