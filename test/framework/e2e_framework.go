@@ -120,10 +120,11 @@ func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) err
 	dataPlaneDir := "data-plane"
 	config.ControlPlaneComponent = "../../../../config/deployments/control-plane"
 	config.DataPlaneComponent = "../../../../config/deployments/data-plane"
-	if config.ImageTag != "latest" {
-		config.ControlPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane?ref=" + config.ImageTag
-		config.DataPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/data-plane?ref=" + config.ImageTag
-	}
+	// TODO fix this, it fails in GHA during the release process
+	//if config.ImageTag != "latest" {
+	//	config.ControlPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane?ref=" + config.ImageTag
+	//	config.DataPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/data-plane?ref=" + config.ImageTag
+	//}
 	controlPlaneTmpl := `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

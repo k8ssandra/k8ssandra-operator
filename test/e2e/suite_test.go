@@ -316,11 +316,12 @@ func TestOperator(t *testing.T) {
 			fixture:  framework.NewTestFixture("gc/4.0-jdk11-ZGC", controlPlane),
 		}))
 	})
-	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
-		testFunc:       createSingleDatacenterClusterWithUpgrade,
-		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
-		initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
-	}))
+	// TODO temporarily disabled until issue in generateK8ssandraOperatorKustomization is fixed
+	//t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
+	//	testFunc:       createSingleDatacenterClusterWithUpgrade,
+	//	fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
+	//	initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
+	//}))
 	t.Run("StargateJwt", e2eTest(ctx, &e2eTestOpts{
 		testFunc: stargateJwt,
 		fixture:  framework.NewTestFixture("stargate-jwt", controlPlane),
