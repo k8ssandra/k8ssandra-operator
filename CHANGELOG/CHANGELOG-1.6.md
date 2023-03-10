@@ -15,15 +15,15 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-* [CHANGE] [#907](https://github.com/k8ssandra/k8ssandra-operator/issues/907) Remove Vector sidecar, instead use cass-operator's server-system-logger Vector agent and only modify its config
+* [CHANGE] [#907](https://github.com/k8ssandra/k8ssandra-operator/issues/907) Update to cass-operator v1.15.0, remove Vector sidecar, instead use cass-operator's server-system-logger Vector agent and only modify its config
 * [CHANGE] [#846](https://github.com/k8ssandra/k8ssandra-operator/issues/846) Remove deprecated CassandraBackup and CassandraRestore APIs
 * [CHANGE] [#848](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Perform Helm releases in the release workflow
+* [CHANGE] [#887](https://github.com/k8ssandra/k8ssandra-operator/issues/887) Fix CVE-2022-32149.
+* [CHANGE] [#891](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Update golang.org/x/net to fix several CVEs.
 * [FEATURE] [#826](https://github.com/k8ssandra/k8ssandra-operator/issues/836) Support cass-operator DC name overrides
 * [FEATURE] [#815](https://github.com/k8ssandra/k8ssandra-operator/issues/815) Add configuration block to CRDs for new Cassandra metrics agent.
+* [FEATURE] [#605](https://github.com/k8ssandra/k8ssandra-operator/issues/598) Create a mutating webhook for the internal secrets provider
 * [ENHANCEMENT] [#831](https://github.com/k8ssandra/k8ssandra-operator/issues/831) Add CLUSTER_NAME, DATACENTER_NAME and RACK_NAME environment variables to the vector container
 * [ENHANCEMENT] [#859](https://github.com/k8ssandra/k8ssandra-operator/issues/859) Remove current usages of managed-by label
 * [BUGFIX] [#854](https://github.com/k8ssandra/k8ssandra-operator/issues/854) Use Patch() to update K8ssandraTask status.
 * [BUGFIX] [#906](https://github.com/k8ssandra/k8ssandra-operator/issues/906) Remove sources from Vector configuration that have no sink attached to them (with or without transformers)
-* [CHANGE] [#887](https://github.com/k8ssandra/k8ssandra-operator/issues/887) Fix CVE-2022-32149.
-* [CHANGE] [#891](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Update golang.org/x/net to fix several CVEs.
-* [FEATURE] [#605](https://github.com/k8ssandra/k8ssandra-operator/issues/598) Create a mutating webhook for the internal secrets provider
