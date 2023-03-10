@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.6.0 - 2023-03-10
+
 * [CHANGE] [#907](https://github.com/k8ssandra/k8ssandra-operator/issues/907) Update to cass-operator v1.15.0, remove Vector sidecar, instead use cass-operator's server-system-logger Vector agent and only modify its config
 * [CHANGE] [#846](https://github.com/k8ssandra/k8ssandra-operator/issues/846) Remove deprecated CassandraBackup and CassandraRestore APIs
 * [CHANGE] [#848](https://github.com/k8ssandra/k8ssandra-operator/issues/848) Perform Helm releases in the release workflow
