@@ -27,6 +27,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctl "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	"go.uber.org/zap/zapcore"
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -88,15 +89,28 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+/*
+	TODO Load the ImageConfig here (from location X? Probably should be set in the Deployment for now with a config path override flag)
+		   - Use the same file as cass-operator uses to load its own
+		 Use the ImageConfig commands (from cass-operator) to load the correct images
+		   - Although, do we really need to duplicate cass-operator's functionality here? Or just let cass-operator handle it if nothing is
+		     overwritten? Would make more sense.
+*/
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var imageConfigFile string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&imageConfigFile, "image-config", "",
+		"The controller will load its initial image configuration from this file. "+
+			"Omit this flag to use the default configuration values. ")
+
 	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
@@ -148,6 +162,17 @@ func main() {
 	}
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	reconcilerConfig := config.InitConfig()
+
+	// Load cass-operator's ImageConfig file
+	if imageConfigFile == "" {
+		imageConfigFile = "/configs/image_config.yaml"
+	}
+
+	err = images.ParseImageConfig(imageConfigFile)
+	if err != nil {
+		setupLog.Error(err, "unable to load the image config file")
+		os.Exit(1)
+	}
 
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache

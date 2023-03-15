@@ -9,6 +9,9 @@ images:
   #   "4.0.0": "k8ssandra/cassandra-ubi:latest"
   # dse:
   #   "6.8.999": "datastax/dse-server-prototype:latest"
+  reaper: ""
+  medusa: ""
+  stargate: ""
 # imageRegistry: "localhost:5000"
 # imagePullPolicy: Always
 # imagePullSecret:
@@ -19,3 +22,5 @@ defaults:
     repository: "k8ssandra/cass-management-api"
   dse:
     repository: "datastax/dse-mgmtapi-6_8"
+  # stargate:
+  #   imagePullPolicy: Always

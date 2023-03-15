@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        args:
+        - "--image-config=/configs/image_config.yaml"
+        volumeMounts:
+        - name: image-config
+          mountPath: /configs
+      volumes:
+      - name: image-config
+        configMap:
+          name: image-config
