@@ -339,11 +339,8 @@ type DatacenterOptions struct {
 	// +optional
 	Racks []cassdcapi.Rack `json:"racks,omitempty"`
 
-	// The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote
-	// authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster.
-	// The default is "busybox:1.34.1".
-	// +optional
-	// +kubebuilder:default={name:"busybox",tag:"1.34.1"}
+	// Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX
+	// authentication anymore. The value of this field will be ignored.
 	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
 
 	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
