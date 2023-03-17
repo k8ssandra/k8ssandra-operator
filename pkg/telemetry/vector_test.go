@@ -225,45 +225,13 @@ type = "prometheus_scrape"
 endpoints = [ "http://localhost:9000/metrics" ]
 scrape_interval_secs = 30
 
-[transforms.parse_cassandra_log]
-type = "remap"
-inputs = ["systemlog"]
-source = '''
-del(.source_type)
-. |= parse_groks!(.message, patterns: [
-  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
-  ]
-)
-pod_name, err = get_env_var("POD_NAME")
-if err == null {
-  .pod_name = pod_name
-}
-node_name, err = get_env_var("NODE_NAME")
-if err == null {
-  .node_name = node_name
-}
-cluster, err = get_env_var("CLUSTER_NAME")
-if err == null {
-  .cluster = cluster
-}
-datacenter, err = get_env_var("DATACENTER_NAME")
-if err == null {
-  .datacenter = datacenter
-}
-rack, err = get_env_var("RACK_NAME")
-if err == null {
-  .rack = rack
-}
-'''
-
-
 [sinks.console]
 type = "console"
 inputs = ["cassandra_metrics"]
 
 [sinks.console_log]
 type = "console"
-inputs = ["parse_cassandra_log"]
+inputs = ["systemlog"]
 target = "stdout"
 encoding.codec = "text"
 
@@ -284,7 +252,7 @@ func TestDefaultRemoveUnusedSources(t *testing.T) {
 	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(1, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(0, len(transformers))
 	assert.Equal(1, len(sinks))
 }
 
@@ -300,7 +268,7 @@ func TestRemoveUnusedSourcesModified(t *testing.T) {
 	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(2, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(0, len(transformers))
 	assert.Equal(2, len(sinks))
 }
 
@@ -382,7 +350,7 @@ func TestOverrideSourcePossible(t *testing.T) {
 	sources, transformers, sinks = FilterUnusedPipelines(newSources, transformers, sinks)
 
 	assert.Equal(1, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(0, len(transformers))
 	assert.Equal(1, len(sinks))
 
 	assert.Equal("stdin", sources[0].Type)

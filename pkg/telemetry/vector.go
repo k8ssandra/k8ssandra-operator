@@ -119,6 +119,9 @@ timeout_ms = 10000
 
 	sources = append(sources, systemLogInput, metricsInput)
 
+	// We provide this transform out of the box because it's likely to be a common need for users who extend the
+	// configuration; however by default we don't use it, it will be filtered out unless it's referenced by one of the
+	// user components.
 	systemLogParser := telemetry.VectorTransformSpec{
 		Name:   "parse_cassandra_log",
 		Type:   "remap",
@@ -158,7 +161,7 @@ if err == null {
 	systemLogSink := telemetry.VectorSinkSpec{
 		Name:   "console_log",
 		Type:   "console",
-		Inputs: []string{"parse_cassandra_log"},
+		Inputs: []string{"systemlog"},
 		Config: `target = "stdout"
 encoding.codec = "text"
 `,
