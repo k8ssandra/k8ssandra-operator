@@ -6,39 +6,277 @@ weight: 11
 description: "How to perform releases of k8ssandra-operator"
 ---
 
+## Prerequisites
+
+- [yq](https://github.com/mikefarah/yq) installed.
+- [Hugo](https://gohugo.io/documentation/) installed.
 
 ## Major / Minor Release
 
-These steps apply to either creating a major or a minor release.
-They should be performed using the k8ssandra/k8ssandra-operator repo as origin (not a fork).
+### Preliminary steps
 
-* Create release branch, e.g., `release/1.0`
-    * The branch name has to have a prefix of `release/`
-* Update the changelog by replacing the `## unreleased` section with the new release version and date (keep the `## unreleased` section above it)
-    * Commit changes with the following as message: `Update changelog for v1.0.0`
-* Update image tag in `config/deployments/default/kustomization.yaml`
-    * The image tag should match the git tag
-    * If the git tag is `v1.0.0`, then the image tag should also be `v1.0.0`.
-    * Update the `version` to `1.0.0` in `charts/k8ssandra-operator/Chart.yaml`
-    * Commit changes using the following as message: `Release v1.0.0`
-* Push commits
-* Wait for GitHub Actions (GHA) workflows to complete
-* After tests have passed, create the git tag, e.g., `v1.0.0`, 
-* Push tag
-* Wait for GHA workflows to complete
-* Create release in GitHub
-    * For the release notes just copy over the changelog
-* Update the image tag in `config/deployments/default/kustomization.yaml` to `1.0-latest` and `version` in `charts/k8ssandra-operator/Chart.yaml` to `1.0.1-SNAPSHOT`
-    * Commit changes using the following as message: `Prepare next patch release`
-* Check out `main` branch
-* Do a forward merge, e.g., `git merge release/1.0 -s ours`
-* Cherry pick changelog updates and any other changes from release that should go back to `main`
-    * Do not cherry pick the release commit that updated `config/deployments/default/kustomization.yaml` and `charts/k8ssandra-operator/Chart.yaml`
-    * The image tag in `main` should stay on `latest`
-    * Commit amend the foward ported changes, `git commit -a --amend`
-* Update the `version` in `charts/k8ssandra-operator/Chart.yaml` to `1.1.0-SNAPSHOT`
-    * Commit changes using the following as message: `Prepare next release`
-* Push commits to upstream, `git push origin main release/1.0 --atomic`
+Create these environment variables, we'll reference them throughout the rest of this section:
+
+- the Major.minor coordinates of the version we are about to release:
+    ```shell
+    export RELEASED_MAJOR_MINOR=1.6
+    ```
+- the Major.minor coordinates of the next version on the main branch (usually this will be the next minor, but there
+  could also be a major bump, like 2.0):
+    ```shell
+    export NEXT_MAJOR_MINOR=1.7
+    ```
+- the name of your Git remote for k8ssandra/k8ssandra-operator:
+    ```shell
+    export GIT_REMOTE=origin
+    ```
+
+In your local `k8ssandra-operator` clone, check out the main branch and make sure it's up-to-date:
+```shell
+git checkout main
+git pull ${GIT_REMOTE?} main
+```
+
+### Create the release branch
+
+```shell
+git checkout -b release/${RELEASED_MAJOR_MINOR?}
+```
+
+### Update the changelog
+
+Edit `CHANGELOG/CHANGELOG-${RELEASED_MAJOR_MINOR?}.md` and replace the `## unreleased` section with the new release
+version and date (keep the `## unreleased` section above it).
+
+This should look similar to this:
+
+```diff
+diff --git a/CHANGELOG/CHANGELOG-1.6.md b/CHANGELOG/CHANGELOG-1.6.md
+index 92e9647..a42e086 100644
+--- a/CHANGELOG/CHANGELOG-1.6.md
++++ b/CHANGELOG/CHANGELOG-1.6.md
+@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
+
+ ## unreleased
+
++## v1.6.0 - 2023-03-10
++
+ * [CHANGE] [#907](https://github.com/k8ssandra/k8ssandra-operator/issues/907) Update to cass-operator v1.15.0, remove Vector sidecar, instead use cass-operator's server-system-logger Vector agent and only modify its config
+```
+
+Commit the changes:
+```shell
+git add CHANGELOG/CHANGELOG-${RELEASED_MAJOR_MINOR?}.md
+git commit -m"Update changelog for v${RELEASED_MAJOR_MINOR?}.0"
+```
+
+### Check that the documentation builds
+
+```shell
+cd docs
+hugo mod clean
+npm run build:production
+
+cd ..
+```
+
+If there are any errors, fix them and commit them on the release branch.
+
+### Create the release commit
+
+Update the image tag in the default kustomization:
+```shell
+yq e -i '.images[0].newTag="v"+env(RELEASED_MAJOR_MINOR)+".0"' config/deployments/default/kustomization.yaml
+```
+
+This should look similar to this:
+```diff
+diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
+index a06412e..e43b28a 100644
+--- a/config/deployments/default/kustomization.yaml
++++ b/config/deployments/default/kustomization.yaml
+@@ -8,5 +8,4 @@ resources:
+
+ images:
+   - name: k8ssandra/k8ssandra-operator
+-    newTag: latest
+-
++    newTag: v1.6.0
+```
+
+Update the version in the release chart:
+```shell
+yq e -i '.version=env(RELEASED_MAJOR_MINOR)+".0"' charts/k8ssandra-operator/Chart.yaml
+```
+
+This should look similar to this:
+```diff
+diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
+index ce8f7d1..f32040d 100644
+--- a/charts/k8ssandra-operator/Chart.yaml
++++ b/charts/k8ssandra-operator/Chart.yaml
+@@ -3,7 +3,7 @@ name: k8ssandra-operator
+ description: |
+   Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
+ type: application
+-version: 1.6.0-SNAPSHOT
++version: 1.6.0
+ dependencies:
+   - name: k8ssandra-common
+     version: 0.29.0
+```
+
+Commit and push the changes:
+```shell
+git add config/deployments/default/kustomization.yaml charts/k8ssandra-operator/Chart.yaml
+git commit -m"Release v${RELEASED_MAJOR_MINOR?}.0"
+git push ${GIT_REMOTE?} release/${RELEASED_MAJOR_MINOR?}
+```
+
+Wait for the [GitHub Actions](https://github.com/k8ssandra/k8ssandra-operator/actions) workflows to complete.
+
+### Tag the release
+
+```shell
+git tag v${RELEASED_MAJOR_MINOR?}.0
+git push ${GIT_REMOTE?} v${RELEASED_MAJOR_MINOR?}.0
+```
+
+Wait for the [GitHub Actions](https://github.com/k8ssandra/k8ssandra-operator/actions) workflows to complete.
+
+### Create the release in GitHub
+
+Go to the [New Release](https://github.com/k8ssandra/k8ssandra-operator/releases/new) page.
+
+- click on "Choose a tag" and select the tag you just pushed, e.g. `v1.6.0`.
+- for the release title, use the name of the tag, e.g. "v1.6.0".
+- for the description, just copy the contents for this version from the changelog.
+
+Click on "Publish release".
+
+### Prepare the branch for the next patch release
+
+Update the image tag in the default kustomization:
+```shell
+yq e -i '.images[0].newTag=env(RELEASED_MAJOR_MINOR)+"-latest"' config/deployments/default/kustomization.yaml
+```
+
+This should look similar to this:
+```diff
+diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
+index a06412e..e43b28a 100644
+--- a/config/deployments/default/kustomization.yaml
++++ b/config/deployments/default/kustomization.yaml
+@@ -8,5 +8,4 @@ resources:
+
+ images:
+   - name: k8ssandra/k8ssandra-operator
+-    newTag: v1.6.0
+-
++    newTag: 1.6-latest
+```
+
+Update the version in the release chart:
+```shell
+yq e -i '.version=env(RELEASED_MAJOR_MINOR)+".1-SNAPSHOT"' charts/k8ssandra-operator/Chart.yaml
+```
+
+This should look similar to this:
+```diff
+diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
+index ce8f7d1..f32040d 100644
+--- a/charts/k8ssandra-operator/Chart.yaml
++++ b/charts/k8ssandra-operator/Chart.yaml
+@@ -3,7 +3,7 @@ name: k8ssandra-operator
+ description: |
+   Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
+ type: application
+-version: 1.6.0
++version: 1.6.1-SNAPSHOT
+ dependencies:
+   - name: k8ssandra-common
+     version: 0.29.0
+```
+
+Commit the changes:
+```shell
+git add config/deployments/default/kustomization.yaml charts/k8ssandra-operator/Chart.yaml
+git commit -m"Prepare next patch release"
+```
+
+### Update the main branch
+
+Merge with the "ours" strategy (none of the changes are applied):
+```shell
+git checkout main
+git merge release/${RELEASED_MAJOR_MINOR?} -s ours
+```
+
+Then cherry-pick the changelog update, as well as any fixes you might have done on the branch (docs, failing tests, etc):
+```shell
+git cherry pick -n <your commit SHA-1s...>
+```
+
+**DO NOT** cherry-pick the "Release vx.x.x" or "Prepare next patch release" commits.
+
+Amend the merge commit with your cherry-picks:
+```shell
+git add .
+git commit --amend
+```
+
+Update the version in the release chart:
+```shell
+yq e -i '.version=env(NEXT_MAJOR_MINOR)+".0-SNAPSHOT"' charts/k8ssandra-operator/Chart.yaml
+```
+
+This should look similar to this:
+```diff
+diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
+index ce8f7d1..f32040d 100644
+--- a/charts/k8ssandra-operator/Chart.yaml
++++ b/charts/k8ssandra-operator/Chart.yaml
+@@ -3,7 +3,7 @@ name: k8ssandra-operator
+ description: |
+   Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
+ type: application
+-version: 1.6.0-SNAPSHOT
++version: 1.7.0-SNAPSHOT
+ dependencies:
+   - name: k8ssandra-common
+     version: 0.29.0
+```
+
+Create a new blank changelog file `CHANGELOG/CHANGELOG-${NEXT_MAJOR_MINOR?}.md` with the following contents:
+
+    # Changelog
+    
+    Changelog for the K8ssandra Operator, new PRs should update the `unreleased` section below with entries describing the changes like:
+    
+    ```markdown
+    * [CHANGE]
+    * [FEATURE]
+    * [ENHANCEMENT]
+    * [BUGFIX]
+    * [DOCS]
+    * [TESTING]
+    ```
+    
+    When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
+    
+    ## unreleased
+
+Commit the changes:
+```shell
+git add charts/k8ssandra-operator/Chart.yaml CHANGELOG/CHANGELOG-${NEXT_MAJOR_MINOR?}.md
+git commit -m"Prepare next release"
+```
+
+Push all the changes:
+```shell
+git push ${GIT_REMOTE?} main ${RELEASED_MAJOR_MINOR?} --atomic
+```
+
 
 ## Patch Release
 
