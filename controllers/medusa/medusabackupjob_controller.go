@@ -19,6 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"net"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -249,7 +250,7 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 }
 
 func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) error {
-	addr := fmt.Sprintf("%s:%d", pod.Status.PodIP, shared.BackupSidecarPort)
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return err
