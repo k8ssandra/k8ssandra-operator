@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#923](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Upgrade cass-operator to v1.15.0 in the helm chart
+
 ## v1.6.0 - 2023-03-10
 
 * [CHANGE] [#907](https://github.com/k8ssandra/k8ssandra-operator/issues/907) Update to cass-operator v1.15.0, remove Vector sidecar, instead use cass-operator's server-system-logger Vector agent and only modify its config
