@@ -316,12 +316,11 @@ func TestOperator(t *testing.T) {
 			fixture:  framework.NewTestFixture("gc/4.0-jdk11-ZGC", controlPlane),
 		}))
 	})
-	// TODO temporarily disabled until issue in generateK8ssandraOperatorKustomization is fixed
-	//t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
-	//	testFunc:       createSingleDatacenterClusterWithUpgrade,
-	//	fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
-	//	initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
-	//}))
+	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
+		testFunc:       createSingleDatacenterClusterWithUpgrade,
+		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
+		initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
+	}))
 	t.Run("StargateJwt", e2eTest(ctx, &e2eTestOpts{
 		testFunc: stargateJwt,
 		fixture:  framework.NewTestFixture("stargate-jwt", controlPlane),
@@ -475,14 +474,16 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	deploymentConfig := framework.OperatorDeploymentConfig{
-		Namespace:     opts.operatorNamespace,
-		ClusterScoped: opts.clusterScoped,
-		ImageName:     *imageName,
-		ImageTag:      *imageTag,
+		Namespace:           opts.operatorNamespace,
+		ClusterScoped:       opts.clusterScoped,
+		ImageName:           *imageName,
+		ImageTag:            *imageTag,
+		GithubKustomization: false,
 	}
 
 	if opts.initialVersion != nil {
 		deploymentConfig.ImageTag = *opts.initialVersion
+		deploymentConfig.GithubKustomization = true
 	}
 
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
@@ -873,6 +874,17 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	initialStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
 	require.Len(initialStargatePodNames, 1, "expected 1 Stargate pod in namespace %s", namespace)
 
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
+	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace)
 	require.NoError(err, "failed to upgrade to latest version")
@@ -892,16 +904,6 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 		}, polling.stargateReady.timeout, polling.stargateReady.interval)
 	}
 
-	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
-	require.NoError(err, "failed to retrieve database credentials")
-
-	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
 	replication := map[string]int{"dc1": 1}
