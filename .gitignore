@@ -31,6 +31,10 @@ clientconfig
 kind-log*/
 kubeconfig
 vendor/
+.DS_Store
 
 # Helm chart dependencies
 charts/*/charts/*.tgz
+
+# Helm chart lock file
+charts/*/Chart.lock
