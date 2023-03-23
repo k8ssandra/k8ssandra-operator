@@ -120,7 +120,8 @@ func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) err
 	dataPlaneDir := "data-plane"
 	config.ControlPlaneComponent = "../../../../config/deployments/control-plane"
 	config.DataPlaneComponent = "../../../../config/deployments/data-plane"
-	if config.ImageTag != "latest" {
+
+	if config.GithubKustomization {
 		config.ControlPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/control-plane?ref=" + config.ImageTag
 		config.DataPlaneComponent = "github.com/k8ssandra/k8ssandra-operator/config/deployments/data-plane?ref=" + config.ImageTag
 	}
@@ -352,6 +353,7 @@ type OperatorDeploymentConfig struct {
 	ClusterScoped         bool
 	ImageName             string
 	ImageTag              string
+	GithubKustomization   bool // If true, use the kustomization.yaml from the github repo
 	ControlPlaneComponent string
 	DataPlaneComponent    string
 }
