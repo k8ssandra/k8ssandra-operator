@@ -48,13 +48,8 @@ git checkout -b release/${RELEASED_MAJOR_MINOR?}
 Edit `CHANGELOG/CHANGELOG-${RELEASED_MAJOR_MINOR?}.md` and replace the `## unreleased` section with the new release
 version and date (keep the `## unreleased` section above it).
 
-This should look similar to this:
-
+The diff should look like this:
 ```diff
-diff --git a/CHANGELOG/CHANGELOG-1.6.md b/CHANGELOG/CHANGELOG-1.6.md
-index 92e9647..a42e086 100644
---- a/CHANGELOG/CHANGELOG-1.6.md
-+++ b/CHANGELOG/CHANGELOG-1.6.md
 @@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
  ## unreleased
@@ -89,12 +84,8 @@ Update the image tag in the default kustomization:
 yq e -i '.images[0].newTag="v"+env(RELEASED_MAJOR_MINOR)+".0"' config/deployments/default/kustomization.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
-index a06412e..e43b28a 100644
---- a/config/deployments/default/kustomization.yaml
-+++ b/config/deployments/default/kustomization.yaml
 @@ -8,5 +8,4 @@ resources:
 
  images:
@@ -109,12 +100,8 @@ Update the version in the release chart:
 yq e -i '.version=env(RELEASED_MAJOR_MINOR)+".0"' charts/k8ssandra-operator/Chart.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
-index ce8f7d1..f32040d 100644
---- a/charts/k8ssandra-operator/Chart.yaml
-+++ b/charts/k8ssandra-operator/Chart.yaml
 @@ -3,7 +3,7 @@ name: k8ssandra-operator
  description: |
    Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
@@ -161,12 +148,8 @@ Update the image tag in the default kustomization:
 yq e -i '.images[0].newTag=env(RELEASED_MAJOR_MINOR)+"-latest"' config/deployments/default/kustomization.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
-index a06412e..e43b28a 100644
---- a/config/deployments/default/kustomization.yaml
-+++ b/config/deployments/default/kustomization.yaml
 @@ -8,5 +8,4 @@ resources:
 
  images:
@@ -181,12 +164,8 @@ Update the version in the release chart:
 yq e -i '.version=env(RELEASED_MAJOR_MINOR)+".1-SNAPSHOT"' charts/k8ssandra-operator/Chart.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
-index ce8f7d1..f32040d 100644
---- a/charts/k8ssandra-operator/Chart.yaml
-+++ b/charts/k8ssandra-operator/Chart.yaml
 @@ -3,7 +3,7 @@ name: k8ssandra-operator
  description: |
    Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
@@ -230,12 +209,8 @@ Update the version in the release chart:
 yq e -i '.version=env(NEXT_MAJOR_MINOR)+".0-SNAPSHOT"' charts/k8ssandra-operator/Chart.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
-index ce8f7d1..f32040d 100644
---- a/charts/k8ssandra-operator/Chart.yaml
-+++ b/charts/k8ssandra-operator/Chart.yaml
 @@ -3,7 +3,7 @@ name: k8ssandra-operator
  description: |
    Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
@@ -274,7 +249,7 @@ git commit -m"Prepare next release"
 
 Push all the changes:
 ```shell
-git push ${GIT_REMOTE?} main ${RELEASED_MAJOR_MINOR?} --atomic
+git push ${GIT_REMOTE?} main release/${RELEASED_MAJOR_MINOR?} --atomic
 ```
 
 
@@ -323,13 +298,8 @@ git cherry-pick <SHA1...>
 Edit `CHANGELOG/CHANGELOG-${RELEASED_MAJOR_MINOR?}.md` and replace the `## unreleased` section with the new release
 version and date (keep the `## unreleased` section above it).
 
-This should look similar to this:
-
+The diff should look like this:
 ```diff
-diff --git a/CHANGELOG/CHANGELOG-1.6.md b/CHANGELOG/CHANGELOG-1.6.md
-index 92e9647..a42e086 100644
---- a/CHANGELOG/CHANGELOG-1.6.md
-+++ b/CHANGELOG/CHANGELOG-1.6.md
 @@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
  ## unreleased
@@ -364,12 +334,8 @@ Update the image tag in the default kustomization:
 yq e -i '.images[0].newTag="v"+env(RELEASED_FULL)' config/deployments/default/kustomization.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
-index a06412e..e43b28a 100644
---- a/config/deployments/default/kustomization.yaml
-+++ b/config/deployments/default/kustomization.yaml
 @@ -8,5 +8,4 @@ resources:
 
  images:
@@ -384,12 +350,8 @@ Update the version in the release chart:
 yq e -i '.version=env(RELEASED_FULL)' charts/k8ssandra-operator/Chart.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
-index ce8f7d1..f32040d 100644
---- a/charts/k8ssandra-operator/Chart.yaml
-+++ b/charts/k8ssandra-operator/Chart.yaml
 @@ -3,7 +3,7 @@ name: k8ssandra-operator
  description: |
    Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
@@ -436,12 +398,8 @@ Update the image tag in the default kustomization:
 yq e -i '.images[0].newTag=env(RELEASED_MAJOR_MINOR)+"-latest"' config/deployments/default/kustomization.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/config/deployments/default/kustomization.yaml b/config/deployments/default/kustomization.yaml
-index a06412e..e43b28a 100644
---- a/config/deployments/default/kustomization.yaml
-+++ b/config/deployments/default/kustomization.yaml
 @@ -8,5 +8,4 @@ resources:
 
  images:
@@ -456,12 +414,8 @@ Update the version in the release chart:
 yq e -i '.version=env(NEXT_FULL)+"-SNAPSHOT"' charts/k8ssandra-operator/Chart.yaml
 ```
 
-This should look similar to this:
+The diff should look like this:
 ```diff
-diff --git a/charts/k8ssandra-operator/Chart.yaml b/charts/k8ssandra-operator/Chart.yaml
-index ce8f7d1..f32040d 100644
---- a/charts/k8ssandra-operator/Chart.yaml
-+++ b/charts/k8ssandra-operator/Chart.yaml
 @@ -3,7 +3,7 @@ name: k8ssandra-operator
  description: |
    Kubernetes operator which handles the provisioning and management of K8ssandra clusters.
@@ -503,5 +457,5 @@ git commit --amend
 
 Push all the changes:
 ```shell
-git push ${GIT_REMOTE?} main ${RELEASED_MAJOR_MINOR?} --atomic
+git push ${GIT_REMOTE?} main release/${RELEASED_MAJOR_MINOR?} --atomic
 ```
