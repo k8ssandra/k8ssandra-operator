@@ -301,7 +301,7 @@ Select the commits to include from the `main` branch:
 git cherry-pick <SHA1...> 
 ```
 
-Note that we don't use the `-n` option here, we want to keep them as individual commits. Also, make sure that you move
+Note that we don't use the `-n` option here, we want to keep them as individual commits. Also, make sure that you copy
 the changelog entries to the file corresponding to the current release
 (`CHANGELOG/CHANGELOG-${RELEASED_MAJOR_MINOR?}.md`).
 
