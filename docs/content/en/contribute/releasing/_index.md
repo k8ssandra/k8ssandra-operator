@@ -227,24 +227,27 @@ The diff should look like this:
      version: 0.29.0
 ```
 
-Create a new blank changelog file `CHANGELOG/CHANGELOG-${NEXT_MAJOR_MINOR?}.md` with the following contents:
+Create a new blank changelog file:
+````shell
+cat > CHANGELOG/CHANGELOG-${NEXT_MAJOR_MINOR?}.md << 'EOF'
+# Changelog
 
-    # Changelog
-    
-    Changelog for the K8ssandra Operator, new PRs should update the `unreleased` section below with entries describing the changes like:
-    
-    ```markdown
-    * [CHANGE]
-    * [FEATURE]
-    * [ENHANCEMENT]
-    * [BUGFIX]
-    * [DOCS]
-    * [TESTING]
-    ```
-    
-    When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
-    
-    ## unreleased
+Changelog for the K8ssandra Operator, new PRs should update the `unreleased` section below with entries describing the changes like:
+
+```markdown
+* [CHANGE]
+* [FEATURE]
+* [ENHANCEMENT]
+* [BUGFIX]
+* [DOCS]
+* [TESTING]
+```
+
+When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
+
+## unreleased
+EOF
+````
 
 Commit the changes:
 ```shell
