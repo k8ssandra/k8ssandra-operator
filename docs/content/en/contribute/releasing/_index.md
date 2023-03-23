@@ -8,8 +8,13 @@ description: "How to perform releases of k8ssandra-operator"
 
 ## Prerequisites
 
-- [yq](https://github.com/mikefarah/yq) installed.
-- [Hugo](https://gohugo.io/documentation/) installed.
+[yq](https://github.com/mikefarah/yq) and [Hugo](https://gohugo.io/documentation/) installed.
+
+With MacOS / Homebrew:
+```shell
+brew install yq
+brew install hugo
+```
 
 ## Major / Minor Release
 
