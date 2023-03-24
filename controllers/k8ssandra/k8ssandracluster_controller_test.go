@@ -11,7 +11,6 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
@@ -1660,9 +1659,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
-				ContainerImage: &images.Image{
-					Repository: medusaImageRepo,
-				},
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
@@ -2040,9 +2036,6 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
-				ContainerImage: &images.Image{
-					Repository: medusaImageRepo,
-				},
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

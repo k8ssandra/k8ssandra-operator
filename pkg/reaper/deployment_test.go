@@ -8,7 +8,6 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -20,8 +19,8 @@ import (
 )
 
 func TestNewDeployment(t *testing.T) {
-	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "latest", PullPolicy: corev1.PullAlways}
-	initImage := &images.Image{Repository: "test", Name: "reaper-init", Tag: "1.2.3", PullPolicy: corev1.PullNever}
+	mainImage := "test/reaper:latest"
+	initImage := "test/reaper-init:1.2.3"
 	reaper := newTestReaper()
 	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.InitContainerImage = initImage
@@ -298,8 +297,6 @@ func TestImages(t *testing.T) {
 	// Note: nil images are normally not possible due to the kubebuilder markers on the CRD spec
 	t.Run("nil images", func(t *testing.T) {
 		reaper := newTestReaper()
-		reaper.Spec.InitContainerImage = nil
-		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
@@ -310,12 +307,7 @@ func TestImages(t *testing.T) {
 	})
 	t.Run("default images", func(t *testing.T) {
 		reaper := newTestReaper()
-		reaper.Spec.InitContainerImage = &images.Image{
-			Repository: "thelastpickle",
-			Name:       "cassandra-reaper",
-			Tag:        DefaultVersion,
-		}
-		reaper.Spec.ContainerImage = nil
+		reaper.Spec.InitContainerImage = "docker.io/thelastpickle/cassandra-reaper:3.2.1"
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
@@ -326,14 +318,8 @@ func TestImages(t *testing.T) {
 	})
 	t.Run("custom images", func(t *testing.T) {
 		reaper := newTestReaper()
-		image := &images.Image{
-			Repository:    "my-custom-repo",
-			Name:          "my-custom-name",
-			Tag:           "latest",
-			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
-		}
-		reaper.Spec.InitContainerImage = image
-		reaper.Spec.ContainerImage = image
+		reaper.Spec.InitContainerImage = "docker.io/my-custom-repo/my-custom-name:latest"
+		reaper.Spec.ContainerImage = "docker.io/my-custom-repo/my-custom-name:latest"
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.InitContainers[0].Image)

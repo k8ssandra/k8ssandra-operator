@@ -20,7 +20,6 @@ import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -45,8 +44,7 @@ type StargateTemplate struct {
 	// ContainerImage is the image characteristics to use for Stargate containers. Leave nil
 	// to use a default image.
 	// +optional
-	// +kubebuilder:default={repository:"stargateio", tag:"v1.0.67"}
-	ContainerImage *images.Image `json:"containerImage,omitempty"`
+	ContainerImage string `json:"containerImage,omitempty"`
 
 	// ServiceAccount is the service account name to use for Stargate pods.
 	// +kubebuilder:default="default"

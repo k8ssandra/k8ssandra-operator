@@ -6,8 +6,6 @@ import (
 
 	"k8s.io/utils/pointer"
 
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
@@ -130,7 +128,7 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	container := utils.FindAndGetContainer(&deployment, deployment.Name)
 	require.NotNil(t, container, "failed to find stargate container")
 
-	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+DefaultVersion, container.Image)
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.67", container.Image)
 	assert.Equal(t, corev1.PullIfNotPresent, container.ImagePullPolicy)
 
 	assert.EqualValues(t, resource.MustParse("200m"), container.Resources.Requests[corev1.ResourceCPU])
@@ -736,68 +734,57 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 }
 
 func testImages(t *testing.T) {
-	// Note: a nil image is normally not possible due to the kubebuilder marker on the CRD spec
 	t.Run("nil image 3", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		stargate.Spec.ContainerImage = nil
+		stargate.Spec.ContainerImage = ""
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "stargate_311/something:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
 	t.Run("nil image 4", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		stargate.Spec.ContainerImage = nil
+		stargate.Spec.ContainerImage = ""
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "stargate_40/something:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
 	t.Run("default image 3", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		stargate.Spec.ContainerImage = &images.Image{
-			Repository: "stargateio",
-			Tag:        "v" + DefaultVersion,
-		}
+		stargate.Spec.ContainerImage = "stargateio/stargate_311:v1.0.67"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "star/something", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
 	t.Run("default image 4", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		stargate.Spec.ContainerImage = &images.Image{
-			Repository: "stargateio",
-			Tag:        "v" + DefaultVersion,
-		}
+		stargate.Spec.ContainerImage = "stargateio/stargate_40:v1.0.67"
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "star_401/something", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
 	t.Run("custom image 3", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		image := &images.Image{
-			Repository:    "my-custom-repo",
-			Tag:           "latest",
-			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
-		}
+		image := "my-custom-repo:latest"
 		stargate.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(stargate, dc, logger)
@@ -810,11 +797,7 @@ func testImages(t *testing.T) {
 	})
 	t.Run("custom image 4", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
-		image := &images.Image{
-			Repository:    "my-custom-repo",
-			Tag:           "latest",
-			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
-		}
+		image := "my-custom-repo:latest"
 		stargate.Spec.ContainerImage = image
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"

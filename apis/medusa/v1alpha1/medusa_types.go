@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -128,7 +127,7 @@ type MedusaClusterTemplate struct {
 	// MedusaContainerImage is the image characteristics to use for Medusa containers. Leave nil
 	// to use a default image.
 	// +optional
-	ContainerImage *images.Image `json:"containerImage,omitempty"`
+	ContainerImage string `json:"containerImage,omitempty"`
 
 	// SecurityContext applied to the Medusa containers.
 	// +optional

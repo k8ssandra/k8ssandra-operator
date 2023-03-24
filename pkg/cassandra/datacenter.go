@@ -11,7 +11,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +83,7 @@ type DatacenterConfig struct {
 	ServerImage               string
 	ServerVersion             *semver.Version
 	ServerType                api.ServerDistribution
-	JmxInitContainerImage     *images.Image
+	JmxInitContainerImage     string
 	Size                      int32
 	Stopped                   bool
 	Resources                 *corev1.ResourceRequirements

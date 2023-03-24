@@ -168,8 +168,7 @@ func main() {
 		imageConfigFile = "/configs/image_config.yaml"
 	}
 
-	err = images.ParseImageConfig(imageConfigFile)
-	if err != nil {
+	if err = images.ParseImageConfig(imageConfigFile); err != nil {
 		setupLog.Error(err, "unable to load the image config file")
 		os.Exit(1)
 	}
