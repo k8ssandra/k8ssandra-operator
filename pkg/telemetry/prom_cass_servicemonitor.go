@@ -219,15 +219,29 @@ spec:
       sourceLabels:
       - mcac
       targetLabel: __name__
-    - regex: org\.apache\.cassandra\.metrics\.hints_service\.hints_delays\-(\w+)
+    - action: replace
+      regex: org\.apache\.cassandra\.metrics\.hints_service\.hint_delays[\-\.]([\w\.]+)
       replacement: ${1}
       sourceLabels:
-      - mcac
+        - mcac
       targetLabel: peer_ip
-    - regex: org\.apache\.cassandra\.metrics\.hints_service\.hints_delays\-(\w+)
-      replacement: mcac_hints_hints_delays
+    - action: replace
+      regex: org\.apache\.cassandra\.metrics\.hints_service\.hint_delays[\-\.]([\w\.]+)
+      replacement: mcac_hints_hint_delays
       sourceLabels:
-      - mcac
+        - mcac
+      targetLabel: __name__
+    - action: replace
+      regex: org\.apache\.cassandra\.metrics\.hints_service\.hints_created[\-\.]([\w\.]+)
+      replacement: ${1}
+      sourceLabels:
+        - mcac
+      targetLabel: peer_ip
+    - action: replace
+      regex: org\.apache\.cassandra\.metrics\.hints_service\.hints_created[\-\.]([\w\.]+)
+      replacement: mcac_hints_hint_created
+      sourceLabels:
+        - mcac
       targetLabel: __name__
     - regex: org\.apache\.cassandra\.metrics\.hints_service\.([^\-]+)
       replacement: mcac_hints_${1}
@@ -308,6 +322,10 @@ spec:
       targetLabel: __name__
     - action: labeldrop
       regex: prom_name
+    - action: drop
+      regex: (.*)\.+(.*)
+      sourceLabels:
+      - __name__
 `
 
 // Static configuration for ServiceMonitor's endpoints, when using modern metrics endpoints. This
