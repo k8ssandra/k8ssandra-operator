@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -51,6 +52,7 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 				},
 			},
 			Medusa: &api.MedusaClusterTemplate{
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: api.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

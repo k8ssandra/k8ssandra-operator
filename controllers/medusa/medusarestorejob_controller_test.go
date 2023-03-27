@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -52,6 +53,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 				},
 			},
 			Medusa: &api.MedusaClusterTemplate{
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: api.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

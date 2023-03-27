@@ -1659,6 +1659,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
@@ -2036,6 +2037,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

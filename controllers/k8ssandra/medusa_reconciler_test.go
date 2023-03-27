@@ -68,6 +68,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
