@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+
+* [BUGFIX] [#925](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Fix invalid metrics names from MCAC and remove the localhost endpoint override from the new metrics agent
+
 ## v1.6.1 - 2023-03-22
 
 * [BUGFIX] [#923](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Upgrade cass-operator to v1.15.0 in the helm chart

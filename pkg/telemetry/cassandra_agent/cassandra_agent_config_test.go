@@ -28,7 +28,6 @@ var (
 		DcName:        testCluster.Spec.Cassandra.Datacenters[0].Meta.Name,
 	}
 	allDefinedYaml string = `endpoint:
-  address: 127.0.0.1
   port: "10000"
 relabels:
 - action: drop
@@ -107,10 +106,7 @@ relabels:
   sourceLabels:
   - should_drop
 `
-	relabelsDefinedYaml = `endpoint:
-  address: 127.0.0.1
-  port: "9000"
-relabels:
+	relabelsDefinedYaml = `relabels:
 - action: drop
   regex: (.*);(b.*)
   separator: ;
@@ -142,8 +138,7 @@ func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 		},
 	}
 	tspec.Cassandra.Endpoint = &telemetryapi.Endpoint{
-		Address: "127.0.0.1",
-		Port:    "10000",
+		Port: "10000",
 	}
 	return *tspec
 }
