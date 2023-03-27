@@ -195,15 +195,13 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 
 	// init container should be a default image and thus should not contain the latest tag; pull policy should be the
 	// default one (IfNotPresent)
-	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.1.2", deployment.Spec.Template.Spec.InitContainers[0].Image)
+	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.2.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 
 	// main container is a custom image where the tag isn't specified, so it should default to latest, and pull policy
 	// to Always.
 	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper-custom:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
-	// one secret should have been collected, from the main container image
-	assert.Equal(t, []corev1.LocalObjectReference{{Name: "main-secret"}}, deployment.Spec.Template.Spec.ImagePullSecrets)
 
 	t.Log("update deployment to be ready")
 	patchDeploymentStatus(t, ctx, deployment, 1, 1, k8sClient)
@@ -568,7 +566,7 @@ func newReaper(namespace string) *reaperapi.Reaper {
 		Spec: reaperapi.ReaperSpec{
 			ReaperTemplate: reaperapi.ReaperTemplate{
 				// custom image for the main container, but default image for the init container
-				ContainerImage: "cassandra-reaper-custom",
+				ContainerImage: "docker.io/thelastpickle/cassandra-reaper-custom:latest",
 			},
 			DatacenterRef: reaperapi.CassandraDatacenterRef{
 				Name: cassandraDatacenterName,

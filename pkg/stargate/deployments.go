@@ -78,6 +78,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 		tolerations := template.Tolerations
 		affinity := computeAffinity(template, dc, &rack)
 
+		image := stargate.Spec.ContainerImage
+		if image == "" {
+			image = cassimages.GetImage(imageKey)
+		}
+
 		podMeta := createPodMeta(stargate, deploymentName)
 
 		deployment := &appsv1.Deployment{
@@ -111,12 +116,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 
 						HostNetwork: dc.IsHostNetworkEnabled(),
 						DNSPolicy:   dnsPolicy,
-						// ImagePullSecrets: images.CollectPullSecrets(image),
 
 						Containers: []corev1.Container{{
 
 							Name:            deploymentName,
-							Image:           cassimages.GetImage(imageKey),
+							Image:           image,
 							ImagePullPolicy: cassimages.GetImagePullPolicy(imageKey),
 
 							Ports: []corev1.ContainerPort{

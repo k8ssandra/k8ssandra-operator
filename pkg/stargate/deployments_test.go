@@ -8,6 +8,8 @@ import (
 
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	configapi "github.com/k8ssandra/cass-operator/apis/config/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
@@ -96,6 +98,7 @@ func TestNewDeployments(t *testing.T) {
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
@@ -192,6 +195,7 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 3
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
@@ -245,6 +249,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 
 	require.Len(t, deployments, 3)
@@ -342,6 +347,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
@@ -455,6 +461,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	}}
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
@@ -531,6 +538,7 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 	stargate.Spec.Size = 2 // rack3 will get no deployment
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 2)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
@@ -553,6 +561,7 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
@@ -586,6 +595,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	stargate := stargate.DeepCopy()
 
 	logger := testlogr.NewTestLogger(t)
+	setupImageConfig()
 	deployments := NewDeployments(stargate, dc, logger)
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
@@ -741,7 +751,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "stargate_311/something:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, images.GetImageConfig().Images.Others[KeyName3], deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -751,10 +761,11 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
+		setupImageConfig()
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "stargate_40/something:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, images.GetImageConfig().Images.Others[KeyName4], deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -762,10 +773,11 @@ func testImages(t *testing.T) {
 		stargate := stargate.DeepCopy()
 		stargate.Spec.ContainerImage = "stargateio/stargate_311:v1.0.67"
 		logger := testlogr.NewTestLogger(t)
+		setupImageConfig()
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "star/something", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, stargate.Spec.ContainerImage, deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -775,10 +787,11 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
+		setupImageConfig()
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "star_401/something", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, stargate.Spec.ContainerImage, deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -787,10 +800,19 @@ func testImages(t *testing.T) {
 		image := "my-custom-repo:latest"
 		stargate.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
+		setupImageConfig()
+		images.GetImageConfig().DefaultImages.ImageComponents[KeyName3] = configapi.ImageComponent{
+			ImagePolicy: configapi.ImagePolicy{
+				ImagePullPolicy: corev1.PullAlways,
+				ImagePullSecret: corev1.LocalObjectReference{
+					Name: "my-secret",
+				},
+			},
+		}
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "docker.io/my-custom-repo/stargate-3_11:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, stargate.Spec.ContainerImage, deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
@@ -802,10 +824,19 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
+		setupImageConfig()
+		images.GetImageConfig().DefaultImages.ImageComponents[KeyName4] = configapi.ImageComponent{
+			ImagePolicy: configapi.ImagePolicy{
+				ImagePullPolicy: corev1.PullAlways,
+				ImagePullSecret: corev1.LocalObjectReference{
+					Name: "my-secret",
+				},
+			},
+		}
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, "docker.io/my-custom-repo/stargate-4_0:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, stargate.Spec.ContainerImage, deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
@@ -817,4 +848,24 @@ func affinityForRack(dc *cassdcapi.CassandraDatacenter, rackName string) *corev1
 		NodeAffinity:    computeNodeAffinity(dc, rackName),
 		PodAntiAffinity: computePodAntiAffinity(false, dc, rackName),
 	}
+}
+
+func setupImageConfig() {
+	config := images.GetImageConfig()
+	config.DefaultImages = &configapi.DefaultImages{}
+	config.DefaultImages.ImageComponents = make(configapi.ImageComponents)
+	config.DefaultImages.ImageComponents[KeyName3] = configapi.ImageComponent{
+		ImagePolicy: configapi.ImagePolicy{
+			ImagePullPolicy: corev1.PullIfNotPresent,
+		},
+	}
+	config.DefaultImages.ImageComponents[KeyName4] = configapi.ImageComponent{
+		ImagePolicy: configapi.ImagePolicy{
+			ImagePullPolicy: corev1.PullIfNotPresent,
+		},
+	}
+	config.Images = &configapi.Images{}
+	config.Images.Others = make(map[string]string)
+	config.Images.Others[KeyName3] = "docker.io/stargateio/stargate-3_11:v1.0.67"
+	config.Images.Others[KeyName4] = "docker.io/stargateio/stargate-4_0:v1.0.67"
 }
