@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#925](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Fix invalid metrics names from MCAC and remove the localhost endpoint override from the new metrics agent
+
 ## v1.6.1 - 2023-03-22
 
 * [BUGFIX] [#923](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Upgrade cass-operator to v1.15.0 in the helm chart
