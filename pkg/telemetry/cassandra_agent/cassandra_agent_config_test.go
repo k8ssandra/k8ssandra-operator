@@ -106,9 +106,7 @@ relabels:
   sourceLabels:
   - should_drop
 `
-	relabelsDefinedYaml = `endpoint:
-  port: "9000"
-relabels:
+	relabelsDefinedYaml = `relabels:
 - action: drop
   regex: (.*);(b.*)
   separator: ;

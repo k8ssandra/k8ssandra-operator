@@ -24,9 +24,6 @@ import (
 var (
 	agentConfigLocation = "/opt/management-api/configs/metrics-collector.yaml"
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
-		Endpoint: &telemetryapi.Endpoint{
-			Port: "9000",
-		},
 		Relabels: []promapi.RelabelConfig{
 			{
 				SourceLabels: []string{"table"},
