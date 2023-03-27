@@ -168,8 +168,15 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	image := cassimages.GetImage("reaper")
 	pullPolicy := cassimages.GetImagePullPolicy("reaper")
 
-	// initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
-	// mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
+	initImage := image
+	if reaper.Spec.InitContainerImage != "" {
+		initImage = reaper.Spec.InitContainerImage
+	}
+
+	mainImage := image
+	if reaper.Spec.ContainerImage != "" {
+		mainImage = reaper.Spec.ContainerImage
+	}
 
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
@@ -192,11 +199,11 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
-					InitContainers: computeInitContainers(reaper, envVars, volumeMounts, initContainerResources),
+					InitContainers: computeInitContainers(reaper, envVars, initImage, pullPolicy, volumeMounts, initContainerResources),
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
-							Image:           image,
+							Image:           mainImage,
 							ImagePullPolicy: pullPolicy,
 							SecurityContext: reaper.Spec.SecurityContext,
 							Ports: []corev1.ContainerPort{
@@ -268,6 +275,8 @@ func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirem
 func computeInitContainers(
 	reaper *api.Reaper,
 	envVars []corev1.EnvVar,
+	image string,
+	pullPolicy corev1.PullPolicy,
 	volumeMounts []corev1.VolumeMount,
 	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
 	var initContainers []corev1.Container
@@ -275,8 +284,8 @@ func computeInitContainers(
 		initContainers = append(initContainers,
 			corev1.Container{
 				Name:            "reaper-schema-init",
-				Image:           cassimages.GetImage("reaper"),
-				ImagePullPolicy: cassimages.GetImagePullPolicy("reaper"),
+				Image:           image,
+				ImagePullPolicy: pullPolicy,
 				SecurityContext: reaper.Spec.InitContainerSecurityContext,
 				Env:             envVars,
 				Args:            []string{"schema-migration"},
