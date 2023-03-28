@@ -20,6 +20,8 @@ spec:
         enabled: false
 ```
 
+**Note:** The new metrics endpoint is only available for Cassandra 3.11.13 and above in the 3.11 branch, and Cassandra 4.0.4 and above in the 4.0 branch.  
+  
 While MCAC can work with Kubernetes, it wasn’t designed for it. Over the past couple years, we listed some inefficiencies and pain points which eventually led to a redesign.
 
 ### collectd

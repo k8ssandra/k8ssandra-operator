@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,9 +24,8 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	remoteClient client.Client,
 ) result.ReconcileResult {
 	logger.Info("reconciling telemetry")
-	clusterSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry
-	dcSpec := dcTemplate.DatacenterOptions.Telemetry
-	mergedSpec := dcSpec.MergeWith(clusterSpec)
+
+	mergedSpec := MergeTelemetrySpecs(kc, dcTemplate)
 	var commonLabels map[string]string
 	if mergedSpec == nil {
 		commonLabels = make(map[string]string)
@@ -51,6 +51,12 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	if !validConfig {
 		return result.Error(errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it"))
 	}
+	// The new metrics endpoint is available since 3.11.13 and 4.0.4.
+	// If MCAC is disabled and the new metrics endpoint is not available then bail here.
+	if !mergedSpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(actualDc.Spec.ServerVersion) && kc.Spec.Cassandra.ServerType == k8ssandraapi.ServerDistributionCassandra {
+		return result.Error(errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled"))
+	}
+
 	// If Prometheus not installed bail here.
 	if !promInstalled {
 		return result.Continue()
@@ -88,4 +94,12 @@ func mustLabels(klusterName string, klusterNamespace string, dcName string, addi
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
 	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
 	return additionalLabels
+}
+
+// MergeTelemetrySpecs merges the cluster and dc level telemetry specs, prioritizing the dc level spec.
+func MergeTelemetrySpecs(kc *k8ssandraapi.K8ssandraCluster, dcTemplate k8ssandraapi.CassandraDatacenterTemplate) *v1alpha1.TelemetrySpec {
+	clusterSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry
+	dcSpec := dcTemplate.DatacenterOptions.Telemetry
+	mergedSpec := dcSpec.MergeWith(clusterSpec)
+	return mergedSpec
 }

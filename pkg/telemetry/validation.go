@@ -2,11 +2,13 @@ package telemetry
 
 import (
 	"errors"
+	"reflect"
+
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,4 +39,11 @@ func IsPromInstalled(client client.Client, logger logr.Logger) (bool, error) {
 		return true, nil
 	}
 	return false, errors.New("something unexpected happened when determining whether prometheus is installed")
+}
+
+// IsNewMetricsEndpointAvailable returns true if the new metrics endpoint is available, false otherwise.
+// It is available since Cassandra 3.11.13 in the 3.11 branch and since 4.0.4 in the 4.0 branch.
+func IsNewMetricsEndpointAvailable(serverVersion string) bool {
+	semVersion := semver.MustParse(serverVersion)
+	return (semVersion.GreaterThan(semver.MustParse("3.11.12")) && semVersion.LessThan(semver.MustParse("4.0.0"))) || semVersion.GreaterThan(semver.MustParse("4.0.3"))
 }
