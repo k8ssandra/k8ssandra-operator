@@ -192,6 +192,15 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.SystemLoggerResources = *template.SystemLoggerResources
 	}
 
+	// This will override values from the previous process, which is the one that's used to set all Vector instance resources. However,
+	// the Cassandra container could potentially require different resource requirements, so we allow overriding it here.
+	if i, found := FindContainer(&template.PodTemplateSpec, reconciliation.SystemLoggerContainerName); found {
+		systemLoggerResources := template.PodTemplateSpec.Spec.Containers[i].Resources
+		if systemLoggerResources.Limits != nil || systemLoggerResources.Requests != nil {
+			dc.Spec.SystemLoggerResources = systemLoggerResources
+		}
+	}
+
 	if template.MgmtAPIHeap != nil {
 		setMgmtAPIHeap(dc, template.MgmtAPIHeap)
 	}

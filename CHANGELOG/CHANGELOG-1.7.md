@@ -17,4 +17,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [BUGFIX] [#914](https://github.com/k8ssandra/k8ssandra-operator/issues/914) Don't parse logs by default when Vector telemetry is enabled.
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
+* [BUGFIX] [#940](https://github.com/k8ssandra/k8ssandra-operator/issues/940) Vector resource requirements are correctly set to the server-system-logger and also allow override of server-system-logger resource properties from containers.
 * [DOCS] [#919](https://github.com/k8ssandra/k8ssandra-operator/issues/919) Improve the release process documentation.
