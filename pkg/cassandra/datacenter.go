@@ -88,6 +88,7 @@ type DatacenterConfig struct {
 	Size                      int32
 	Stopped                   bool
 	Resources                 *corev1.ResourceRequirements
+	SystemLoggerResources     *corev1.ResourceRequirements
 	StorageConfig             *cassdcapi.StorageConfig
 	Racks                     []cassdcapi.Rack
 	CassandraConfig           api.CassandraConfig
@@ -185,6 +186,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if template.Resources != nil {
 		dc.Spec.Resources = *template.Resources
+	}
+
+	if template.SystemLoggerResources != nil {
+		dc.Spec.SystemLoggerResources = *template.SystemLoggerResources
 	}
 
 	if template.MgmtAPIHeap != nil {
