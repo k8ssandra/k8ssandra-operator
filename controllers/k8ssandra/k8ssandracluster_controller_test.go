@@ -2226,16 +2226,6 @@ func getCassDcAnnotations(t *testing.T, f *framework.Framework, ctx context.Cont
 	return dc.Spec.PodTemplateSpec.Annotations
 }
 
-// func getReaperAnnotations(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string {
-// 	reaper := &reaperapi.Reaper{}
-// 	err = f.Get(ctx, key, reaper)
-// 	if err != nil {
-// 		t.Logf("Failed to get Reaper: %v", err)
-// 	}
-
-// 	return reaper.Spec.ResourceMeta.Pods.Annotations
-// }
-
 func secretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey,
 	annFn func(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string, secretName string) func() bool {
 	return func() bool {

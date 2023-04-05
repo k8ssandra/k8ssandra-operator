@@ -27,7 +27,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	reaper "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"

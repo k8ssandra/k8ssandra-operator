@@ -48,7 +48,6 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 		return result.Error(err)
 	}
 
-	// inject annotation here (cluster or dc spec?) -- if using external secrets, do you still need to specify the secretname in the config?
 	err := secret.AddInjectionAnnotation(&kc.Spec.Cassandra.Meta.Pods, kc.Spec.Cassandra.SuperuserSecretRef.Name)
 	if err != nil {
 		logger.Error(err, "Failed to add superuser injection annotation")
@@ -59,9 +58,6 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	// TODO(ss): add annotation here? since they're being reconciled?
-	// what to do if external, should be allowed to customize secret name, but should it be specified here
-
 	if kc.Spec.Reaper != nil {
 		// Reaper secrets are only required when authentication is enabled on the cluster
 		if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
@@ -88,22 +84,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				return result.Error(err)
 			}
 			logger.Info("Reaper user secrets successfully reconciled")
-
-			// if kc.Spec.Reaper.ResourceMeta == nil {
-			// 	kc.Spec.Reaper.ResourceMeta = &meta.ResourceMeta{}
-			// }
-
-			// err := secret.AddInjectionAnnotation(&kc.Spec.Reaper.ResourceMeta.Pods, cassandraUserSecretRef.Name)
-			// if err != nil {
-			// 	logger.Error(err, "Failed to add superuser injection annotation")
-			// 	return result.Error(err)
-			// }
-
-			// err = secret.AddInjectionAnnotation(&kc.Spec.Reaper.ResourceMeta.Pods, uiUserSecretRef.Name)
-			// if err != nil {
-			// 	logger.Error(err, "Failed to add superuser injection annotation")
-			// 	return result.Error(err)
-			// }
 
 		} else if kc.Spec.IsAuthEnabled() && kc.Spec.UseExternalSecrets() {
 			// Auth is enabled in the cluster, but the SecretsProvider is set to external, so no secret need to
