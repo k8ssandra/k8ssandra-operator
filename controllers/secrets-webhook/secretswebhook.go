@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,14 +62,6 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-// e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
-const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
-
-type SecretInjection struct {
-	SecretName string `json:"secretName"`
-	Path       string `json:"path"`
-}
-
 // mutatePods injects the secret mounting configuration into the pod
 func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error {
 	if pod.Annotations == nil {
@@ -76,13 +69,13 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		return nil
 	}
 
-	secretsStr := pod.Annotations[secretInjectionAnnotation]
+	secretsStr := pod.Annotations[secret.SecretInjectionAnnotation]
 	if len(secretsStr) == 0 {
 		logger.Info("no secret annotation exists", "podName", pod.Name, "namespace", pod.Namespace)
 		return nil
 	}
 
-	var secrets []SecretInjection
+	var secrets []secret.SecretInjection
 	if err := json.Unmarshal([]byte(secretsStr), &secrets); err != nil {
 		logger.Error(err, "unable to unmarhsal secrets annotation",
 			"annotation", secretsStr,

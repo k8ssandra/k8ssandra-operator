@@ -79,6 +79,9 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			return result.Error(err)
 		}
 	}
+
+	// TODO(ss): if we were to add annotation, inject it here
+
 	logger.Info("Medusa user secrets successfully reconciled")
 	return result.Continue()
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	reaper "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -104,7 +104,11 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 		logger.Info("Reaper present for DC " + actualDc.Name)
 
-		desiredReaper := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
+		desiredReaper, err := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
+		if err != nil {
+			logger.Error(err, "failed to create Reaper API object")
+			return result.Error(err)
+		}
 
 		if err := remoteClient.Get(ctx, reaperKey, actualReaper); err != nil {
 			if errors.IsNotFound(err) {

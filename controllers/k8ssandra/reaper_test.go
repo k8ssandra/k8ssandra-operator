@@ -8,7 +8,9 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -162,6 +164,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 
 	t.Log("check that reaper reaper1 is created")
 	require.Eventually(f.ReaperExists(ctx, reaper1Key), timeout, interval)
+	verifyReaperSecretAnnotationAdded(t, f, ctx, reaper1Key, reaper.DefaultUserSecretName(kc.SanitizedName()))
 
 	t.Logf("update reaper reaper1 status to ready")
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
@@ -169,6 +172,7 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 
 	t.Log("check that reaper reaper2 is created")
 	require.Eventually(f.ReaperExists(ctx, reaper2Key), timeout, interval)
+	verifyReaperSecretAnnotationAdded(t, f, ctx, reaper2Key, reaper.DefaultUserSecretName(kc.SanitizedName()))
 
 	t.Logf("update reaper reaper2 status to ready")
 	err = f.SetReaperStatusReady(ctx, reaper2Key)
@@ -258,4 +262,19 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 			kc.Status.Datacenters[dc2Key.Name].Reaper == nil
 	}, timeout, interval)
 
+}
+
+func getReaperAnnotations(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string {
+	reaper := &reaperapi.Reaper{}
+	err := f.Get(ctx, key, reaper)
+	if err != nil {
+		t.Logf("Failed to get Reaper: %v", err)
+	}
+
+	return reaper.Spec.ResourceMeta.Pods.Annotations
+}
+
+func verifyReaperSecretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, secretName string) {
+	t.Logf("check that the superuser secret annotation is added")
+	assert.Eventually(t, secretAnnotationAdded(t, f, ctx, dcKey, getReaperAnnotations, secretName), timeout, interval, " failed to verify reaper secret annotation added")
 }

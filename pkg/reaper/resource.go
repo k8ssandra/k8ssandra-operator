@@ -5,6 +5,8 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +19,9 @@ const (
 
 	DatacenterAvailabilityEach = "EACH"
 	DatacenterAvailabilityAll  = "ALL"
+
+	defaultSecretMountPath = "/etc/secrets"
+	defaultSecretName      = "reaper"
 )
 
 // DefaultResourceName generates a name for a new Reaper resource that is derived from the Cassandra cluster and DC
@@ -30,7 +35,7 @@ func NewReaper(
 	kc *k8ssandraapi.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
 	reaperTemplate *reaperapi.ReaperClusterTemplate,
-) *reaperapi.Reaper {
+) (*reaperapi.Reaper, error) {
 	labels := createResourceLabels(kc)
 	var anns map[string]string
 	if m := reaperTemplate.ResourceMeta; m != nil {
@@ -55,20 +60,35 @@ func NewReaper(
 			ClientEncryptionStores: kc.Spec.Cassandra.ClientEncryptionStores,
 		},
 	}
-	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
-		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
-		// Reaper: one for CQL and JMX connections, one for the UI. Here we assume that these secrets exist. If the
-		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
-		// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
-		// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
-		if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
-			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.SanitizedName())
+	if kc.Spec.IsAuthEnabled() {
+		if !kc.Spec.UseExternalSecrets() {
+			// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
+			// Reaper: one for CQL and JMX connections, one for the UI. Here we assume that these secrets exist. If the
+			// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
+			// that the k8ssandra controller created two secrets with default names, and we need to manually fill in this
+			// info in desiredReaper.Spec since it wasn't persisted in reaperTemplate.
+			if desiredReaper.Spec.CassandraUserSecretRef.Name == "" {
+				desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.SanitizedName())
+			}
+			// Note: deliberately skip JmxUserSecretRef, which is deprecated.
+			if desiredReaper.Spec.UiUserSecretRef.Name == "" {
+				desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
+			}
 		}
-		// Note: deliberately skip JmxUserSecretRef, which is deprecated.
-		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
-			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
+		if desiredReaper.Spec.ResourceMeta == nil {
+			desiredReaper.Spec.ResourceMeta = &meta.ResourceMeta{}
+		}
+
+		err := secret.AddInjectionAnnotation(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.CassandraUserSecretRef.Name)
+		if err != nil {
+			return desiredReaper, err
+		}
+		err = secret.AddInjectionAnnotation(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
+		if err != nil {
+			return desiredReaper, err
 		}
 	}
+
 	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the
 	// cluster for Reaper's keyspace. In this case we simply skip schema migration, otherwise Reaper wouldn't be able to
 	// start up.
@@ -76,7 +96,7 @@ func NewReaper(
 		desiredReaper.Spec.SkipSchemaMigration = true
 	}
 	annotations.AddHashAnnotation(desiredReaper)
-	return desiredReaper
+	return desiredReaper, nil
 }
 
 // See https://cassandra-reaper.io/docs/usage/multi_dc/.
