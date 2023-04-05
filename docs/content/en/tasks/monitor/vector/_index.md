@@ -2,16 +2,16 @@
 title: "Using Vector with k8ssandra-operator"
 linkTitle: "Vector"
 weight: 6
-description: "Configure Vector to scrape metrics"
+description: "Configure Vector"
 ---
 
-Since k8ssandra-operator v1.5.0, it is possible to scrape Cassandra metrics with the Vector agent and customize its configuration to add transformers and sinks.
+k8ssandra-operator provides a Vector instance that can be used to scrape logs and metrics. It's configuration is fully customizable and one can add transformers and sinks to provide the kind of solution user needs.
 
 More information about Vector can be found in the [official documentation](https://vector.dev/docs/).
 
 ## Enabling Vector agent
 
-To enable Vector agent, you need to add a `.spec.cassandra.telemetry` section in the `K8ssandraCluster` manifest:
+Vector agent is enabled by default for Cassandra pods. To enable Vector agent for all the other pods, you need to add a `.spec.cassandra.telemetry` section in the `K8ssandraCluster` manifest:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -20,7 +20,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.6
+    serverVersion: 4.0.8
     telemetry:
       vector:
         enabled: true
@@ -31,43 +31,79 @@ spec:
           limits:
             cpu: 1000m
             memory: 1Gi
-...
-...
 ```
 
 Telemetry settings can be configured at the cluster level and then overridden at the datacenter level.
 
-
-The following content will be added automatically to the vector.toml file, setting up Cassandra metrics scraping:
+The following content will be added automatically to the vector.toml file:
 
 ```toml
-data_dir = "/var/lib/vector"
+[sources.systemlog]
+type = "file"
+include = [ "/var/log/cassandra/system.log" ]
+read_from = "beginning"
+fingerprint.strategy = "device_and_inode
+[sources.systemlog.multiline]
+start_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+mode = "halt_before"
+timeout_ms = 10000
 
-[api]
-enabled = false
-  
 [sources.cassandra_metrics]
 type = "prometheus_scrape"
 endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
 scrape_interval_secs = {{ .ScrapeInterval }}
-```
 
-The `config` section allows you to specify a `ConfigMap` containing a custom Vector configuration. If not specified, the default configuration will be used and the metrics will be logged in the console output of the vector container:
+[transforms.parse_cassandra_log]
+type = "remap"
+inputs = [ "systemlog" ]
+source = '''
+del(.source_type)
+. |= parse_groks!(.message, patterns: [
+  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
+  ]
+)
+pod_name, err = get_env_var("POD_NAME")
+if err == null {
+  .pod_name = pod_name
 
-```toml
+node_name, err = get_env_var("NODE_NAME")
+if err == null {
+  .node_name = node_name
+
+cluster, err = get_env_var("CLUSTER_NAME")
+if err == null {
+  .cluster = cluster
+
+datacenter, err = get_env_var("DATACENTER_NAME")
+if err == null {
+  .datacenter = datacenter
+
+rack, err = get_env_var("RACK_NAME")
+if err == null {
+  .rack = rack
+}
+'''
+
 [sinks.console]
 type = "console"
-inputs = [ "cassandra_metrics" ]
+inputs = ["systemlog"]
 target = "stdout"
-
-  [sinks.console.encoding]
-  codec = "json"`
+encoding.codec = "text"
 ```
+
+The default options are always added to the configuration, but one may override them and if not used, they're automatically cleaned up (see next section).
+
+## Automated cleanup of unused sources
+
+If there are sources and transformers which are not used by any sinks, the operator will remove those when deploying the configuration. Thus, there's no need to remove the default provided parsing or metrics scraping - they will not consume any resources if there's no sink attached to them. 
 
 ## Predefined Vector sources
 
 Metrics sources are predefined in the Vector configuration for Cassandra, Reaper and Stargate. These sources are named `cassandra_metrics`, `reaper_metrics` and `stargate_metrics` respectively.
 They can be used as input in custom components added through configuration.
+
+`systemlog` input is defined as the default source for Cassandra logs.
 
 ## Custom Vector configuration
 
@@ -107,7 +143,33 @@ The above configuration should display the scraped Cassandra metrics in json for
 {"name":"org_apache_cassandra_metrics_table_bloom_filter_off_heap_memory_used","tags":{"cluster":"Weird Cluster Name","datacenter":"dc1","host":"95c50ce3-2c91-46bb-9500-536f0959241b","instance":"10.244.2.8","keyspace":"system_auth","rack":"default","table":"network_permissions"},"timestamp":"2023-02-02T10:28:08.670070700Z","kind":"absolute","gauge":{"value":0.0}}
 ```
 
-Providing no custom configuration would produce the following configmap:
+As an another example, to output the logs as json to the console, one could modify the configuration to following:
+
+```yaml
+cassandra:  
+  telemetry:
+      vector:
+        enabled: true
+        components:
+          sinks:
+            - name: console_output
+              type: console
+              inputs:
+                - parse_cassandra_log
+              config: |
+                target = "stdout"
+                [sinks.console_output.encoding]
+                codec = "json"
+        scrapeInterval: 30s
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+          limits:
+            memory: 2Gi
+```
+
+Should you provide no custom configuration, the default should create the following ConfigMap:
 
 ```yaml
 apiVersion: v1
@@ -117,22 +179,20 @@ metadata:
   namespace: k8ssandra-operator
 data:
   vector.toml: |
-
-    data_dir = "/var/lib/vector"
-
-    [api]
-    enabled = false
-      
-    [sources.cassandra_metrics]
-    type = "prometheus_scrape"
-    endpoints = [ "http://localhost:9103/metrics" ]
-    scrape_interval_secs = 30
+    [sources.systemlog]
+    type = "file"
+    include = [ "/var/log/cassandra/system.log" ]
+    read_from = "beginning"
+    fingerprint.strategy = "device_and_inode
+    [sources.systemlog.multiline]
+    start_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+    condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
+    mode = "halt_before"
+    timeout_ms = 10000
 
     [sinks.console]
     type = "console"
-    inputs = [ "cassandra_metrics" ]
+    inputs = ["systemlog"]
     target = "stdout"
-
-      [sinks.console.encoding]
-      codec = "json"
+    encoding.codec = "text"
 ```
