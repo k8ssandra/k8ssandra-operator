@@ -25,7 +25,7 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": `[{"secretName": "mySecret", "path": "/my/secret/path"}]`,
+				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -66,7 +66,6 @@ func TestHandleInjectSecretNoPatch(t *testing.T) {
 	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
-	fmt.Println(fmt.Sprintf("%v", resp))
 	assert.Equal(t, true, resp.AdmissionResponse.Allowed)
 	// no injection annotation, no patch
 	assert.Equal(t, len(resp.Patches), 0)
@@ -77,7 +76,7 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": `[{"secretName": "mySecret", "path": "/my/secret/path"}]`,
+				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -103,7 +102,7 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": `[{"secretName": "mySecret", "path": "/my/secret/path"}]`,
+				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -125,8 +124,8 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 }
 
 func TestMutatePodsMutliSecret(t *testing.T) {
-	injectionAnnotation := `[{"secretName": "mySecret", "path": "/my/secret/path"},
-	 {"secretName": "myOtherSecret", "path": "/my/other/secret/path"}]`
+	injectionAnnotation := `[{"name": "mySecret", "path": "/my/secret/path"},
+	 {"name": "myOtherSecret", "path": "/my/other/secret/path"}]`
 
 	want := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
@@ -222,4 +221,58 @@ func createRequest(t *testing.T, pod *corev1.Pod) webhook.AdmissionRequest {
 		Operation: "CREATE",
 		Object:    runtime.RawExtension{Raw: pBytes},
 	}}
+}
+
+func TestMutatePodsExpandKey(t *testing.T) {
+	want := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "cluster2-dc2-r1-sts-0",
+			Namespace: "test-ns",
+			Annotations: map[string]string{
+				"k8ssandra.io/inject-secret": `[{"name": "mySecret-${POD_NAME}-${POD_NAMESPACE}-${POD_ORDINAL}", "path": "/my/secret/path"}]`,
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: "test",
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
+					MountPath: "/my/secret/path",
+				}},
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
+					},
+				},
+			}},
+		},
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "cluster2-dc2-r1-sts-0",
+			Namespace: "test-ns",
+			Annotations: map[string]string{
+				"k8ssandra.io/inject-secret": `[{"name": "mySecret-${POD_NAME}-${POD_NAMESPACE}-${POD_ORDINAL}", "path": "/my/secret/path"}]`,
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: "test",
+			}},
+		},
+	}
+
+	p := &podSecretsInjector{}
+
+	ctx := context.Background()
+	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, want, pod)
 }
