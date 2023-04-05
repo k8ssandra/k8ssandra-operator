@@ -7,7 +7,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 )
 
-// e.g. k8ssandra.io/inject-secret: '[{ "name": "test-secret", "path": "/etc/test/test-secret", "containers": ["c1", "c2"]}]'
+// e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
 const (
 	SecretInjectionAnnotation = "k8ssandra.io/inject-secret"
 	credentialsMountPath      = "/etc/secrets"
