@@ -19,9 +19,6 @@ const (
 
 	DatacenterAvailabilityEach = "EACH"
 	DatacenterAvailabilityAll  = "ALL"
-
-	defaultSecretMountPath = "/etc/secrets"
-	defaultSecretName      = "reaper"
 )
 
 // DefaultResourceName generates a name for a new Reaper resource that is derived from the Cassandra cluster and DC
