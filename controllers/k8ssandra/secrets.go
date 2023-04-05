@@ -58,9 +58,6 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	// TODO(ss): add annotation here? since they're being reconciled?
-	// what to do if external, should be allowed to customize secret name, but should it be specified here
-
 	if kc.Spec.Reaper != nil {
 		// Reaper secrets are only required when authentication is enabled on the cluster
 		if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
