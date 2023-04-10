@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#914](https://github.com/k8ssandra/k8ssandra-operator/issues/914) Don't parse logs by default when Vector telemetry is enabled.
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
 * [DOCS] [#919](https://github.com/k8ssandra/k8ssandra-operator/issues/919) Improve the release process documentation.
+* [CHANGE] [#601](https://github.com/k8ssandra/k8ssandra-operator/issues/601) Add injection annotation to Cassandra and Reaper pods
