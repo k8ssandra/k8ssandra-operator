@@ -40,7 +40,7 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 	resp := p.Handle(context.Background(), req)
 	fmt.Println(fmt.Sprintf("%v", resp))
 	assert.Equal(t, true, resp.AdmissionResponse.Allowed)
-	// 2 patches for addition of volume and volumeMount
+	// 3 patches for addition of init-container, volume, and volumeMount
 	assert.Equal(t, len(resp.Patches), 3)
 	sort.Slice(resp.Patches, func(i, j int) bool {
 		return resp.Patches[i].Path < resp.Patches[j].Path

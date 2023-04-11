@@ -19,4 +19,3 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
 * [DOCS] [#919](https://github.com/k8ssandra/k8ssandra-operator/issues/919) Improve the release process documentation.
 * [ENHANCEMENT] [#605](https://github.com/k8ssandra/k8ssandra-operator/issues/605) Change webhook to inject init-container for secrets mounting.
-
