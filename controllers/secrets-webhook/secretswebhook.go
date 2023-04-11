@@ -67,7 +67,7 @@ const (
 	secretInjectionAnnotation    = "k8ssandra.io/inject-secret"
 	initContainerImageAnnotation = "k8ssandra.io/inject-secret-image"
 	defaultInitContainerImage    = "k8ssandra/k8ssandra-client:latest"
-	defaultImagePullPolicy       = "IfNotPresent"
+	defaultInjectContainerName   = "secrets-inject"
 )
 
 type SecretInjection struct {
@@ -102,17 +102,16 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 	if !ok {
 		image = defaultInitContainerImage
 	}
-	logger.Info("injecting init-containner", "image", image)
+	logger.Info("injecting init-container", "image", image)
 
 	if len(pod.Spec.Containers) == 0 {
 		return fmt.Errorf("no containers found in spec")
 	}
 
 	container := corev1.Container{
-		Name:            "secrets-inject",
-		Image:           image,
-		ImagePullPolicy: defaultImagePullPolicy,
-		Args:            []string{"mount", secretsStr},
+		Name:  defaultInjectContainerName,
+		Image: image,
+		Args:  []string{"mount", secretsStr},
 	}
 	// since some containers might depend on credentials, this should be the first init-container
 	pod.Spec.InitContainers = append([]corev1.Container{container}, pod.Spec.InitContainers...)

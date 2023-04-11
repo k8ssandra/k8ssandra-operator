@@ -60,7 +60,8 @@ func TestHandleInjectSecretNoPatch(t *testing.T) {
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				"fake-annotation": `fake-val`,
+				"fake-annotation":                  `fake-val`,
+				"k8ssandra.io/inject-secret-image": "my-custom-image", // spceifying image shouldn't trigger injection
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -80,39 +81,6 @@ func TestHandleInjectSecretNoPatch(t *testing.T) {
 
 func TestMutatePodsSingleSecret(t *testing.T) {
 	secretsStr := `[{"secretName": "mySecret", "path": "/my/secret/path"}]`
-	want := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "test",
-			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": secretsStr,
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name: "test",
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret",
-					MountPath: "/my/secret/path/mySecret",
-				}},
-			}},
-			InitContainers: []corev1.Container{{
-				Name:            "secrets-inject",
-				Image:           defaultInitContainerImage,
-				ImagePullPolicy: defaultImagePullPolicy,
-				Args:            []string{"mount", secretsStr},
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret",
-					MountPath: "/my/secret/path/mySecret",
-				}},
-			}},
-			Volumes: []corev1.Volume{{
-				Name: "mySecret",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			}},
-		},
-	}
 
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
@@ -124,6 +92,36 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name: "test",
+			}},
+		},
+	}
+
+	vm := []corev1.VolumeMount{{
+		Name:      "mySecret",
+		MountPath: "/my/secret/path/mySecret",
+	}}
+
+	want := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name:        pod.Name,
+			Annotations: pod.Annotations,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:         pod.Spec.Containers[0].Name,
+				VolumeMounts: vm,
+			}},
+			InitContainers: []corev1.Container{{
+				Name:         "secrets-inject",
+				Image:        defaultInitContainerImage,
+				Args:         []string{"mount", secretsStr},
+				VolumeMounts: vm,
+			}},
+			Volumes: []corev1.Volume{{
+				Name: "mySecret",
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
+				},
 			}},
 		},
 	}
@@ -142,7 +140,13 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 func TestMutatePodsSingleSecretCustomImage(t *testing.T) {
 	secretsStr := `[{"secretName": "mySecret", "path": "/my/secret/path"}]`
 	image := "my-custom-image:latest"
-	want := &corev1.Pod{
+
+	vm := []corev1.VolumeMount{{
+		Name:      "mySecret",
+		MountPath: "/my/secret/path/mySecret",
+	}}
+
+	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
@@ -153,20 +157,25 @@ func TestMutatePodsSingleSecretCustomImage(t *testing.T) {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name: "test",
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret",
-					MountPath: "/my/secret/path/mySecret",
-				}},
+			}},
+		},
+	}
+
+	want := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name:        pod.Name,
+			Annotations: pod.Annotations,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:         pod.Spec.Containers[0].Name,
+				VolumeMounts: vm,
 			}},
 			InitContainers: []corev1.Container{{
-				Name:            "secrets-inject",
-				Image:           image,
-				ImagePullPolicy: defaultImagePullPolicy,
-				Args:            []string{"mount", secretsStr},
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret",
-					MountPath: "/my/secret/path/mySecret",
-				}},
+				Name:         "secrets-inject",
+				Image:        image,
+				Args:         []string{"mount", secretsStr},
+				VolumeMounts: vm,
 			}},
 			Volumes: []corev1.Volume{{
 				Name: "mySecret",
@@ -177,12 +186,26 @@ func TestMutatePodsSingleSecretCustomImage(t *testing.T) {
 		},
 	}
 
+	p := &podSecretsInjector{}
+
+	ctx := context.Background()
+	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, want, pod)
+}
+
+func TestMutatePodsMultiSecret(t *testing.T) {
+	injectionAnnotation := `[{"secretName": "mySecret", "path": "/my/secret/path"},
+	 {"secretName": "myOtherSecret", "path": "/my/other/secret/path"}]`
+
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret":       secretsStr,
-				"k8ssandra.io/inject-secret-image": image,
+				"k8ssandra.io/inject-secret": injectionAnnotation,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -200,49 +223,32 @@ func TestMutatePodsSingleSecretCustomImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, want, pod)
-}
-
-func TestMutatePodsMutliSecret(t *testing.T) {
-	injectionAnnotation := `[{"secretName": "mySecret", "path": "/my/secret/path"},
-	 {"secretName": "myOtherSecret", "path": "/my/other/secret/path"}]`
+	vm := []corev1.VolumeMount{
+		{
+			Name:      "mySecret",
+			MountPath: "/my/secret/path/mySecret",
+		},
+		{
+			Name:      "myOtherSecret",
+			MountPath: "/my/other/secret/path/myOtherSecret",
+		},
+	}
 
 	want := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
-			Name: "test",
-			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": injectionAnnotation,
-			},
+			Name:        pod.Name,
+			Annotations: pod.Annotations,
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
-				Name: "test",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "mySecret",
-						MountPath: "/my/secret/path/mySecret",
-					},
-					{
-						Name:      "myOtherSecret",
-						MountPath: "/my/other/secret/path/myOtherSecret",
-					},
-				},
+				Name:         pod.Spec.Containers[0].Name,
+				VolumeMounts: vm,
 			}},
 			InitContainers: []corev1.Container{{
-				Name:            "secrets-inject",
-				Image:           defaultInitContainerImage,
-				ImagePullPolicy: defaultImagePullPolicy,
-				Args:            []string{"mount", injectionAnnotation},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "mySecret",
-						MountPath: "/my/secret/path/mySecret",
-					},
-					{
-						Name:      "myOtherSecret",
-						MountPath: "/my/other/secret/path/myOtherSecret",
-					},
-				},
+				Name:         "secrets-inject",
+				Image:        defaultInitContainerImage,
+				Args:         []string{"mount", injectionAnnotation},
+				VolumeMounts: vm,
 			}},
 			Volumes: []corev1.Volume{
 				{
@@ -259,28 +265,6 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
-			Name: "test",
-			Annotations: map[string]string{
-				"k8ssandra.io/inject-secret": injectionAnnotation,
-			},
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{
-				Name: "test",
-			}},
-		},
-	}
-
-	p := &podSecretsInjector{}
-
-	ctx := context.Background()
-	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	assert.Equal(t, want, pod)
