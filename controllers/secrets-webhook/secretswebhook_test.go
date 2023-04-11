@@ -112,7 +112,7 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 				VolumeMounts: vm,
 			}},
 			InitContainers: []corev1.Container{{
-				Name:         "secrets-inject",
+				Name:         defaultInjectContainerName,
 				Image:        defaultInitContainerImage,
 				Args:         []string{"mount", secretsStr},
 				VolumeMounts: vm,
@@ -172,7 +172,7 @@ func TestMutatePodsSingleSecretCustomImage(t *testing.T) {
 				VolumeMounts: vm,
 			}},
 			InitContainers: []corev1.Container{{
-				Name:         "secrets-inject",
+				Name:         defaultInjectContainerName,
 				Image:        image,
 				Args:         []string{"mount", secretsStr},
 				VolumeMounts: vm,
@@ -245,7 +245,7 @@ func TestMutatePodsMultiSecret(t *testing.T) {
 				VolumeMounts: vm,
 			}},
 			InitContainers: []corev1.Container{{
-				Name:         "secrets-inject",
+				Name:         defaultInjectContainerName,
 				Image:        defaultInitContainerImage,
 				Args:         []string{"mount", injectionAnnotation},
 				VolumeMounts: vm,
