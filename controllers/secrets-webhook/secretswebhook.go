@@ -3,6 +3,7 @@ package secrets_webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
@@ -62,7 +63,12 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 }
 
 // e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
-const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
+const (
+	secretInjectionAnnotation    = "k8ssandra.io/inject-secret"
+	initContainerImageAnnotation = "k8ssandra.io/inject-secret-image"
+	defaultInitContainerImage    = "k8ssandra/k8ssandra-client:latest"
+	defaultImagePullPolicy       = "IfNotPresent"
+)
 
 type SecretInjection struct {
 	SecretName string `json:"secretName"`
@@ -92,8 +98,27 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		return err
 	}
 
+	image, ok := pod.Annotations[initContainerImageAnnotation]
+	if !ok {
+		image = defaultInitContainerImage
+	}
+	logger.Info("injecting init-containner", "image", image)
+
+	if len(pod.Spec.Containers) == 0 {
+		return fmt.Errorf("no containers found in spec")
+	}
+
+	container := corev1.Container{
+		Name:            "secrets-inject",
+		Image:           image,
+		ImagePullPolicy: defaultImagePullPolicy,
+		Args:            []string{"mount", secretsStr},
+	}
+	// since some containers might depend on credentials, this should be the first init-container
+	pod.Spec.InitContainers = append([]corev1.Container{container}, pod.Spec.InitContainers...)
+
 	for _, secret := range secrets {
-		// get secret name from injection annotation
+		// volume per secret (empyt dir)
 		secretName := secret.SecretName
 		mountPath := secret.Path
 		logger.Info("creating volume and volume mount for secret",
@@ -106,16 +131,15 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		volume := corev1.Volume{
 			Name: secretName,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: secretName,
-				},
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		}
 		injectVolume(pod, volume)
 
+		// volume mount per secret: mount empty dir at secret path {path}/{secretName}
 		volumeMount := corev1.VolumeMount{
 			Name:      secretName,
-			MountPath: mountPath,
+			MountPath: fmt.Sprintf("%s/%s", mountPath, secretName),
 		}
 		injectVolumeMount(pod, volumeMount)
 		logger.Info("added volume and volumeMount to podSpec",
@@ -145,7 +169,7 @@ func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount) {
 	}
 	for i, container := range pod.Spec.InitContainers {
 		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
-			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+			pod.Spec.InitContainers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
 		}
 	}
 }
