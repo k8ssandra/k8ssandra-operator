@@ -138,7 +138,7 @@ func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount) {
 	}
 	for i, container := range pod.Spec.InitContainers {
 		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
-			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+			pod.Spec.InitContainers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
 		}
 	}
 }
