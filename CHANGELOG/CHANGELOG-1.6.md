@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#925](https://github.com/k8ssandra/k8ssandra-operator/issues/923) Fix invalid metrics names from MCAC and remove the localhost endpoint override from the new metrics agent
+* [BUGFIX] [#929](https://github.com/k8ssandra/k8ssandra-operator/issues/929) Error out if the Cassandra version doesn't support the new metrics endpoint but MCAC is disabled
 
 ## v1.6.1 - 2023-03-22
 

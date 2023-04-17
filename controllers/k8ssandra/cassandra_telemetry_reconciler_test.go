@@ -74,3 +74,39 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 	assert.NotEqual(t, kc.Namespace, currentSM.Namespace)
 	assert.Contains(t, currentSM.Labels, "test-label")
 }
+
+func Test_mergeTelemetrySpecs(t *testing.T) {
+	cassDC := test.NewCassandraDatacenter("test-dc", "test-namespace")
+	kc := test.NewK8ssandraCluster("test-cluster-name", "test-kc-namespace")
+
+	kc.Spec.Cassandra.Telemetry = &telemetryapi.TelemetrySpec{
+		Mcac: &telemetryapi.McacTelemetrySpec{
+			Enabled: pointer.Bool(true),
+		},
+	}
+
+	kc.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
+		{
+			Meta: k8ssandraapi.EmbeddedObjectMeta{
+				Namespace: cassDC.Namespace,
+				Name:      cassDC.Name,
+			},
+			DatacenterOptions: k8ssandraapi.DatacenterOptions{
+				Telemetry: &telemetryapi.TelemetrySpec{
+					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
+						Enabled:      pointer.Bool(true),
+						CommonLabels: map[string]string{"test-label": "test"},
+					},
+					Mcac: &telemetryapi.McacTelemetrySpec{
+						Enabled: pointer.Bool(false),
+					},
+				},
+			},
+		},
+	}
+
+	merged := MergeTelemetrySpecs(&kc, kc.Spec.Cassandra.Datacenters[0])
+	assert.NotNil(t, merged)
+	assert.False(t, *merged.Mcac.Enabled)
+	assert.True(t, *merged.Prometheus.Enabled)
+}
