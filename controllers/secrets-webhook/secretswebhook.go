@@ -3,9 +3,12 @@ package secrets_webhook
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"net/http"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -61,11 +64,11 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-// e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
+// e.g. k8ssandra.io/inject-secret: '[{ "name": "test-secret", "path": "/etc/test/test-secret" }]'
 const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
 
 type SecretInjection struct {
-	SecretName string `json:"secretName"`
+	SecretName string `json:"name"`
 	Path       string `json:"path"`
 }
 
@@ -94,7 +97,25 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 
 	for _, secret := range secrets {
 		// get secret name from injection annotation
-		secretName := secret.SecretName
+
+		secretMapper := func(p string) string {
+			switch p {
+			case "POD_NAME":
+				return pod.Name
+			case "POD_NAMESPACE":
+				return pod.Namespace
+			case "POD_ORDINAL":
+				// Get StatefulSet ordinal
+				lastIndex := strings.LastIndex(pod.Name, "-")
+				if lastIndex > 0 {
+					return pod.Name[lastIndex+1:]
+				}
+			}
+
+			return ""
+		}
+
+		secretName := os.Expand(secret.SecretName, secretMapper)
 		mountPath := secret.Path
 		logger.Info("creating volume and volume mount for secret",
 			"secret", secretName,
