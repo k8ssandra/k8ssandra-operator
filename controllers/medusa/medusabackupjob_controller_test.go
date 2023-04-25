@@ -182,6 +182,12 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 
 	createDatacenterPods(t, f, ctx, dcKey, dc)
 
+	dcCopy := dc.DeepCopy()
+	dcKeyCopy := framework.NewClusterKey(f.DataPlaneContexts[0], dcKey.Namespace+"-copy", dcKey.Name)
+	dcCopy.ObjectMeta.Namespace = dc.Namespace + "-copy"
+
+	createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
+
 	t.Log("creating MedusaBackupJob")
 	backupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	backup := &api.MedusaBackupJob{
@@ -222,6 +228,9 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		t.Logf("backup in progress: %v", updated.Status.InProgress)
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
+
+	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups()))
+
 	return true
 }
 
@@ -346,6 +355,7 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 }
 
 func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
+	_ = f.CreateNamespace(dcKey.Namespace)
 	for i := int32(0); i < dc.Spec.Size; i++ {
 		pod := &corev1.Pod{}
 		podName := fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i)
