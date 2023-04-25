@@ -28,16 +28,16 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - name: Create temporary directory for yq install
-        run: |
-          mkdir ${{ runner.temp }}/yq
-      - name: Install yq
-        working-directory: ${{ runner.temp }}/yq
-        run: |
-          sudo rm /bin/yq
-          wget https://github.com/mikefarah/yq/releases/download/v4.11.2/yq_linux_amd64.tar.gz
-          tar -xzf yq_linux_amd64.tar.gz
-          sudo mv ./yq_linux_amd64 /usr/bin/yq
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          # GHA requires longer timeout
+          args: --timeout=10m
+          # Optional: show only new issues if it's a pull request. The default value is `false`.
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
+          skip-pkg-cache: true
+          skip-build-cache: true
       - name: Run unit and integration tests
         run: |
           export PATH=$GOROOT/bin:$GOPATH/bin:$PATH

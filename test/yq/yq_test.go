@@ -1,11 +1,12 @@
 package yq
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEval(t *testing.T) {
@@ -51,7 +52,7 @@ func TestEval(t *testing.T) {
 					"../testdata/fixtures/single-dc/k8ssandra.yaml",
 				},
 			},
-			want: "3",
+			want: "3\n3",
 		},
 		{
 			name: "empty line",

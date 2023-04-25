@@ -52,6 +52,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperReady(t, f, ctx, reaper2Key)
 
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")
+	require.NoError(t, err)
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[1])
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[1]].StargateRest

@@ -22,6 +22,8 @@ type DefaultFactory struct {
 
 func (f *DefaultFactory) NewClient(address string) (Client, error) {
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)), grpc.WithTimeout(5*time.Second))
+	// TODO Modify to use DialContext
+	// conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC connection to %s: %s", address, err)

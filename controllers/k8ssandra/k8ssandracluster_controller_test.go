@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"testing"
 	"time"
@@ -105,7 +106,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
-	// t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
 	t.Run("ApplyClusterWithEncryptionOptionsExternalSecrets", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsExternalSecrets))
@@ -1614,7 +1614,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, clientCertificates} {
 		secretKey := utils.GetKey(secret)
 		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
-		f.Create(ctx, secretClusterKey0, secret)
+		require.NoError(f.Create(ctx, secretClusterKey0, secret))
 	}
 
 	// Create the cluster template with encryption enabled
@@ -1812,10 +1812,12 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	dc1Size := int32(3)
 	dc2Size := int32(3)
 
+	randNr := rand.Int31()
+
 	// Create the client keystore and truststore secrets
 	clientKeystore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-keystore-secret",
+			Name:      fmt.Sprintf("client-keystore-secret%d", randNr),
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -1825,7 +1827,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 
 	clientTruststore := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-truststore-secret",
+			Name:      fmt.Sprintf("client-truststore-secret%d", randNr),
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -1836,7 +1838,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	// Create the client keystore and truststore secrets
 	clientKeystoreSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-keystore-password-secret",
+			Name:      fmt.Sprintf("client-keystore-password-secret%d", randNr),
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -1846,7 +1848,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 
 	clientTruststoreSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-truststore-password-secret",
+			Name:      fmt.Sprintf("client-truststore-password-secret%d", randNr),
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
@@ -1856,11 +1858,14 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 
 	// Loop over the created configmaps and create them
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, clientKeystoreSecret, clientTruststoreSecret} {
+		secret2 := *secret
+
 		secretKey := utils.GetKey(secret)
 		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
 		secretClusterKey1 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[1]}
-		f.Create(ctx, secretClusterKey0, secret)
-		f.Create(ctx, secretClusterKey1, secret)
+
+		require.NoError(f.Create(ctx, secretClusterKey0, secret))
+		require.NoError(f.Create(ctx, secretClusterKey1, &secret2))
 	}
 
 	// Create the cluster template with encryption enabled for both server and client, but missing client encryption stores
@@ -1907,10 +1912,10 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 				},
 				ServerEncryptionStores: &encryption.Stores{
 					KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
-						Name: "server-keystore-secret",
+						Name: fmt.Sprintf("server-keystore-secret%d", randNr),
 					}},
 					TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
-						Name: "server-truststore-secret",
+						Name: fmt.Sprintf("server-truststore-secret%d", randNr),
 					}},
 				},
 			},
@@ -2011,7 +2016,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, clientCertificates} {
 		secretKey := utils.GetKey(secret)
 		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
-		f.Create(ctx, secretClusterKey0, secret)
+		require.NoError(f.Create(ctx, secretClusterKey0, secret))
 	}
 
 	// Create the cluster template with encryption enabled

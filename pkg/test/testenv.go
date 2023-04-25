@@ -99,6 +99,9 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 
 	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		return err
+	}
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
 	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)

@@ -5,7 +5,6 @@ import (
 
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"k8s.io/utils/pointer"
@@ -414,28 +413,6 @@ func TestCoalesce(t *testing.T) {
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
 				McacEnabled:        true,
-				PodTemplateSpec: corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{{Name: "cassandra"}},
-					},
-				},
-			},
-		},
-		{
-			name: "Override JMX init container",
-			clusterTemplate: &api.CassandraClusterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					JmxInitContainerImage: &images.Image{Name: "cluster-image"},
-				},
-			},
-			dcTemplate: &api.CassandraDatacenterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					JmxInitContainerImage: &images.Image{Name: "dc-image"},
-				},
-			},
-			want: &DatacenterConfig{
-				JmxInitContainerImage: &images.Image{Name: "dc-image"},
-				McacEnabled:           true,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},

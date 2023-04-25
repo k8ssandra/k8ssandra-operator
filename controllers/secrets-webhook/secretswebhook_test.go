@@ -3,15 +3,15 @@ package secrets_webhook
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -20,9 +20,10 @@ import (
 
 func TestHandleInjectSecretSuccess(t *testing.T) {
 	p := setupSecretsInjector(t)
+	assert := assert.New(t)
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
@@ -37,21 +38,24 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
-	fmt.Println(fmt.Sprintf("%v", resp))
-	assert.Equal(t, true, resp.AdmissionResponse.Allowed)
+	assert.True(resp.AdmissionResponse.Allowed)
 	// 2 patches for addition of volume and volumeMount, but the order of the patches may vary
-	assert.Equal(t, len(resp.Patches), 2)
-	testPasses := (resp.Patches[0].Path == "/spec/volumes" && resp.Patches[1].Path == "/spec/containers/0/volumeMounts") || (resp.Patches[1].Path == "/spec/volumes" && resp.Patches[0].Path == "/spec/containers/0/volumeMounts")
-	assert.True(t, testPasses)
-	assert.Equal(t, resp.Patches[0].Operation, "add")
-	assert.Equal(t, resp.Patches[1].Operation, "add")
+	assert.Equal(len(resp.Patches), 2)
+
+	sort.Slice(resp.Patches, func(i, j int) bool {
+		return resp.Patches[i].Path > resp.Patches[j].Path
+	})
+	assert.Equal(resp.Patches[1].Path == "/spec/volumes")
+	assert.Equal(resp.Patches[0].Path == "/spec/containers/0/volumeMounts")
+	assert.Equal(resp.Patches[0].Operation, "add")
+	assert.Equal(resp.Patches[1].Operation, "add")
 }
 
 func TestHandleInjectSecretNoPatch(t *testing.T) {
 	p := setupSecretsInjector(t)
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"fake-annotation": `fake-val`,
@@ -73,7 +77,7 @@ func TestHandleInjectSecretNoPatch(t *testing.T) {
 
 func TestMutatePodsSingleSecret(t *testing.T) {
 	want := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
@@ -99,7 +103,7 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 	}
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": `[{"name": "mySecret", "path": "/my/secret/path"}]`,
@@ -128,7 +132,7 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 	 {"name": "myOtherSecret", "path": "/my/other/secret/path"}]`
 
 	want := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": injectionAnnotation,
@@ -170,7 +174,7 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 	}
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": injectionAnnotation,
@@ -200,7 +204,9 @@ func setupSecretsInjector(t *testing.T) *podSecretsInjector {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p.InjectDecoder(d)
+	if err := p.InjectDecoder(d); err != nil {
+		t.Fatal(err)
+	}
 	return p
 }
 
@@ -225,7 +231,7 @@ func createRequest(t *testing.T, pod *corev1.Pod) webhook.AdmissionRequest {
 
 func TestMutatePodsExpandKey(t *testing.T) {
 	want := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster2-dc2-r1-sts-0",
 			Namespace: "test-ns",
 			Annotations: map[string]string{
@@ -252,7 +258,7 @@ func TestMutatePodsExpandKey(t *testing.T) {
 	}
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster2-dc2-r1-sts-0",
 			Namespace: "test-ns",
 			Annotations: map[string]string{
