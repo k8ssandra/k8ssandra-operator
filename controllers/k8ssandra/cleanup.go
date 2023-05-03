@@ -218,34 +218,22 @@ func (r *K8ssandraClusterReconciler) findStargateForDeletion(
 	dcName string,
 	remoteClient client.Client) (*stargateapi.Stargate, client.Client, error) {
 
-	selector := k8ssandralabels.PartOfLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	stargateList := &stargateapi.StargateList{}
 	stargateName := kcKey.Name + "-" + dcName + "-stargate"
-
 	if remoteClient == nil {
 		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, stargateList, options)
+			stargate, err := finStargateForDeletionWithRemoteClient(ctx, kcKey, dcName, stargateName, remoteClient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
 			}
-			for _, stargate := range stargateList.Items {
-				if stargate.Name == stargateName {
-					return &stargate, remoteClient, nil
-				}
-			}
+			return stargate, remoteClient, nil
 		}
 	} else {
-		err := remoteClient.List(ctx, stargateList, options)
+		stargate, err := finStargateForDeletionWithRemoteClient(ctx, kcKey, dcName, stargateName, remoteClient)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
 		}
 
-		for _, stargate := range stargateList.Items {
-			if stargate.Name == stargateName {
-				return &stargate, remoteClient, nil
-			}
-		}
+		return stargate, remoteClient, nil
 	}
 
 	return nil, nil, nil
@@ -257,34 +245,22 @@ func (r *K8ssandraClusterReconciler) findReaperForDeletion(
 	dcName string,
 	remoteClient client.Client) (*reaperapi.Reaper, client.Client, error) {
 
-	selector := k8ssandralabels.PartOfLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	reaperList := &reaperapi.ReaperList{}
 	reaperName := kcKey.Name + "-" + dcName + "-reaper"
-
 	if remoteClient == nil {
 		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, reaperList, options)
+			reaper, err := finReaperForDeletionWithRemoteClient(ctx, kcKey, dcName, reaperName, remoteClient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
 			}
-			for _, reaper := range reaperList.Items {
-				if reaper.Name == reaperName {
-					return &reaper, remoteClient, nil
-				}
-			}
+			return reaper, remoteClient, nil
 		}
 	} else {
-		err := remoteClient.List(ctx, reaperList, options)
+		reaper, err := finReaperForDeletionWithRemoteClient(ctx, kcKey, dcName, reaperName, remoteClient)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
 		}
 
-		for _, reaper := range reaperList.Items {
-			if reaper.Name == reaperName {
-				return &reaper, remoteClient, nil
-			}
-		}
+		return reaper, remoteClient, nil
 	}
 
 	return nil, nil, nil
@@ -295,33 +271,22 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	kcKey client.ObjectKey,
 	dcName string,
 	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, client.Client, error) {
-	selector := k8ssandralabels.PartOfLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	dcList := &cassdcapi.CassandraDatacenterList{}
 
 	if remoteClient == nil {
 		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, dcList, options)
+			dc, err := findDcForDeletionWithRemoteClient(ctx, kcKey, dcName, remoteClient)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
 			}
-			for _, dc := range dcList.Items {
-				if dc.Name == dcName {
-					return &dc, remoteClient, nil
-				}
-			}
+			return dc, remoteClient, nil
 		}
 	} else {
-		err := remoteClient.List(ctx, dcList, options)
+		dc, err := findDcForDeletionWithRemoteClient(ctx, kcKey, dcName, remoteClient)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
 		}
 
-		for _, dc := range dcList.Items {
-			if dc.Name == dcName {
-				return &dc, remoteClient, nil
-			}
-		}
+		return dc, remoteClient, nil
 	}
 
 	return nil, nil, nil
@@ -356,4 +321,68 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 		}
 	}
 	return
+}
+
+func findDcForDeletionWithRemoteClient(ctx context.Context,
+	kcKey client.ObjectKey,
+	dcName string,
+	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, error) {
+
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	dcList := &cassdcapi.CassandraDatacenterList{}
+
+	err := remoteClient.List(ctx, dcList, options)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, dc := range dcList.Items {
+		if dc.Name == dcName {
+			return &dc, nil
+		}
+	}
+	return nil, nil
+}
+
+func finReaperForDeletionWithRemoteClient(ctx context.Context,
+	kcKey client.ObjectKey,
+	dcName, reaperName string,
+	remoteClient client.Client) (*reaperapi.Reaper, error) {
+
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	reaperList := &reaperapi.ReaperList{}
+
+	err := remoteClient.List(ctx, reaperList, options)
+	if err != nil {
+		return nil, err
+	}
+	for _, reaper := range reaperList.Items {
+		if reaper.Name == reaperName {
+			return &reaper, nil
+		}
+	}
+	return nil, nil
+}
+
+func finStargateForDeletionWithRemoteClient(ctx context.Context,
+	kcKey client.ObjectKey,
+	dcName, stargateName string,
+	remoteClient client.Client) (*stargateapi.Stargate, error) {
+
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	stargateList := &stargateapi.StargateList{}
+
+	err := remoteClient.List(ctx, stargateList, options)
+	if err != nil {
+		return nil, err
+	}
+	for _, reaper := range stargateList.Items {
+		if reaper.Name == stargateName {
+			return &reaper, nil
+		}
+	}
+	return nil, nil
 }
