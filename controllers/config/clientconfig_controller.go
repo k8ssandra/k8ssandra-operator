@@ -134,9 +134,11 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
-		if err := initAdditionalCLusterConfig(r, ctx, cCfg, additionalClusters, mgr, watchNamespace); err != nil {
+		c, err := initAdditionalCLusterConfig(r, ctx, cCfg, mgr, watchNamespace)
+		if err != nil {
 			return nil, err
 		}
+		additionalClusters = append(additionalClusters, c)
 	}
 
 	logger.V(1).Info(fmt.Sprintf("Finished initializing %d client configs", len(clientConfigs)))
@@ -159,7 +161,7 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 }
 
 // initAdditionalCLusterConfig fetches the clientConfigs for additional clusters
-func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context, cCfg configapi.ClientConfig, additionalClusters []cluster.Cluster, mgr ctrl.Manager, watchNamespace string) error {
+func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, watchNamespace string) (cluster.Cluster, error) {
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 	namespaces := strings.Split(watchNamespace, ",")
 
@@ -169,14 +171,14 @@ func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context,
 
 	cCfgHash, secretHash, err := calculateHashes(ctx, uncachedClient, cCfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, ClientConfigHashAnnotation, cCfgHash)
 	metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, KubeSecretHashAnnotation, secretHash)
 
 	if err := uncachedClient.Update(ctx, &cCfg); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Add the Secret to the cache
@@ -185,7 +187,7 @@ func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context,
 	// Create clients and add them to the client cache
 	cfg, err := r.ClientCache.GetRestConfig(&cCfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Add cluster to the manager
@@ -203,15 +205,15 @@ func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context,
 		})
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r.ClientCache.AddClient(cCfg.GetContextName(), c.GetClient())
 
 	err = mgr.Add(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	additionalClusters = append(additionalClusters, c)
-	return nil
+
+	return c, nil
 }
