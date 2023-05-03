@@ -153,60 +153,22 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 }
 
 func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
-	kcKey := utils.GetKey(kc)
+	remoteClient := getFirstRemoteClient(r)
 
-	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, dcName, nil)
-	if err != nil {
-		return result.Error(err)
+	// delete Stargate
+	if result := deleteStargate(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+		return result
 	}
 
-	if stargate != nil {
-		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", dcName, err))
-		}
-		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
+	// delete Reaper
+	if result := deleteReaper(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+		return result
 	}
 
-	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dcName, remoteClient)
-	if err != nil {
-		return result.Error(err)
+	// delete the DC
+	if result := deleteDc(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+		return result
 	}
-
-	if reaper != nil {
-		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dcName, err))
-		}
-		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
-	}
-
-	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
-	if err != nil {
-		return result.Error(err)
-	}
-
-	if dc != nil {
-		if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
-			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
-			// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
-			return result.Done()
-		}
-
-		if !annotations.HasAnnotationWithValue(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true") {
-			patch := client.MergeFrom(dc.DeepCopy())
-			annotations.AddAnnotation(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true")
-			if err = remoteClient.Patch(ctx, dc, patch); err != nil {
-				return result.Error(fmt.Errorf("failed to add %s annotation to dc: %v", cassdcapi.DecommissionOnDeleteAnnotation, err))
-			}
-		}
-
-		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
-		}
-		logger.Info("Deleted CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
-		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
-		return result.Done()
-	}
-
 	delete(kc.Status.Datacenters, dcName)
 	logger.Info("DC deletion finished", "DC", dcName)
 	return result.Continue()
@@ -385,4 +347,93 @@ func finStargateForDeletionWithRemoteClient(ctx context.Context,
 		}
 	}
 	return nil, nil
+}
+
+func getFirstRemoteClient(r *K8ssandraClusterReconciler) client.Client {
+	return r.ClientCache.GetAllClients()[0]
+}
+
+func deleteStargate(r *K8ssandraClusterReconciler,
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcName string,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
+	kcKey := utils.GetKey(kc)
+
+	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, dcName, remoteClient)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if stargate != nil {
+		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
+			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", dcName, err))
+		}
+		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
+	}
+	return nil
+}
+
+func deleteReaper(r *K8ssandraClusterReconciler,
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcName string,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
+	kcKey := utils.GetKey(kc)
+
+	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dcName, remoteClient)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if reaper != nil {
+		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
+			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dcName, err))
+		}
+		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
+	}
+	return nil
+}
+
+func deleteDc(r *K8ssandraClusterReconciler,
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	dcName string,
+	remoteClient client.Client,
+	logger logr.Logger) result.ReconcileResult {
+
+	kcKey := utils.GetKey(kc)
+
+	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if dc != nil {
+		if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
+			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
+			// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+			return result.Done()
+		}
+
+		if !annotations.HasAnnotationWithValue(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true") {
+			patch := client.MergeFrom(dc.DeepCopy())
+			annotations.AddAnnotation(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true")
+			if err = remoteClient.Patch(ctx, dc, patch); err != nil {
+				return result.Error(fmt.Errorf("failed to add %s annotation to dc: %v", cassdcapi.DecommissionOnDeleteAnnotation, err))
+			}
+		}
+
+		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
+			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
+		}
+		logger.Info("Deleted CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
+		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+		return result.Done()
+	}
+	return nil
 }
