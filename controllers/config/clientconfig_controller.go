@@ -134,57 +134,9 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
-		// Calculate hashes
-		cCfgName := types.NamespacedName{Name: cCfg.Name, Namespace: cCfg.Namespace}
-		secretName := types.NamespacedName{Name: cCfg.Spec.KubeConfigSecret.Name, Namespace: cCfg.Namespace}
-
-		cCfgHash, secretHash, err := calculateHashes(ctx, uncachedClient, cCfg)
-		if err != nil {
+		if err := initAdditionalCLusterConfig(r, ctx, cCfg, additionalClusters, mgr, watchNamespace); err != nil {
 			return nil, err
 		}
-
-		metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, ClientConfigHashAnnotation, cCfgHash)
-		metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, KubeSecretHashAnnotation, secretHash)
-
-		if err := uncachedClient.Update(ctx, &cCfg); err != nil {
-			return nil, err
-		}
-
-		// Add the Secret to the cache
-		r.secretFilter[secretName] = cCfgName
-
-		// Create clients and add them to the client cache
-		cfg, err := r.ClientCache.GetRestConfig(&cCfg)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add cluster to the manager
-		var c cluster.Cluster
-		if strings.Contains(watchNamespace, ",") {
-			c, err = cluster.New(cfg, func(o *cluster.Options) {
-				o.Scheme = r.Scheme
-				o.Namespace = ""
-				o.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
-			})
-		} else {
-			c, err = cluster.New(cfg, func(o *cluster.Options) {
-				o.Scheme = r.Scheme
-				o.Namespace = watchNamespace
-			})
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		r.ClientCache.AddClient(cCfg.GetContextName(), c.GetClient())
-
-		err = mgr.Add(c)
-		if err != nil {
-			return nil, err
-		}
-
-		additionalClusters = append(additionalClusters, c)
 	}
 
 	logger.V(1).Info(fmt.Sprintf("Finished initializing %d client configs", len(clientConfigs)))
@@ -204,4 +156,62 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 	secretHash := utils.DeepHashString(secret.Data)
 
 	return cfgHash, secretHash, nil
+}
+
+// initAdditionalCLusterConfig fetches the clientConfigs for additional clusters
+func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context, cCfg configapi.ClientConfig, additionalClusters []cluster.Cluster, mgr ctrl.Manager, watchNamespace string) error {
+	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
+	namespaces := strings.Split(watchNamespace, ",")
+
+	// Calculate hashes
+	cCfgName := types.NamespacedName{Name: cCfg.Name, Namespace: cCfg.Namespace}
+	secretName := types.NamespacedName{Name: cCfg.Spec.KubeConfigSecret.Name, Namespace: cCfg.Namespace}
+
+	cCfgHash, secretHash, err := calculateHashes(ctx, uncachedClient, cCfg)
+	if err != nil {
+		return err
+	}
+
+	metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, ClientConfigHashAnnotation, cCfgHash)
+	metav1.SetMetaDataAnnotation(&cCfg.ObjectMeta, KubeSecretHashAnnotation, secretHash)
+
+	if err := uncachedClient.Update(ctx, &cCfg); err != nil {
+		return err
+	}
+
+	// Add the Secret to the cache
+	r.secretFilter[secretName] = cCfgName
+
+	// Create clients and add them to the client cache
+	cfg, err := r.ClientCache.GetRestConfig(&cCfg)
+	if err != nil {
+		return err
+	}
+
+	// Add cluster to the manager
+	var c cluster.Cluster
+	if strings.Contains(watchNamespace, ",") {
+		c, err = cluster.New(cfg, func(o *cluster.Options) {
+			o.Scheme = r.Scheme
+			o.Namespace = ""
+			o.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
+		})
+	} else {
+		c, err = cluster.New(cfg, func(o *cluster.Options) {
+			o.Scheme = r.Scheme
+			o.Namespace = watchNamespace
+		})
+	}
+	if err != nil {
+		return err
+	}
+
+	r.ClientCache.AddClient(cCfg.GetContextName(), c.GetClient())
+
+	err = mgr.Add(c)
+	if err != nil {
+		return err
+	}
+	additionalClusters = append(additionalClusters, c)
+	return nil
 }
