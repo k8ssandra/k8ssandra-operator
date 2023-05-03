@@ -84,18 +84,6 @@ type K8ssandraTaskList struct {
 	Items           []K8ssandraTask `json:"items"`
 }
 
-// globalStatus is an internal struct to hold all the aggregate status info from all Datacenters
-type globalStatus struct {
-	totalActive        int
-	totalSucceeded     int
-	totalFailed        int
-	allComplete        bool
-	anyRunning         bool
-	anyFailed          bool
-	firstStartTime     *metav1.Time
-	lastCompletionTime *metav1.Time
-}
-
 func (t *K8ssandraTask) GetClusterKey() client.ObjectKey {
 	return client.ObjectKey{
 		Namespace: utils.FirstNonEmptyString(t.Spec.Cluster.Namespace, t.Namespace),
@@ -111,16 +99,44 @@ func (t *K8ssandraTask) SetDcStatus(dcName string, dcStatus cassapi.CassandraTas
 }
 
 func (t *K8ssandraTask) RefreshGlobalStatus(expectedDcCount int) {
-	globalStatus := getGlobalStatus(t.Status)
+	firstStartTime := &metav1.Time{}
+	lastCompletionTime := &metav1.Time{}
+	totalActive := 0
+	totalSucceeded := 0
+	totalFailed := 0
+	allComplete := true
+	anyRunning := false
+	anyFailed := false
 
-	t.Status.StartTime = globalStatus.firstStartTime
-	t.Status.Active = globalStatus.totalActive
-	t.Status.Succeeded = globalStatus.totalSucceeded
-	t.Status.Failed = globalStatus.totalFailed
-	t.SetCondition(cassapi.JobRunning, getCondition(globalStatus.anyRunning))
-	t.SetCondition(cassapi.JobFailed, getCondition(globalStatus.anyFailed))
-	if globalStatus.allComplete && len(t.Status.Datacenters) == expectedDcCount {
-		t.Status.CompletionTime = globalStatus.lastCompletionTime
+	for _, dcStatus := range t.Status.Datacenters {
+		if firstStartTime.IsZero() || dcStatus.StartTime.Before(firstStartTime) {
+			firstStartTime = dcStatus.StartTime
+		}
+		if lastCompletionTime.IsZero() || lastCompletionTime.Before(dcStatus.CompletionTime) {
+			lastCompletionTime = dcStatus.CompletionTime
+		}
+		totalActive += dcStatus.Active
+		totalSucceeded += dcStatus.Succeeded
+		totalFailed += dcStatus.Failed
+		if getConditionStatus(dcStatus, cassapi.JobRunning) == corev1.ConditionTrue {
+			anyRunning = true
+		}
+		if getConditionStatus(dcStatus, cassapi.JobFailed) == corev1.ConditionTrue {
+			anyFailed = true
+		}
+		if getConditionStatus(dcStatus, cassapi.JobComplete) != corev1.ConditionTrue {
+			allComplete = false
+		}
+	}
+
+	t.Status.StartTime = firstStartTime
+	t.Status.Active = totalActive
+	t.Status.Succeeded = totalSucceeded
+	t.Status.Failed = totalFailed
+	t.SetCondition(cassapi.JobRunning, toConditionStatus(anyRunning))
+	t.SetCondition(cassapi.JobFailed, toConditionStatus(anyFailed))
+	if allComplete && len(t.Status.Datacenters) == expectedDcCount {
+		t.Status.CompletionTime = lastCompletionTime
 		t.SetCondition(cassapi.JobComplete, corev1.ConditionTrue)
 	}
 }
@@ -176,46 +192,10 @@ func init() {
 	SchemeBuilder.Register(&K8ssandraTask{}, &K8ssandraTaskList{})
 }
 
-// getCondition converts a primitive boolean into a k8s ConditionStatus
-func getCondition(condition bool) corev1.ConditionStatus {
+// toConditionStatus converts a primitive boolean into a k8s ConditionStatus
+func toConditionStatus(condition bool) corev1.ConditionStatus {
 	if condition {
 		return corev1.ConditionTrue
 	}
 	return corev1.ConditionFalse
-}
-
-// getGlobalStatus returns an aggregate status of the Datacenters task statuses
-func getGlobalStatus(t K8ssandraTaskStatus) globalStatus {
-	status := globalStatus{
-		firstStartTime:     &metav1.Time{},
-		lastCompletionTime: &metav1.Time{},
-		totalActive:        0,
-		totalSucceeded:     0,
-		totalFailed:        0,
-		allComplete:        true,
-		anyRunning:         false,
-		anyFailed:          false,
-	}
-
-	for _, dcStatus := range t.Datacenters {
-		if status.firstStartTime.IsZero() || dcStatus.StartTime.Before(status.firstStartTime) {
-			status.firstStartTime = dcStatus.StartTime
-		}
-		if status.lastCompletionTime.IsZero() || status.lastCompletionTime.Before(dcStatus.CompletionTime) {
-			status.lastCompletionTime = dcStatus.CompletionTime
-		}
-		status.totalActive += dcStatus.Active
-		status.totalSucceeded += dcStatus.Succeeded
-		status.totalFailed += dcStatus.Failed
-		if getConditionStatus(dcStatus, cassapi.JobRunning) == corev1.ConditionTrue {
-			status.anyRunning = true
-		}
-		if getConditionStatus(dcStatus, cassapi.JobFailed) == corev1.ConditionTrue {
-			status.anyFailed = true
-		}
-		if getConditionStatus(dcStatus, cassapi.JobComplete) != corev1.ConditionTrue {
-			status.allComplete = false
-		}
-	}
-	return status
 }

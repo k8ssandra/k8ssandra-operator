@@ -33,61 +33,55 @@ func TestRefreshGlobalStatus(t *testing.T) {
 }
 
 func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
-	dcMap := make(map[string]v1alpha1.CassandraTaskStatus, 3)
-	// dc1
-	dc := v1alpha1.CassandraTaskStatus{
-		StartTime: &metav1.Time{
-			Time: time.Date(2023, 6, 13, 13, 13, 13, 13, time.UTC),
+	return map[string]v1alpha1.CassandraTaskStatus{
+		"dc1" : {
+			StartTime: &metav1.Time{
+				Time: time.Date(2023, 6, 13, 13, 13, 13, 13, time.UTC),
+			},
+			CompletionTime: &metav1.Time{
+				Time: time.Date(2023, 6, 14, 14, 14, 14, 14, time.UTC),
+			},
+			Active:    1,
+			Succeeded: 1,
+			Failed:    0,
+			Conditions: []v1alpha1.JobCondition{
+				{
+					Type:   v1alpha1.JobComplete,
+					Status: v1.ConditionTrue,
+				},
+			},
 		},
-		CompletionTime: &metav1.Time{
-			Time: time.Date(2023, 6, 14, 14, 14, 14, 14, time.UTC),
+		"dc2" : {
+			StartTime: &metav1.Time{
+				Time: time.Date(2023, 6, 11, 11, 11, 11, 11, time.UTC),
+			},
+			CompletionTime: &metav1.Time{
+				Time: time.Date(2023, 6, 12, 12, 12, 12, 12, time.UTC),
+			},
+			Active:    0,
+			Succeeded: 0,
+			Failed:    1,
+			Conditions: []v1alpha1.JobCondition{
+				{
+					Type:   v1alpha1.JobFailed,
+					Status: v1.ConditionTrue,
+				},
+			},
 		},
-		Active:    1,
-		Succeeded: 1,
-		Failed:    0,
-		Conditions: []v1alpha1.JobCondition{
-			{
-				Type:   v1alpha1.JobComplete,
-				Status: v1.ConditionTrue,
+		"dc3" : {
+			StartTime: &metav1.Time{
+				Time: time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC),
+			},
+			CompletionTime: nil,
+			Active:         1,
+			Succeeded:      0,
+			Failed:         0,
+			Conditions: []v1alpha1.JobCondition{
+				{
+					Type:   v1alpha1.JobRunning,
+					Status: v1.ConditionTrue,
+				},
 			},
 		},
 	}
-	dcMap["dc1"] = dc
-	// dc2
-	dc = v1alpha1.CassandraTaskStatus{
-		StartTime: &metav1.Time{
-			Time: time.Date(2023, 6, 11, 11, 11, 11, 11, time.UTC),
-		},
-		CompletionTime: &metav1.Time{
-			Time: time.Date(2023, 6, 12, 12, 12, 12, 12, time.UTC),
-		},
-		Active:    0,
-		Succeeded: 0,
-		Failed:    1,
-		Conditions: []v1alpha1.JobCondition{
-			{
-				Type:   v1alpha1.JobFailed,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-	dcMap["dc2"] = dc
-	// dc3
-	dc = v1alpha1.CassandraTaskStatus{
-		StartTime: &metav1.Time{
-			Time: time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC),
-		},
-		CompletionTime: nil,
-		Active:         1,
-		Succeeded:      0,
-		Failed:         0,
-		Conditions: []v1alpha1.JobCondition{
-			{
-				Type:   v1alpha1.JobRunning,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-	dcMap["dc3"] = dc
-	return dcMap
 }
