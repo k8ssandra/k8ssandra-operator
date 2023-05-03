@@ -133,16 +133,8 @@ func (t *K8ssandraTask) RefreshGlobalStatus(expectedDcCount int) {
 	t.Status.Active = totalActive
 	t.Status.Succeeded = totalSucceeded
 	t.Status.Failed = totalFailed
-	if anyRunning {
-		t.SetCondition(cassapi.JobRunning, corev1.ConditionTrue)
-	} else {
-		t.SetCondition(cassapi.JobRunning, corev1.ConditionFalse)
-	}
-	if anyFailed {
-		t.SetCondition(cassapi.JobFailed, corev1.ConditionTrue)
-	} else {
-		t.SetCondition(cassapi.JobFailed, corev1.ConditionFalse)
-	}
+	t.SetCondition(cassapi.JobRunning, toConditionStatus(anyRunning))
+	t.SetCondition(cassapi.JobFailed, toConditionStatus(anyFailed))
 	if allComplete && len(t.Status.Datacenters) == expectedDcCount {
 		t.Status.CompletionTime = lastCompletionTime
 		t.SetCondition(cassapi.JobComplete, corev1.ConditionTrue)
@@ -198,4 +190,12 @@ func getConditionStatus(s cassapi.CassandraTaskStatus, conditionType cassapi.Job
 
 func init() {
 	SchemeBuilder.Register(&K8ssandraTask{}, &K8ssandraTaskList{})
+}
+
+// toConditionStatus converts a primitive boolean into a k8s ConditionStatus
+func toConditionStatus(condition bool) corev1.ConditionStatus {
+	if condition {
+		return corev1.ConditionTrue
+	}
+	return corev1.ConditionFalse
 }
