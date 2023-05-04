@@ -18,7 +18,7 @@ fi
 OPTS=$(getopt -o ho --long clusters:,cluster-prefix:,kind-node-version:,kind-worker-nodes:,output-file:,overwrite,help -n 'setup-kind-multicluster' -- "$@")
 eval set -- "$OPTS"
 
-default_kind_node_version=v1.25.3
+default_kind_node_version=v1.26.3
 
 function help() {
 cat << EOF
