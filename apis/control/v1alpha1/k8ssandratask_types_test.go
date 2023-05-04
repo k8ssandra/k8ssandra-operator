@@ -34,7 +34,7 @@ func TestRefreshGlobalStatus(t *testing.T) {
 
 func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 	return map[string]v1alpha1.CassandraTaskStatus{
-		"dc1" : {
+		"dc1": {
 			StartTime: &metav1.Time{
 				Time: time.Date(2023, 6, 13, 13, 13, 13, 13, time.UTC),
 			},
@@ -51,7 +51,7 @@ func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 				},
 			},
 		},
-		"dc2" : {
+		"dc2": {
 			StartTime: &metav1.Time{
 				Time: time.Date(2023, 6, 11, 11, 11, 11, 11, time.UTC),
 			},
@@ -68,7 +68,7 @@ func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 				},
 			},
 		},
-		"dc3" : {
+		"dc3": {
 			StartTime: &metav1.Time{
 				Time: time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC),
 			},
