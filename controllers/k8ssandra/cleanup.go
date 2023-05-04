@@ -153,20 +153,19 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 }
 
 func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
-	remoteClient := getFirstRemoteClient(r)
 
 	// delete Stargate
-	if result := deleteStargate(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+	if result := r.deleteStargate(ctx, kc, dcName, logger); result != nil {
 		return result
 	}
 
 	// delete Reaper
-	if result := deleteReaper(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+	if result := r.deleteReaper(ctx, kc, dcName, logger); result != nil {
 		return result
 	}
 
 	// delete the DC
-	if result := deleteDc(r, ctx, kc, dcName, remoteClient, logger); result != nil {
+	if result := r.deleteDatacenter(ctx, kc, dcName, logger); result != nil {
 		return result
 	}
 	delete(kc.Status.Datacenters, dcName)
@@ -283,18 +282,13 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 	return
 }
 
-func getFirstRemoteClient(r *K8ssandraClusterReconciler) client.Client {
-	return r.ClientCache.GetAllClients()[0]
-}
-
-func deleteStargate(r *K8ssandraClusterReconciler,
-	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	dcName string,
-	remoteClient client.Client,
-	logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) deleteStargate(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 
 	kcKey := utils.GetKey(kc)
+	remoteClient, err := r.findRemoteClientForStargate(ctx, kcKey, dcName)
+	if err != nil {
+		return result.Error(err)
+	}
 
 	stargate, err := r.findStargateForDeletion(ctx, kcKey, dcName, remoteClient)
 	if err != nil {
@@ -310,14 +304,13 @@ func deleteStargate(r *K8ssandraClusterReconciler,
 	return nil
 }
 
-func deleteReaper(r *K8ssandraClusterReconciler,
-	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	dcName string,
-	remoteClient client.Client,
-	logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) deleteReaper(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 
 	kcKey := utils.GetKey(kc)
+	remoteClient, err := r.findRemoteClientForReaper(ctx, kcKey, dcName)
+	if err != nil {
+		return result.Error(err)
+	}
 
 	reaper, err := r.findReaperForDeletion(ctx, kcKey, dcName, remoteClient)
 	if err != nil {
@@ -333,14 +326,13 @@ func deleteReaper(r *K8ssandraClusterReconciler,
 	return nil
 }
 
-func deleteDc(r *K8ssandraClusterReconciler,
-	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	dcName string,
-	remoteClient client.Client,
-	logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) deleteDatacenter(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 
 	kcKey := utils.GetKey(kc)
+	remoteClient, err := r.findRemoteClientForDc(ctx, kcKey, dcName)
+	if err != nil {
+		return result.Error(err)
+	}
 
 	dc, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
 	if err != nil {
@@ -370,4 +362,63 @@ func deleteDc(r *K8ssandraClusterReconciler,
 		return result.Done()
 	}
 	return nil
+}
+
+func (r *K8ssandraClusterReconciler) findRemoteClientForReaper(ctx context.Context, kcKey client.ObjectKey, dcName string) (client.Client, error) {
+	reaperName := kcKey.Name + "-" + dcName + "-reaper"
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	reaperList := &reaperapi.ReaperList{}
+
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
+		err := remoteClient.List(ctx, reaperList, options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
+		}
+		for _, reaper := range reaperList.Items {
+			if reaper.Name == reaperName {
+				return remoteClient, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (r *K8ssandraClusterReconciler) findRemoteClientForStargate(ctx context.Context, kcKey client.ObjectKey, dcName string) (client.Client, error) {
+	stargateName := kcKey.Name + "-" + dcName + "-stargate"
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	stargateList := &stargateapi.StargateList{}
+
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
+		err := remoteClient.List(ctx, stargateList, options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
+		}
+		for _, stargate := range stargateList.Items {
+			if stargate.Name == stargateName {
+				return remoteClient, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (r *K8ssandraClusterReconciler) findRemoteClientForDc(ctx context.Context, kcKey client.ObjectKey, dcName string) (client.Client, error) {
+	selector := k8ssandralabels.PartOfLabels(kcKey)
+	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
+	dcList := &cassdcapi.CassandraDatacenterList{}
+
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
+		err := remoteClient.List(ctx, dcList, options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
+		}
+		for _, reaper := range dcList.Items {
+			if reaper.Name == dcName {
+				return remoteClient, nil
+			}
+		}
+	}
+	return nil, nil
 }
