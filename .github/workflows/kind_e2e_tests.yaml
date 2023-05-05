@@ -29,7 +29,7 @@ jobs:
       - id: input_or_default
         name: Set Kind node version from workflow input or default
         env:
-          DEFAULT_KIND_NODE_VERSION: v1.27.1
+          DEFAULT_KIND_NODE_VERSION: v1.26.3
         run: |
           if [[ -z "${{ inputs.kind_node_version }}" ]]; then
             echo "kind_node_version=${{ env.DEFAULT_KIND_NODE_VERSION }}" >> $GITHUB_OUTPUT
