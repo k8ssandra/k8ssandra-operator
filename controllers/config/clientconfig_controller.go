@@ -134,7 +134,7 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
-		c, err := initAdditionalCLusterConfig(r, ctx, cCfg, mgr, watchNamespace)
+		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces)
 		if err != nil {
 			return nil, err
 		}
@@ -161,9 +161,8 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 }
 
 // initAdditionalCLusterConfig fetches the clientConfigs for additional clusters
-func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, watchNamespace string) (cluster.Cluster, error) {
+func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, namespaces []string) (cluster.Cluster, error) {
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
-	namespaces := strings.Split(watchNamespace, ",")
 
 	// Calculate hashes
 	cCfgName := types.NamespacedName{Name: cCfg.Name, Namespace: cCfg.Namespace}
@@ -192,7 +191,7 @@ func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context,
 
 	// Add cluster to the manager
 	var c cluster.Cluster
-	if strings.Contains(watchNamespace, ",") {
+	if len(namespaces) > 1 {
 		c, err = cluster.New(cfg, func(o *cluster.Options) {
 			o.Scheme = r.Scheme
 			o.Namespace = ""
@@ -201,7 +200,7 @@ func initAdditionalCLusterConfig(r *ClientConfigReconciler, ctx context.Context,
 	} else {
 		c, err = cluster.New(cfg, func(o *cluster.Options) {
 			o.Scheme = r.Scheme
-			o.Namespace = watchNamespace
+			o.Namespace = namespaces[0]
 		})
 	}
 	if err != nil {
