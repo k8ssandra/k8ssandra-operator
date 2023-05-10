@@ -11,7 +11,7 @@ More information about Vector can be found in the [official documentation](https
 
 ## Enabling Vector agent
 
-Vector agent is enabled by default for Cassandra pods. To enable Vector agent for all the other pods, you need to add a `.spec.cassandra.telemetry` section in the `K8ssandraCluster` manifest:
+Vector agent is enabled by default for Cassandra pods. To enable Vector agent for Stargate and Reaper, you need to add a `.spec.stargate.telemetry` and a `.spec.reaper.telemetry` sections respectively in the `K8ssandraCluster` manifest with `.vector.enabled: true`:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
