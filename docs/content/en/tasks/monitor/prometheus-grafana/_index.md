@@ -160,26 +160,27 @@ The new metrics endpoint doesn't extract os level metrics (cpu, memory, disk, et
 An alternative is to enable Vector instead and include the following components in the Vector configuration:
 
 ```
-hostMetricsSource := telemetryapi.VectorSourceSpec{
-		Name: "host_metrics",
-		Type: "host_metrics",
-		Config: `filesystem.devices.excludes = ["binfmt_misc"]
-filesystem.filesystems.excludes = ["binfmt_misc"]
-filesystem.mountpoints.excludes = ["*/proc/sys/fs/binfmt_misc"]
-scrape_interval_secs = 30`,
-	}
-
-	enrichHostMetricsTransform := telemetryapi.VectorTransformSpec{
-		// We enrich the host metrics with the cluster, datacenter and rack information which are available as env variables in the Vector container
-		Name:   "enrich_host_metrics",
-		Type:   "remap",
-		Inputs: []string{"host_metrics"},
-		Config: `source = """
-.tags.cluster = get_env_var!("CLUSTER_NAME")
-.tags.datacenter = get_env_var!("DATACENTER_NAME")
-.tags.rack = get_env_var!("RACK_NAME")
-"""`,
-	}
+      vector:
+        components:
+          sources:
+            - config: |-
+                filesystem.devices.excludes = ["binfmt_misc"]
+                filesystem.filesystems.excludes = ["binfmt_misc"]
+                filesystem.mountpoints.excludes = ["*/proc/sys/fs/binfmt_misc"]
+                scrape_interval_secs = 30
+              name: host_metrics
+              type: host_metrics
+          transforms:
+            - config: |-
+                source = """
+                .tags.cluster = get_env_var!("CLUSTER_NAME")
+                .tags.datacenter = get_env_var!("DATACENTER_NAME")
+                .tags.rack = get_env_var!("RACK_NAME")
+                """
+              inputs:
+                - host_metrics
+              name: enrich_host_metrics
+              type: remap
 ```
 
 The `enrich_host_metrics` transform then needs to be used as input for a Prometheus remote write sink which will send the metrics to the Prometheus server.
