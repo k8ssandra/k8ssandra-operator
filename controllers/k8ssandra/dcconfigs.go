@@ -2,9 +2,11 @@ package k8ssandra
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
@@ -77,6 +79,15 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// Inject MCAC metrics filters
 		if kc.Spec.Cassandra.Telemetry.IsMcacEnabled() {
 			telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		}
+
+		// The new metrics endpoint is available since 3.11.13 and 4.0.4.
+		// If MCAC is disabled and the new metrics endpoint is not available then we should return an error.
+		mergedTelemetrySpec := MergeTelemetrySpecs(kc, dcTemplate)
+		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(kc.Spec.Cassandra.ServerVersion) && kc.Spec.Cassandra.ServerType == k8ssandraapi.ServerDistributionCassandra {
+			return dcConfigs, errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled")
+		} else {
+			logger.Info("new metrics endpoint is available, so MCAC can be disabled", "serverVersion", kc.Spec.Cassandra.ServerVersion)
 		}
 
 		// Inject Vector agent

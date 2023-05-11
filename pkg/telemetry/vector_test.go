@@ -33,10 +33,10 @@ func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, "server-system-logger", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Memory())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *dcConfig.SystemLoggerResources.Limits.Cpu())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.SystemLoggerResources.Requests.Cpu())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.SystemLoggerResources.Limits.Memory())
+	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.SystemLoggerResources.Requests.Memory())
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {

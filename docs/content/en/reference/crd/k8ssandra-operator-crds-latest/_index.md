@@ -971,9 +971,7 @@ Cassandra is a specification of the Cassandra cluster. This includes everything 
         <td><b><a href="#k8ssandraclusterspeccassandrajmxinitcontainerimage">jmxInitContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster. The default is "busybox:1.34.1".<br/>
-          <br/>
-            <i>Default</i>: map[name:busybox tag:1.34.1]<br/>
+          Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX authentication anymore. The value of this field will be ignored.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -4415,9 +4413,7 @@ VolumeMount describes a mounting of a Volume within a container.
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexjmxinitcontainerimage">jmxInitContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster. The default is "busybox:1.34.1".<br/>
-          <br/>
-            <i>Default</i>: map[name:busybox tag:1.34.1]<br/>
+          Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX authentication anymore. The value of this field will be ignored.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15911,7 +15907,7 @@ VolumeMount describes a mounting of a Volume within a container.
 
 
 
-The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster. The default is "busybox:1.34.1".
+Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX authentication anymore. The value of this field will be ignored.
 
 <table>
     <thead>
@@ -36348,7 +36344,7 @@ VolumeMount describes a mounting of a Volume within a container.
 
 
 
-The image to use in each Cassandra pod for the (short-lived) init container that enables JMX remote authentication on Cassandra pods. This is only useful when authentication is enabled in the cluster. The default is "busybox:1.34.1".
+Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX authentication anymore. The value of this field will be ignored.
 
 <table>
     <thead>
