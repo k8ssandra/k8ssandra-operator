@@ -5,10 +5,8 @@ import (
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -166,11 +164,9 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 		return true
 	}, timeout, interval, "timed out waiting for Vector config map")
 
-	// Check that Vector configuration was set to the SystemLoggerContainer
-	loggerContainerIndex, foundLogger := cassandra.FindContainer(dc.Spec.PodTemplateSpec, reconciliation.SystemLoggerContainerName)
-	require.True(foundLogger)
-	loggerContainer := dc.Spec.PodTemplateSpec.Spec.Containers[loggerContainerIndex]
-	_, foundCPURequest := loggerContainer.Resources.Requests[corev1.ResourceCPU]
+	// Check that Vector configuration was set to the SystemLoggerResources
+	loggerResources := dc.Spec.SystemLoggerResources
+	_, foundCPURequest := loggerResources.Requests[corev1.ResourceCPU]
 	require.True(foundCPURequest)
 
 	// Check that the AdditionalVolumes has VolumeSource

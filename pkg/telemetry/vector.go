@@ -20,9 +20,11 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 	if telemetrySpec.IsVectorEnabled() {
 		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
 		loggerContainer := corev1.Container{
-			Name:      reconciliation.SystemLoggerContainerName,
-			Resources: vector.VectorContainerResources(telemetrySpec),
+			Name: reconciliation.SystemLoggerContainerName,
 		}
+
+		loggerResources := vector.VectorContainerResources(telemetrySpec)
+		dcConfig.SystemLoggerResources = &loggerResources
 
 		if dcConfig.StorageConfig == nil {
 			dcConfig.StorageConfig = &cassdcapi.StorageConfig{}

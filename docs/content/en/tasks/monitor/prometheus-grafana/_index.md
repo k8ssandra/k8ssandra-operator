@@ -144,11 +144,47 @@ test-dc1-stargate-stargate-servicemonitor            5m47s
 ### Install the Grafana dashboards
 
 Grafana will pick up dashboards passed as configmaps that have the label `grafana_dashboard: "1"`.  
-Create the overview, condensed and stargate dashboards (download the manifest [here](grafana-dashboards.yaml)) configmaps:
+**When using MCAC**, create the overview, condensed and stargate dashboards (download the manifest [here](grafana-dashboards.yaml)) configmaps:
 
 ```bash
 kubectl apply -f grafana-dashboards.yaml -n k8ssandra-operator
 ``` 
+
+**When using the new metrics endpoint** (and MCAC is disabled), create the overview, condensed and stargate dashboards (download the manifest [here](grafana-dashboards-new.yaml)) configmaps:
+
+```bash
+kubectl apply -f grafana-dashboards-new.yaml -n k8ssandra-operator
+```
+
+The new metrics endpoint doesn't extract os level metrics (cpu, memory, disk, etc) so the overview dashboard will be missing those metrics by default. The Prometheus node_exporter can be deployed to expose those metrics for scraping, and the corresponding charts will have to be adjusted accordingly in the dashboard.  
+An alternative is to enable Vector instead and include the following components in the Vector configuration:
+
+```
+      vector:
+        components:
+          sources:
+            - config: |-
+                filesystem.devices.excludes = ["binfmt_misc"]
+                filesystem.filesystems.excludes = ["binfmt_misc"]
+                filesystem.mountpoints.excludes = ["*/proc/sys/fs/binfmt_misc"]
+                scrape_interval_secs = 30
+              name: host_metrics
+              type: host_metrics
+          transforms:
+            - config: |-
+                source = """
+                .tags.cluster = get_env_var!("CLUSTER_NAME")
+                .tags.datacenter = get_env_var!("DATACENTER_NAME")
+                .tags.rack = get_env_var!("RACK_NAME")
+                """
+              inputs:
+                - host_metrics
+              name: enrich_host_metrics
+              type: remap
+```
+
+The `enrich_host_metrics` transform then needs to be used as input for a Prometheus remote write sink which will send the metrics to the Prometheus server.
+The resulting metrics will be used by the overview dashboard out of the box without requiring any modification.
 
 You can port-forward the Grafana service to access the dashboard at [http://localhost:3000](http://localhost:3000): `kubectl port-forward svc/grafana-service 3000:3000`
 Log in with the credentials defined in the values file: `admin` / `secret`

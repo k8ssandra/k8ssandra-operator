@@ -14,15 +14,15 @@ K8ssandra includes the following components:
 
 K8ssandra 1.x is configured, packaged, and deployed via Helm charts. Those Helm charts can be found in the [k8ssandra](https://github.com/k8ssandra/k8ssandra) repo.
 
-K8ssandra 2.x will be based on the this operator.
+K8ssandra 2.x will be based on this operator.
 
 One of the primary features of this operator is multi-cluster support which will facilitate multi-region Cassandra clusters.
 
 ## Architecture
-The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It can be used seamlessly in a single-cluster deployments as well.
+The K8ssandra operator is being developed with multi-cluster support first and foremost in mind. It can be used seamlessly in single-cluster deployments as well.
 
-K8sandra Operator consists of a control plane and a data plane.
-The control plane creates and manages object that exist only in the api server. The control plane does not deploy or manage pods. 
+K8ssandra Operator consists of a control plane and a data plane.
+The control plane creates and manages object that exist only in the API server. The control plane does not deploy or manage pods. 
 
 **Note:** The control plane can be installed in only one cluster, i.e., the control plane cluster. 
 
@@ -41,7 +41,7 @@ It is required to have routable pod IPs between Kubernetes clusters; however thi
 
 If you are running in a cloud provider, you can get routable IPs by installing the Kubernetes clusters in the same VPC.
 
-If you run multiple kind clusters locally, you will have routable pod IPs assuming that they run on the same Docker network which is normally the case. We leverage this for our multi-cluster e2e tests.
+If you run multiple kind clusters locally, you will have routable pod IPs assuming that they run on the same Docker network which is normally the case. We leverage this for our multi-cluster E2E tests.
 
 
 <!--
@@ -54,7 +54,7 @@ A kubeconfig entry for a cluster hosted by a cloud provider with include an auth
 -->
 
 ## Installing the operator
-See the install [guide](docs/install/README.md).
+See the install [guide](https://docs.k8ssandra.io/install/).
 
 
 ## Contributing
