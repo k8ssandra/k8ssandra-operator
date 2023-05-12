@@ -54,7 +54,7 @@ A kubeconfig entry for a cluster hosted by a cloud provider with include an auth
 -->
 
 ## Installing the operator
-See the install [guide](docs/install/README.md).
+See the install [guide](https://docs.k8ssandra.io/install/).
 
 
 ## Contributing
