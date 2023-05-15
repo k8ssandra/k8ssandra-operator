@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [DOCS] [#935](https://github.com/k8ssandra/k8ssandra-operator/issues/935) Add and document updated dashboards for the new metrics endpoint
 * [DOCS] [#919](https://github.com/k8ssandra/k8ssandra-operator/issues/919) Improve the release process documentation.
 * [CHANGE] [#601](https://github.com/k8ssandra/k8ssandra-operator/issues/601) Add injection annotation to Cassandra and Reaper pods
+* [ENHANCEMENT] [#965](https://github.com/k8ssandra/k8ssandra-operator/issues/965) Allow for ability to specify containers where webhook will mount secrets

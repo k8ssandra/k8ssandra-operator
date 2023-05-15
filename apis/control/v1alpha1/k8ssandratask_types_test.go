@@ -25,7 +25,7 @@ func TestRefreshGlobalStatus(t *testing.T) {
 	assert.Equal(t, 2, kt.Status.Active)
 	assert.Equal(t, 1, kt.Status.Failed)
 	assert.Equal(t, 1, kt.Status.Succeeded)
-	// assert.Equal(t, 0, kt.Status.StartTime.Compare(time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC)))
+	assert.Equal(t, 0, kt.Status.StartTime.Compare(time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC)))
 	assert.Equal(t, v1.ConditionTrue, kt.GetConditionStatus(v1alpha1.JobRunning))
 	assert.Equal(t, v1.ConditionTrue, kt.GetConditionStatus(v1alpha1.JobFailed))
 	// the test data does not have a completion time, so it should be Unknown
