@@ -83,12 +83,12 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 			Containers: []corev1.Container{{
 				Name: "test",
 				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret",
+					Name:      "mySecret-secret",
 					MountPath: "/my/secret/path",
 				}},
 			}},
 			Volumes: []corev1.Volume{{
-				Name: "mySecret",
+				Name: "mySecret-secret",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: "mySecret",
@@ -139,18 +139,18 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 				Name: "test",
 				VolumeMounts: []corev1.VolumeMount{
 					{
-						Name:      "mySecret",
+						Name:      "mySecret-secret",
 						MountPath: "/my/secret/path",
 					},
 					{
-						Name:      "myOtherSecret",
+						Name:      "myOtherSecret-secret",
 						MountPath: "/my/other/secret/path",
 					},
 				},
 			}},
 			Volumes: []corev1.Volume{
 				{
-					Name: "mySecret",
+					Name: "mySecret-secret",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName: "mySecret",
@@ -158,7 +158,7 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 					},
 				},
 				{
-					Name: "myOtherSecret",
+					Name: "myOtherSecret-secret",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName: "myOtherSecret",
@@ -236,12 +236,12 @@ func TestMutatePodsExpandKey(t *testing.T) {
 			Containers: []corev1.Container{{
 				Name: "test",
 				VolumeMounts: []corev1.VolumeMount{{
-					Name:      "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
+					Name:      "mySecret-cluster2-dc2-r1-sts-0-test-ns-0-secret",
 					MountPath: "/my/secret/path",
 				}},
 			}},
 			Volumes: []corev1.Volume{{
-				Name: "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
+				Name: "mySecret-cluster2-dc2-r1-sts-0-test-ns-0-secret",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: "mySecret-cluster2-dc2-r1-sts-0-test-ns-0",
@@ -263,6 +263,73 @@ func TestMutatePodsExpandKey(t *testing.T) {
 			Containers: []corev1.Container{{
 				Name: "test",
 			}},
+		},
+	}
+
+	p := &podSecretsInjector{}
+
+	ctx := context.Background()
+	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, want, pod)
+}
+
+func TestMutatePodsSpecifyContainer(t *testing.T) {
+	injectionAnnotation := `[{"name": "mySecret", "path": "/my/secret/path", "containers": ["test"]}]`
+
+	want := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "test",
+			Annotations: map[string]string{
+				"k8ssandra.io/inject-secret": injectionAnnotation,
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name: "test",
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "mySecret-secret",
+							MountPath: "/my/secret/path",
+						},
+					},
+				},
+				{
+					Name: "other",
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "mySecret-secret",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "mySecret",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "test",
+			Annotations: map[string]string{
+				"k8ssandra.io/inject-secret": injectionAnnotation,
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name: "test",
+				},
+				{
+					Name: "other",
+				}},
 		},
 	}
 

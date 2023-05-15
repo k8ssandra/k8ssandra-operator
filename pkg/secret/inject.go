@@ -7,18 +7,31 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 )
 
-// e.g. k8ssandra.io/inject-secret: '[{ "secretName": "test-secret", "path": "/etc/test/test-secret" }]'
+// e.g. k8ssandra.io/inject-secret: '[{ "name": "test-secret", "path": "/etc/test/test-secret", "containers": ["c1", "c2"]}]'
 const (
 	SecretInjectionAnnotation = "k8ssandra.io/inject-secret"
 	credentialsMountPath      = "/etc/secrets"
 )
 
 type SecretInjection struct {
-	SecretName string `json:"secretName"`
-	Path       string `json:"path"`
+	SecretName string   `json:"name"`
+	Path       string   `json:"path"`
+	Containers []string `json:"containers,omitempty"`
 }
 
-func AddInjectionAnnotation(t *meta.Tags, secretName string) error {
+func AddInjectionAnnotationCassandraContainers(t *meta.Tags, secretName string) error {
+	return AddInjectionAnnotation(t, secretName, []string{"cassandra"})
+}
+
+func AddInjectionAnnotationMedusaContainers(t *meta.Tags, secretName string) error {
+	return AddInjectionAnnotation(t, secretName, []string{"medusa", "medusa-restore"})
+}
+
+func AddInjectionAnnotationReaperContainers(t *meta.Tags, secretName string) error {
+	return AddInjectionAnnotation(t, secretName, []string{"reaper", "reaper-schema-init"})
+}
+
+func AddInjectionAnnotation(t *meta.Tags, secretName string, containers []string) error {
 	if t.Annotations == nil {
 		t.Annotations = make(map[string]string)
 	}
@@ -34,7 +47,7 @@ func AddInjectionAnnotation(t *meta.Tags, secretName string) error {
 		return nil
 	}
 
-	secretsStr, err := addSecretToAnnotationString(secrets, secretName, fmt.Sprintf("%s/%s", credentialsMountPath, secretName))
+	secretsStr, err := addSecretToAnnotationString(secrets, secretName, fmt.Sprintf("%s/%s", credentialsMountPath, secretName), containers)
 	if err != nil {
 		return err
 	}
@@ -54,10 +67,11 @@ func isSecretIncluded(secrets []SecretInjection, secretName string) bool {
 	return false
 }
 
-func addSecretToAnnotationString(secrets []SecretInjection, secretName string, path string) (string, error) {
+func addSecretToAnnotationString(secrets []SecretInjection, secretName string, path string, containers []string) (string, error) {
 	secret := SecretInjection{
 		SecretName: secretName,
 		Path:       path,
+		Containers: containers,
 	}
 
 	secrets = append(secrets, secret)

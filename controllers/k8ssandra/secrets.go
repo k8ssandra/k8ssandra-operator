@@ -48,7 +48,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 		return result.Error(err)
 	}
 
-	err := secret.AddInjectionAnnotation(&kc.Spec.Cassandra.Meta.Pods, kc.Spec.Cassandra.SuperuserSecretRef.Name)
+	err := secret.AddInjectionAnnotationCassandraContainers(&kc.Spec.Cassandra.Meta.Pods, kc.Spec.Cassandra.SuperuserSecretRef.Name)
 	if err != nil {
 		logger.Error(err, "Failed to add superuser injection annotation")
 		return result.Error(err)

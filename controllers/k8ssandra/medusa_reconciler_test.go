@@ -93,6 +93,8 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
+	verifySecretAnnotationAdded(t, f, ctx, dc1Key, cassandraUserSecret)
+
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.SetCondition(cassdcapi.DatacenterCondition{
@@ -183,6 +185,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
+	verifySecretAnnotationAdded(t, f, ctx, dc2Key, cassandraUserSecret)
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {

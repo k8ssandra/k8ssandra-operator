@@ -11,13 +11,13 @@ import (
 func TestAddInjectionAnnotationEmptyTags(t *testing.T) {
 	tags := meta.Tags{}
 
-	err := AddInjectionAnnotation(&tags, "test-secret")
+	err := AddInjectionAnnotation(&tags, "test-secret", nil)
 	require.NoError(t, err)
 
 	val, ok := tags.Annotations[SecretInjectionAnnotation]
 	assert.True(t, ok)
 
-	expected := `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"}]`
+	expected := `[{"name":"test-secret","path":"/etc/secrets/test-secret"}]`
 	assert.Equal(t, expected, val)
 }
 
@@ -28,13 +28,13 @@ func TestAddInjectionAnnotationNonEmptyTags(t *testing.T) {
 		},
 	}
 
-	err := AddInjectionAnnotation(&tags, "test-secret")
+	err := AddInjectionAnnotation(&tags, "test-secret", nil)
 	require.NoError(t, err)
 
 	val, ok := tags.Annotations[SecretInjectionAnnotation]
 	assert.True(t, ok)
 
-	expected := `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"}]`
+	expected := `[{"name":"test-secret","path":"/etc/secrets/test-secret"}]`
 	assert.Equal(t, expected, val)
 
 	val, ok = tags.Annotations["non-secret-key"]
@@ -45,14 +45,14 @@ func TestAddInjectionAnnotationNonEmptyTags(t *testing.T) {
 func TestAddInjectionAnnotationWithInjectionAnnotationPresent(t *testing.T) {
 	tags := meta.Tags{
 		Annotations: map[string]string{
-			SecretInjectionAnnotation: `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"}]`,
+			SecretInjectionAnnotation: `[{"name":"test-secret","path":"/etc/secrets/test-secret"}]`,
 		},
 	}
 
-	err := AddInjectionAnnotation(&tags, "other-secret")
+	err := AddInjectionAnnotation(&tags, "other-secret", nil)
 	require.NoError(t, err)
 
-	expected := `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"},{"secretName":"other-secret","path":"/etc/secrets/other-secret"}]`
+	expected := `[{"name":"test-secret","path":"/etc/secrets/test-secret"},{"name":"other-secret","path":"/etc/secrets/other-secret"}]`
 	val, ok := tags.Annotations[SecretInjectionAnnotation]
 	assert.True(t, ok)
 	assert.Equal(t, expected, val)
@@ -61,14 +61,14 @@ func TestAddInjectionAnnotationWithInjectionAnnotationPresent(t *testing.T) {
 func TestAddInjectionAnnotationDuplicate(t *testing.T) {
 	tags := meta.Tags{
 		Annotations: map[string]string{
-			SecretInjectionAnnotation: `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"}]`,
+			SecretInjectionAnnotation: `[{"name":"test-secret","path":"/etc/secrets/test-secret"}]`,
 		},
 	}
 
-	err := AddInjectionAnnotation(&tags, "test-secret")
+	err := AddInjectionAnnotation(&tags, "test-secret", nil)
 	require.NoError(t, err)
 
-	expected := `[{"secretName":"test-secret","path":"/etc/secrets/test-secret"}]`
+	expected := `[{"name":"test-secret","path":"/etc/secrets/test-secret"}]`
 	val, ok := tags.Annotations[SecretInjectionAnnotation]
 	assert.True(t, ok)
 	assert.Equal(t, expected, val)
@@ -81,7 +81,7 @@ func TestAddInjectionAnnotationNonJson(t *testing.T) {
 		},
 	}
 
-	err := AddInjectionAnnotation(&tags, "test-secret")
+	err := AddInjectionAnnotation(&tags, "test-secret", nil)
 	require.Error(t, err)
 }
 
