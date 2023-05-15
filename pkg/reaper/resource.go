@@ -57,7 +57,7 @@ func NewReaper(
 			ClientEncryptionStores: kc.Spec.Cassandra.ClientEncryptionStores,
 		},
 	}
-	if kc.Spec.IsAuthEnabled() {
+	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
 		// Reaper: one for CQL and JMX connections, one for the UI. Here we assume that these secrets exist. If the
 		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
@@ -75,11 +75,11 @@ func NewReaper(
 			desiredReaper.Spec.ResourceMeta = &meta.ResourceMeta{}
 		}
 
-		err := secret.AddInjectionAnnotation(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.CassandraUserSecretRef.Name)
+		err := secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.CassandraUserSecretRef.Name)
 		if err != nil {
 			return desiredReaper, err
 		}
-		err = secret.AddInjectionAnnotation(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
+		err = secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
 		if err != nil {
 			return desiredReaper, err
 		}
@@ -97,7 +97,6 @@ func NewReaper(
 			return desiredReaper, err
 		}
 	}
-
 	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the
 	// cluster for Reaper's keyspace. In this case we simply skip schema migration, otherwise Reaper wouldn't be able to
 	// start up.
