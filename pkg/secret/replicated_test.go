@@ -1,12 +1,13 @@
 package secret
 
 import (
+	"testing"
+
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func TestLabelIsSet(t *testing.T) {
@@ -82,6 +83,21 @@ func TestRequiresUpdate(t *testing.T) {
 	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
 
 	currentRepSec.Spec.Selector.MatchLabels = make(map[string]string)
+	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
+}
+
+func TestRequiresUpdateNoContext(t *testing.T) {
+	assert := assert.New(t)
+	kcKey := client.ObjectKey{Namespace: "namespace", Name: "name"}
+	targets := []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}}
+	desiredRepSec := generateReplicatedSecret(kcKey, targets)
+
+	// Labels should allow additional stuff, but must have our desired ones
+	currentRepSec := generateReplicatedSecret(kcKey, targets)
+	assert.False(requiresUpdate(currentRepSec, desiredRepSec))
+
+	targets = []replicationapi.ReplicationTarget{{Namespace: "default", K8sContextName: "cluster-1"}, {Namespace: "dc2"}}
+	desiredRepSec = generateReplicatedSecret(kcKey, targets)
 	assert.True(requiresUpdate(currentRepSec, desiredRepSec))
 }
 

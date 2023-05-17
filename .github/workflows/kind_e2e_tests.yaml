@@ -98,6 +98,7 @@ jobs:
           - ChangeDseWorkload
           - PerNodeConfig/UserDefined
           - RemoveLocalDcFromCluster
+          - AddDcToClusterSameDataplane
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
