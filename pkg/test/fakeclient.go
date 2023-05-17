@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	certmanagerapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -34,6 +35,7 @@ func NewFakeClient(initRuntimeObjs ...runtime.Object) (client.Client, error) {
 	utilruntime.Must(stargateapi.AddToScheme(testScheme))
 	utilruntime.Must(corev1.AddToScheme(testScheme))
 	utilruntime.Must(appsv1.AddToScheme(testScheme))
+	utilruntime.Must(certmanagerapi.AddToScheme(testScheme))
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(testScheme).
 		WithRuntimeObjects(initRuntimeObjs...).
