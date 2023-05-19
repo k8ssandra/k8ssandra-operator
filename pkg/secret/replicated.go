@@ -194,6 +194,19 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 		}
 	}
 
-	// ReplicationTargets must be different to require an update
-	return !reflect.DeepEqual(current.Spec.ReplicationTargets, desired.Spec.ReplicationTargets)
+	// ReplicationTargets must have at least our targets, but additional targets are allowed
+	for desiredTarget := range desired.Spec.ReplicationTargets {
+		found := false
+		for currentTarget := range current.Spec.ReplicationTargets {
+			if reflect.DeepEqual(current.Spec.ReplicationTargets[currentTarget], desired.Spec.ReplicationTargets[desiredTarget]) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return true
+		}
+	}
+
+	return false
 }
