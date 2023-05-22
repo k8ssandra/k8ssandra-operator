@@ -153,7 +153,8 @@ func injectVolume(pod *corev1.Pod, volume corev1.Volume) {
 	}
 }
 
-// injectVolumeMount attaches a volumeMount to all containers in the pod spec
+// injectVolumeMount attaches a volumeMount to the speficied containers. If no containers
+// specified, the volumeMount will be attached to all containers
 func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount, containers []string) {
 	var all bool
 	s := make(map[string]bool)
