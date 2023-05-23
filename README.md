@@ -74,7 +74,3 @@ For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandr
 
 ## Development
 See the development [guide](docs/development/README.md).
-
-## Dependencies
-
-For information on the packaged dependencies of K8ssandra Operator and their licenses, check out our [open source report](https://app.fossa.com/reports/10e82f74-97fd-4b5b-8580-e71239757c1e).
