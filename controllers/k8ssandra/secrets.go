@@ -48,6 +48,12 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 		return result.Error(err)
 	}
 
+	err := secret.AddInjectionAnnotationCassandraContainers(&kc.Spec.Cassandra.Meta.Pods, kc.Spec.Cassandra.SuperuserSecretRef.Name)
+	if err != nil {
+		logger.Error(err, "Failed to add superuser injection annotation")
+		return result.Error(err)
+	}
+
 	return result.Continue()
 }
 
@@ -78,6 +84,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				return result.Error(err)
 			}
 			logger.Info("Reaper user secrets successfully reconciled")
+
 		} else if kc.Spec.IsAuthEnabled() && kc.Spec.UseExternalSecrets() {
 			// Auth is enabled in the cluster, but the SecretsProvider is set to external, so no secret need to
 			// be reconciled. Secrets will be injected into the Reaper pod by the mutating webhook configured by

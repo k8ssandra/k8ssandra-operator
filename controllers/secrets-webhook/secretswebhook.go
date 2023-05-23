@@ -3,6 +3,7 @@ package secrets_webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,14 +66,6 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
-// e.g. k8ssandra.io/inject-secret: '[{ "name": "test-secret", "path": "/etc/test/test-secret" }]'
-const secretInjectionAnnotation = "k8ssandra.io/inject-secret"
-
-type SecretInjection struct {
-	SecretName string `json:"name"`
-	Path       string `json:"path"`
-}
-
 // mutatePods injects the secret mounting configuration into the pod
 func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error {
 	if pod.Annotations == nil {
@@ -79,13 +73,13 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		return nil
 	}
 
-	secretsStr := pod.Annotations[secretInjectionAnnotation]
+	secretsStr := pod.Annotations[secret.SecretInjectionAnnotation]
 	if len(secretsStr) == 0 {
 		logger.Info("no secret annotation exists", "podName", pod.Name, "namespace", pod.Namespace)
 		return nil
 	}
 
-	var secrets []SecretInjection
+	var secrets []secret.SecretInjection
 	if err := json.Unmarshal([]byte(secretsStr), &secrets); err != nil {
 		logger.Error(err, "unable to unmarhsal secrets annotation",
 			"annotation", secretsStr,
@@ -122,10 +116,11 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 			"secret path", mountPath,
 			"podName", pod.Name,
 			"namespace", pod.Namespace,
+			"containers", secret.Containers,
 		)
 
 		volume := corev1.Volume{
-			Name: secretName,
+			Name: fmt.Sprintf("%s-secret", secretName),
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: secretName,
@@ -135,15 +130,16 @@ func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, lo
 		injectVolume(pod, volume)
 
 		volumeMount := corev1.VolumeMount{
-			Name:      secretName,
+			Name:      fmt.Sprintf("%s-secret", secretName),
 			MountPath: mountPath,
 		}
-		injectVolumeMount(pod, volumeMount)
+		injectVolumeMount(pod, volumeMount, secret.Containers)
 		logger.Info("added volume and volumeMount to podSpec",
 			"secret", secretName,
 			"secret path", mountPath,
 			"podName", pod.Name,
 			"namespace", pod.Namespace,
+			"containers", secret.Containers,
 		)
 	}
 
@@ -157,16 +153,33 @@ func injectVolume(pod *corev1.Pod, volume corev1.Volume) {
 	}
 }
 
-// injectVolumeMount attaches a volumeMount to all containers in the pod spec
-func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount) {
+// injectVolumeMount attaches a volumeMount to the speficied containers. If no containers
+// specified, the volumeMount will be attached to all containers
+func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount, containers []string) {
+	var all bool
+	s := make(map[string]bool)
+	if containers == nil || len(containers) == 0 {
+		all = true
+	} else {
+		for _, c := range containers {
+			s[c] = true
+		}
+	}
+
 	for i, container := range pod.Spec.Containers {
-		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
-			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+		if _, ok := s[container.Name]; all || ok {
+			if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
+				pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+			}
 		}
 	}
+
 	for i, container := range pod.Spec.InitContainers {
-		if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
-			pod.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+		if _, ok := s[container.Name]; all || ok {
+			if utils.FindVolumeMount(&container, volumeMount.Name) == nil {
+				pod.Spec.InitContainers[i].VolumeMounts = append(container.VolumeMounts, volumeMount)
+			}
 		}
 	}
+
 }

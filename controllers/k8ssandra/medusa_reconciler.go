@@ -48,7 +48,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
 		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
 		if !kc.Spec.UseExternalSecrets() {
-			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName()))
+			cassandraUserSecretName := medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName())
+			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, cassandraUserSecretName)
+
+			if dcConfig.Meta.Metadata.Pods.Annotations == nil {
+				dcConfig.Meta.Metadata.Pods.Annotations = map[string]string{}
+			}
+			secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Metadata.Pods, cassandraUserSecretName)
 		}
 	} else {
 		logger.Info("Medusa is not enabled")
@@ -79,6 +85,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			return result.Error(err)
 		}
 	}
+
 	logger.Info("Medusa user secrets successfully reconciled")
 	return result.Continue()
 }

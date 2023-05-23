@@ -5,6 +5,8 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +32,7 @@ func NewReaper(
 	kc *k8ssandraapi.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
 	reaperTemplate *reaperapi.ReaperClusterTemplate,
-) *reaperapi.Reaper {
+) (*reaperapi.Reaper, error) {
 	labels := createResourceLabels(kc)
 	var anns map[string]string
 	if m := reaperTemplate.ResourceMeta; m != nil {
@@ -68,6 +70,19 @@ func NewReaper(
 		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
 			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
 		}
+
+		if desiredReaper.Spec.ResourceMeta == nil {
+			desiredReaper.Spec.ResourceMeta = &meta.ResourceMeta{}
+		}
+
+		err := secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.CassandraUserSecretRef.Name)
+		if err != nil {
+			return desiredReaper, err
+		}
+		err = secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
+		if err != nil {
+			return desiredReaper, err
+		}
 	}
 	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the
 	// cluster for Reaper's keyspace. In this case we simply skip schema migration, otherwise Reaper wouldn't be able to
@@ -76,7 +91,7 @@ func NewReaper(
 		desiredReaper.Spec.SkipSchemaMigration = true
 	}
 	annotations.AddHashAnnotation(desiredReaper)
-	return desiredReaper
+	return desiredReaper, nil
 }
 
 // See https://cassandra-reaper.io/docs/usage/multi_dc/.
