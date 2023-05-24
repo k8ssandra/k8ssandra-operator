@@ -213,6 +213,13 @@ func TestOperator(t *testing.T) {
 		testFunc: addDcToCluster,
 		fixture:  framework.NewTestFixture("add-dc", controlPlane),
 	}))
+	t.Run("AddDcToClusterSameDataplane", e2eTest(ctx, &e2eTestOpts{
+		testFunc:             addDcToClusterSameDataplane,
+		fixture:              framework.NewTestFixture("add-dc-cass-only", controlPlane),
+		clusterScoped:        true,
+		additionalNamespaces: []string{"dc2"},
+		sutNamespace:         "k8ssandra-operator",
+	}))
 	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-dc", controlPlane),
@@ -1205,6 +1212,98 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)
+}
+
+func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	assert := assert.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dc1Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc1",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+
+	dcSize := 2
+	t.Log("create keyspaces")
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+	require.NoError(err, "failed to create keyspace")
+
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+	require.NoError(err, "failed to create keyspace")
+
+	t.Log("add dc2 to cluster")
+
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			t.Logf("failed to add DC: failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		kc.Spec.Cassandra.Datacenters = append(kc.Spec.Cassandra.Datacenters, api.CassandraDatacenterTemplate{
+			Meta: api.EmbeddedObjectMeta{
+				Name:      "dc2",
+				Namespace: "dc2",
+			},
+			K8sContext: f.DataPlaneContexts[0],
+			Size:       int32(dcSize),
+		})
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
+
+		err = f.Client.Update(ctx, kc)
+		if err != nil {
+			t.Logf("failed to add DC: %v", err)
+			return false
+		}
+
+		return true
+	}, 30*time.Second, 1*time.Second, "timed out waiting to add DC to K8ssandraCluster")
+
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: "dc2", Name: "dc2"}}
+	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	t.Log("retrieve database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
+	require.NoError(err, "failed to retrieve database credentials")
+
+	t.Log("check that nodes in dc1 see nodes in dc2")
+	pod := DcPrefix(t, f, dc1Key) + "-default-sts-0"
+	count := dcSize * 2
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+
+	t.Log("check nodes in dc2 see nodes in dc1")
+	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], "dc2", pod, count, 0, "-u", username, "-pw", password)
+
+	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
+
+	keyspaces := []string{"system_auth", "ks1", "ks2"}
+	for _, ks := range keyspaces {
+		assert.Eventually(func() bool {
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
+			if err != nil {
+				t.Logf("replication check for keyspace %s failed: %v", ks, err)
+				return false
+			}
+			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
+		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
+	}
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

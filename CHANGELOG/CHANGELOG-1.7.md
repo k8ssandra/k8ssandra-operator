@@ -20,6 +20,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
 * [BUGFIX] [#946](https://github.com/k8ssandra/k8ssandra-operator/issues/946) Fix medusaClient to fetch the pods from correct namespace
 * [BUGFIX] [#940](https://github.com/k8ssandra/k8ssandra-operator/issues/940) Vector resource requirements are correctly set to the server-system-logger and also allow override of server-system-logger resource properties from containers.
+* [BUGFIX] [#973](https://github.com/k8ssandra/k8ssandra-operator/issues/973) ReplicatedSecrets don't get updated when a DC is added in a different namespace but without context
 * [DOCS] [#935](https://github.com/k8ssandra/k8ssandra-operator/issues/935) Add and document updated dashboards for the new metrics endpoint
 * [DOCS] [#919](https://github.com/k8ssandra/k8ssandra-operator/issues/919) Improve the release process documentation.
 * [CHANGE] [#601](https://github.com/k8ssandra/k8ssandra-operator/issues/601) Add injection annotation to Cassandra and Reaper pods

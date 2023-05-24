@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
+	"reflect"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
@@ -12,8 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"math/big"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -181,7 +182,6 @@ func generateReplicatedSecret(kcKey client.ObjectKey, replicationTargets []repli
 
 func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 	// Ensure our labels are there (allow additionals) and our selector is there (nothing else) and replicationTargets has at least our targets
-
 	// Selector must not change
 	if !reflect.DeepEqual(current.Spec.Selector, desired.Spec.Selector) {
 		return true
@@ -194,15 +194,16 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 		}
 	}
 
-	// TargetContexts must have our desired ones, additionals allowed also.
-	currentContexts := make(map[string]bool, len(current.Spec.ReplicationTargets))
-
-	for _, target := range current.Spec.ReplicationTargets {
-		currentContexts[target.K8sContextName] = true
-	}
-
-	for _, target := range desired.Spec.ReplicationTargets {
-		if _, found := currentContexts[target.K8sContextName]; !found {
+	// ReplicationTargets must have at least our targets, but additional targets are allowed
+	for desiredTarget := range desired.Spec.ReplicationTargets {
+		found := false
+		for currentTarget := range current.Spec.ReplicationTargets {
+			if reflect.DeepEqual(current.Spec.ReplicationTargets[currentTarget], desired.Spec.ReplicationTargets[desiredTarget]) {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return true
 		}
 	}
