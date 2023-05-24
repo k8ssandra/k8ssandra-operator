@@ -350,8 +350,9 @@ func TestInitContainerDefaultResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
+	medusaContainer := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
-	UpdateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
@@ -408,8 +409,9 @@ func TestInitContainerCustomResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
+	medusaContainer := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
-	UpdateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
@@ -448,8 +450,9 @@ func TestExternalSecretsFlag(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
+	medusaContainer := CreateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, true, "test", logger)
-	UpdateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	assert.True(t, found, "Couldn't find medusa-restore init container")
@@ -461,4 +464,28 @@ func TestExternalSecretsFlag(t *testing.T) {
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env))
 	assert.Equal(t, "MEDUSA_MODE", dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env[0].Name)
 	assert.Equal(t, "MEDUSA_TMP_DIR", dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Env[1].Name)
+}
+
+func TestGenerateMedusaProbe(t *testing.T) {
+	customProbeSettings := &medusaapi.ProbeSettings{
+		InitialDelaySeconds: 100,
+		TimeoutSeconds:      200,
+		PeriodSeconds:       300,
+		SuccessThreshold:    400,
+		FailureThreshold:    500,
+	}
+
+	customProbe := generateMedusaProbe(customProbeSettings)
+	assert.Equal(t, int32(100), customProbe.InitialDelaySeconds)
+	assert.Equal(t, int32(200), customProbe.TimeoutSeconds)
+	assert.Equal(t, int32(300), customProbe.PeriodSeconds)
+	assert.Equal(t, int32(400), customProbe.SuccessThreshold)
+	assert.Equal(t, int32(500), customProbe.FailureThreshold)
+
+	defaultProbe := generateMedusaProbe(nil)
+	assert.Equal(t, int32(DefaultProbeInitialDelay), defaultProbe.InitialDelaySeconds)
+	assert.Equal(t, int32(DefaultProbeTimeout), defaultProbe.TimeoutSeconds)
+	assert.Equal(t, int32(DefaultProbePeriod), defaultProbe.PeriodSeconds)
+	assert.Equal(t, int32(DefaultProbeSuccessThreshold), defaultProbe.SuccessThreshold)
+	assert.Equal(t, int32(DefaultProbeFailureThreshold), defaultProbe.FailureThreshold)
 }

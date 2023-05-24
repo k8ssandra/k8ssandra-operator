@@ -10,13 +10,17 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -80,6 +84,30 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,
 				},
+				ReadinessProbeSettings: &medusaapi.ProbeSettings{
+					InitialDelaySeconds: 1,
+					TimeoutSeconds:      2,
+					PeriodSeconds:       3,
+					SuccessThreshold:    1,
+					FailureThreshold:    5,
+				},
+				LivenessProbeSettings: &medusaapi.ProbeSettings{
+					InitialDelaySeconds: 6,
+					TimeoutSeconds:      7,
+					PeriodSeconds:       8,
+					SuccessThreshold:    1,
+					FailureThreshold:    10,
+				},
+				Resources: &corev1.ResourceRequirements{
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("1Gi"),
+					},
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("150m"),
+						corev1.ResourceMemory: resource.MustParse("500Mi"),
+					},
+				},
 			},
 		},
 	}
@@ -94,6 +122,28 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
 	verifySecretAnnotationAdded(t, f, ctx, dc1Key, cassandraUserSecret)
+
+	t.Log("check that the standalone Medusa deployment was created in dc1")
+	medusaDeploymentKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
+	medusaDeployment1 := &appsv1.Deployment{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaDeploymentKey1, medusaDeployment1); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+
+	require.True(f.ContainerHasEnvVar(medusaDeployment1.Spec.Template.Spec.Containers[0], "MEDUSA_RESOLVE_IP_ADDRESSES", "False"))
+
+	t.Log("check that the standalone Medusa service was created")
+	medusaServiceKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaServiceName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
+	medusaService1 := &corev1.Service{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaServiceKey1, medusaService1); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
@@ -158,6 +208,26 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
+
+	t.Log("check that the standalone Medusa deployment was created in dc2")
+	medusaDeploymentKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
+	medusaDeployment2 := &appsv1.Deployment{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaDeploymentKey2, medusaDeployment2); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
+
+	t.Log("check that the standalone Medusa service was created in dc2")
+	medusaServiceKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaServiceName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
+	medusaService2 := &corev1.Service{}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, medusaServiceKey2, medusaService2); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval)
 
 	t.Log("check that remote seeds are set on dc2")
 	dc2 = &cassdcapi.CassandraDatacenter{}
@@ -226,6 +296,17 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 
 		return true
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	// Test cluster deletion
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+	// Check that Medusa Standalone deployment and service were deleted
+	f.AssertObjectDoesNotExist(ctx, t, medusaDeploymentKey1, &appsv1.Deployment{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, medusaDeploymentKey2, &appsv1.Deployment{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, medusaServiceKey1, &corev1.Service{}, timeout, interval)
+	f.AssertObjectDoesNotExist(ctx, t, medusaServiceKey2, &corev1.Service{}, timeout, interval)
 }
 
 // Check that all the Medusa related objects have been created and are in the expected state.
@@ -259,8 +340,6 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 		} else {
 			assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_MODE", "RESTORE"), "Wrong MEDUSA_MODE env var for medusa-restore")
 		}
-		assert.True(t, f.ContainerHasEnvVar(container, "CQL_USERNAME", ""), "Missing CQL_USERNAME env var for medusa-restore")
-		assert.True(t, f.ContainerHasEnvVar(container, "CQL_PASSWORD", ""), "Missing CQL_PASSWORD env var for medusa-restore")
 		assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_TMP_DIR", ""), "Missing MEDUSA_TMP_DIR env var for medusa-restore")
 	}
 }

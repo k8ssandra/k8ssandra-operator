@@ -25900,6 +25900,64 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  livenessProbeSettings:
+                    description: Define the liveness probe settings to use for the
+                      Medusa containers.
+                    properties:
+                      failureThreshold:
+                        default: 10
+                        description: The number of failed probes after which the container
+                          will be considered unhealthy.
+                        type: integer
+                      initialDelaySeconds:
+                        default: 10
+                        description: The initial delay for the probe after the container
+                          has started.
+                        type: integer
+                      periodSeconds:
+                        default: 10
+                        description: The period after which the probe will be invoked.
+                        type: integer
+                      successThreshold:
+                        default: 1
+                        description: The number of successful probes after which the
+                          container will be considered healthy.
+                        type: integer
+                      timeoutSeconds:
+                        default: 1
+                        description: The number of seconds after which the probe will
+                          be considered failed.
+                        type: integer
+                    type: object
+                  readinessProbeSettings:
+                    description: Define the readiness probe settings to use for the
+                      Medusa containers.
+                    properties:
+                      failureThreshold:
+                        default: 10
+                        description: The number of failed probes after which the container
+                          will be considered unhealthy.
+                        type: integer
+                      initialDelaySeconds:
+                        default: 10
+                        description: The initial delay for the probe after the container
+                          has started.
+                        type: integer
+                      periodSeconds:
+                        default: 10
+                        description: The period after which the probe will be invoked.
+                        type: integer
+                      successThreshold:
+                        default: 1
+                        description: The number of successful probes after which the
+                          container will be considered healthy.
+                        type: integer
+                      timeoutSeconds:
+                        default: 1
+                        description: The number of seconds after which the probe will
+                          be considered failed.
+                        type: integer
+                    type: object
                   securityContext:
                     description: SecurityContext applied to the Medusa containers.
                     properties:

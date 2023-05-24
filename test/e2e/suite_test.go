@@ -68,6 +68,7 @@ var (
 		k8ssandraClusterStatus  pollingConfig
 		stargateReady           pollingConfig
 		reaperReady             pollingConfig
+		medusaReady             pollingConfig
 		medusaBackupDone        pollingConfig
 		medusaRestoreDone       pollingConfig
 		datacenterUpdating      pollingConfig
@@ -654,6 +655,9 @@ func applyPollingDefaults() {
 
 	polling.cassandraTaskCreated.timeout = 1 * time.Minute
 	polling.cassandraTaskCreated.interval = 3 * time.Second
+
+	polling.medusaReady.timeout = 5 * time.Minute
+	polling.medusaReady.interval = 5 * time.Second
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {

@@ -155,7 +155,7 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 	partOfLabels := labels.CleanedUpByLabels(KlKey)
 	desiredCm.SetLabels(partOfLabels)
 
-	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
+	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm, &KlKey)
 	switch {
 	case recRes.IsError():
 		return recRes
