@@ -39,12 +39,12 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 	resp := p.Handle(context.Background(), req)
 	fmt.Println(fmt.Sprintf("%v", resp))
 	assert.Equal(t, true, resp.AdmissionResponse.Allowed)
-	// 2 patches for addition of volume and volumeMount
+	// 2 patches for addition of volume and volumeMount, but the order of the patches may vary
 	assert.Equal(t, len(resp.Patches), 2)
+	testPasses := (resp.Patches[0].Path == "/spec/volumes" && resp.Patches[1].Path == "/spec/containers/0/volumeMounts") || (resp.Patches[1].Path == "/spec/volumes" && resp.Patches[0].Path == "/spec/containers/0/volumeMounts")
+	assert.True(t, testPasses)
 	assert.Equal(t, resp.Patches[0].Operation, "add")
-	assert.Equal(t, resp.Patches[0].Path, "/spec/volumes")
 	assert.Equal(t, resp.Patches[1].Operation, "add")
-	assert.Equal(t, resp.Patches[1].Path, "/spec/containers/0/volumeMounts")
 }
 
 func TestHandleInjectSecretNoPatch(t *testing.T) {

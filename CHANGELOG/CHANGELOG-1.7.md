@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] [#483](https://github.com/k8ssandra/k8ssandra-operator/issues/483) Deploy a standalone Medusa pod for operator to Medusa direct interactions
 * [CHANGE] [#601](https://github.com/k8ssandra/k8ssandra-operator/issues/601) Add injection annotation to Cassandra and Reaper pods
 * [ENHANCEMENT] [#965](https://github.com/k8ssandra/k8ssandra-operator/issues/965) Allow for ability to specify containers where webhook will mount secrets
 * [ENHANCEMENT] [#932](https://github.com/k8ssandra/k8ssandra-operator/issues/932) Add ability to set variables to the secret-injection annotation. Supported are `POD_NAME`, `POD_NAMESPACE` and `POD_ORDINAL`. Also, changed JSON key from `secretName` to `name`
