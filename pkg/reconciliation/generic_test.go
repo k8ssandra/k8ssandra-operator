@@ -7,6 +7,7 @@ import (
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ var (
 func Test_ReconcileObject_UpdateDone(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	// Launch reconciliation.
-	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
 	assert.True(t, recRes.IsRequeue())
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}
@@ -43,13 +44,13 @@ func Test_ReconcileObject_UpdateDone(t *testing.T) {
 		afterUpdateCM)
 	assert.NoError(t, err)
 	// If we reconcile again, we should move into the Done state.
-	recRes = ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
+	recRes = ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
 	assert.True(t, recRes.IsDone())
 }
 
 func Test_ReconcileObject_CreateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
-	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
 	assert.True(t, recRes.IsRequeue())
 	actualCm := &corev1.ConfigMap{}
 	err := kClient.Get(ctx, types.NamespacedName{Name: desiredObject.Name, Namespace: desiredObject.Namespace}, actualCm)
@@ -58,7 +59,7 @@ func Test_ReconcileObject_CreateSuccess(t *testing.T) {
 func Test_ReconcileObject_CreateFailed(t *testing.T) {
 
 	kClient := testutils.NewCreateFailingFakeClient() // Reset the Client
-	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
 	assert.True(t, recRes.IsError())
 }
 
@@ -74,7 +75,7 @@ func Test_ReconcileObject_UpdateSuccess(t *testing.T) {
 		assert.Fail(t, "could not create initial ConfigMap")
 	}
 	// Launch reconciliation.
-	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
 	assert.True(t, recRes.IsRequeue())
 	annotations.AddHashAnnotation(&desiredObject)
 	// After the update we should see the expected ConfigMap
@@ -94,4 +95,45 @@ func Test_ReconcileObject_UpdateSuccess(t *testing.T) {
 	assert.Equal(t, desiredObject.Data["test-key"], afterUpdateCM.Data["test-key"])
 	assert.Equal(t, desiredObject.Name, afterUpdateCM.Name)
 	assert.Equal(t, desiredObject.Namespace, afterUpdateCM.Namespace)
+}
+
+func Test_ReconcileObject_WithPartOfLabel(t *testing.T) {
+	kcKey := types.NamespacedName{Namespace: "test", Name: "kc"}
+	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
+	// Launch reconciliation.
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, &kcKey)
+	assert.True(t, recRes.IsRequeue())
+	annotations.AddHashAnnotation(&desiredObject)
+	// After the update we should see the expected ConfigMap
+	afterReconcileCM := &corev1.ConfigMap{}
+	err := kClient.Get(ctx,
+		types.NamespacedName{
+			Name:      desiredObject.Name,
+			Namespace: desiredObject.Namespace},
+		afterReconcileCM)
+	assert.NoError(t, err)
+	assert.True(t,
+		labels.IsPartOf(afterReconcileCM, kcKey),
+	)
+}
+
+func Test_ReconcileObject_WithoutPartOfLabel(t *testing.T) {
+	kcKey := types.NamespacedName{Namespace: "test", Name: "kc"}
+	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
+	// Launch reconciliation.
+	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject, nil)
+	assert.True(t, recRes.IsRequeue())
+	annotations.AddHashAnnotation(&desiredObject)
+	// After the update we should see the expected ConfigMap
+	afterReconcileCM := &corev1.ConfigMap{}
+	err := kClient.Get(ctx,
+		types.NamespacedName{
+			Name:      desiredObject.Name,
+			Namespace: desiredObject.Namespace},
+		afterReconcileCM)
+	assert.NoError(t, err)
+	assert.False(t,
+		labels.IsPartOf(afterReconcileCM, kcKey),
+	)
+	assert.False(t, labels.HasLabel(afterReconcileCM, k8ssandraapi.K8ssandraClusterNameLabel))
 }

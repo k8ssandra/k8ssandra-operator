@@ -15,6 +15,7 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -91,6 +92,14 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 		}
 
 		if r.deleteReapers(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
+			hasErrors = true
+		}
+
+		if r.deleteDeployments(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
+			hasErrors = true
+		}
+
+		if r.deleteServices(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 
@@ -355,5 +364,71 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 			}
 		}
 	}
+	return
+}
+
+func (r *K8ssandraClusterReconciler) deleteServices(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	kcLogger logr.Logger,
+) (hasErrors bool) {
+	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	options := client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selector),
+	}
+	serviceList := &corev1.ServiceList{}
+	if err := remoteClient.List(ctx, serviceList, &options); err != nil {
+		kcLogger.Error(err, "Failed to list K8ssandra services", "Context", dcTemplate.K8sContext)
+		return true
+	}
+	for _, rp := range serviceList.Items {
+		kcLogger.Info("Deleting service", "Service", utils.GetKey(&rp))
+		if err := remoteClient.Delete(ctx, &rp); err != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
+			if !errors.IsNotFound(err) {
+				kcLogger.Error(err, "Failed to delete Service", "Service", key,
+					"Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+		}
+	}
+
+	return
+}
+
+func (r *K8ssandraClusterReconciler) deleteDeployments(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	kcLogger logr.Logger,
+) (hasErrors bool) {
+	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	options := client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selector),
+	}
+	deploymentList := &appsv1.DeploymentList{}
+	if err := remoteClient.List(ctx, deploymentList, &options); err != nil {
+		kcLogger.Error(err, "Failed to list K8ssandra deployments", "Context", dcTemplate.K8sContext)
+		return true
+	}
+	for _, item := range deploymentList.Items {
+		kcLogger.Info("Deleting deployment", "Deployment", utils.GetKey(&item))
+		if err := remoteClient.Delete(ctx, &item); err != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
+			if !errors.IsNotFound(err) {
+				kcLogger.Error(err, "Failed to delete Deployment", "Deployment", key,
+					"Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+		}
+	}
+
 	return
 }

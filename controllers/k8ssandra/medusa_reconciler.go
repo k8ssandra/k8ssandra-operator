@@ -44,9 +44,27 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return res
 		}
 
+		medusaContainer := medusa.CreateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
-		medusa.UpdateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
-		medusa.UpdateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
+		medusa.UpdateMedusaMainContainer(dcConfig, medusaContainer)
+
+		// Create required volumes for the Medusa containers
+		volumes, additionalVolumes := medusa.GenerateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
+		for _, volume := range volumes {
+			cassandra.AddOrUpdateVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
+		for _, volume := range additionalVolumes {
+			cassandra.AddOrUpdateAdditionalVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
+
+		// Create the Medusa standalone pod
+		medusaStandalone := medusa.StandaloneMedusaDeployment(medusaContainer, kc.Name, dcConfig.Meta.Name, namespace, logger)
+
+		// Add the volumes previously computed to the Medusa standalone pod
+		for _, volume := range volumes {
+			cassandra.AddOrUpdateVolumeToSpec(&medusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
+		}
+
 		if !kc.Spec.UseExternalSecrets() {
 			cassandraUserSecretName := medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName())
 			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, cassandraUserSecretName)
@@ -56,6 +74,27 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			}
 			secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Metadata.Pods, cassandraUserSecretName)
 		}
+
+		// Reconcile the Medusa standalone deployment
+		kcKey := utils.GetKey(kc)
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaStandalone, &kcKey)
+		switch {
+		case recRes.IsError():
+			return recRes
+		case recRes.IsRequeue():
+			return recRes
+		}
+
+		// Create and reconcile the Medusa service for the standalone deployment
+		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
+		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService, &kcKey)
+		switch {
+		case recRes.IsError():
+			return recRes
+		case recRes.IsRequeue():
+			return recRes
+		}
+
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
@@ -102,7 +141,8 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	if kc.Spec.Medusa != nil {
 		medusaIni := medusa.CreateMedusaIni(kc)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
+		kcKey := utils.GetKey(kc)
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap, &kcKey)
 		switch {
 		case recRes.IsError():
 			return recRes
