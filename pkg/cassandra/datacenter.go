@@ -363,7 +363,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 
 	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
 	dcConfig.Meta.CommonLabels = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonLabels, dcTemplate.Meta.CommonLabels)
-	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
+	dcConfig.Meta.Pods = goalesceutils.MergeCRs(clusterTemplate.Meta.Pods, dcTemplate.Meta.Pods)
 	dcConfig.Meta.ServiceConfig = goalesceutils.MergeCRs(clusterTemplate.Meta.ServiceConfig, dcTemplate.Meta.ServiceConfig)
 
 	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta)
