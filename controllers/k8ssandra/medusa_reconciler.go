@@ -7,11 +7,13 @@ import (
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,7 +46,10 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return res
 		}
 
-		medusaContainer := medusa.CreateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
+		medusaContainer, err := medusa.CreateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
+		if err != nil {
+			return result.Error(err)
+		}
 		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaContainer)
 
@@ -58,11 +63,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create the Medusa standalone pod
-		medusaStandalone := medusa.StandaloneMedusaDeployment(medusaContainer, kc.Name, dcConfig.Meta.Name, namespace, logger)
+		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(medusaContainer, kc.Name, dcConfig.Meta.Name, namespace, logger)
 
 		// Add the volumes previously computed to the Medusa standalone pod
 		for _, volume := range volumes {
-			cassandra.AddOrUpdateVolumeToSpec(&medusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
+			cassandra.AddOrUpdateVolumeToSpec(&desiredMedusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
 
 		if !kc.Spec.UseExternalSecrets() {
@@ -77,7 +82,8 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Reconcile the Medusa standalone deployment
 		kcKey := utils.GetKey(kc)
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaStandalone, &kcKey)
+		desiredMedusaStandalone.SetLabels(labels.PartOfLabels(kcKey))
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredMedusaStandalone)
 		switch {
 		case recRes.IsError():
 			return recRes
@@ -87,7 +93,8 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Create and reconcile the Medusa service for the standalone deployment
 		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
-		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService, &kcKey)
+		medusaService.SetLabels(labels.PartOfLabels(kcKey))
+		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService)
 		switch {
 		case recRes.IsError():
 			return recRes
@@ -95,11 +102,32 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return recRes
 		}
 
+		// Check if the Medusa Standalone deployment is ready, and requeue if not
+		ready, err := r.isMedusaStandaloneReady(ctx, remoteClient, desiredMedusaStandalone)
+		if err != nil {
+			logger.Info("Failed to check if Medusa standalone deployment is ready", "error", err)
+			return result.Error(err)
+		}
+		if !ready {
+			logger.Info("Medusa standalone deployment is not ready yet")
+			return result.RequeueSoon(r.DefaultDelay)
+		}
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
 
 	return result.Continue()
+}
+
+// Check if the Medusa standalone deployment is ready
+func (r *K8ssandraClusterReconciler) isMedusaStandaloneReady(ctx context.Context, remoteClient client.Client, desiredMedusaStandalone *appsv1.Deployment) (bool, error) {
+	// Get the medusa standalone deployment and check the number of ready replicas
+	deplKey := utils.GetKey(desiredMedusaStandalone)
+	medusaStandalone := &appsv1.Deployment{}
+	if err := remoteClient.Get(context.Background(), deplKey, medusaStandalone); err != nil {
+		return false, err
+	}
+	return medusaStandalone.Status.ReadyReplicas > 0, nil
 }
 
 // Generate a secret for Medusa or use the existing one if provided in the spec
@@ -142,7 +170,8 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		medusaIni := medusa.CreateMedusaIni(kc)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
 		kcKey := utils.GetKey(kc)
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap, &kcKey)
+		desiredConfigMap.SetLabels(labels.PartOfLabels(kcKey))
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
 		switch {
 		case recRes.IsError():
 			return recRes

@@ -348,6 +348,32 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
+func (f *E2eFramework) InstallMinioOperator(namespace string) error {
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Install Minio Operator", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.ApplyKustomize(options, "github.com/minio/operator?ref=v5.0.5"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *E2eFramework) CreateMinioTenant(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "minio-tenant.yaml")
+
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Cassandra Encryption secrets", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type OperatorDeploymentConfig struct {
 	Namespace             string
 	ClusterScoped         bool

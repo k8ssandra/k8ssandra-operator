@@ -18,7 +18,9 @@ package medusa
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -46,6 +48,7 @@ const (
 	restoreContainerName = "medusa-restore"
 	backupNameEnvVar     = "BACKUP_NAME"
 	restoreKeyEnvVar     = "RESTORE_KEY"
+	restoreMappingEnvVar = "RESTORE_MAPPING"
 )
 
 // MedusaRestoreJobReconciler reconciles a MedusaRestoreJob object
@@ -104,22 +107,13 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Prepare the restore by placing a mapping file in the Cassandra data volume.
 	if !request.RestoreJob.Status.RestorePrepared {
 		restorePrepared := false
-		if requeue, err := r.prepareRestore(ctx, request); err != nil {
+		if restoreMapping, err := r.prepareRestore(ctx, request); err != nil {
 			logger.Error(err, "Failed to prepare restore")
-			if requeue {
-				return r.applyUpdatesAndRequeue(ctx, request)
-			} else {
-				return ctrl.Result{}, err
-			}
-		} else if requeue {
-			// Operation is still in progress
-			return r.applyUpdatesAndRequeue(ctx, request)
+			return ctrl.Result{}, err
 		} else {
 			restorePrepared = true
 			request.SetMedusaRestorePrepared(restorePrepared)
-		}
-		if !restorePrepared {
-			logger.Error(fmt.Errorf("failed to prepare restore"), request.RestoreJob.Status.RestoreKey)
+			request.SetMedusaRestoreMapping(*restoreMapping)
 			return r.applyUpdatesAndRequeue(ctx, request)
 		}
 	}
@@ -244,44 +238,27 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 	return true, nil
 }
 
-func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest) (bool, error) {
-	// Create a prepare_restore medusa task to create the mapping files in each pod.
-	// Returns true if the reconcile needs to be requeued, false otherwise.
-	prepare := &medusav1alpha1.MedusaTask{}
-	if err := r.Client.Get(context.Background(), types.NamespacedName{Name: request.RestoreJob.Status.RestoreKey, Namespace: request.RestoreJob.Namespace}, prepare); err != nil {
-		if errors.IsNotFound(err) {
-			// Create the sync task
-			prepare = &medusav1alpha1.MedusaTask{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      request.RestoreJob.Status.RestoreKey,
-					Namespace: request.RestoreJob.Namespace,
-				},
-				Spec: medusav1alpha1.MedusaTaskSpec{
-					Operation:           medusav1alpha1.OperationTypePrepareRestore,
-					CassandraDatacenter: request.RestoreJob.Spec.CassandraDatacenter,
-					BackupName:          request.MedusaBackup.ObjectMeta.Name,
-					RestoreKey:          request.RestoreJob.Status.RestoreKey,
-				},
-			}
-			if err := r.Client.Create(context.Background(), prepare); err != nil {
-				return true, err
-			}
-		} else {
-			return true, err
-		}
-	} else {
-		if !prepare.Status.FinishTime.IsZero() {
-			// Prepare is finished
-			return false, nil
-		}
-		if len(prepare.Status.InProgress) == 0 {
-			// No more pods are running the task but finish time is not set.
-			// This means the task failed.
-			return false, fmt.Errorf("prepare restore task failed for restore %s", request.RestoreJob.Name)
-		}
+// prepareRestore prepares the MedusaRestoreMapping for the restore operation.
+// It uses the Medusa client to get the host map for the restore operation, using the Medusa standalone service to get the backup topology.
+func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest) (*medusav1alpha1.MedusaRestoreMapping, error) {
+	medusaClient, err := r.ClientFactory.NewClient(medusaServiceUrl(
+		request.Datacenter.Spec.ClusterName,
+		request.Datacenter.DatacenterName(),
+		request.Datacenter.Namespace))
+	if err != nil {
+		return nil, err
 	}
-	// The operation is still in progress
-	return true, nil
+	restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	medusaRestoreMapping, err := restoreHostMap.ToMedusaRestoreMapping()
+	if err != nil {
+		return nil, err
+	}
+
+	return &medusaRestoreMapping, nil
 }
 
 // stopDatacenter sets the Stopped property in the Datacenter spec to true. Returns true if
@@ -303,10 +280,14 @@ func stopDatacenterRestoreJob(req *medusa.RestoreRequest) bool {
 	return false
 }
 
-// updateRestoreInitContainer sets the backup name and restore key env vars in the restore
+// updateRestoreInitContainer sets the backup name, restore key and restore mapping env vars in the medusa-restore
 // init container. An error is returned if the container is not found.
 func updateMedusaRestoreInitContainer(req *medusa.RestoreRequest) error {
 	if err := setBackupNameInRestoreContainer(req.MedusaBackup.ObjectMeta.Name, req.Datacenter); err != nil {
+		return err
+	}
+
+	if err := setRestoreMappingInRestoreContainer(req.RestoreJob.Status.RestoreMapping, req.Datacenter); err != nil {
 		return err
 	}
 	return setRestoreKeyInRestoreContainer(req.RestoreJob.Status.RestoreKey, req.Datacenter)
@@ -368,6 +349,32 @@ func setRestoreKeyInRestoreContainer(restoreKey string, dc *cassdcapi.CassandraD
 	return nil
 }
 
+func setRestoreMappingInRestoreContainer(restoreMapping medusav1alpha1.MedusaRestoreMapping, dc *cassdcapi.CassandraDatacenter) error {
+	// Marshall the restore mapping to a json string
+	restoreMappingBytes, err := json.Marshal(restoreMapping)
+	if err != nil {
+		return err
+	}
+
+	index, err := getRestoreInitContainerIndex(dc)
+	if err != nil {
+		return err
+	}
+
+	restoreContainer := &dc.Spec.PodTemplateSpec.Spec.InitContainers[index]
+	envVars := restoreContainer.Env
+	envVarIdx := utils.GetEnvVarIndex(restoreMappingEnvVar, envVars)
+
+	if envVarIdx > -1 {
+		envVars[envVarIdx].Value = string(restoreMappingBytes)
+	} else {
+		envVars = append(envVars, corev1.EnvVar{Name: restoreMappingEnvVar, Value: string(restoreMappingBytes)})
+	}
+	restoreContainer.Env = envVars
+
+	return nil
+}
+
 func getRestoreInitContainerIndex(dc *cassdcapi.CassandraDatacenter) (int, error) {
 	spec := dc.Spec.PodTemplateSpec
 	initContainers := &spec.Spec.InitContainers
@@ -379,4 +386,8 @@ func getRestoreInitContainerIndex(dc *cassdcapi.CassandraDatacenter) (int, error
 	}
 
 	return 0, fmt.Errorf("restore initContainer (%s) not found", restoreContainerName)
+}
+
+func medusaServiceUrl(clusterName, dcName, dcNamespace string) string {
+	return net.JoinHostPort(fmt.Sprintf("%s.%s.svc", medusa.MedusaServiceName(clusterName, dcName), dcNamespace), fmt.Sprintf("%d", medusa.DefaultMedusaPort))
 }

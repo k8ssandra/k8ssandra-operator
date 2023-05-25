@@ -160,36 +160,9 @@ type MedusaClusterTemplate struct {
 
 	// Define the readiness probe settings to use for the Medusa containers.
 	// +optional
-	ReadinessProbeSettings *ProbeSettings `json:"readinessProbeSettings,omitempty"`
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 
 	// Define the liveness probe settings to use for the Medusa containers.
 	// +optional
-	LivenessProbeSettings *ProbeSettings `json:"livenessProbeSettings,omitempty"`
-}
-
-type ProbeSettings struct {
-	// The initial delay for the probe after the container has started.
-	// +kubebuilder:default=10
-	// +optional
-	InitialDelaySeconds int `json:"initialDelaySeconds,omitempty"`
-
-	// The period after which the probe will be invoked.
-	// +kubebuilder:default=10
-	// +optional
-	PeriodSeconds int `json:"periodSeconds,omitempty"`
-
-	// The number of failed probes after which the container will be considered unhealthy.
-	// +kubebuilder:default=10
-	// +optional
-	FailureThreshold int `json:"failureThreshold,omitempty"`
-
-	// The number of successful probes after which the container will be considered healthy.
-	// +kubebuilder:default=1
-	// +optional
-	SuccessThreshold int `json:"successThreshold,omitempty"`
-
-	// The number of seconds after which the probe will be considered failed.
-	// +kubebuilder:default=1
-	// +optional
-	TimeoutSeconds int `json:"timeoutSeconds,omitempty"`
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 }

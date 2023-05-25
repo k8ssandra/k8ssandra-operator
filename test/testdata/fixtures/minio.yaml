@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-user-0
+  namespace: k8ssandra-operator
+immutable: true
+type: Opaque
+data:
+  CONSOLE_ACCESS_KEY: UDJRRW52Z2Y2MlNRcDZpSw==
+  CONSOLE_SECRET_KEY: eW5NQUNEMmpQRW92WWxxU2VNTVkyVGtPbGI3MGd2MUs=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-tls
+  namespace: k8ssandra-operator
+type: Opaque
+data:
+  private.key: >-
+    LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JR0hBZ0VBTUJNR0J5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEJHMHdhd0lCQVFRZ0preG1uM3Y4SHRBQldsTHYKTkdhaUdNSGdlNmdBT3BEbjhsWXYyeUJ6d1craFJBTkNBQVRockJjdThBWGpVOUtKOEI4Zld2dWw4YmN6WldPVgpOaks0K3kxOXdLS1U3cGlYck9wTXM4a1V5bnJFbXljME11bXBYUFVtbHM0S1E0M01pc2RXYmEzQgotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==
+  public.crt: >-
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURGRENDQWZ5Z0F3SUJBZ0lRSWdUalJyUC92L25mNVM4Y1pyQ2k3akFOQmdrcWhraUc5dzBCQVFzRkFEQVYKTVJNd0VRWURWUVFERXdwcmRXSmxjbTVsZEdWek1CNFhEVEl6TURZd01URTBOREV6TUZvWERUSTBNRFV6TVRFMApOREV6TUZvd1R6RVZNQk1HQTFVRUNoTU1jM2x6ZEdWdE9tNXZaR1Z6TVRZd05BWURWUVFEREMxemVYTjBaVzA2CmJtOWtaVG9xTG5SbGMzUXRhR3d1YldsdWFXOHVjM1pqTG1Oc2RYTjBaWEl1Ykc5allXd3dXVEFUQmdjcWhrak8KUFFJQkJnZ3Foa2pPUFFNQkJ3TkNBQVRockJjdThBWGpVOUtKOEI4Zld2dWw4YmN6WldPVk5qSzQreTE5d0tLVQo3cGlYck9wTXM4a1V5bnJFbXljME11bXBYUFVtbHM0S1E0M01pc2RXYmEzQm80SHdNSUh0TUE0R0ExVWREd0VCCi93UUVBd0lGb0RBVEJnTlZIU1VFRERBS0JnZ3JCZ0VGQlFjREFUQU1CZ05WSFJNQkFmOEVBakFBTUI4R0ExVWQKSXdRWU1CYUFGSVo2OWdVSUhDNy9iV1I5dlo1SHlOSXFpT3pPTUlHV0JnTlZIUkVFZ1k0d2dZdUNMWFJsYzNRdApjRzl2YkMwd0xUQXVkR1Z6ZEMxb2JDNXRhVzVwYnk1emRtTXVZMngxYzNSbGNpNXNiMk5oYklJZGJXbHVhVzh1CmJXbHVhVzh1YzNaakxtTnNkWE4wWlhJdWJHOWpZV3lDQzIxcGJtbHZMbTFwYm1sdmdnOXRhVzVwYnk1dGFXNXAKYnk1emRtT0NBaW91Z2hrcUxtMXBibWx2TG5OMll5NWpiSFZ6ZEdWeUxteHZZMkZzTUEwR0NTcUdTSWIzRFFFQgpDd1VBQTRJQkFRQ0RmTVBhc212bE1pUHdEWUNyaGNiQnFrZnZ3aEZBOHJFTU9Ya1dHMHV1aDlsZ296dmx4dzc0Cm5RaUdnMzZFOEZobjdJbHorcWgzeC9DUExIRHk0Y3BUU2NwQW85SWxuSXZ5S3QzY2Q5bUFBeVBNbGZpK25UbjQKVytndTA5WmJ2Y1ZzVDkwRHBERlRoZ043RHNMODQ1VC95U28zN2VULy81WklYZ1NXaTFFbVlkR1U2L05GUHIwUQpQaldDb1JidVR1bnEzVnlMTk1FZG91WUxjQnFnd2pDRjQwaVJOb2dQQUVTcWVTV3RneFpiZ0NJcnpibktnbGFUCldlOFFYKzNHTzZ6cWtwamw1dHZwc0c2SElnTzVoM2o0STI4anR3V2xDa2llTS9XQWRNUWZkQkVqelFKbzZ2S3gKYWlGamdINWkwbGlHbmt1VUUrcEFTZnY5MUwzZnZrWnoKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+  namespace: k8ssandra-operator
+type: Opaque
+data:
+  accesskey: ''
+  secretkey: ''
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-env-configuration
+  namespace: k8ssandra-operator
+type: Opaque
+data:
+  config.env: >-
+    ZXhwb3J0IE1JTklPX0JST1dTRVI9Im9uIgpleHBvcnQgTUlOSU9fUk9PVF9VU0VSPSJLQlJTS1laR0dZWENQVVJNIgpleHBvcnQgTUlOSU9fUk9PVF9QQVNTV09SRD0iTVlVTkdPVFpJS0ZSR1pUNVpMUlJGS0ZWSjVKTkdVVlMiCmV4cG9ydCBNSU5JT19TVE9SQUdFX0NMQVNTX1NUQU5EQVJEPSJFQzo0Igo=
+---
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: test
+  namespace: k8ssandra-operator
+spec:
+  configuration:
+    name: test-env-configuration
+  credsSecret:
+    name: test-secret
+  exposeServices:
+    console: false
+    minio: true
+  image: minio/minio:RELEASE.2023-05-27T05-56-19Z
+  imagePullSecret: {}
+  mountPath: /export
+  pools:
+    - affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: v1.min.io/tenant
+                    operator: In
+                    values:
+                      - test
+                  - key: v1.min.io/pool
+                    operator: In
+                    values:
+                      - pool-0
+              topologyKey: kubernetes.io/hostname
+      name: pool-0
+      resources:
+        requests:
+          cpu: '2'
+          memory: 2Gi
+      runtimeClassName: ''
+      servers: 1
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: '1073741824'
+          storageClassName: standard
+        status: {}
+      volumesPerServer: 1
+  requestAutoCert: true
+  users:
+    - name: test-user-0
+scheduler:
+  name: ''

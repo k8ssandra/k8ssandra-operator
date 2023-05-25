@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	pkgtest "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type mockgRPCClient struct{}
@@ -52,6 +52,26 @@ func (client mockgRPCClient) GetBackups(ctx context.Context) ([]*BackupSummary, 
 	}, nil
 }
 
+func (c mockgRPCClient) Close() error {
+	return nil
+}
+
+func (c mockgRPCClient) CreateBackup(ctx context.Context, name string, backupType string) error {
+	return nil
+}
+
+func (c mockgRPCClient) PurgeBackups(ctx context.Context) (*PurgeBackupsResponse, error) {
+	return nil, nil
+}
+
+func (c mockgRPCClient) BackupStatus(ctx context.Context, name string) (*BackupStatusResponse, error) {
+	return nil, nil
+}
+
+func (c mockgRPCClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*PrepareRestoreResponse, error) {
+	return nil, nil
+}
+
 func TestGetSourceRacksIPs(t *testing.T) {
 	mockgRPCClient := mockgRPCClient{}
 	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
@@ -67,23 +87,24 @@ func TestGetSourceRacksIPs(t *testing.T) {
 }
 
 func TestGetTargetRackFQDNs(t *testing.T) {
-	kluster := pkgtest.NewK8ssandraCluster("test-cluster", "default")
-	kluster.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
-		{
-			Meta: k8ssandraapi.EmbeddedObjectMeta{
-				Name:      "test-dc2",
-				Namespace: "default",
-			},
-			Size: 3,
+	cassDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dc2",
+			Namespace: "default",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName: "test-cluster",
+			Size:        3,
 		},
 	}
-	result, err := getTargetRackFQDNs(kluster, "test-dc2")
+
+	result, err := getTargetRackFQDNs(cassDc)
 	assert.NoError(t, err, err)
 	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "default", DC: "test-dc2"}: {"test-cluster-test-dc2-default-sts-0", "test-cluster-test-dc2-default-sts-1", "test-cluster-test-dc2-default-sts-2"},
 	}
 	assert.Equal(t, expectedSourceRacks, result)
-	kluster.Spec.Cassandra.Racks = []cassdcapi.Rack{
+	cassDc.Spec.Racks = []cassdcapi.Rack{
 		{Name: "rack1"},
 		{Name: "rack2"},
 		{Name: "rack3"},
@@ -93,7 +114,7 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 		{Rack: "rack2", DC: "test-dc2"}: {"test-cluster-test-dc2-rack2-sts-0"},
 		{Rack: "rack3", DC: "test-dc2"}: {"test-cluster-test-dc2-rack3-sts-0"},
 	}
-	result, err = getTargetRackFQDNs(kluster, "test-dc2")
+	result, err = getTargetRackFQDNs(cassDc)
 	assert.NoError(t, err, err)
 	assert.Equal(t, expectedSourceRacks, result)
 }
@@ -102,20 +123,21 @@ func TestGetHostMap(t *testing.T) {
 	// Fixtures
 	mockgRPCClient := mockgRPCClient{}
 	ctx := context.Background()
-	kluster := pkgtest.NewK8ssandraCluster("test-cluster", "default")
-	kluster.Spec.Cassandra.Datacenters = []k8ssandraapi.CassandraDatacenterTemplate{
-		{
-			Meta: k8ssandraapi.EmbeddedObjectMeta{
-				Name:      "test-dc1",
-				Namespace: "default",
-			},
-			Size: 3,
+
+	cassDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dc1",
+			Namespace: "default",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName: "test-cluster",
+			Size:        3,
 		},
 	}
 	/////////////////////////////////////////////// Test with all nodes in one rack. /////////////////////////////////////////////////
 	// Using DC = "test-dc-1" here because that's the DC we defined in the fixture above which has all nodes in a single rack.
 	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc1", "test-cluster")
-	result, err := GetHostMap(kluster, *medusaBackup, mockgRPCClient, ctx)
+	result, err := GetHostMap(cassDc, *medusaBackup, mockgRPCClient, ctx)
 	assert.NoError(t, err, err)
 	expected := HostMappingSlice{
 		{
@@ -134,13 +156,14 @@ func TestGetHostMap(t *testing.T) {
 	assert.Equal(t, expected, result)
 	///////////////////////////////////////////// Test with nodes split over three racks. ////////////////////////////////////////////
 	// Define racks on DC
-	kluster.Spec.Cassandra.Racks = []cassdcapi.Rack{
+	cassDc.Spec.Racks = []cassdcapi.Rack{
 		{Name: "rack1"},
 		{Name: "rack2"},
 		{Name: "rack3"},
 	}
 	// Make DC name = "test-dc2" which is our test DC which has racks.
-	kluster.Spec.Cassandra.Datacenters[0].Meta.Name = "test-dc2"
+	medusaBackup = pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
+	cassDc.ObjectMeta.Name = "test-dc2"
 	expected = HostMappingSlice{
 		{
 			Source: "192.168.1.5",
@@ -155,7 +178,7 @@ func TestGetHostMap(t *testing.T) {
 			Target: "test-cluster-test-dc2-rack3-sts-0",
 		},
 	}
-	result, err = GetHostMap(kluster, *medusaBackup, mockgRPCClient, ctx)
+	result, err = GetHostMap(cassDc, *medusaBackup, mockgRPCClient, ctx)
 	assert.NoError(t, err, err)
 	assert.Equal(t, expected, result)
 }

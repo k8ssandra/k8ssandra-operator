@@ -3,8 +3,10 @@ package medusa
 import (
 	"bytes"
 	"fmt"
+	reflect "reflect"
 	"text/template"
 
+	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -21,9 +23,9 @@ import (
 )
 
 const (
-	DefaultMedusaImageRepository = "k8ssandra"
+	DefaultMedusaImageRepository = "alexdejanovski269"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.13.4"
+	DefaultMedusaVersion         = "env-restore-mapping3"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
@@ -200,7 +202,7 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 	}
 }
 
-func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) *corev1.Container {
+func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) (*corev1.Container, error) {
 	medusaContainer := &corev1.Container{Name: "medusa"}
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
@@ -213,12 +215,20 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		},
 	}
 
-	medusaContainer.ReadinessProbe = generateMedusaProbe(medusaSpec.ReadinessProbeSettings)
-	medusaContainer.LivenessProbe = generateMedusaProbe(medusaSpec.LivenessProbeSettings)
+	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe)
+	if err != nil {
+		return nil, err
+	}
+	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe)
+	if err != nil {
+		return nil, err
+	}
 
+	medusaContainer.ReadinessProbe = readinessProbe
+	medusaContainer.LivenessProbe = livenessProbe
 	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
-	return medusaContainer
+	return medusaContainer, nil
 }
 
 func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaContainer *corev1.Container) {
@@ -305,6 +315,14 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExt
 		{
 			Name:  "MEDUSA_TMP_DIR",
 			Value: "/var/lib/cassandra",
+		},
+		{
+			Name: "POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
 		},
 	}
 
@@ -481,7 +499,7 @@ func MedusaServiceName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-service", clusterName, dcName)
 }
 
-func MedusaStandalonePodName(clusterName string, dcName string) string {
+func MedusaStandaloneDeploymentName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-standalone", clusterName, dcName)
 }
 
@@ -491,20 +509,20 @@ func StandaloneMedusaDeployment(medusaContainer *corev1.Container, clusterName, 
 	medusaStandaloneContainer.Env = append(medusaStandaloneContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
 	medusaDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaStandalonePodName(clusterName, dcName),
+			Name:      MedusaStandaloneDeploymentName(clusterName, dcName),
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": MedusaStandalonePodName(clusterName, dcName),
+					"app": MedusaStandaloneDeploymentName(clusterName, dcName),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": MedusaStandalonePodName(clusterName, dcName),
+						"app": MedusaStandaloneDeploymentName(clusterName, dcName),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -512,7 +530,7 @@ func StandaloneMedusaDeployment(medusaContainer *corev1.Container, clusterName, 
 						*medusaStandaloneContainer.DeepCopy(),
 					},
 					Volumes:  []corev1.Volume{},
-					Hostname: MedusaStandalonePodName(clusterName, dcName),
+					Hostname: MedusaStandaloneDeploymentName(clusterName, dcName),
 				},
 			},
 		},
@@ -549,7 +567,7 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 				},
 			},
 			Selector: map[string]string{
-				"app": MedusaStandalonePodName(clusterName, dcConfig.Meta.Name),
+				"app": MedusaStandaloneDeploymentName(clusterName, dcConfig.Meta.Name),
 			},
 		},
 	}
@@ -557,7 +575,24 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 	return medusaService
 }
 
-func generateMedusaProbe(configuredProbeSettings *api.ProbeSettings) *corev1.Probe {
+func generateMedusaProbe(configuredProbe *corev1.Probe) (*corev1.Probe, error) {
+	// Goalesce the custom probe with the default probe,
+	defaultProbe := defaultMedusaProbe()
+	if configuredProbe == nil {
+		return defaultProbe, nil
+	}
+	mergedProbe := goalesce.MustDeepMerge(*defaultProbe, *configuredProbe)
+	if !reflect.DeepEqual(defaultProbe.ProbeHandler, mergedProbe.ProbeHandler) {
+		// If the user has configured a custom probe, use it
+		// Otherwise, use the default probe
+		return nil, fmt.Errorf("invalid probe configuration. You should not modify the probe handler.")
+	}
+
+	return &mergedProbe, nil
+}
+
+func defaultMedusaProbe() *corev1.Probe {
+	// Goalesce the custom probe with the default probe,
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
@@ -569,24 +604,6 @@ func generateMedusaProbe(configuredProbeSettings *api.ProbeSettings) *corev1.Pro
 		PeriodSeconds:       DefaultProbePeriod,
 		SuccessThreshold:    DefaultProbeSuccessThreshold,
 		FailureThreshold:    DefaultProbeFailureThreshold,
-	}
-
-	if configuredProbeSettings != nil {
-		if configuredProbeSettings.InitialDelaySeconds > 0 {
-			probe.InitialDelaySeconds = int32(configuredProbeSettings.InitialDelaySeconds)
-		}
-		if configuredProbeSettings.TimeoutSeconds > 0 {
-			probe.TimeoutSeconds = int32(configuredProbeSettings.TimeoutSeconds)
-		}
-		if configuredProbeSettings.PeriodSeconds > 0 {
-			probe.PeriodSeconds = int32(configuredProbeSettings.PeriodSeconds)
-		}
-		if configuredProbeSettings.SuccessThreshold > 0 {
-			probe.SuccessThreshold = int32(configuredProbeSettings.SuccessThreshold)
-		}
-		if configuredProbeSettings.FailureThreshold > 0 {
-			probe.FailureThreshold = int32(configuredProbeSettings.FailureThreshold)
-		}
 	}
 
 	return probe

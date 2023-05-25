@@ -11,6 +11,7 @@ import (
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,14 +85,14 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,
 				},
-				ReadinessProbeSettings: &medusaapi.ProbeSettings{
+				ReadinessProbe: &corev1.Probe{
 					InitialDelaySeconds: 1,
 					TimeoutSeconds:      2,
 					PeriodSeconds:       3,
 					SuccessThreshold:    1,
 					FailureThreshold:    5,
 				},
-				LivenessProbeSettings: &medusaapi.ProbeSettings{
+				LivenessProbe: &corev1.Probe{
 					InitialDelaySeconds: 6,
 					TimeoutSeconds:      7,
 					PeriodSeconds:       8,
@@ -117,6 +118,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	require.NoError(err, "failed to create K8ssandraCluster")
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -124,7 +126,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	verifySecretAnnotationAdded(t, f, ctx, dc1Key, cassandraUserSecret)
 
 	t.Log("check that the standalone Medusa deployment was created in dc1")
-	medusaDeploymentKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
+	medusaDeploymentKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandaloneDeploymentName("test", "dc1")}, K8sContext: f.DataPlaneContexts[0]}
 	medusaDeployment1 := &appsv1.Deployment{}
 	require.Eventually(func() bool {
 		if err := f.Get(ctx, medusaDeploymentKey1, medusaDeployment1); err != nil {
@@ -206,11 +208,12 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
 	}, timeout, interval, "failed to update dc1 generation")
 
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc2", f.DataPlaneContexts[1])
 	t.Log("check that dc2 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	t.Log("check that the standalone Medusa deployment was created in dc2")
-	medusaDeploymentKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandalonePodName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
+	medusaDeploymentKey2 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandaloneDeploymentName("test", "dc2")}, K8sContext: f.DataPlaneContexts[1]}
 	medusaDeployment2 := &appsv1.Deployment{}
 	require.Eventually(func() bool {
 		if err := f.Get(ctx, medusaDeploymentKey2, medusaDeployment2); err != nil {
@@ -342,4 +345,45 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 		}
 		assert.True(t, f.ContainerHasEnvVar(container, "MEDUSA_TMP_DIR", ""), "Missing MEDUSA_TMP_DIR env var for medusa-restore")
 	}
+}
+
+func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcName string, k8sContext string) {
+	t.Log("check ReplicatedSecret reconciled")
+
+	medusaDepl := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName),
+			Namespace: kc.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName)},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName)},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName),
+							Image: "quay.io/k8ssandra/medusa:0.11.0",
+						},
+					},
+				},
+			},
+		},
+	}
+	medusaKey := framework.ClusterKey{NamespacedName: utils.GetKey(medusaDepl), K8sContext: k8sContext}
+	f.Create(ctx, medusaKey, medusaDepl)
+
+	actualMedusaDepl := &appsv1.Deployment{}
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, medusaKey, actualMedusaDepl)
+		return err == nil
+	}, timeout, interval, "failed to get Medusa Deployment")
+
+	err := f.SetMedusaDeplReadyReplicas(ctx, medusaKey)
+
+	require.NoError(t, err, "Failed to update Medusa Deployment status")
 }

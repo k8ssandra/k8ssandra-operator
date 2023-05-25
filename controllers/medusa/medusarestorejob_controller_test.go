@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -9,8 +10,10 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +27,7 @@ const (
 
 func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	err := f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
+	f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
 	k8sCtx0 := f.DataPlaneContexts[0]
 
 	kc := &k8ss.K8ssandraCluster{
@@ -69,10 +72,11 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	}
 
 	t.Log("Creating k8ssandracluster with Medusa")
-	err = f.Client.Create(ctx, kc)
+	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -198,6 +202,13 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 			return false
 		}
 
+		envVar = utils.FindEnvVar(restoreContainer.Env, "RESTORE_MAPPING")
+		t.Logf("restore mapping: %v", envVar)
+		if envVar == nil || envVar.Value == "" {
+			t.Logf("restore mapping not foun d in restore container: %v", restoreContainer.Env)
+			return false
+		}
+
 		envVar = utils.FindEnvVar(restoreContainer.Env, "RESTORE_KEY")
 		t.Logf("restore key: %v", envVar)
 		return envVar != nil
@@ -269,4 +280,87 @@ func findContainer(containers []corev1.Container, name string) *corev1.Container
 		}
 	}
 	return nil
+}
+
+func TestMedusaServiceAddress(t *testing.T) {
+	serviceUrl := medusaServiceUrl("k8c-cluster", "dc1", "dc-namespace")
+	assert.Equal(t, "k8c-cluster-dc1-medusa-service.dc-namespace.svc:50051", serviceUrl)
+}
+
+type fakeMedusaRestoreClientFactory struct {
+	clientsMutex sync.Mutex
+	clients      map[string]*fakeMedusaRestoreClient
+}
+
+func NewMedusaRestoreClientFactory() *fakeMedusaRestoreClientFactory {
+	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
+}
+
+func NewMedusaClientRestoreFactory() *fakeMedusaRestoreClientFactory {
+	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
+}
+
+func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Client, error) {
+	f.clientsMutex.Lock()
+	defer f.clientsMutex.Unlock()
+	_, ok := f.clients[address]
+	if !ok {
+		f.clients[address] = newFakeMedusaRestoreClient()
+	}
+	return f.clients[address], nil
+}
+
+type fakeMedusaRestoreClient struct {
+}
+
+func newFakeMedusaRestoreClient() *fakeMedusaRestoreClient {
+	return &fakeMedusaRestoreClient{}
+}
+
+func (c *fakeMedusaRestoreClient) Close() error {
+	return nil
+}
+
+func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string, backupType string) error {
+	return nil
+}
+
+func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
+	return []*medusa.BackupSummary{
+		{
+			BackupName: restoredBackupName,
+			StartTime:  0,
+			FinishTime: 10,
+			Status:     *medusa.StatusType_SUCCESS.Enum(),
+			Nodes: []*medusa.BackupNode{
+				{
+					Host: "node1", Datacenter: "dc1", Rack: "rack1",
+				},
+				{
+					Host: "node2", Datacenter: "dc1", Rack: "rack1",
+				},
+				{
+					Host: "node3", Datacenter: "dc1", Rack: "rack1",
+				},
+			},
+		},
+	}, nil
+}
+
+func (c *fakeMedusaRestoreClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+	response := &medusa.PurgeBackupsResponse{
+		NbBackupsPurged:           2,
+		NbObjectsPurged:           10,
+		TotalObjectsWithinGcGrace: 0,
+		TotalPurgedSize:           1000,
+	}
+	return response, nil
+}
+
+func (c *fakeMedusaRestoreClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
+	return nil, nil
+}
+
+func (c *fakeMedusaRestoreClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*medusa.PrepareRestoreResponse, error) {
+	return nil, nil
 }

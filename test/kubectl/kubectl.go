@@ -23,7 +23,15 @@ func LogOutput(enabled bool) {
 	logOutput = enabled
 }
 
+func ApplyKustomize(opts Options, arg interface{}) error {
+	return applyInternal(opts, true, arg)
+}
+
 func Apply(opts Options, arg interface{}) error {
+	return applyInternal(opts, false, arg)
+}
+
+func applyInternal(opts Options, kustomize bool, arg interface{}) error {
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {
@@ -40,7 +48,11 @@ func Apply(opts Options, arg interface{}) error {
 		cmd.Args = append(cmd.Args, "--server-side", "--force-conflicts")
 	}
 
-	cmd.Args = append(cmd.Args, "-f")
+	if kustomize {
+		cmd.Args = append(cmd.Args, "-f")
+	} else {
+		cmd.Args = append(cmd.Args, "-f", "-R")
+	}
 
 	if buf, ok := arg.(*bytes.Buffer); ok {
 		cmd.Stdin = buf

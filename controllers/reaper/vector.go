@@ -43,7 +43,7 @@ func (r *ReaperReconciler) reconcileVectorConfigMap(
 			dcLogger.Error(err, "Failed to set controller reference on new Reaper Vector ConfigMap", "ConfigMap", configMapKey)
 			return ctrl.Result{}, err
 		}
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap, nil)
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
 		switch {
 		case recRes.IsError():
 			return ctrl.Result{}, recRes.GetError()

@@ -176,7 +176,7 @@ func checkMedusaStandaloneDeploymentExists(t *testing.T, ctx context.Context, dc
 	// Get the medusa standalone pod and check that it is running
 	require.Eventually(func() bool {
 		deployment := &appsv1.Deployment{}
-		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandalonePodName(kc.Name, dcKey.Name)}}
+		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandaloneDeploymentName(kc.Name, dcKey.Name)}}
 		err := f.Get(ctx, deploymentKey, deployment)
 		require.NoError(err, "Error getting the medusa standalone pod")
 		return deployment.Status.ReadyReplicas == 1

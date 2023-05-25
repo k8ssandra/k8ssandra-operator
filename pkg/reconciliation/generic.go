@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,15 +19,10 @@ type Reconcileable[T any] interface {
 }
 
 // Try with U, a type of any whose POINTER still fulfils Reoncilable...
-func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient client.Client, requeueDelay time.Duration, desiredObject U, klKey *types.NamespacedName) result.ReconcileResult {
+func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient client.Client, requeueDelay time.Duration, desiredObject U) result.ReconcileResult {
 	objectKey := types.NamespacedName{
 		Name:      T(&desiredObject).GetName(),
 		Namespace: T(&desiredObject).GetNamespace(),
-	}
-	if klKey != nil {
-		// if a key is provided for a K8ssandra object, add the part-of labels to the reconciled object
-		partOfLabels := labels.PartOfLabels(*klKey)
-		T(&desiredObject).SetLabels(partOfLabels)
 	}
 	annotations.AddHashAnnotation(T(&desiredObject))
 

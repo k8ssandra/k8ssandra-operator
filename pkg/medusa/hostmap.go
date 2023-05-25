@@ -7,10 +7,7 @@ import (
 	"sort"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	cassandrapkg "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // HostMapping is a type that reflects the mapping of source IP address from the Medusa backup to the target host name obtained from looking at the k8s
@@ -82,15 +79,14 @@ type NodeLocation struct {
 	DC   string
 }
 
-type backupGetter interface {
-	GetBackups(ctx context.Context) ([]*BackupSummary, error)
-}
-
 // getSourceRacksIPs gets a map of racks to IPs or hostnames from a Medusa CassandraBackup k8s object.
-func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client backupGetter, ctx context.Context) (map[NodeLocation][]string, error) {
+func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client Client, ctx context.Context) (map[NodeLocation][]string, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if len(backups) == 0 {
+		return nil, fmt.Errorf("no backups found")
 	}
 	namedBackup, err := filterBackupsByName(k8sRestore.Spec.Backup, backups)
 	if err != nil {
@@ -156,11 +152,7 @@ func sortLocations(m map[NodeLocation][]string) []rack {
 
 // getClusterRackFQDNs gets a map of racks to FQDNs from the current K8ssandraCluster k8s object. The CassDC does not exist yet, so we cannot refer to it for names.
 // We refer to the following code for how to calculate pod names: // https://github.com/k8ssandra/cass-operator/blob/master/pkg/reconciliation/construct_statefulset.go#L39
-func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (map[NodeLocation][]string, error) {
-	cassDC, err := cassDCFromKluster(Kluster, dcName)
-	if err != nil {
-		return nil, err
-	}
+func getTargetRackFQDNs(cassDC *cassdcapi.CassandraDatacenter) (map[NodeLocation][]string, error) {
 	racks := cassDC.GetRacks()
 	out := make(map[NodeLocation][]string)
 	for _, i := range racks {
@@ -169,7 +161,7 @@ func getTargetRackFQDNs(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (m
 			Rack: i.Name,
 		}
 		sizePerRack := int(cassDC.Spec.Size) / len(racks)
-		out[location] = getPodNames(Kluster.Name, cassDC.Name, i.Name, sizePerRack)
+		out[location] = getPodNames(cassDC.Spec.ClusterName, cassDC.Name, i.Name, sizePerRack)
 	}
 	return out, nil
 }
@@ -182,35 +174,13 @@ func getPodNames(clusterName string, DCName string, rackName string, rackSize in
 	return out
 }
 
-func cassDCFromKluster(Kluster k8ssandraapi.K8ssandraCluster, dcName string) (*cassdcapi.CassandraDatacenter, error) {
-	thisDC := k8ssandraapi.CassandraDatacenterTemplate{}
-	if len(Kluster.Spec.Cassandra.Datacenters) > 0 {
-		for _, i := range Kluster.Spec.Cassandra.Datacenters {
-			if i.Meta.Name == dcName {
-				thisDC = i
-			}
-		}
-	}
-	DCConfig := cassandrapkg.Coalesce(Kluster.Name, Kluster.Spec.Cassandra, &thisDC)
-	cassDC, err := cassandrapkg.NewDatacenter(
-		types.NamespacedName{
-			Namespace: Kluster.Namespace,
-			Name:      Kluster.Name,
-		},
-		DCConfig)
-	if err != nil {
-		return nil, err
-	}
-	return cassDC, nil
-}
-
 // GetHostMap gets the hostmap for a given CassandraBackup from IP or DNS name sources to DNS named targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
-func GetHostMap(Kluster k8ssandraapi.K8ssandraCluster, k8sbackup medusaapi.MedusaRestoreJob, client backupGetter, ctx context.Context) (HostMappingSlice, error) {
+func GetHostMap(cassDC *cassdcapi.CassandraDatacenter, k8sbackup medusaapi.MedusaRestoreJob, client Client, ctx context.Context) (HostMappingSlice, error) {
 	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx)
 	if err != nil {
 		return nil, err
 	}
-	destRacks, err := getTargetRackFQDNs(Kluster, k8sbackup.Spec.CassandraDatacenter)
+	destRacks, err := getTargetRackFQDNs(cassDC)
 	if err != nil {
 		return nil, err
 	}
@@ -252,4 +222,22 @@ func (s HostMappingSlice) IsInPlace() (bool, error) {
 		}
 	}
 	return inPlace, nil
+}
+
+func (s HostMappingSlice) ToMedusaRestoreMapping() (medusaapi.MedusaRestoreMapping, error) {
+	inPlace, err := s.IsInPlace()
+	if err != nil {
+		return medusaapi.MedusaRestoreMapping{}, err
+	}
+	out := medusaapi.MedusaRestoreMapping{
+		InPlace: &inPlace,
+		HostMap: make(map[string]medusaapi.MappingSource),
+	}
+	for _, i := range s {
+		out.HostMap[i.Target] = medusaapi.MappingSource{
+			Source: []string{i.Source},
+			Seed:   false,
+		}
+	}
+	return out, nil
 }

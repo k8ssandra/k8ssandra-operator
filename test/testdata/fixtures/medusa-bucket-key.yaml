@@ -7,5 +7,5 @@ stringData:
  # Note that this currently has to be set to credentials!
  credentials: |-
    [default]
-   aws_access_key_id = minio_key
-   aws_secret_access_key = minio_secret
+   aws_access_key_id = P2QEnvgf62SQp6iK
+   aws_secret_access_key = ynMACD2jPEovYlqSeMMY2TkOlb70gv1K
