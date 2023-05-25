@@ -132,7 +132,7 @@ type ReaperTemplate struct {
 	InitContainerResources *corev1.ResourceRequirements `json:"initContainerResources,omitempty"`
 
 	// Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster
-	// (unless overriden by DC specific settings)
+	// (unless overridden by DC specific settings)
 	// +optional
 	Telemetry *telemetryapi.TelemetrySpec `json:"telemetry,omitempty"`
 
