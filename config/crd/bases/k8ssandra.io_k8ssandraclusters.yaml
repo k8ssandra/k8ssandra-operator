@@ -22010,7 +22010,8 @@ spec:
                         type: object
                     type: object
                   metadata:
-                    description: Struct to hold labels and annotations for a CassandraDatacenter
+                    description: Struct to hold labels and annotations for the top-level
+                      Cassandra cluster definition.
                     properties:
                       annotations:
                         additionalProperties:
