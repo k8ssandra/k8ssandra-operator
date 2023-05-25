@@ -31,9 +31,9 @@ type ResourceMeta struct {
 	Service Tags `json:"service,omitempty"`
 }
 
-// Struct to hold labels and annotations for a CassandraDatacenter
+// Struct to hold labels and annotations for the top-level Cassandra cluster definition.
 // +kubebuilder:object:generate=true
-type CassandraDatacenterMeta struct {
+type CassandraClusterMeta struct {
 	// labels/annotations for the CassandraDatacenter component
 	// +optional
 	Tags `json:",inline"`

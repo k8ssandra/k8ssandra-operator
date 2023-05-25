@@ -2,7 +2,6 @@ package cassandra
 
 import (
 	"fmt"
-
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -12,7 +11,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -220,7 +218,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.ManagementApiAuth = *template.ManagementApiAuth
 	}
 
-	m := template.Meta.Metadata
+	m := template.Meta
 	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
 	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
 
@@ -363,9 +361,12 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 	dcConfig.ServiceAccount = mergedOptions.ServiceAccount
 
-	dcConfig.Meta.Metadata = goalesceutils.MergeCRs(clusterTemplate.Meta, dcTemplate.Meta.Metadata)
+	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
+	dcConfig.Meta.CommonLabels = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonLabels, dcTemplate.Meta.CommonLabels)
+	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
+	dcConfig.Meta.ServiceConfig = goalesceutils.MergeCRs(clusterTemplate.Meta.ServiceConfig, dcTemplate.Meta.ServiceConfig)
 
-	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta.Metadata)
+	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta)
 
 	if len(mergedOptions.Containers) > 0 {
 		AddContainersToPodTemplateSpec(dcConfig, mergedOptions.Containers...)
@@ -435,7 +436,7 @@ func AddVolumesToPodTemplateSpec(podTemplateSpec *corev1.PodTemplateSpec, volume
 	podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, volume)
 }
 
-func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m meta.CassandraDatacenterMeta) {
+func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m api.EmbeddedObjectMeta) {
 	// We don't need to overlay m.CommonLabels as this will be done by cass-operator itself
 	dcConfig.PodTemplateSpec.ObjectMeta = metav1.ObjectMeta{
 		Annotations: m.Pods.Annotations,

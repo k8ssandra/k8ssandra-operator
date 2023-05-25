@@ -51,11 +51,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -66,11 +64,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -344,11 +340,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -367,11 +361,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -399,11 +391,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -414,11 +404,9 @@ func TestCoalesce(t *testing.T) {
 				Meta: api.EmbeddedObjectMeta{
 					Namespace: "k8ssandra",
 					Name:      "dc1",
-					Metadata: meta.CassandraDatacenterMeta{
-						Tags: meta.Tags{
-							Labels: map[string]string{
-								"env": "dev",
-							},
+					Tags: meta.Tags{
+						Labels: map[string]string{
+							"env": "dev",
 						},
 					},
 				},
@@ -935,7 +923,7 @@ func TestCoalesce(t *testing.T) {
 			name: "Set Cluster Pod Tags",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
-				Meta: meta.CassandraDatacenterMeta{
+				Meta: meta.CassandraClusterMeta{
 					CommonLabels: map[string]string{
 						"common": "label",
 					},
@@ -951,14 +939,12 @@ func TestCoalesce(t *testing.T) {
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
-						},
-						Pods: meta.Tags{
-							Labels:      map[string]string{"label": "lvalue"},
-							Annotations: map[string]string{"annotation:": "avalue"},
-						},
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					Pods: meta.Tags{
+						Labels:      map[string]string{"label": "lvalue"},
+						Annotations: map[string]string{"annotation:": "avalue"},
 					},
 				},
 				McacEnabled: true,
@@ -982,28 +968,24 @@ func TestCoalesce(t *testing.T) {
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
-						},
-						Pods: meta.Tags{
-							Labels:      map[string]string{"label": "lvalue"},
-							Annotations: map[string]string{"annotation:": "avalue"},
-						},
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					Pods: meta.Tags{
+						Labels:      map[string]string{"label": "lvalue"},
+						Annotations: map[string]string{"annotation:": "avalue"},
 					},
 				},
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
-						},
-						Pods: meta.Tags{
-							Labels:      map[string]string{"label": "lvalue"},
-							Annotations: map[string]string{"annotation:": "avalue"},
-						},
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					Pods: meta.Tags{
+						Labels:      map[string]string{"label": "lvalue"},
+						Annotations: map[string]string{"annotation:": "avalue"},
 					},
 				},
 				McacEnabled: true,
@@ -1022,7 +1004,7 @@ func TestCoalesce(t *testing.T) {
 			name: "Set Cluster & DC Pod Tags",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
-				Meta: meta.CassandraDatacenterMeta{
+				Meta: meta.CassandraClusterMeta{
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue", "cluster": "cluster"},
 						Annotations: map[string]string{"annotation:": "avalue", "cluster": "cluster"},
@@ -1033,22 +1015,18 @@ func TestCoalesce(t *testing.T) {
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
-					Metadata: meta.CassandraDatacenterMeta{
-						Pods: meta.Tags{
-							Labels:      map[string]string{"label": "dcvalue", "dc": "dc"},
-							Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc"},
-						},
+					Pods: meta.Tags{
+						Labels:      map[string]string{"label": "dcvalue", "dc": "dc"},
+						Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc"},
 					},
 				},
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
-					Metadata: meta.CassandraDatacenterMeta{
-						Pods: meta.Tags{
-							Labels:      map[string]string{"label": "dcvalue", "dc": "dc", "cluster": "cluster"},
-							Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc", "cluster": "cluster"},
-						},
+					Pods: meta.Tags{
+						Labels:      map[string]string{"label": "dcvalue", "dc": "dc", "cluster": "cluster"},
+						Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc", "cluster": "cluster"},
 					},
 				},
 				McacEnabled: true,
@@ -1067,7 +1045,7 @@ func TestCoalesce(t *testing.T) {
 			name: "Set Cluster Service Tags",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
-				Meta: meta.CassandraDatacenterMeta{
+				Meta: meta.CassandraClusterMeta{
 					CommonLabels: map[string]string{
 						"common": "label",
 					},
@@ -1100,31 +1078,29 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					ServiceConfig: meta.CassandraDatacenterServicesMeta{
+						DatacenterService: meta.Tags{
+							Labels:      map[string]string{"dclabel": "dcvalue"},
+							Annotations: map[string]string{"dcannotation:": "dcvalue"},
 						},
-						ServiceConfig: meta.CassandraDatacenterServicesMeta{
-							DatacenterService: meta.Tags{
-								Labels:      map[string]string{"dclabel": "dcvalue"},
-								Annotations: map[string]string{"dcannotation:": "dcvalue"},
-							},
-							SeedService: meta.Tags{
-								Labels:      map[string]string{"seedlabel": "seedvalue"},
-								Annotations: map[string]string{"seedannotation:": "seedvalue"},
-							},
-							AdditionalSeedService: meta.Tags{
-								Labels:      map[string]string{"aslabel": "asvalue"},
-								Annotations: map[string]string{"asannotation:": "asvalue"},
-							},
-							AllPodsService: meta.Tags{
-								Labels:      map[string]string{"aplabel": "apvalue"},
-								Annotations: map[string]string{"apannotation:": "apvalue"},
-							},
-							NodePortService: meta.Tags{
-								Labels:      map[string]string{"nodeportlabel": "nodeportval"},
-								Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
-							},
+						SeedService: meta.Tags{
+							Labels:      map[string]string{"seedlabel": "seedvalue"},
+							Annotations: map[string]string{"seedannotation:": "seedvalue"},
+						},
+						AdditionalSeedService: meta.Tags{
+							Labels:      map[string]string{"aslabel": "asvalue"},
+							Annotations: map[string]string{"asannotation:": "asvalue"},
+						},
+						AllPodsService: meta.Tags{
+							Labels:      map[string]string{"aplabel": "apvalue"},
+							Annotations: map[string]string{"apannotation:": "apvalue"},
+						},
+						NodePortService: meta.Tags{
+							Labels:      map[string]string{"nodeportlabel": "nodeportval"},
+							Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
 						},
 					},
 				},
@@ -1144,62 +1120,58 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: api.EmbeddedObjectMeta{
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					ServiceConfig: meta.CassandraDatacenterServicesMeta{
+						DatacenterService: meta.Tags{
+							Labels:      map[string]string{"dclabel": "dcvalue"},
+							Annotations: map[string]string{"dcannotation:": "dcvalue"},
 						},
-						ServiceConfig: meta.CassandraDatacenterServicesMeta{
-							DatacenterService: meta.Tags{
-								Labels:      map[string]string{"dclabel": "dcvalue"},
-								Annotations: map[string]string{"dcannotation:": "dcvalue"},
-							},
-							SeedService: meta.Tags{
-								Labels:      map[string]string{"seedlabel": "seedvalue"},
-								Annotations: map[string]string{"seedannotation:": "seedvalue"},
-							},
-							AdditionalSeedService: meta.Tags{
-								Labels:      map[string]string{"aslabel": "asvalue"},
-								Annotations: map[string]string{"asannotation:": "asvalue"},
-							},
-							AllPodsService: meta.Tags{
-								Labels:      map[string]string{"aplabel": "apvalue"},
-								Annotations: map[string]string{"apannotation:": "apvalue"},
-							},
-							NodePortService: meta.Tags{
-								Labels:      map[string]string{"nodeportlabel": "nodeportval"},
-								Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
-							},
+						SeedService: meta.Tags{
+							Labels:      map[string]string{"seedlabel": "seedvalue"},
+							Annotations: map[string]string{"seedannotation:": "seedvalue"},
+						},
+						AdditionalSeedService: meta.Tags{
+							Labels:      map[string]string{"aslabel": "asvalue"},
+							Annotations: map[string]string{"asannotation:": "asvalue"},
+						},
+						AllPodsService: meta.Tags{
+							Labels:      map[string]string{"aplabel": "apvalue"},
+							Annotations: map[string]string{"apannotation:": "apvalue"},
+						},
+						NodePortService: meta.Tags{
+							Labels:      map[string]string{"nodeportlabel": "nodeportval"},
+							Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
 						},
 					},
 				},
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
-					Metadata: meta.CassandraDatacenterMeta{
-						CommonLabels: map[string]string{
-							"common": "label",
+					CommonLabels: map[string]string{
+						"common": "label",
+					},
+					ServiceConfig: meta.CassandraDatacenterServicesMeta{
+						DatacenterService: meta.Tags{
+							Labels:      map[string]string{"dclabel": "dcvalue"},
+							Annotations: map[string]string{"dcannotation:": "dcvalue"},
 						},
-						ServiceConfig: meta.CassandraDatacenterServicesMeta{
-							DatacenterService: meta.Tags{
-								Labels:      map[string]string{"dclabel": "dcvalue"},
-								Annotations: map[string]string{"dcannotation:": "dcvalue"},
-							},
-							SeedService: meta.Tags{
-								Labels:      map[string]string{"seedlabel": "seedvalue"},
-								Annotations: map[string]string{"seedannotation:": "seedvalue"},
-							},
-							AdditionalSeedService: meta.Tags{
-								Labels:      map[string]string{"aslabel": "asvalue"},
-								Annotations: map[string]string{"asannotation:": "asvalue"},
-							},
-							AllPodsService: meta.Tags{
-								Labels:      map[string]string{"aplabel": "apvalue"},
-								Annotations: map[string]string{"apannotation:": "apvalue"},
-							},
-							NodePortService: meta.Tags{
-								Labels:      map[string]string{"nodeportlabel": "nodeportval"},
-								Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
-							},
+						SeedService: meta.Tags{
+							Labels:      map[string]string{"seedlabel": "seedvalue"},
+							Annotations: map[string]string{"seedannotation:": "seedvalue"},
+						},
+						AdditionalSeedService: meta.Tags{
+							Labels:      map[string]string{"aslabel": "asvalue"},
+							Annotations: map[string]string{"asannotation:": "asvalue"},
+						},
+						AllPodsService: meta.Tags{
+							Labels:      map[string]string{"aplabel": "apvalue"},
+							Annotations: map[string]string{"apannotation:": "apvalue"},
+						},
+						NodePortService: meta.Tags{
+							Labels:      map[string]string{"nodeportlabel": "nodeportval"},
+							Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
 						},
 					},
 				},
@@ -1215,7 +1187,7 @@ func TestCoalesce(t *testing.T) {
 			name: "Set Cluster & DC Service Tags",
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
-				Meta: meta.CassandraDatacenterMeta{
+				Meta: meta.CassandraClusterMeta{
 					ServiceConfig: meta.CassandraDatacenterServicesMeta{
 						DatacenterService: meta.Tags{
 							Labels:      map[string]string{"dclabel": "cl_value"},
@@ -1243,56 +1215,52 @@ func TestCoalesce(t *testing.T) {
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: api.EmbeddedObjectMeta{
-					Metadata: meta.CassandraDatacenterMeta{
-						ServiceConfig: meta.CassandraDatacenterServicesMeta{
-							DatacenterService: meta.Tags{
-								Labels:      map[string]string{"dclabel": "dcvalue"},
-								Annotations: map[string]string{"dcannotation:": "dcvalue"},
-							},
-							SeedService: meta.Tags{
-								Labels:      map[string]string{"seedlabel": "seedvalue"},
-								Annotations: map[string]string{"seedannotation:": "seedvalue"},
-							},
-							AdditionalSeedService: meta.Tags{
-								Labels:      map[string]string{"aslabel": "asvalue"},
-								Annotations: map[string]string{"asannotation:": "asvalue"},
-							},
-							AllPodsService: meta.Tags{
-								Labels:      map[string]string{"aplabel": "apvalue"},
-								Annotations: map[string]string{"apannotation:": "apvalue"},
-							},
-							NodePortService: meta.Tags{
-								Labels:      map[string]string{"nodeportlabel": "nodeportval"},
-								Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
-							},
+					ServiceConfig: meta.CassandraDatacenterServicesMeta{
+						DatacenterService: meta.Tags{
+							Labels:      map[string]string{"dclabel": "dcvalue"},
+							Annotations: map[string]string{"dcannotation:": "dcvalue"},
+						},
+						SeedService: meta.Tags{
+							Labels:      map[string]string{"seedlabel": "seedvalue"},
+							Annotations: map[string]string{"seedannotation:": "seedvalue"},
+						},
+						AdditionalSeedService: meta.Tags{
+							Labels:      map[string]string{"aslabel": "asvalue"},
+							Annotations: map[string]string{"asannotation:": "asvalue"},
+						},
+						AllPodsService: meta.Tags{
+							Labels:      map[string]string{"aplabel": "apvalue"},
+							Annotations: map[string]string{"apannotation:": "apvalue"},
+						},
+						NodePortService: meta.Tags{
+							Labels:      map[string]string{"nodeportlabel": "nodeportval"},
+							Annotations: map[string]string{"nodeportann:": "nodeportvalue"},
 						},
 					},
 				},
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
-					Metadata: meta.CassandraDatacenterMeta{
-						ServiceConfig: meta.CassandraDatacenterServicesMeta{
-							DatacenterService: meta.Tags{
-								Labels:      map[string]string{"dclabel": "dcvalue"},
-								Annotations: map[string]string{"dcannotation:": "dcvalue"},
-							},
-							SeedService: meta.Tags{
-								Labels:      map[string]string{"seedlabel": "seedvalue"},
-								Annotations: map[string]string{"seedannotation:": "seedvalue"},
-							},
-							AdditionalSeedService: meta.Tags{
-								Labels:      map[string]string{"aslabel": "asvalue"},
-								Annotations: map[string]string{"asannotation:": "asvalue"},
-							},
-							AllPodsService: meta.Tags{
-								Labels:      map[string]string{"aplabel": "apvalue"},
-								Annotations: map[string]string{"apannotation:": "apvalue"},
-							},
-							NodePortService: meta.Tags{
-								Labels:      map[string]string{"nodeportlabel": "nodeportval", "cl_nodeportlabel": "nodeportval"},
-								Annotations: map[string]string{"nodeportann:": "nodeportvalue", "cl_nodeportann:": "nodeportvalue"},
-							},
+					ServiceConfig: meta.CassandraDatacenterServicesMeta{
+						DatacenterService: meta.Tags{
+							Labels:      map[string]string{"dclabel": "dcvalue"},
+							Annotations: map[string]string{"dcannotation:": "dcvalue"},
+						},
+						SeedService: meta.Tags{
+							Labels:      map[string]string{"seedlabel": "seedvalue"},
+							Annotations: map[string]string{"seedannotation:": "seedvalue"},
+						},
+						AdditionalSeedService: meta.Tags{
+							Labels:      map[string]string{"aslabel": "asvalue"},
+							Annotations: map[string]string{"asannotation:": "asvalue"},
+						},
+						AllPodsService: meta.Tags{
+							Labels:      map[string]string{"aplabel": "apvalue"},
+							Annotations: map[string]string{"apannotation:": "apvalue"},
+						},
+						NodePortService: meta.Tags{
+							Labels:      map[string]string{"nodeportlabel": "nodeportval", "cl_nodeportlabel": "nodeportval"},
+							Annotations: map[string]string{"nodeportann:": "nodeportvalue", "cl_nodeportann:": "nodeportvalue"},
 						},
 					},
 				},
@@ -1509,11 +1477,9 @@ func GetDatacenterConfig() DatacenterConfig {
 		Meta: api.EmbeddedObjectMeta{
 			Namespace: "k8ssandra",
 			Name:      "dc1",
-			Metadata: meta.CassandraDatacenterMeta{
-				Tags: meta.Tags{
-					Labels: map[string]string{
-						"env": "dev",
-					},
+			Tags: meta.Tags{
+				Labels: map[string]string{
+					"env": "dev",
 				},
 			},
 		},
