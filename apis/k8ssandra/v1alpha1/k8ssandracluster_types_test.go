@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"sigs.k8s.io/yaml"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -127,4 +128,68 @@ func TestNetworkingConfig_ToCassNetworkingConfig(t *testing.T) {
 			assert.Equal(t, tt.want, tt.in.ToCassNetworkingConfig())
 		})
 	}
+}
+
+// TestUnmarshallDatacenterMeta checks that user-provided labels and annotations are properly set when unmarshalling
+// YAML.
+func TestUnmarshallDatacenterMeta(t *testing.T) {
+	input := `
+metadata:
+  labels:
+    label1: labelValue1
+  annotations:
+    annotation1: annotationValue1
+  commonLabels:
+    commonLabel1: commonLabelValue1
+  pods:
+    labels:
+      podLabel1: podLabelValue1
+    annotations:
+      podAnnotation1: podAnnotationValue1
+  services:
+    dcService:
+      labels:
+        dcSvcLabel1: dcSvcValue1
+      annotations:
+        dcSvcAnnotation1: dcSvcAnnotationValue1
+    seedService:
+      labels:
+        seedSvcLabel1: seedSvcLabelValue1
+      annotations:
+        seedSvcAnnotation1: seedSvcAnnotationValue1
+    allPodsService:
+      labels:
+        allPodsSvcLabel1: allPodsSvcLabelValue1
+      annotations:
+        allPodsSvcAnnotation1: allPodsSvcAnnotationValue1
+    additionalSeedService:
+      labels:
+        addSeedSvcLabel1: addSeedSvcLabelValue1
+      annotations:
+        addSeedSvcAnnotation1: addSeedSvcAnnotationValue1
+    nodePortService:
+      labels:
+        nodePortSvcLabel1: nodePortSvcLabelValue1
+      annotations:
+        nodePortSvcAnnotation1: nodePortSvcAnnotationValue1
+`
+	dc := &CassandraDatacenterTemplate{}
+	err := yaml.Unmarshal([]byte(input), dc)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "labelValue1", dc.Meta.Metadata.Labels["label1"])
+	assert.Equal(t, "annotationValue1", dc.Meta.Metadata.Annotations["annotation1"])
+	assert.Equal(t, "commonLabelValue1", dc.Meta.Metadata.CommonLabels["commonLabel1"])
+	assert.Equal(t, "podLabelValue1", dc.Meta.Metadata.Pods.Labels["podLabel1"])
+	assert.Equal(t, "podAnnotationValue1", dc.Meta.Metadata.Pods.Annotations["podAnnotation1"])
+	assert.Equal(t, "dcSvcValue1", dc.Meta.Metadata.ServiceConfig.DatacenterService.Labels["dcSvcLabel1"])
+	assert.Equal(t, "dcSvcAnnotationValue1", dc.Meta.Metadata.ServiceConfig.DatacenterService.Annotations["dcSvcAnnotation1"])
+	assert.Equal(t, "seedSvcLabelValue1", dc.Meta.Metadata.ServiceConfig.SeedService.Labels["seedSvcLabel1"])
+	assert.Equal(t, "seedSvcAnnotationValue1", dc.Meta.Metadata.ServiceConfig.SeedService.Annotations["seedSvcAnnotation1"])
+	assert.Equal(t, "allPodsSvcLabelValue1", dc.Meta.Metadata.ServiceConfig.AllPodsService.Labels["allPodsSvcLabel1"])
+	assert.Equal(t, "allPodsSvcAnnotationValue1", dc.Meta.Metadata.ServiceConfig.AllPodsService.Annotations["allPodsSvcAnnotation1"])
+	assert.Equal(t, "addSeedSvcLabelValue1", dc.Meta.Metadata.ServiceConfig.AdditionalSeedService.Labels["addSeedSvcLabel1"])
+	assert.Equal(t, "addSeedSvcAnnotationValue1", dc.Meta.Metadata.ServiceConfig.AdditionalSeedService.Annotations["addSeedSvcAnnotation1"])
+	assert.Equal(t, "nodePortSvcLabelValue1", dc.Meta.Metadata.ServiceConfig.NodePortService.Labels["nodePortSvcLabel1"])
+	assert.Equal(t, "nodePortSvcAnnotationValue1", dc.Meta.Metadata.ServiceConfig.NodePortService.Annotations["nodePortSvcAnnotation1"])
 }
