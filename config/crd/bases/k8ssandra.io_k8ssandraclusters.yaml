@@ -14243,8 +14243,8 @@ spec:
                             telemetry:
                               description: Telemetry defines the desired telemetry
                                 integrations to deploy targeting the Stargate pods
-                                for all DCs in this cluster (unless overridden by DC
-                                specific settings)
+                                for all DCs in this cluster (unless overridden by
+                                DC specific settings)
                               properties:
                                 cassandra:
                                   properties:
