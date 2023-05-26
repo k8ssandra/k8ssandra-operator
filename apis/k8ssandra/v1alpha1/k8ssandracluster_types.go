@@ -226,7 +226,7 @@ type K8ssandraClusterList struct {
 type CassandraClusterTemplate struct {
 	DatacenterOptions `json:",inline"`
 
-	Meta meta.CassandraDatacenterMeta `json:"metadata,omitempty"`
+	Meta meta.CassandraClusterMeta `json:"metadata,omitempty"`
 
 	// The reference to the superuser secret to use for Cassandra. If unspecified, a default secret will be generated
 	// with a random password; the generated secret name will be "<cluster_name>-superuser" where <cluster_name> is the
@@ -466,8 +466,24 @@ type EmbeddedObjectMeta struct {
 
 	Name string `json:"name"`
 
+	// Note that the rest of the fields below are shared with CassandraClusterMeta. We originally tried to inline that
+	// struct instead of repeating the fields, but that doesn't work because of a YAML unmarshalling bug.
+
+	// labels/annotations for the CassandraDatacenter component
 	// +optional
-	Metadata meta.CassandraDatacenterMeta `json:",inline"`
+	meta.Tags `json:",inline"`
+
+	// labels/annotations that will be applied to all components
+	// created by the CRD
+	// +optional
+	CommonLabels map[string]string `json:"commonLabels,omitempty"`
+
+	// labels/annotations for the pod components
+	// +optional
+	Pods meta.Tags `json:"pods,omitempty"`
+
+	// labels/annotations for all of the CassandraDatacenter service components
+	ServiceConfig meta.CassandraDatacenterServicesMeta `json:"services,omitempty"`
 }
 
 func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClusterConditionType) corev1.ConditionStatus {

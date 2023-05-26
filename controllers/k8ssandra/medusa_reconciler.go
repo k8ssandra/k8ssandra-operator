@@ -51,10 +51,10 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			cassandraUserSecretName := medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName())
 			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, cassandraUserSecretName)
 
-			if dcConfig.Meta.Metadata.Pods.Annotations == nil {
-				dcConfig.Meta.Metadata.Pods.Annotations = map[string]string{}
+			if dcConfig.Meta.Pods.Annotations == nil {
+				dcConfig.Meta.Pods.Annotations = map[string]string{}
 			}
-			secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Metadata.Pods, cassandraUserSecretName)
+			secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Pods, cassandraUserSecretName)
 		}
 	} else {
 		logger.Info("Medusa is not enabled")
