@@ -1,13 +1,13 @@
 package v1alpha1
 
 import (
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"testing"
 )
 
 var (
@@ -194,13 +194,10 @@ func testStargateDatacenterTemplateMerge(t *testing.T) {
 			&StargateDatacenterTemplate{
 				StargateClusterTemplate: StargateClusterTemplate{
 					StargateTemplate: StargateTemplate{
-						ContainerImage: &images.Image{
-							Registry: "reg1",
-							Name:     "img1",
-						},
-						HeapSize:     &quantity512Mi,
-						NodeSelector: map[string]string{"k1": "v1", "k2": "v2"},
-						Tolerations:  []corev1.Toleration{{Key: "k1", Value: "v1"}},
+						ContainerImage: "reg1/repo2/img1",
+						HeapSize:       &quantity512Mi,
+						NodeSelector:   map[string]string{"k1": "v1", "k2": "v2"},
+						Tolerations:    []corev1.Toleration{{Key: "k1", Value: "v1"}},
 						Affinity: &corev1.Affinity{
 							PodAffinity: &corev1.PodAffinity{
 								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -224,10 +221,7 @@ func testStargateDatacenterTemplateMerge(t *testing.T) {
 			},
 			&StargateClusterTemplate{
 				StargateTemplate: StargateTemplate{
-					ContainerImage: &images.Image{
-						Repository: "repo2",
-						Name:       "img2",
-					},
+					ContainerImage: "reg1/img2",
 					ServiceAccount: pointer.String("sa2"),
 					HeapSize:       &quantity256Mi,
 					NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
@@ -264,11 +258,7 @@ func testStargateDatacenterTemplateMerge(t *testing.T) {
 			&StargateDatacenterTemplate{
 				StargateClusterTemplate: StargateClusterTemplate{
 					StargateTemplate: StargateTemplate{
-						ContainerImage: &images.Image{
-							Registry:   "reg1",
-							Repository: "repo2",
-							Name:       "img1",
-						},
+						ContainerImage: "reg1/repo2/img1",
 						HeapSize:       &quantity512Mi,
 						ServiceAccount: pointer.String("sa2"),
 						// map will be merged
@@ -354,13 +344,10 @@ func testStargateRackTemplateMerge(t *testing.T) {
 			"Non nil rack with non nil dc",
 			&StargateRackTemplate{
 				StargateTemplate: StargateTemplate{
-					ContainerImage: &images.Image{
-						Registry: "reg1",
-						Name:     "img1",
-					},
-					HeapSize:     &quantity512Mi,
-					NodeSelector: map[string]string{"k1": "v1", "k2": "v2"},
-					Tolerations:  []corev1.Toleration{{Key: "k1", Value: "v1"}},
+					ContainerImage: "reg1/img1",
+					HeapSize:       &quantity512Mi,
+					NodeSelector:   map[string]string{"k1": "v1", "k2": "v2"},
+					Tolerations:    []corev1.Toleration{{Key: "k1", Value: "v1"}},
 					Affinity: &corev1.Affinity{
 						PodAffinity: &corev1.PodAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -380,10 +367,7 @@ func testStargateRackTemplateMerge(t *testing.T) {
 			&StargateDatacenterTemplate{
 				StargateClusterTemplate: StargateClusterTemplate{
 					StargateTemplate: StargateTemplate{
-						ContainerImage: &images.Image{
-							Repository: "repo2",
-							Name:       "img2",
-						},
+						ContainerImage: "repo2/img2",
 						ServiceAccount: pointer.String("sa2"),
 						HeapSize:       &quantity256Mi,
 						NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
@@ -418,11 +402,7 @@ func testStargateRackTemplateMerge(t *testing.T) {
 				},
 			},
 			&StargateTemplate{
-				ContainerImage: &images.Image{
-					Registry:   "reg1",
-					Repository: "repo2",
-					Name:       "img1",
-				},
+				ContainerImage: "reg1/img1",
 				HeapSize:       &quantity512Mi,
 				ServiceAccount: pointer.String("sa2"),
 				// map will be merged

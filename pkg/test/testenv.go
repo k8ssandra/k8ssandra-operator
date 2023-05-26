@@ -34,6 +34,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -71,6 +72,12 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
 			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
 		},
+	}
+
+	// Initialize ImageConfig
+	imageConfigFile := filepath.Join("..", "..", "config", "components", "cass-operator-image-config", "image_config.yaml")
+	if err := images.ParseImageConfig(imageConfigFile); err != nil {
+		return err
 	}
 
 	cfg, err := e.Environment.Start()

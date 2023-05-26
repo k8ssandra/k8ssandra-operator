@@ -7,12 +7,12 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,12 +22,6 @@ import (
 )
 
 const (
-	DefaultImageRepository = "thelastpickle"
-	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.2.1"
-	// When changing the default version above, please also change the kubebuilder markers in
-	// apis/reaper/v1alpha1/reaper_types.go accordingly.
-
 	InitContainerMemRequest = "128Mi"
 	InitContainerMemLimit   = "512Mi"
 	InitContainerCpuRequest = "100m"
@@ -35,13 +29,6 @@ const (
 	MainContainerMemLimit   = "3Gi"
 	MainContainerCpuRequest = "100m"
 )
-
-var defaultImage = images.Image{
-	Registry:   images.DefaultRegistry,
-	Repository: DefaultImageRepository,
-	Name:       DefaultImageName,
-	Tag:        DefaultVersion,
-}
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	selector := metav1.LabelSelector{
@@ -178,8 +165,18 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
-	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
-	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
+	image := cassimages.GetImage("reaper")
+	pullPolicy := cassimages.GetImagePullPolicy("reaper")
+
+	initImage := image
+	if reaper.Spec.InitContainerImage != "" {
+		initImage = reaper.Spec.InitContainerImage
+	}
+
+	mainImage := image
+	if reaper.Spec.ContainerImage != "" {
+		mainImage = reaper.Spec.ContainerImage
+	}
 
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
@@ -202,12 +199,12 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
-					InitContainers: computeInitContainers(reaper, initImage, envVars, volumeMounts, initContainerResources),
+					InitContainers: computeInitContainers(reaper, envVars, initImage, pullPolicy, volumeMounts, initContainerResources),
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
-							Image:           mainImage.String(),
-							ImagePullPolicy: mainImage.PullPolicy,
+							Image:           mainImage,
+							ImagePullPolicy: pullPolicy,
 							SecurityContext: reaper.Spec.SecurityContext,
 							Ports: []corev1.ContainerPort{
 								{
@@ -231,12 +228,12 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
-					ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage, initImage),
 					Volumes:            volumes,
 				},
 			},
 		},
 	}
+	cassimages.AddDefaultRegistryImagePullSecrets(&deployment.Spec.Template.Spec, "reaper")
 	addAuthEnvVars(deployment, authVars)
 	configureVector(reaper, deployment, dc, logger)
 	annotations.AddHashAnnotation(deployment)
@@ -277,8 +274,9 @@ func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirem
 
 func computeInitContainers(
 	reaper *api.Reaper,
-	initImage *images.Image,
 	envVars []corev1.EnvVar,
+	image string,
+	pullPolicy corev1.PullPolicy,
 	volumeMounts []corev1.VolumeMount,
 	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
 	var initContainers []corev1.Container
@@ -286,8 +284,8 @@ func computeInitContainers(
 		initContainers = append(initContainers,
 			corev1.Container{
 				Name:            "reaper-schema-init",
-				Image:           initImage.String(),
-				ImagePullPolicy: initImage.PullPolicy,
+				Image:           image,
+				ImagePullPolicy: pullPolicy,
 				SecurityContext: reaper.Spec.InitContainerSecurityContext,
 				Env:             envVars,
 				Args:            []string{"schema-migration"},
@@ -296,14 +294,6 @@ func computeInitContainers(
 			})
 	}
 	return initContainers
-}
-
-func computeImagePullSecrets(reaper *api.Reaper, mainImage, initImage *images.Image) []corev1.LocalObjectReference {
-	if reaper.Spec.SkipSchemaMigration {
-		return images.CollectPullSecrets(mainImage)
-	} else {
-		return images.CollectPullSecrets(mainImage, initImage)
-	}
 }
 
 func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {

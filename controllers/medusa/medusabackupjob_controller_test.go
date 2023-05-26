@@ -11,7 +11,6 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -61,9 +60,6 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 				},
 			},
 			Medusa: &api.MedusaClusterTemplate{
-				ContainerImage: &images.Image{
-					Repository: medusaImageRepo,
-				},
 				StorageProperties: api.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

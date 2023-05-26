@@ -175,7 +175,7 @@ func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient 
 	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
 	assert.Equal(t, sg.UID, deployment.OwnerReferences[0].UID)
 
-	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.67", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	t.Log("check that authentication is enabled on the Stargate deployment")
@@ -649,7 +649,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
 	assert.Equal(t, sg.UID, deployment.OwnerReferences[0].UID)
 
-	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.67", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	t.Log("check that authentication is enabled on the Stargate deployment")
@@ -926,7 +926,7 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 	assert.Len(t, deployment.OwnerReferences, 1, "expected to find 1 owner reference for Stargate deployment")
 	assert.Equal(t, sg.UID, deployment.OwnerReferences[0].UID)
 
-	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v"+stargate.DefaultVersion, deployment.Spec.Template.Spec.Containers[0].Image)
+	assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.67", deployment.Spec.Template.Spec.Containers[0].Image)
 	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 
 	t.Log("check that authentication is enabled on the Stargate deployment")

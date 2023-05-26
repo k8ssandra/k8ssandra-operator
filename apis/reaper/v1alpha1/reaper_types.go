@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -69,14 +68,12 @@ type ReaperTemplate struct {
 	// The image to use for the Reaper pod main container.
 	// The default is "thelastpickle/cassandra-reaper:3.2.1".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.1"}
-	ContainerImage *images.Image `json:"containerImage,omitempty"`
+	ContainerImage string `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
 	// The default is "thelastpickle/cassandra-reaper:3.2.1".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.2.1"}
-	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
+	InitContainerImage string `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
 	// +optional

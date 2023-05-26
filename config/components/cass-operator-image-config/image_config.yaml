@@ -9,6 +9,10 @@ images:
   #   "4.0.0": "k8ssandra/cassandra-ubi:latest"
   # dse:
   #   "6.8.999": "datastax/dse-server-prototype:latest"
+  reaper: "docker.io/thelastpickle/cassandra-reaper:3.2.1"
+  medusa: "k8ssandra/medusa:master"
+  stargate-3_11: "docker.io/stargateio/stargate-3_11:v1.0.67"
+  stargate-4_0: "docker.io/stargateio/stargate-4_0:v1.0.67"
 # imageRegistry: "localhost:5000"
 # imagePullPolicy: Always
 # imagePullSecret:
@@ -19,3 +23,7 @@ defaults:
     repository: "k8ssandra/cass-management-api"
   dse:
     repository: "datastax/dse-mgmtapi-6_8"
+  medusa:
+    repository: "k8ssandra/medusa"
+  # stargate:
+  #   imagePullPolicy: Always

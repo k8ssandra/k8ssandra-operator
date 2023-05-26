@@ -6,13 +6,13 @@ import (
 	"text/template"
 
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,15 +28,6 @@ const (
 	MainContainerMemRequest = "100Mi"
 	MainContainerMemLimit   = "8Gi"
 	MainContainerCpuRequest = "100m"
-)
-
-var (
-	defaultMedusaImage = images.Image{
-		Registry:   images.DefaultRegistry,
-		Repository: DefaultMedusaImageRepository,
-		Name:       DefaultMedusaImageName,
-		Tag:        DefaultMedusaVersion,
-	}
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
@@ -233,10 +224,15 @@ func medusaMainContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 }
 
 // Build the image name and pull policy and add it to a medusa container definition
-func setImage(containerImage *images.Image, container *corev1.Container) {
-	image := containerImage.ApplyDefaults(defaultMedusaImage)
-	container.Image = image.String()
-	container.ImagePullPolicy = image.PullPolicy
+func setImage(containerImage string, container *corev1.Container) {
+	if containerImage != "" {
+		container.Image = containerImage
+	}
+
+	pullPolicy := images.GetImagePullPolicy("medusa")
+	if pullPolicy != "" {
+		container.ImagePullPolicy = pullPolicy
+	}
 }
 
 func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {

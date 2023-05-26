@@ -23,7 +23,6 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -341,7 +340,7 @@ type DatacenterOptions struct {
 
 	// Deprecated: JMX security is now based on CQL roles. We don't need an init container to configure JMX
 	// authentication anymore. The value of this field will be ignored.
-	JmxInitContainerImage *images.Image `json:"jmxInitContainerImage,omitempty"`
+	JmxInitContainerImage string `json:"jmxInitContainerImage,omitempty"`
 
 	// SoftPodAntiAffinity sets whether multiple Cassandra instances can be scheduled on the same node.
 	// This should normally be false to ensure cluster resilience but may be set true for test/dev scenarios to minimise

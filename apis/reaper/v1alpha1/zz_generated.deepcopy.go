@@ -24,7 +24,6 @@ package v1alpha1
 import (
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -214,16 +213,6 @@ func (in *ReaperTemplate) DeepCopyInto(out *ReaperTemplate) {
 	out.CassandraUserSecretRef = in.CassandraUserSecretRef
 	out.JmxUserSecretRef = in.JmxUserSecretRef
 	out.UiUserSecretRef = in.UiUserSecretRef
-	if in.ContainerImage != nil {
-		in, out := &in.ContainerImage, &out.ContainerImage
-		*out = new(images.Image)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.InitContainerImage != nil {
-		in, out := &in.InitContainerImage, &out.InitContainerImage
-		*out = new(images.Image)
-		(*in).DeepCopyInto(*out)
-	}
 	in.AutoScheduling.DeepCopyInto(&out.AutoScheduling)
 	if in.LivenessProbe != nil {
 		in, out := &in.LivenessProbe, &out.LivenessProbe

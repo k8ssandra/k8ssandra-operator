@@ -9,7 +9,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,9 +68,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
-				ContainerImage: &images.Image{
-					Repository: medusaImageRepo,
-				},
+				ContainerImage: fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo),
 				StorageProperties: medusaapi.Storage{
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,

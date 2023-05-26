@@ -1044,50 +1044,9 @@ spec:
                 - truststoreSecretRef
                 type: object
               containerImage:
-                default:
-                  name: cassandra-reaper
-                  repository: thelastpickle
-                  tag: 3.2.1
                 description: The image to use for the Reaper pod main container. The
                   default is "thelastpickle/cassandra-reaper:3.2.1".
-                properties:
-                  name:
-                    description: The image name to use.
-                    type: string
-                  pullPolicy:
-                    description: The image pull policy to use. Defaults to "Always"
-                      if the tag is "latest", otherwise to "IfNotPresent".
-                    enum:
-                    - Always
-                    - IfNotPresent
-                    - Never
-                    type: string
-                  pullSecretRef:
-                    description: 'The secret to use when pulling the image from private
-                      repositories. If specified, this secret will be passed to individual
-                      puller implementations for them to use. For example, in the
-                      case of Docker, only DockerConfig type secrets are honored.
-                      More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  registry:
-                    default: docker.io
-                    description: The Docker registry to use. Defaults to "docker.io",
-                      the official Docker Hub.
-                    type: string
-                  repository:
-                    description: The Docker repository to use.
-                    type: string
-                  tag:
-                    default: latest
-                    description: The image tag to use. Defaults to "latest".
-                    type: string
-                type: object
+                type: string
               datacenterAvailability:
                 default: ALL
                 description: DatacenterAvailability indicates to Reaper its deployment
@@ -1129,50 +1088,9 @@ spec:
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               initContainerImage:
-                default:
-                  name: cassandra-reaper
-                  repository: thelastpickle
-                  tag: 3.2.1
                 description: The image to use for the Reaper pod init container (that
                   performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.2.1".
-                properties:
-                  name:
-                    description: The image name to use.
-                    type: string
-                  pullPolicy:
-                    description: The image pull policy to use. Defaults to "Always"
-                      if the tag is "latest", otherwise to "IfNotPresent".
-                    enum:
-                    - Always
-                    - IfNotPresent
-                    - Never
-                    type: string
-                  pullSecretRef:
-                    description: 'The secret to use when pulling the image from private
-                      repositories. If specified, this secret will be passed to individual
-                      puller implementations for them to use. For example, in the
-                      case of Docker, only DockerConfig type secrets are honored.
-                      More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod'
-                    properties:
-                      name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
-                        type: string
-                    type: object
-                    x-kubernetes-map-type: atomic
-                  registry:
-                    default: docker.io
-                    description: The Docker registry to use. Defaults to "docker.io",
-                      the official Docker Hub.
-                    type: string
-                  repository:
-                    description: The Docker repository to use.
-                    type: string
-                  tag:
-                    default: latest
-                    description: The image tag to use. Defaults to "latest".
-                    type: string
-                type: object
+                type: string
               initContainerResources:
                 description: Init Container resources.
                 properties:

@@ -28,7 +28,6 @@ import (
 	stargatev1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -223,11 +222,6 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.JmxInitContainerImage != nil {
-		in, out := &in.JmxInitContainerImage, &out.JmxInitContainerImage
-		*out = new(images.Image)
-		(*in).DeepCopyInto(*out)
 	}
 	if in.SoftPodAntiAffinity != nil {
 		in, out := &in.SoftPodAntiAffinity, &out.SoftPodAntiAffinity
