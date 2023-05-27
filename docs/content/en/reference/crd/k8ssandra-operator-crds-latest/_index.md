@@ -985,7 +985,7 @@ Cassandra is a specification of the Cassandra cluster. This includes everything 
         <td><b><a href="#k8ssandraclusterspeccassandrametadata">metadata</a></b></td>
         <td>object</td>
         <td>
-          Struct to hold labels and annotations for a CassandraDatacenter<br/>
+          Struct to hold labels and annotations for the top-level Cassandra cluster definition.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -36514,7 +36514,7 @@ ManagementApiAuth defines the authentication settings for the management API in 
 
 
 
-Struct to hold labels and annotations for a CassandraDatacenter
+Struct to hold labels and annotations for the top-level Cassandra cluster definition.
 
 <table>
     <thead>
