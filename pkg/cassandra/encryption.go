@@ -164,6 +164,11 @@ func ClientEncryptionEnabled(template *DatacenterConfig) bool {
 }
 
 func ServerEncryptionEnabled(template *DatacenterConfig) bool {
+	// This allows to bypass the automated behavior, but of course removes the idea of validating this field also
+	if template.ServerEncryptionStores == nil {
+		return false
+	}
+
 	internodeEncryption, _ := template.CassandraConfig.CassandraYaml.Get("server_encryption_options/internode_encryption")
 	return internodeEncryption != nil && internodeEncryption != "none"
 }
