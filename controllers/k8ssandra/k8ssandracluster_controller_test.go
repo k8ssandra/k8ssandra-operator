@@ -102,6 +102,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
+	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
 	// t.Run("ChangeNumTokensValue", testEnv.ControllerTest(ctx, changeNumTokensValue))

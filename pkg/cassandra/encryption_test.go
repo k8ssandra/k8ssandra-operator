@@ -3,8 +3,9 @@ package cassandra
 import (
 	"context"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
@@ -17,6 +18,8 @@ import (
 )
 
 func TestCheckMandatoryEncryptionFields(t *testing.T) {
+	assert := assert.New(t)
+
 	dcConfig := &DatacenterConfig{
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
@@ -43,11 +46,47 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 		},
 	}
 
-	noErr := checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores)
-	assert.NoError(t, noErr)
+	assert.NoError(checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores))
+	assert.Error(checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores))
 
-	err := checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores)
-	assert.Error(t, err)
+	dcConfig = &DatacenterConfig{
+		CassandraConfig: api.CassandraConfig{
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
+				},
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
+				},
+			},
+		},
+		ServerKeystorePassword: "flintstones",
+		ClientKeystorePassword: "flightstones",
+	}
+
+	assert.True(ServerEncryptionEnabled(dcConfig))
+	assert.True(ClientEncryptionEnabled(dcConfig))
+
+	assert.Error(checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores))
+	assert.Error(checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores))
+}
+
+func TestOverrideOfMandatoryEncryptionCheck(t *testing.T) {
+	dcConfig := &DatacenterConfig{
+		CassandraConfig: api.CassandraConfig{
+			CassandraYaml: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
+				},
+				"server_encryption_options": map[string]interface{}{
+					"internode_encryption": "all",
+				},
+			},
+		},
+	}
+
+	assert.False(t, ServerEncryptionEnabled(dcConfig))
+	assert.False(t, ClientEncryptionEnabled(dcConfig))
 }
 
 func TestAddEncryptionMountToCassandra(t *testing.T) {
