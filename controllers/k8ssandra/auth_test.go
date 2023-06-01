@@ -10,6 +10,8 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -370,4 +372,79 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
+}
+
+func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "cluster1",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Auth: pointer.BoolPtr(true),
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{{
+					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
+					K8sContext: f.DataPlaneContexts[1],
+					Size:       1,
+					DatacenterOptions: api.DatacenterOptions{
+						ServerVersion: "4.1.2",
+						StorageConfig: &cassdcapi.StorageConfig{
+							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+								StorageClassName: &defaultStorageClass,
+							},
+						},
+						CassandraConfig: &api.CassandraConfig{
+							CassandraYaml: unstructured.Unstructured{
+								"server_encryption_options": map[string]interface{}{
+									"internode_encryption": "all",
+									"keystore":             "/etc/encryption/internode/keystore.jks",
+									"keystore_password":    "changeit",
+									"truststore":           "/etc/encryption/internode/truststore.jks",
+									"truststore_password":  "changeit",
+								},
+							},
+						},
+					},
+				}},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+
+	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("update dc status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dcKey)
+	require.NoError(err, "failed to set dc status ready")
+
+	t.Log("check the cassandra-yaml properties were set in the CassandraDatacenter")
+	dc := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dcKey, dc)
+	require.NoError(err, "failed to get CassandraDatacenter")
+
+	dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
+	dcConfigYaml, _ := dcConfig["cassandra-yaml"].(map[string]interface{})
+
+	require.Equal("all", dcConfigYaml["server_encryption_options"].(map[string]interface{})["internode_encryption"].(string))
+	require.Equal("changeit", dcConfigYaml["server_encryption_options"].(map[string]interface{})["keystore_password"].(string))
+	require.Equal("/etc/encryption/internode/keystore.jks", dcConfigYaml["server_encryption_options"].(map[string]interface{})["keystore"].(string))
+
+	t.Log("deleting K8ssandraCluster")
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
