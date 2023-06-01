@@ -149,7 +149,7 @@ func checkMandatoryEncryptionFields(encryptionStores *encryption.Stores) error {
 		return fmt.Errorf("EncryptionStores is required to set up encryption")
 	}
 	if encryptionStores.KeystoreSecretRef == nil {
-		return fmt.Errorf("keystore secret ref was not set")
+		return fmt.Errorf("keystore secret ref is required when EncryptionStores is used")
 	}
 	return nil
 }
@@ -159,13 +159,17 @@ func StoreMountFullPath(storeType encryption.StoreType, storeName encryption.Sto
 }
 
 func ClientEncryptionEnabled(template *DatacenterConfig) bool {
+	if template.ClientEncryptionStores == nil && (template.ClientKeystorePassword == "" && template.ClientTruststorePassword == "") {
+		return false
+	}
+
 	enabled, _ := template.CassandraConfig.CassandraYaml.Get("client_encryption_options/enabled")
 	return enabled == true
 }
 
 func ServerEncryptionEnabled(template *DatacenterConfig) bool {
 	// This allows to bypass the automated behavior, but of course removes the idea of validating this field also
-	if template.ServerEncryptionStores == nil {
+	if template.ServerEncryptionStores == nil && (template.ServerKeystorePassword == "" && template.ServerTruststorePassword == "") {
 		return false
 	}
 
