@@ -63,7 +63,7 @@ jobs:
           context: .
           push: false
           tags: k8ssandra/k8ssandra-operator:latest,k8ssandra/k8ssandra-operator:${{ steps.parse_image_tag.outputs.image_tag }}
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64,linux/arm64
           outputs: type=docker,dest=/tmp/k8ssandra-operator.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
