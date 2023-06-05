@@ -348,13 +348,28 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
-func (f *E2eFramework) InstallMinioOperator(namespace string) error {
+func (f *E2eFramework) InstallMinioOperator() error {
+	namespace := "minio-operator"
 	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Install Minio Operator", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.ApplyKustomize(options, "github.com/minio/operator?ref=v5.0.5"); err != nil {
 			return err
 		}
+
+		// Wait for the minio-operator rollout to complete
+		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
+			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio-operator"); err != nil {
+				f.logger.Info("Waiting for minio-operator rollout to complete: %s", err)
+				return false, err
+			}
+			return true, nil
+		})
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

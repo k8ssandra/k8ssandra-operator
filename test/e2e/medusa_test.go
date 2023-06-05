@@ -26,6 +26,8 @@ const (
 func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+	require.NoError(f.InstallMinioOperator(), "Failed to install the MinIO operator")
+	require.NoError(f.CreateMinioTenant(namespace), "Failed to create the MinIO tenant")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
@@ -44,6 +46,8 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+	require.NoError(f.InstallMinioOperator(), "Failed to install the MinIO operator")
+	require.NoError(f.CreateMinioTenant(namespace), "Failed to create the MinIO tenant")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)

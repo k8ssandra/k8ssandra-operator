@@ -49,9 +49,9 @@ func applyInternal(opts Options, kustomize bool, arg interface{}) error {
 	}
 
 	if kustomize {
-		cmd.Args = append(cmd.Args, "-f")
+		cmd.Args = append(cmd.Args, "-k")
 	} else {
-		cmd.Args = append(cmd.Args, "-f", "-R")
+		cmd.Args = append(cmd.Args, "-f")
 	}
 
 	if buf, ok := arg.(*bytes.Buffer); ok {
