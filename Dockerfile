@@ -18,6 +18,8 @@ COPY controllers/ controllers/
 # Build
 ARG ARCH=amd64
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} go build -a -o manager main.go
+
+# Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
