@@ -50,7 +50,6 @@ func newPerNodeConfigMap(kcKey, configKey types.NamespacedName) *corev1.ConfigMa
 				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
 				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
 				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
-				k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 				k8ssandraapi.K8ssandraClusterNameLabel:      kcKey.Name,
 				k8ssandraapi.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
 			},

@@ -157,7 +157,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 				api.NameLabel:                      api.NameLabelValue,
 				api.PartOfLabel:                    api.PartOfLabelValue,
 				api.ComponentLabel:                 api.ComponentLabelValueCassandra,
-				api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
 				api.K8ssandraClusterNameLabel:      klusterKey.Name,
 				api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 			},
