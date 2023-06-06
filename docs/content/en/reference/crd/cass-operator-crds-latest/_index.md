@@ -294,7 +294,7 @@ CassandraDatacenterSpec defines the desired state of a CassandraDatacenter
         <td><b>replaceNodes</b></td>
         <td>[]string</td>
         <td>
-          DEPRECATED Use CassandraTask replacenode to achieve correct node replacement. A list of pod names that need to be replaced.<br/>
+          Deprecated Use CassandraTask replacenode to achieve correct node replacement. A list of pod names that need to be replaced.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -308,7 +308,7 @@ CassandraDatacenterSpec defines the desired state of a CassandraDatacenter
         <td><b>rollingRestartRequested</b></td>
         <td>boolean</td>
         <td>
-          DEPRECATED. Use CassandraTask for rolling restarts. Whether to do a rolling restart at the next opportunity. The operator will set this back to false once the restart is in progress.<br/>
+          Deprecated. Use CassandraTask for rolling restarts. Whether to do a rolling restart at the next opportunity. The operator will set this back to false once the restart is in progress.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -322,7 +322,14 @@ CassandraDatacenterSpec defines the desired state of a CassandraDatacenter
         <td><b>serviceAccount</b></td>
         <td>string</td>
         <td>
-          The k8s service account to use for the server pods<br/>
+          Deprecated DeprecatedServiceAccount Use ServiceAccountName instead, which takes precedence. The k8s service account to use for the server pods<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>serviceAccountName</b></td>
+        <td>string</td>
+        <td>
+          ServiceAccountName is the Kubernetes service account to use for the server pods. This takes presedence over DeprecatedServiceAccount and both take precedence over setting it in the PodTemplateSpec.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -16579,7 +16586,7 @@ Rack ...
         <td><b>zone</b></td>
         <td>string</td>
         <td>
-          Deprecated. Use nodeAffinityLabels instead. Zone name to pin the rack, using node affinity<br/>
+          Deprecated. Use nodeAffinityLabels instead. DeprecatedZone name to pin the rack, using node affinity<br/>
         </td>
         <td>false</td>
       </tr></tbody>
