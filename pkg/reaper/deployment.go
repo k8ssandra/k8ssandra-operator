@@ -46,6 +46,8 @@ var defaultImage = images.Image{
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
+			// Note: managed-by shouldn't be used here, but we're keeping it for backwards compatibility, since changing
+			// a deployment's selector is a breaking change.
 			{
 				Key:      v1alpha1.ManagedByLabel,
 				Operator: metav1.LabelSelectorOpIn,
