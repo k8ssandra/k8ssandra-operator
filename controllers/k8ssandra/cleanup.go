@@ -65,7 +65,7 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			hasErrors = true
 		}
 
-		selector := k8ssandralabels.PartOfLabels(kcKey)
+		selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 		stargateList := &stargateapi.StargateList{}
 		options := client.ListOptions{
 			Namespace:     namespace,
@@ -218,7 +218,7 @@ func (r *K8ssandraClusterReconciler) findStargateForDeletion(
 	dcName string,
 	remoteClient client.Client) (*stargateapi.Stargate, client.Client, error) {
 
-	selector := k8ssandralabels.PartOfLabels(kcKey)
+	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	stargateList := &stargateapi.StargateList{}
 	stargateName := kcKey.Name + "-" + dcName + "-stargate"
@@ -257,7 +257,7 @@ func (r *K8ssandraClusterReconciler) findReaperForDeletion(
 	dcName string,
 	remoteClient client.Client) (*reaperapi.Reaper, client.Client, error) {
 
-	selector := k8ssandralabels.PartOfLabels(kcKey)
+	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	reaperList := &reaperapi.ReaperList{}
 	reaperName := kcKey.Name + "-" + dcName + "-reaper"
@@ -295,7 +295,7 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	kcKey client.ObjectKey,
 	dcName string,
 	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, client.Client, error) {
-	selector := k8ssandralabels.PartOfLabels(kcKey)
+	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	dcList := &cassdcapi.CassandraDatacenterList{}
 
@@ -335,7 +335,7 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
+	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
 	configMaps := &corev1.ConfigMapList{}
 	options := client.ListOptions{
 		Namespace:     namespace,

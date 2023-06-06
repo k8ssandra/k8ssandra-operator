@@ -62,6 +62,9 @@ const (
 	ReplicatedByLabel      = "k8ssandra.io/replicated-by"
 	ReplicatedByLabelValue = "k8ssandracluster-controller"
 
+	CleanedUpByLabel      = "k8ssandra.io/CleanedUp-by"
+	CleanedUpByLabelValue = "k8ssandracluster-controller"
+
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
 
