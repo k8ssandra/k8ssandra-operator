@@ -62,7 +62,7 @@ const (
 	ReplicatedByLabel      = "k8ssandra.io/replicated-by"
 	ReplicatedByLabelValue = "k8ssandracluster-controller"
 
-	CleanedUpByLabel      = "k8ssandra.io/CleanedUp-by"
+	CleanedUpByLabel      = "k8ssandra.io/cleaned-up-by"
 	CleanedUpByLabelValue = "k8ssandracluster-controller"
 
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
