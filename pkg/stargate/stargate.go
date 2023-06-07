@@ -72,7 +72,6 @@ func createResourceMeta(stargateTemplate *stargateapi.StargateDatacenterTemplate
 		api.NameLabel:                      api.NameLabelValue,
 		api.PartOfLabel:                    api.PartOfLabelValue,
 		api.ComponentLabel:                 api.ComponentLabelValueStargate,
-		api.CreatedByLabel:                 api.CreatedByLabelValueK8ssandraClusterController,
 		api.K8ssandraClusterNameLabel:      kc.Name,
 		api.K8ssandraClusterNamespaceLabel: kc.Namespace,
 	}
