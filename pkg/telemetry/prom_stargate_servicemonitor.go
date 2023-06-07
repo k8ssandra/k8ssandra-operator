@@ -5,7 +5,6 @@ import (
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"os"
 
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -138,8 +137,7 @@ func (cfg PrometheusResourcer) NewStargateServiceMonitor() (promapi.ServiceMonit
 		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueStargateController,
-					stargateapi.StargateLabel:   cfg.MonitoringTargetName,
+					stargateapi.StargateLabel: cfg.MonitoringTargetName,
 				},
 			},
 			NamespaceSelector: promapi.NamespaceSelector{

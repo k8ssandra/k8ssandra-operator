@@ -5,7 +5,6 @@ import (
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"os"
 
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,8 +51,7 @@ func (cfg PrometheusResourcer) NewReaperServiceMonitor() (promapi.ServiceMonitor
 		Spec: promapi.ServiceMonitorSpec{
 			Selector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
-					reaperapi.ReaperLabel:       cfg.MonitoringTargetName,
+					reaperapi.ReaperLabel: cfg.MonitoringTargetName,
 				},
 			},
 			NamespaceSelector: promapi.NamespaceSelector{
