@@ -293,7 +293,6 @@ func newCassandraTask(kTask *api.K8ssandraTask, namespace string, dcName string)
 				k8capi.NameLabel:                k8capi.NameLabelValue,
 				k8capi.PartOfLabel:              k8capi.PartOfLabelValue,
 				k8capi.ComponentLabel:           k8capi.ComponentLabelValueCassandra,
-				k8capi.CreatedByLabel:           k8capi.CreatedByLabelValueK8ssandraTaskController,
 				api.K8ssandraTaskNameLabel:      kTask.Name,
 				api.K8ssandraTaskNamespaceLabel: kTask.Namespace,
 			},

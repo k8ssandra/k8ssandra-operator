@@ -53,7 +53,6 @@ const (
 	CreatedByLabelValueK8ssandraClusterController = "k8ssandracluster-controller"
 	CreatedByLabelValueStargateController         = "stargate-controller"
 	CreatedByLabelValueReaperController           = "reaper-controller"
-	CreatedByLabelValueK8ssandraTaskController    = "k8ssandratask-controller"
 
 	PartOfLabel      = "app.kubernetes.io/part-of"
 	PartOfLabelValue = "k8ssandra"
