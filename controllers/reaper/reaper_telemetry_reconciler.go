@@ -97,7 +97,6 @@ func mustLabels(reaperName string, additionalLabels map[string]string) map[strin
 	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
 	additionalLabels[reaperapi.ReaperLabel] = reaperName
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
-	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
 	return additionalLabels
 }
 

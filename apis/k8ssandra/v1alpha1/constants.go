@@ -49,11 +49,6 @@ const (
 	ComponentLabelValueReaper    = "reaper"
 	ComponentLabelTelemetry      = "telemetry"
 
-	CreatedByLabel                                = "app.kubernetes.io/created-by"
-	CreatedByLabelValueK8ssandraClusterController = "k8ssandracluster-controller"
-	CreatedByLabelValueStargateController         = "stargate-controller"
-	CreatedByLabelValueReaperController           = "reaper-controller"
-
 	PartOfLabel      = "app.kubernetes.io/part-of"
 	PartOfLabelValue = "k8ssandra"
 

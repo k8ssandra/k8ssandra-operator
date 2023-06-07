@@ -26,7 +26,6 @@ func TestNewService(t *testing.T) {
 		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
 		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
 		reaperapi.ReaperLabel:       reaper.Name,
-		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
 	}
 
 	serviceLabels := map[string]string{
@@ -35,7 +34,6 @@ func TestNewService(t *testing.T) {
 		k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueReaper,
 		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
 		reaperapi.ReaperLabel:       reaper.Name,
-		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
 		"common":                    "everywhere",
 		"service-label":             "service-label-value",
 		"override":                  "serviceLevel",

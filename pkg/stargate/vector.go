@@ -35,7 +35,6 @@ func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraD
 				k8ssandra.NameLabel:                      k8ssandra.NameLabelValue,
 				k8ssandra.PartOfLabel:                    k8ssandra.PartOfLabelValue,
 				k8ssandra.ComponentLabel:                 k8ssandra.ComponentLabelValueStargate,
-				k8ssandra.CreatedByLabel:                 k8ssandra.CreatedByLabelValueK8ssandraClusterController,
 				k8ssandra.K8ssandraClusterNameLabel:      dc.Labels[k8ssandra.K8ssandraClusterNameLabel],
 				k8ssandra.K8ssandraClusterNamespaceLabel: namespace,
 			},

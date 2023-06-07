@@ -296,7 +296,6 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
 				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
 				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
-				k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
 				k8ssandraapi.K8ssandraClusterNameLabel:      k8cName,
 				k8ssandraapi.K8ssandraClusterNamespaceLabel: k8cNamespace,
 			},
