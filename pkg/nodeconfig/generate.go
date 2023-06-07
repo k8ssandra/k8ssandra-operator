@@ -2,6 +2,7 @@ package nodeconfig
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"strings"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -46,13 +47,13 @@ func newPerNodeConfigMap(kcKey, configKey types.NamespacedName) *corev1.ConfigMa
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      configKey.Name,
 			Namespace: configKey.Namespace,
-			Labels: map[string]string{
-				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
-				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
-				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
-				k8ssandraapi.K8ssandraClusterNameLabel:      kcKey.Name,
-				k8ssandraapi.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
-			},
+			Labels: utils.MergeMap(
+				map[string]string{
+					k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+					k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+					k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueCassandra,
+				},
+				labels.CleanedUpByLabels(kcKey)),
 		},
 	}
 }

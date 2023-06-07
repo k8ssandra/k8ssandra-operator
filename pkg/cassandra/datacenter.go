@@ -3,7 +3,6 @@ package cassandra
 import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
-
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
@@ -11,6 +10,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -153,13 +153,11 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
 			Annotations: map[string]string{},
-			Labels: map[string]string{
-				api.NameLabel:                      api.NameLabelValue,
-				api.PartOfLabel:                    api.PartOfLabelValue,
-				api.ComponentLabel:                 api.ComponentLabelValueCassandra,
-				api.K8ssandraClusterNameLabel:      klusterKey.Name,
-				api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
-			},
+			Labels: utils.MergeMap(map[string]string{
+				api.NameLabel:      api.NameLabelValue,
+				api.PartOfLabel:    api.PartOfLabelValue,
+				api.ComponentLabel: api.ComponentLabelValueCassandra,
+			}, labels.CleanedUpByLabels(klusterKey)),
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                template.Size,
