@@ -94,7 +94,7 @@ func IsCleanedUpBy(component Labeled, klusterKey client.ObjectKey) bool {
 }
 
 // CleanedUpByLabels returns the labels used to indicate that a component should be cleaned up by the k8ssandra-cluster
-// when the given K8ssandraCluster is deleted.
+// controller when the given K8ssandraCluster is deleted.
 // (This is only used for cross-context references, when ownerReferences cannot be used).
 func CleanedUpByLabels(klusterKey client.ObjectKey) map[string]string {
 	return map[string]string{
