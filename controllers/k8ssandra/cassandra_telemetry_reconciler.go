@@ -92,7 +92,6 @@ func mustLabels(klusterName string, klusterNamespace string, dcName string, addi
 	additionalLabels[k8ssandraapi.DatacenterLabel] = dcName
 	additionalLabels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
-	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
 	return additionalLabels
 }
 

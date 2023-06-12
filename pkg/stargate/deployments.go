@@ -467,7 +467,6 @@ func createDeploymentLabels(stargate *api.Stargate) map[string]string {
 		coreapi.NameLabel:      coreapi.NameLabelValue,
 		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
 		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
 		api.StargateLabel:      stargate.Name,
 	}
 
@@ -482,7 +481,6 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 		coreapi.NameLabel:           coreapi.NameLabelValue,
 		coreapi.PartOfLabel:         coreapi.PartOfLabelValue,
 		coreapi.ComponentLabel:      coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel:      coreapi.CreatedByLabelValueStargateController,
 		api.StargateLabel:           stargate.Name,
 		api.StargateDeploymentLabel: deploymentName,
 	}

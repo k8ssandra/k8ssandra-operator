@@ -56,7 +56,6 @@ func createServiceMeta(stargate *api.Stargate) meta.Tags {
 		coreapi.NameLabel:      coreapi.NameLabelValue,
 		coreapi.PartOfLabel:    coreapi.PartOfLabelValue,
 		coreapi.ComponentLabel: coreapi.ComponentLabelValueStargate,
-		coreapi.CreatedByLabel: coreapi.CreatedByLabelValueStargateController,
 		api.StargateLabel:      stargate.Name,
 	}
 

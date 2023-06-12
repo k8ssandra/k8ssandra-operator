@@ -2,6 +2,9 @@ package reaper
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -31,14 +34,13 @@ func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraD
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name),
 			Namespace: namespace,
-			Labels: map[string]string{
-				k8ssandra.NameLabel:                      k8ssandra.NameLabelValue,
-				k8ssandra.PartOfLabel:                    k8ssandra.PartOfLabelValue,
-				k8ssandra.ComponentLabel:                 k8ssandra.ComponentLabelValueReaper,
-				k8ssandra.CreatedByLabel:                 k8ssandra.CreatedByLabelValueK8ssandraClusterController,
-				k8ssandra.K8ssandraClusterNameLabel:      dc.Labels[k8ssandra.K8ssandraClusterNameLabel],
-				k8ssandra.K8ssandraClusterNamespaceLabel: namespace,
-			},
+			Labels: utils.MergeMap(
+				map[string]string{
+					k8ssandra.NameLabel:      k8ssandra.NameLabelValue,
+					k8ssandra.PartOfLabel:    k8ssandra.PartOfLabelValue,
+					k8ssandra.ComponentLabel: k8ssandra.ComponentLabelValueReaper,
+				},
+				labels.CleanedUpByLabels(client.ObjectKey{Namespace: namespace, Name: dc.Labels[k8ssandra.K8ssandraClusterNameLabel]})),
 		},
 		Data: map[string]string{
 			"vector.toml": vectorToml,

@@ -34,13 +34,9 @@ const (
 
 	RebuildDcAnnotation = "k8ssandra.io/rebuild-dc"
 
-	RebuildLabel = "k8ssandra.io/rebuild"
-
 	NameLabel      = "app.kubernetes.io/name"
 	NameLabelValue = "k8ssandra-operator"
 
-	InstanceLabel  = "app.kubernetes.io/instance"
-	VersionLabel   = "app.kubernetes.io/version"
 	ManagedByLabel = "app.kubernetes.io/managed-by"
 
 	ComponentLabel               = "app.kubernetes.io/component"
@@ -49,18 +45,15 @@ const (
 	ComponentLabelValueReaper    = "reaper"
 	ComponentLabelTelemetry      = "telemetry"
 
-	CreatedByLabel                                = "app.kubernetes.io/created-by"
-	CreatedByLabelValueK8ssandraClusterController = "k8ssandracluster-controller"
-	CreatedByLabelValueStargateController         = "stargate-controller"
-	CreatedByLabelValueReaperController           = "reaper-controller"
-	CreatedByLabelValueK8ssandraTaskController    = "k8ssandratask-controller"
-
 	PartOfLabel      = "app.kubernetes.io/part-of"
 	PartOfLabelValue = "k8ssandra"
 
 	// ReplicatedByLabel is used to label secrets that should be selected for replication by a ReplicatedSecret.
 	ReplicatedByLabel      = "k8ssandra.io/replicated-by"
 	ReplicatedByLabelValue = "k8ssandracluster-controller"
+
+	CleanedUpByLabel      = "k8ssandra.io/cleaned-up-by"
+	CleanedUpByLabelValue = "k8ssandracluster-controller"
 
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"

@@ -52,10 +52,10 @@ func TestNewDefaultPerNodeConfigMap(t *testing.T) {
 					Namespace: "ns1",
 					Name:      "kc1-dc1-per-node-config",
 					Labels: map[string]string{
-						"app.kubernetes.io/created-by":   "k8ssandracluster-controller",
 						"app.kubernetes.io/name":         "k8ssandra-operator",
 						"app.kubernetes.io/component":    "cassandra",
 						"app.kubernetes.io/part-of":      "k8ssandra",
+						"k8ssandra.io/cleaned-up-by":     "k8ssandracluster-controller",
 						"k8ssandra.io/cluster-name":      "kc1",
 						"k8ssandra.io/cluster-namespace": "ns1",
 					},

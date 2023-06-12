@@ -2,6 +2,9 @@ package telemetry
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -292,14 +295,13 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      VectorAgentConfigMapName(k8cName, dcName),
 			Namespace: namespace,
-			Labels: map[string]string{
-				k8ssandraapi.NameLabel:                      k8ssandraapi.NameLabelValue,
-				k8ssandraapi.PartOfLabel:                    k8ssandraapi.PartOfLabelValue,
-				k8ssandraapi.ComponentLabel:                 k8ssandraapi.ComponentLabelValueCassandra,
-				k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
-				k8ssandraapi.K8ssandraClusterNameLabel:      k8cName,
-				k8ssandraapi.K8ssandraClusterNamespaceLabel: k8cNamespace,
-			},
+			Labels: utils.MergeMap(
+				map[string]string{
+					k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
+					k8ssandraapi.PartOfLabel:    k8ssandraapi.PartOfLabelValue,
+					k8ssandraapi.ComponentLabel: k8ssandraapi.ComponentLabelValueCassandra,
+				},
+				labels.CleanedUpByLabels(client.ObjectKey{Namespace: k8cNamespace, Name: k8cName})),
 		},
 		Data: map[string]string{
 			"vector.toml": vectorToml,

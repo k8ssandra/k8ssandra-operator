@@ -85,7 +85,6 @@ func mustLabels(stargateName string, additionalLabels map[string]string) map[str
 	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
 	additionalLabels[stargateapi.StargateLabel] = stargateName
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
-	additionalLabels[k8ssandraapi.CreatedByLabel] = k8ssandraapi.CreatedByLabelValueK8ssandraClusterController
 	return additionalLabels
 
 }

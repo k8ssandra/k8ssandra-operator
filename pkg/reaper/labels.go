@@ -3,7 +3,9 @@ package reaper
 import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var commonLabels = map[string]string{
@@ -14,18 +16,14 @@ var commonLabels = map[string]string{
 }
 
 func createResourceLabels(kc *k8ssandraapi.K8ssandraCluster) map[string]string {
-	labels := map[string]string{
-		k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
-		k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
-		k8ssandraapi.CreatedByLabel:                 k8ssandraapi.CreatedByLabelValueK8ssandraClusterController,
-	}
-	return utils.MergeMap(commonLabels, labels)
+	return utils.MergeMap(
+		commonLabels,
+		k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}))
 }
 
 func getConstantLabels(r *reaperapi.Reaper) map[string]string {
 	labels := map[string]string{
-		reaperapi.ReaperLabel:       r.Name,
-		k8ssandraapi.CreatedByLabel: k8ssandraapi.CreatedByLabelValueReaperController,
+		reaperapi.ReaperLabel: r.Name,
 	}
 
 	kcName, nameFound := r.Labels[k8ssandraapi.K8ssandraClusterNameLabel]
