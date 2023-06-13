@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: setup-minio
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup-minio-pod
+          image: minio/mc
+          command: ["bash", "-c"]
+          args:
+            - |
+              mc alias set k8s-minio-dev http://test-hl.minio.svc.cluster.local:9000 KBRSKYZGGYXCPURM MYUNGOTZIKFRGZT5ZLRRFKFVJ5JNGUVS
+              mc mb k8s-minio-dev/k8ssandra-medusa

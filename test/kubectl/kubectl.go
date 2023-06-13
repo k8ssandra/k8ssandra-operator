@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -315,6 +316,41 @@ func RolloutStatus(ctx context.Context, opts Options, kind, name string) error {
 		fmt.Println(string(output))
 	}
 	return err
+}
+
+func StatefulSetReadyReplicas(ctx context.Context, opts Options, namespace, name string) (int, error) {
+	cmd := exec.CommandContext(ctx, "kubectl", "get", "statefulset", name, "-o", "jsonpath='{.status.readyReplicas}'")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	cmd.Args = append(cmd.Args, "-n", namespace)
+
+	fmt.Println(cmd)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get ready replicas: %s", string(output))
+	}
+	outputStr := strings.Trim(string(output), "'")
+	return strconv.Atoi(outputStr)
+}
+
+func JobSuccess(ctx context.Context, opts Options, namespace, name string) error {
+	cmd := exec.CommandContext(ctx, "kubectl", "get", "job", name, "-o", "jsonpath='{.status.succeeded}'")
+	if len(opts.Context) > 0 {
+		cmd.Args = append(cmd.Args, "--context", opts.Context)
+	}
+	cmd.Args = append(cmd.Args, "-n", namespace)
+
+	fmt.Println(cmd)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to get job status: %s", string(output))
+	}
+	outputStr := strings.Trim(string(output), "'")
+	if outputStr != "1" {
+		return fmt.Errorf("job %s/%s didn't succeed yet. .status.succeeded: %s", namespace, name, string(output))
+	}
+	return nil
 }
 
 func Logs(opts Options, args ...string) (string, error) {
