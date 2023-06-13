@@ -82,7 +82,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Reconcile the Medusa standalone deployment
 		kcKey := utils.GetKey(kc)
-		desiredMedusaStandalone.SetLabels(labels.PartOfLabels(kcKey))
+		desiredMedusaStandalone.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredMedusaStandalone)
 		switch {
 		case recRes.IsError():
@@ -93,7 +93,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Create and reconcile the Medusa service for the standalone deployment
 		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
-		medusaService.SetLabels(labels.PartOfLabels(kcKey))
+		medusaService.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService)
 		switch {
 		case recRes.IsError():
@@ -170,7 +170,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		medusaIni := medusa.CreateMedusaIni(kc)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
 		kcKey := utils.GetKey(kc)
-		desiredConfigMap.SetLabels(labels.PartOfLabels(kcKey))
+		desiredConfigMap.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
 		switch {
 		case recRes.IsError():

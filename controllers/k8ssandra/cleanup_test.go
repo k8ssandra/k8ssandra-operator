@@ -34,7 +34,7 @@ func TestK8ssandraClusterReconciler_DeleteServices(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-1",
 			Namespace: "test-namespace",
-			Labels:    k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}),
+			Labels:    k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}),
 		},
 	}
 
@@ -76,7 +76,7 @@ func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment-1",
 			Namespace: "test-namespace",
-			Labels:    k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}),
+			Labels:    k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}),
 		},
 	}
 

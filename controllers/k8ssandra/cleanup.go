@@ -375,7 +375,7 @@ func (r *K8ssandraClusterReconciler) deleteServices(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	options := client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: labels.SelectorFromSet(selector),
@@ -408,7 +408,7 @@ func (r *K8ssandraClusterReconciler) deleteDeployments(
 	remoteClient client.Client,
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
-	selector := k8ssandralabels.PartOfLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	options := client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: labels.SelectorFromSet(selector),
