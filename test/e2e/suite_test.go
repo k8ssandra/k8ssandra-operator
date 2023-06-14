@@ -507,12 +507,8 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 			t.Logf("failed to create namespace %s", "minio")
 			return err
 		}
-		if err := f.InstallMinioOperator(); err != nil {
+		if err := f.InstallMinio(); err != nil {
 			t.Log("failed to install Minio operator")
-			return err
-		}
-		if err := f.CreateMinioTenant(framework.MinioNamespace); err != nil {
-			t.Log("failed to create Minio tenant")
 			return err
 		}
 		if err := f.CreateMedusaBucket(framework.MinioNamespace); err != nil {

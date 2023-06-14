@@ -349,55 +349,25 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
-func (f *E2eFramework) InstallMinioOperator() error {
-	namespace := "minio-operator"
+func (f *E2eFramework) InstallMinio() error {
+	path := filepath.Join("..", "testdata", "fixtures", "minio.yaml")
 	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Install Minio Operator", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.ApplyKustomize(options, "github.com/minio/operator?ref=v5.0.5"); err != nil {
+		options := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
+		f.logger.Info("Install Minio", "Namespace", MinioNamespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}
 
 		// Wait for the minio-operator rollout to complete
-		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		opts := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
 		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
-			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio-operator"); err != nil {
-				f.logger.Info("Waiting for minio-operator rollout to complete: %s", err)
+			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio"); err != nil {
+				f.logger.Info("Waiting for minio rollout to complete: %s", err)
 				return false, err
 			}
 			return true, nil
 		})
 		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
-}
-
-func (f *E2eFramework) CreateMinioTenant(namespace string) error {
-	path := filepath.Join("..", "testdata", "fixtures", "minio-tenant.yaml")
-
-	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		f.logger.Info("Create Minio Tenant", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
-			return err
-		}
-		// Wait for the minio tenant statefulset to have 2 ready replicas
-		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		err := wait.PollWithContext(context.Background(), 5*time.Second, 10*time.Minute, func(ctx context.Context) (bool, error) {
-			readyReplicas, errInner := kubectl.StatefulSetReadyReplicas(ctx, opts, namespace, "test-pool-0")
-			if errInner != nil {
-				f.logger.Error(errInner, "Waiting for minio-tenant to be ready")
-				return false, nil
-			}
-			f.logger.Info("Waiting for minio-tenant to be ready", "readyReplicas", readyReplicas)
-			return readyReplicas == 2, nil
-		})
-		if err != nil {
-			f.logger.Error(err, "minio tenant not ready within timeout")
 			return err
 		}
 	}

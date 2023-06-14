@@ -27,7 +27,7 @@ spec:
       prefix: test
       storageSecretRef:
         name: medusa-bucket-key
-      host: test-hl.minio.svc.cluster.local
+      host: minio-service.minio.svc.cluster.local
       port: 9000
       secure: false 
     certificatesSecretRef:
