@@ -5,7 +5,6 @@
 -->
 
 **What this PR does**:
-<!-- Describe your changes here -->
 
 **Which issue(s) this PR fixes**:
 Fixes #<issue number>

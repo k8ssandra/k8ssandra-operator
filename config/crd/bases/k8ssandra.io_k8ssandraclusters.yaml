@@ -26442,7 +26442,6 @@ spec:
                       storageProvider:
                         description: The storage backend to use for the backups.
                         enum:
-                        - local
                         - google_storage
                         - azure_blobs
                         - s3

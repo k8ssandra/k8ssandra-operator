@@ -39,7 +39,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}
 		}
-		if medusaSpec.StorageProperties.StorageProvider != "local" && medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
+		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
 			return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
 		}
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
@@ -54,12 +54,9 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaContainer)
 
 		// Create required volumes for the Medusa containers
-		volumes, additionalVolumes := medusa.GenerateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
+		volumes := medusa.GenerateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
 		for _, volume := range volumes {
 			cassandra.AddOrUpdateVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
-		}
-		for _, volume := range additionalVolumes {
-			cassandra.AddOrUpdateAdditionalVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
 
 		// Create the Medusa standalone pod

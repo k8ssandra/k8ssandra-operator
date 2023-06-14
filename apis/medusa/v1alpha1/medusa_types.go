@@ -27,7 +27,7 @@ import (
 
 type Storage struct {
 	// The storage backend to use for the backups.
-	// +kubebuilder:validation:Enum=local;google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
+	// +kubebuilder:validation:Enum=google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
 	// +kubebuilder:validation:Required
 	StorageProvider string `json:"storageProvider,omitempty"`
 

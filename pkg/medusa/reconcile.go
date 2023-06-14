@@ -66,12 +66,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     [storage]
     use_sudo_for_restore = false
     storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
-    {{- if eq .Spec.Medusa.StorageProperties.StorageProvider "local" }}
-    bucket_name = {{ .Name }}
-    base_path = /mnt/backups
-    {{- else }}
     bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
-    {{- end }}
     key_file = /etc/medusa-secrets/credentials
     {{- if .Spec.Medusa.StorageProperties.Prefix }}
     prefix = {{ .Spec.Medusa.StorageProperties.Prefix }}
@@ -288,20 +283,12 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 		})
 	}
 
-	if medusaSpec.StorageProperties.StorageProvider == "local" {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			// Medusa local backup storage volume
-			Name:      MedusaBackupsVolumeName,
-			MountPath: MedusaBackupsMountPath,
-		})
-	} else {
-		// We're not using local storage for backups, which requires a secret with backend credentials
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			// Medusa storage secret volume
-			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
-			MountPath: "/etc/medusa-secrets",
-		})
-	}
+	// Mount secret with Medusa storage backend credentials
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		// Medusa storage secret volume
+		Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
+		MountPath: "/etc/medusa-secrets",
+	})
 
 	return volumeMounts
 }
@@ -370,9 +357,8 @@ type medusaAdditionalVolume struct {
 }
 
 // Create or update volumes for medusa
-func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string) ([]medusaVolume, []medusaAdditionalVolume) {
+func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string) []medusaVolume {
 	var newVolumes []medusaVolume
-	var additionalVolumes []medusaAdditionalVolume
 
 	// Medusa config volume, containing medusa.ini
 	configVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, fmt.Sprintf("%s-medusa", k8cName))
@@ -394,61 +380,21 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 	})
 
 	// Medusa credentials volume using the referenced secret
-	if medusaSpec.StorageProperties.StorageProvider != "local" {
-		// We're not using local storage for backups, which requires a secret with backend credentials
-		secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
-		secretVolume := &corev1.Volume{
-			Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
-				},
+	secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
+	secretVolume := &corev1.Volume{
+		Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
 			},
-		}
-
-		newVolumes = append(newVolumes, medusaVolume{
-			Volume:      secretVolume,
-			VolumeIndex: secretVolumeIndex,
-			Exists:      found,
-		})
-	} else {
-		// We're using local storage for backups, which requires a volume for the local backup storage
-		backupVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "medusa-backups")
-		accessModes := []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-		storageClassName := "standard"
-		storageSize := resource.MustParse("10Gi")
-		if medusaSpec.StorageProperties.PodStorage != nil {
-			if medusaSpec.StorageProperties.PodStorage.AccessModes != nil {
-				accessModes = medusaSpec.StorageProperties.PodStorage.AccessModes
-			}
-			if medusaSpec.StorageProperties.PodStorage.StorageClassName != "" {
-				storageClassName = medusaSpec.StorageProperties.PodStorage.StorageClassName
-			}
-			if !medusaSpec.StorageProperties.PodStorage.Size.IsZero() {
-				storageSize = medusaSpec.StorageProperties.PodStorage.Size
-			}
-		}
-
-		backupVolume := &v1beta1.AdditionalVolumes{
-			Name:      MedusaBackupsVolumeName,
-			MountPath: MedusaBackupsMountPath,
-			PVCSpec: &corev1.PersistentVolumeClaimSpec{
-				StorageClassName: &storageClassName,
-				AccessModes:      accessModes,
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: storageSize,
-					},
-				},
-			},
-		}
-
-		additionalVolumes = append(additionalVolumes, medusaAdditionalVolume{
-			Volume:      backupVolume,
-			VolumeIndex: backupVolumeIndex,
-			Exists:      found,
-		})
+		},
 	}
+
+	newVolumes = append(newVolumes, medusaVolume{
+		Volume:      secretVolume,
+		VolumeIndex: secretVolumeIndex,
+		Exists:      found,
+	})
 
 	// Pod info volume
 	podInfoVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "podinfo")
@@ -492,7 +438,7 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 			Exists:      found,
 		})
 	}
-	return newVolumes, additionalVolumes
+	return newVolumes
 }
 
 func MedusaServiceName(clusterName string, dcName string) string {
