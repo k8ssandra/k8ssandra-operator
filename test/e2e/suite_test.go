@@ -274,6 +274,7 @@ func TestOperator(t *testing.T) {
 		fixture:                      framework.NewTestFixture("multi-dc-encryption-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc: multiDcAuthOnOff,
