@@ -242,8 +242,8 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 // It uses the Medusa client to get the host map for the restore operation, using the Medusa standalone service to get the backup topology.
 func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest) (*medusav1alpha1.MedusaRestoreMapping, error) {
 	medusaClient, err := r.ClientFactory.NewClient(medusaServiceUrl(
-		request.Datacenter.Spec.ClusterName,
-		request.Datacenter.DatacenterName(),
+		cassdcapi.CleanupForKubernetes(request.Datacenter.Spec.ClusterName),
+		request.Datacenter.SanitizedName(),
 		request.Datacenter.Namespace))
 	if err != nil {
 		return nil, err

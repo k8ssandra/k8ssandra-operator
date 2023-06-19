@@ -303,8 +303,15 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 }
 
 // SetDeploymentReplicas sets the replicas field of the given deployment to the given value.
-func (f *Framework) SetMedusaDeplReadyReplicas(ctx context.Context, key ClusterKey) error {
+func (f *Framework) SetMedusaDeplAvailable(ctx context.Context, key ClusterKey) error {
 	return f.PatchDeploymentStatus(ctx, key, func(depl *appsv1.Deployment) {
+		// Add a condition to the deployment to indicate that it is available
+		now := metav1.Now()
+		depl.Status.Conditions = append(depl.Status.Conditions, appsv1.DeploymentCondition{
+			Type:               appsv1.DeploymentAvailable,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
 		depl.Status.ReadyReplicas = 1
 		depl.Status.Replicas = 1
 	})

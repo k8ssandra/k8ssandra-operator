@@ -26,10 +26,12 @@ spec:
     certificatesSecretRef:
       name: client-certificates
   cassandra:
+    clusterName: "First Cluster"
     serverVersion: 3.11.14
     datacenters:
       - metadata:
           name: dc1
+        datacenterName: "Datacenter 1"
         k8sContext: kind-k8ssandra-0
         size: 2
         storageConfig:

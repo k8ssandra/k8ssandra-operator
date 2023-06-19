@@ -348,7 +348,7 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 }
 
 func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster, dcName string, k8sContext string) {
-	t.Log("check ReplicatedSecret reconciled")
+	t.Log("create Medusa Standalone deployment")
 
 	medusaDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -383,7 +383,7 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 		return err == nil
 	}, timeout, interval, "failed to get Medusa Deployment")
 
-	err := f.SetMedusaDeplReadyReplicas(ctx, medusaKey)
+	err := f.SetMedusaDeplAvailable(ctx, medusaKey)
 
 	require.NoError(t, err, "Failed to update Medusa Deployment status")
 }

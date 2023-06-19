@@ -449,10 +449,9 @@ func MedusaStandaloneDeploymentName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-standalone", clusterName, dcName)
 }
 
-func StandaloneMedusaDeployment(medusaContainer *corev1.Container, clusterName, dcName, namespace string, logger logr.Logger) *appsv1.Deployment {
-	medusaStandaloneContainer := *medusaContainer.DeepCopy()
+func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, dcName, namespace string, logger logr.Logger) *appsv1.Deployment {
 	// The standalone medusa pod won't be able to resolve its own IP address using DNS entries
-	medusaStandaloneContainer.Env = append(medusaStandaloneContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
+	medusaContainer.Env = append(medusaContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
 	medusaDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      MedusaStandaloneDeploymentName(clusterName, dcName),
@@ -473,7 +472,7 @@ func StandaloneMedusaDeployment(medusaContainer *corev1.Container, clusterName, 
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						*medusaStandaloneContainer.DeepCopy(),
+						medusaContainer,
 					},
 					Volumes:  []corev1.Volume{},
 					Hostname: MedusaStandaloneDeploymentName(clusterName, dcName),
@@ -501,7 +500,7 @@ func StandaloneMedusaDeployment(medusaContainer *corev1.Container, clusterName, 
 func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *corev1.Service {
 	medusaService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaServiceName(clusterName, dcConfig.Meta.Name),
+			Name:      MedusaServiceName(clusterName, dcConfig.SanitizedName()),
 			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{
@@ -513,7 +512,7 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 				},
 			},
 			Selector: map[string]string{
-				"app": MedusaStandaloneDeploymentName(clusterName, dcConfig.Meta.Name),
+				"app": MedusaStandaloneDeploymentName(clusterName, dcConfig.SanitizedName()),
 			},
 		},
 	}

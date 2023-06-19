@@ -358,7 +358,7 @@ func (f *E2eFramework) InstallMinio() error {
 			return err
 		}
 
-		// Wait for the minio-operator rollout to complete
+		// Wait for the minio rollout to complete
 		opts := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
 		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio"); err != nil {

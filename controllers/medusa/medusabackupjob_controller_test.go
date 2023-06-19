@@ -445,7 +445,7 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 		return err == nil
 	}, timeout, interval, "failed to get Medusa Deployment")
 
-	err := f.SetMedusaDeplReadyReplicas(ctx, medusaKey)
+	err := f.SetMedusaDeplAvailable(ctx, medusaKey)
 
 	require.NoError(t, err, "Failed to update Medusa Deployment status")
 }

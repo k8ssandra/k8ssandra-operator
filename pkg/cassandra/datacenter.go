@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -118,6 +119,10 @@ type DatacenterConfig struct {
 	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
 	// presence affects the PodTemplateSpec.
 	InitialTokensByPodName map[string][]string
+}
+
+func (in *DatacenterConfig) SanitizedName() string {
+	return cassdcapi.CleanupForKubernetes(in.CassDcName())
 }
 
 // CassDcName returns the Cassandra datacenter name override if it exists,

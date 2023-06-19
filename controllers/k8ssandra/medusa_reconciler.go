@@ -14,6 +14,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -26,7 +27,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	logger logr.Logger,
 ) result.ReconcileResult {
 	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
-	logger.Info("Medusa reconcile for " + dcConfig.Meta.Name + " on namespace " + namespace)
+	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {
 		logger.Info("Medusa is enabled")
@@ -60,7 +61,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create the Medusa standalone pod
-		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(medusaContainer, kc.Name, dcConfig.Meta.Name, namespace, logger)
+		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), namespace, logger)
 
 		// Add the volumes previously computed to the Medusa standalone pod
 		for _, volume := range volumes {
@@ -89,7 +90,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create and reconcile the Medusa service for the standalone deployment
-		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.Name, namespace, logger)
+		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.SanitizedName(), namespace, logger)
 		medusaService.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService)
 		switch {
@@ -118,13 +119,19 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 // Check if the Medusa standalone deployment is ready
 func (r *K8ssandraClusterReconciler) isMedusaStandaloneReady(ctx context.Context, remoteClient client.Client, desiredMedusaStandalone *appsv1.Deployment) (bool, error) {
-	// Get the medusa standalone deployment and check the number of ready replicas
+	// Get the medusa standalone deployment and check the rollout status
 	deplKey := utils.GetKey(desiredMedusaStandalone)
 	medusaStandalone := &appsv1.Deployment{}
 	if err := remoteClient.Get(context.Background(), deplKey, medusaStandalone); err != nil {
 		return false, err
 	}
-	return medusaStandalone.Status.ReadyReplicas > 0, nil
+	// Check the conditions to see if the deployment has successfully rolled out
+	for _, c := range medusaStandalone.Status.Conditions {
+		if c.Type == appsv1.DeploymentAvailable {
+			return c.Status == corev1.ConditionTrue, nil // deployment is available
+		}
+	}
+	return false, nil // deployment condition not found
 }
 
 // Generate a secret for Medusa or use the existing one if provided in the spec
