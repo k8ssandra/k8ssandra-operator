@@ -119,6 +119,40 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 	assert.Equal(t, expectedSourceRacks, result)
 }
 
+func TestGetTargetRackFQDNsOverrides(t *testing.T) {
+	cassDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-dc2",
+			Namespace: "default",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:    "Test Cluster",
+			Size:           3,
+			DatacenterName: "Test DC2",
+		},
+	}
+
+	result, err := getTargetRackFQDNs(cassDc)
+	assert.NoError(t, err, err)
+	expectedSourceRacks := map[NodeLocation][]string{
+		{Rack: "default", DC: "testdc2"}: {"testcluster-testdc2-default-sts-0", "testcluster-testdc2-default-sts-1", "testcluster-testdc2-default-sts-2"},
+	}
+	assert.Equal(t, expectedSourceRacks, result)
+	cassDc.Spec.Racks = []cassdcapi.Rack{
+		{Name: "rack1"},
+		{Name: "rack2"},
+		{Name: "rack3"},
+	}
+	expectedSourceRacks = map[NodeLocation][]string{
+		{Rack: "rack1", DC: "testdc2"}: {"testcluster-testdc2-rack1-sts-0"},
+		{Rack: "rack2", DC: "testdc2"}: {"testcluster-testdc2-rack2-sts-0"},
+		{Rack: "rack3", DC: "testdc2"}: {"testcluster-testdc2-rack3-sts-0"},
+	}
+	result, err = getTargetRackFQDNs(cassDc)
+	assert.NoError(t, err, err)
+	assert.Equal(t, expectedSourceRacks, result)
+}
+
 func TestGetHostMap(t *testing.T) {
 	// Fixtures
 	mockgRPCClient := mockgRPCClient{}

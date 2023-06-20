@@ -2621,6 +2621,8 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	// Create a Medusa deployment object and simulate it being available to make the k8c reconcile progress.
 	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was never created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}

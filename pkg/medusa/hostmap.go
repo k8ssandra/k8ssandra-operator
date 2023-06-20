@@ -157,11 +157,11 @@ func getTargetRackFQDNs(cassDC *cassdcapi.CassandraDatacenter) (map[NodeLocation
 	out := make(map[NodeLocation][]string)
 	for _, i := range racks {
 		location := NodeLocation{
-			DC:   cassDC.Name,
+			DC:   cassDC.SanitizedName(),
 			Rack: i.Name,
 		}
 		sizePerRack := int(cassDC.Spec.Size) / len(racks)
-		out[location] = getPodNames(cassDC.Spec.ClusterName, cassDC.Name, i.Name, sizePerRack)
+		out[location] = getPodNames(cassdcapi.CleanupForKubernetes(cassDC.Spec.ClusterName), cassDC.SanitizedName(), i.Name, sizePerRack)
 	}
 	return out, nil
 }
