@@ -14,9 +14,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,6 +83,7 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -404,4 +407,45 @@ func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Fr
 		err := f.Get(ctx, key, obj)
 		return err != nil && errors.IsNotFound(err)
 	}, timeout, interval, "failed to verify object does not exist", key)
+}
+
+func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *framework.Framework, kc *k8ss.K8ssandraCluster, dcName string, k8sContext string) {
+	t.Log("check ReplicatedSecret reconciled")
+
+	medusaDepl := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName),
+			Namespace: kc.Namespace,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName)},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName)},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), dcName),
+							Image: "quay.io/k8ssandra/medusa:0.11.0",
+						},
+					},
+				},
+			},
+		},
+	}
+	medusaKey := framework.ClusterKey{NamespacedName: utils.GetKey(medusaDepl), K8sContext: k8sContext}
+	f.Create(ctx, medusaKey, medusaDepl)
+
+	actualMedusaDepl := &appsv1.Deployment{}
+	assert.Eventually(t, func() bool {
+		err := f.Get(ctx, medusaKey, actualMedusaDepl)
+		return err == nil
+	}, timeout, interval, "failed to get Medusa Deployment")
+
+	err := f.SetMedusaDeplAvailable(ctx, medusaKey)
+
+	require.NoError(t, err, "Failed to update Medusa Deployment status")
 }

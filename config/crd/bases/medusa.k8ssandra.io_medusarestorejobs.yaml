@@ -70,6 +70,30 @@ spec:
               restoreKey:
                 description: A unique key that identifies the restore operation.
                 type: string
+              restoreMapping:
+                description: Mapping between source and target nodes for a restore
+                properties:
+                  host_map:
+                    additionalProperties:
+                      properties:
+                        seed:
+                          type: boolean
+                        source:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - seed
+                      - source
+                      type: object
+                    description: Mapping between source and target nodes for a restore
+                    type: object
+                  in_place:
+                    description: Whether the restore is in-place or not
+                    type: boolean
+                required:
+                - in_place
+                type: object
               restorePrepared:
                 type: boolean
               startTime:

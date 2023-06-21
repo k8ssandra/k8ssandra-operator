@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
@@ -40,6 +41,7 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		k8ssandralabels.SetWatchedByK8ssandraCluster(desiredVectorConfigMap, kcKey)
 
 		// Check if the vector config map already exists
+		desiredVectorConfigMap.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredVectorConfigMap)
 		switch {
 		case recRes.IsError():

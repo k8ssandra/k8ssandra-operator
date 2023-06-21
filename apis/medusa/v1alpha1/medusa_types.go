@@ -27,7 +27,7 @@ import (
 
 type Storage struct {
 	// The storage backend to use for the backups.
-	// +kubebuilder:validation:Enum=local;google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
+	// +kubebuilder:validation:Enum=google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
 	// +kubebuilder:validation:Required
 	StorageProvider string `json:"storageProvider,omitempty"`
 
@@ -157,4 +157,12 @@ type MedusaClusterTemplate struct {
 	// Medusa main container resources.
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"containerResources,omitempty"`
+
+	// Define the readiness probe settings to use for the Medusa containers.
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// Define the liveness probe settings to use for the Medusa containers.
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
 }

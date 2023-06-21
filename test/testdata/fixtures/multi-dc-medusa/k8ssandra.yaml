@@ -33,11 +33,11 @@ spec:
     mgmtAPIHeap: 64Mi
   medusa:
     storageProperties:
-      storageProvider: local
+      storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
       prefix: test
-      podStorage:
-        storageClassName: standard
-        accessModes:
-          - ReadWriteOnce
-        size: 100Mi
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: test-hl.minio.svc.cluster.local
+      port: 9000
+      secure: false 

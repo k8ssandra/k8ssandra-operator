@@ -4,8 +4,8 @@ metadata:
   name: demo
 spec:
   cassandra:
-    serverVersion: "4.0.1"
-    serverImage: k8ssandra/cass-management-api:4.0.1
+    serverVersion: "4.0.6"
+    serverImage: k8ssandra/cass-management-api:4.0.6
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -27,7 +27,6 @@ spec:
     containerImage:
       registry: docker.io
       repository: k8ssandra
-      tag: 0.11.3
     storageProperties:
       storageProvider: s3_compatible
       storageSecretRef: medusa-bucket-key

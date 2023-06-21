@@ -73,6 +73,7 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)

@@ -1706,6 +1706,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -2074,7 +2075,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -2551,11 +2552,6 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Medusa: &medusaapi.MedusaClusterTemplate{
-				StorageProperties: medusaapi.Storage{
-					StorageProvider: "local",
-				},
-			},
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ServerVersion: serverVersion,
@@ -2626,6 +2622,8 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
+	// Create a Medusa deployment object and simulate it being available to make the k8c reconcile progress.
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was never created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -2650,7 +2648,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
 
-	require.Equal(3, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 2 additionals volumes")
+	require.Equal(2, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 2 additionals volumes")
 	require.Equal("/etc/injected", dc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected injected-volume mount path")
 
 	t.Log("deleting K8ssandraCluster")

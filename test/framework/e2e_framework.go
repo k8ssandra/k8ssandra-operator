@@ -39,10 +39,11 @@ import (
 )
 
 const (
-	repoName  = "k8ssandra"
-	relName   = "k8ssandra-operator"
-	chartName = "k8ssandra-operator"
-	repoURL   = "https://helm.k8ssandra.io/stable"
+	repoName       = "k8ssandra"
+	relName        = "k8ssandra-operator"
+	chartName      = "k8ssandra-operator"
+	repoURL        = "https://helm.k8ssandra.io/stable"
+	MinioNamespace = "minio"
 )
 
 type E2eFramework struct {
@@ -340,6 +341,73 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Create client certificates secrets", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *E2eFramework) InstallMinio() error {
+	path := filepath.Join("..", "testdata", "fixtures", "minio.yaml")
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
+		f.logger.Info("Install Minio", "Namespace", MinioNamespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+
+		// Wait for the minio rollout to complete
+		opts := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
+		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
+			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio"); err != nil {
+				f.logger.Info("Waiting for minio rollout to complete: %s", err)
+				return false, err
+			}
+			return true, nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "minio-create-bucket.yaml")
+
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Medusa bucket", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, path); err != nil {
+			return err
+		}
+		// Wait for job to succeed
+		f.logger.Info("Waiting for setup-minio job to succeed")
+		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
+			if err := kubectl.JobSuccess(ctx, opts, namespace, "setup-minio"); err != nil {
+				f.logger.Error(err, "Waiting for setup-minio job to succeed")
+				return false, nil
+			}
+			return true, nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (f *E2eFramework) CreateMedusaSecret(namespace string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "medusa-bucket-key.yaml")
+
+	for _, k8sContext := range f.DataPlaneContexts {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Create Medusa secret", "Namespace", namespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}

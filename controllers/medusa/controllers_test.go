@@ -138,7 +138,7 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
 	reconcilerConfig.LongDelay = 300 * time.Millisecond
 
-	medusaClientFactory = NewMedusaClientFactory()
+	medusaRestoreClientFactory := NewMedusaClientRestoreFactory()
 
 	err := testEnv.Start(ctx, t, func(controlPlaneMgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&k8ssandractrl.K8ssandraClusterReconciler{
@@ -158,21 +158,12 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 			if err != nil {
 				return err
 			}
-			err = (&MedusaTaskReconciler{
-				ReconcilerConfig: reconcilerConfig,
-				Client:           dataPlaneMgr.GetClient(),
-				Scheme:           scheme.Scheme,
-				ClientFactory:    medusaClientFactory,
-			}).SetupWithManager(dataPlaneMgr)
-			if err != nil {
-				return err
-			}
 
 			err = (&MedusaRestoreJobReconciler{
 				ReconcilerConfig: reconcilerConfig,
 				Client:           dataPlaneMgr.GetClient(),
 				Scheme:           scheme.Scheme,
-				ClientFactory:    medusaClientFactory,
+				ClientFactory:    medusaRestoreClientFactory,
 			}).SetupWithManager(dataPlaneMgr)
 			if err != nil {
 				return err

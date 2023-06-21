@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -118,6 +119,10 @@ type DatacenterConfig struct {
 	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
 	// presence affects the PodTemplateSpec.
 	InitialTokensByPodName map[string][]string
+}
+
+func (in *DatacenterConfig) SanitizedName() string {
+	return cassdcapi.CleanupForKubernetes(in.CassDcName())
 }
 
 // CassDcName returns the Cassandra datacenter name override if it exists,
@@ -514,12 +519,16 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 }
 
 func AddOrUpdateVolume(dcConfig *DatacenterConfig, volume *corev1.Volume, volumeIndex int, found bool) {
+	AddOrUpdateVolumeToSpec(&dcConfig.PodTemplateSpec, volume, volumeIndex, found)
+}
+
+func AddOrUpdateVolumeToSpec(templateSpec *corev1.PodTemplateSpec, volume *corev1.Volume, volumeIndex int, found bool) {
 	if !found {
 		// volume doesn't exist, we need to add it
-		dcConfig.PodTemplateSpec.Spec.Volumes = append(dcConfig.PodTemplateSpec.Spec.Volumes, *volume)
+		templateSpec.Spec.Volumes = append(templateSpec.Spec.Volumes, *volume)
 	} else {
 		// Overwrite existing volume
-		dcConfig.PodTemplateSpec.Spec.Volumes[volumeIndex] = *volume
+		templateSpec.Spec.Volumes[volumeIndex] = *volume
 	}
 }
 

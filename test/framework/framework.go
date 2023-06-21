@@ -29,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -299,6 +300,36 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 		})
 		dc.Status.ObservedGeneration = dc.Generation
 	})
+}
+
+// SetDeploymentReplicas sets the replicas field of the given deployment to the given value.
+func (f *Framework) SetMedusaDeplAvailable(ctx context.Context, key ClusterKey) error {
+	return f.PatchDeploymentStatus(ctx, key, func(depl *appsv1.Deployment) {
+		// Add a condition to the deployment to indicate that it is available
+		now := metav1.Now()
+		depl.Status.Conditions = append(depl.Status.Conditions, appsv1.DeploymentCondition{
+			Type:               appsv1.DeploymentAvailable,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+		depl.Status.ReadyReplicas = 1
+		depl.Status.Replicas = 1
+	})
+}
+
+func (f *Framework) PatchDeploymentStatus(ctx context.Context, key ClusterKey, updateFn func(depl *appsv1.Deployment)) error {
+	depl := &appsv1.Deployment{}
+	err := f.Get(ctx, key, depl)
+
+	if err != nil {
+		return err
+	}
+
+	patch := client.MergeFromWithOptions(depl.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	updateFn(depl)
+
+	remoteClient := f.remoteClients[key.K8sContext]
+	return remoteClient.Status().Patch(ctx, depl, patch)
 }
 
 // UpdateDatacenterGeneration fetches the CassandraDatacenter specified by key and persists

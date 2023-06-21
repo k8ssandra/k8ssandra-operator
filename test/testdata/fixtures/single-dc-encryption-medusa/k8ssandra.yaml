@@ -15,17 +15,18 @@ metadata:
 spec:
   medusa:
     storageProperties:
-      storageProvider: local
+      storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
       prefix: test
-      podStorage:
-        storageClassName: standard
-        accessModes:
-          - ReadWriteOnce
-        size: 100Mi
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: minio-service.minio.svc.cluster.local
+      port: 9000
+      secure: false 
     certificatesSecretRef:
       name: client-certificates
   cassandra:
+    clusterName: "First Cluster"
     serverVersion: 3.11.14
     datacenters:
       - metadata:

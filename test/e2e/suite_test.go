@@ -68,6 +68,7 @@ var (
 		k8ssandraClusterStatus  pollingConfig
 		stargateReady           pollingConfig
 		reaperReady             pollingConfig
+		medusaReady             pollingConfig
 		medusaBackupDone        pollingConfig
 		medusaRestoreDone       pollingConfig
 		datacenterUpdating      pollingConfig
@@ -266,12 +267,14 @@ func TestOperator(t *testing.T) {
 		fixture:                      framework.NewTestFixture("single-dc-encryption-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
 	}))
 	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusaJob,
 		fixture:                      framework.NewTestFixture("multi-dc-encryption-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc: multiDcAuthOnOff,
@@ -409,6 +412,9 @@ type e2eTestOpts struct {
 
 	// dse is used to specify if the e2e tests will run against DSE or Cassandra
 	dse bool
+
+	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
+	installMinio bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -468,6 +474,10 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
 
+	if opts.installMinio {
+		namespaces = append(namespaces, framework.MinioNamespace)
+	}
+
 	for _, namespace := range namespaces {
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Logf("failed to create namespace %s", namespace)
@@ -491,6 +501,25 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	if opts.initialVersion != nil {
 		deploymentConfig.ImageTag = *opts.initialVersion
 		deploymentConfig.GithubKustomization = true
+	}
+
+	if opts.installMinio {
+		if err := f.CreateNamespace("minio"); err != nil {
+			t.Logf("failed to create namespace %s", "minio")
+			return err
+		}
+		if err := f.InstallMinio(); err != nil {
+			t.Log("failed to install Minio operator")
+			return err
+		}
+		if err := f.CreateMedusaBucket(framework.MinioNamespace); err != nil {
+			t.Log("failed to create Medusa bucket")
+			return err
+		}
+		if err := f.CreateMedusaSecret(opts.sutNamespace); err != nil {
+			t.Log("failed to create Medusa secret")
+			return err
+		}
 	}
 
 	if err := f.DeployK8ssandraOperator(deploymentConfig); err != nil {
@@ -654,6 +683,9 @@ func applyPollingDefaults() {
 
 	polling.cassandraTaskCreated.timeout = 1 * time.Minute
 	polling.cassandraTaskCreated.interval = 3 * time.Second
+
+	polling.medusaReady.timeout = 5 * time.Minute
+	polling.medusaReady.interval = 5 * time.Second
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {

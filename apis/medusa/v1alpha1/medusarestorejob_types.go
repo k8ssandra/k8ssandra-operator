@@ -39,6 +39,10 @@ type MedusaRestoreJobStatus struct {
 
 	RestorePrepared bool `json:"restorePrepared,omitempty"`
 
+	// Mapping between source and target nodes for a restore
+	// +optional
+	RestoreMapping MedusaRestoreMapping `json:"restoreMapping,omitempty"`
+
 	StartTime metav1.Time `json:"startTime,omitempty"`
 
 	FinishTime metav1.Time `json:"finishTime,omitempty"`
@@ -62,6 +66,19 @@ type MedusaRestoreJob struct {
 
 	Spec   MedusaRestoreJobSpec   `json:"spec,omitempty"`
 	Status MedusaRestoreJobStatus `json:"status,omitempty"`
+}
+
+type MedusaRestoreMapping struct {
+	// Whether the restore is in-place or not
+	InPlace *bool `json:"in_place"`
+
+	// Mapping between source and target nodes for a restore
+	HostMap map[string]MappingSource `json:"host_map,omitempty"`
+}
+
+type MappingSource struct {
+	Source []string `json:"source"`
+	Seed   bool     `json:"seed"`
 }
 
 //+kubebuilder:object:root=true

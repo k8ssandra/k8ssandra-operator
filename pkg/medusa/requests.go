@@ -145,6 +145,11 @@ func (r *RestoreRequest) SetMedusaRestorePrepared(prepared bool) {
 	r.RestoreJob.Status.RestorePrepared = prepared
 }
 
+// SetRestorePrepared sets the prepared flag. Note that this function is idempotent.
+func (r *RestoreRequest) SetMedusaRestoreMapping(restoreMapping api.MedusaRestoreMapping) {
+	r.RestoreJob.Status.RestoreMapping = *restoreMapping.DeepCopy()
+}
+
 // GetRestorePatch returns a patch that can be used to apply changes to the CassandraRestore.
 // The patch is created when the RestoreRequest is initialized.
 func (r *RestoreRequest) GetRestorePatch() client.Patch {
