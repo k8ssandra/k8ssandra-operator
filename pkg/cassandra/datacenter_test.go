@@ -1386,7 +1386,7 @@ func TestNewDatacenter_ServiceAccount(t *testing.T) {
 		&template,
 	)
 	assert.NoError(t, err)
-	assert.Equal(t, template.ServiceAccount, dc.Spec.ServiceAccount)
+	assert.Equal(t, template.ServiceAccount, dc.Spec.ServiceAccountName)
 }
 
 // TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.

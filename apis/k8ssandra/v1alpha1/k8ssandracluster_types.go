@@ -305,9 +305,9 @@ type CassandraDatacenterTemplate struct {
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
 type DatacenterOptions struct {
 	// ServerVersion is the Cassandra or DSE version. The following versions are supported:
-	// - Cassandra: 3.11.X and 4.0.X
-	// - DSE: 6.8.X
-	// +kubebuilder:validation:Pattern=(6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)
+	// - Cassandra: 3.11.X, 4.X.X and 5.X.X
+	// - DSE: 6.8.X, 7.x.x
+	// +kubebuilder:validation:Pattern=(6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)|(5\.\d+\.\d+)|(7\.\d+\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a

@@ -213,7 +213,7 @@ func (f *Framework) Patch(ctx context.Context, obj client.Object, patch client.P
 	return remoteClient.Patch(ctx, obj, patch, opts...)
 }
 
-func (f *Framework) PatchStatus(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.PatchOption) error {
+func (f *Framework) PatchStatus(ctx context.Context, obj client.Object, patch client.Patch, key ClusterKey, opts ...client.SubResourcePatchOption) error {
 	remoteClient, err := f.getRemoteClient(key.K8sContext)
 	if err != nil {
 		return err

@@ -24,9 +24,6 @@ func computeNodeAffinityLabels(dc *cassdcapi.CassandraDatacenter, rackName strin
 		if rack.Name == rackName {
 			labels = utils.MergeMap(rack.NodeAffinityLabels, dc.Spec.NodeAffinityLabels)
 			//goland:noinspection GoDeprecation
-			if rack.Zone != "" {
-				labels[zoneLabel] = rack.Zone
-			}
 			break
 		}
 	}
