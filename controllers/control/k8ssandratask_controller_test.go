@@ -7,7 +7,6 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
-	casscontrol "github.com/k8ssandra/cass-operator/controllers/control"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -120,14 +119,14 @@ func executeParallelK8ssandraTask(t *testing.T, ctx context.Context, f *framewor
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
 		cassTask1.Status.Active = 1
 		cassTask1.Status.StartTime = &startTime1
-		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionTrue)
+		SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionTrue)
 	}))
 
 	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
 		cassTask2.Status.Active = 1
 		cassTask2.Status.StartTime = &startTime2
-		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionTrue)
+		SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that the K8ssandraTask is marked as Running")
@@ -146,15 +145,15 @@ func executeParallelK8ssandraTask(t *testing.T, ctx context.Context, f *framewor
 		cassTask1.Status.Active = 0
 		cassTask1.Status.Succeeded = 1
 		cassTask1.Status.CompletionTime = &completionTime1
-		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionFalse)
-		casscontrol.SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionFalse)
+		SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
 		cassTask2.Status.Active = 0
 		cassTask2.Status.Succeeded = 1
 		cassTask2.Status.CompletionTime = &completionTime2
-		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionFalse)
-		casscontrol.SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionFalse)
+		SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that the K8ssandraTask is marked as Complete")
@@ -215,7 +214,7 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
 		cassTask1.Status.Active = 1
 		cassTask1.Status.StartTime = &startTime1
-		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionTrue)
+		SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that the K8ssandraTask is marked as Running")
@@ -236,8 +235,8 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 		cassTask1.Status.Active = 0
 		cassTask1.Status.Succeeded = 1
 		cassTask1.Status.CompletionTime = &completionTime1
-		casscontrol.SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionFalse)
-		casscontrol.SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask1, cassapi.JobRunning, corev1.ConditionFalse)
+		SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that CassandraTask 2 has been created")
@@ -250,7 +249,7 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
 		cassTask2.Status.Active = 1
 		cassTask2.Status.StartTime = &startTime2
-		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionTrue)
+		SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionTrue)
 	}))
 
 	t.Log("Mark CassandraTask 2 as Complete")
@@ -259,8 +258,8 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 		cassTask2.Status.Active = 0
 		cassTask2.Status.Succeeded = 1
 		cassTask2.Status.CompletionTime = &completionTime2
-		casscontrol.SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionFalse)
-		casscontrol.SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask2, cassapi.JobRunning, corev1.ConditionFalse)
+		SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that the K8ssandraTask is marked as Complete")
@@ -364,12 +363,12 @@ func expireK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask1Key, func(cassTask1 *cassapi.CassandraTask) {
 		cassTask1.Status.Succeeded = 1
 		cassTask1.Status.CompletionTime = &completionTime1
-		casscontrol.SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask1, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 	require.NoError(f.PatchCassandraTaskStatus(ctx, cassTask2Key, func(cassTask2 *cassapi.CassandraTask) {
 		cassTask2.Status.Succeeded = 1
 		cassTask2.Status.CompletionTime = &completionTime2
-		casscontrol.SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
+		SetCondition(cassTask2, cassapi.JobComplete, corev1.ConditionTrue)
 	}))
 
 	t.Log("Check that everything gets deleted")
@@ -424,4 +423,33 @@ func loadCassandraTask(k8sContext, namespace, cassTaskName string, ctx context.C
 	cassTask := &cassapi.CassandraTask{}
 	require.NoError(f.Get(ctx, cassTaskKey, cassTask), "failed to get CassandraTask")
 	return cassTask
+}
+
+func SetCondition(task *cassapi.CassandraTask, condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
+	existing := false
+	for i := 0; i < len(task.Status.Conditions); i++ {
+		cond := task.Status.Conditions[i]
+		if cond.Type == condition {
+			if cond.Status == status {
+				// Already correct status
+				return false
+			}
+			cond.Status = status
+			cond.LastTransitionTime = metav1.Now()
+			existing = true
+			task.Status.Conditions[i] = cond
+			break
+		}
+	}
+
+	if !existing {
+		cond := cassapi.JobCondition{
+			Type:               condition,
+			Status:             status,
+			LastTransitionTime: metav1.Now(),
+		}
+		task.Status.Conditions = append(task.Status.Conditions, cond)
+	}
+
+	return true
 }

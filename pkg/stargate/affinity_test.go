@@ -68,19 +68,6 @@ func Test_computeNodeAffinityLabels(t *testing.T) {
 		assert.Equal(t, "value1", actual["label1"])
 		assert.Equal(t, "value2", actual["label2"])
 	})
-
-	t.Run("affinity on zone label", func(t *testing.T) {
-		//goland:noinspection GoDeprecation
-		actual := computeNodeAffinityLabels(&cassdcapi.CassandraDatacenter{
-			Spec: cassdcapi.CassandraDatacenterSpec{
-				Racks: []cassdcapi.Rack{{
-					Name: "rack1",
-					Zone: "zone1",
-				}},
-			}}, "rack1")
-		require.NotNil(t, actual)
-		assert.Equal(t, "zone1", actual[zoneLabel])
-	})
 }
 
 func Test_computeNodeAffinity(t *testing.T) {
@@ -155,23 +142,6 @@ func Test_computeNodeAffinity(t *testing.T) {
 		assert.Equal(t, "label2", requirement2.Key)
 		assert.Equal(t, "value2", requirement2.Values[0])
 	})
-
-	t.Run("affinity on zone label", func(t *testing.T) {
-		//goland:noinspection GoDeprecation
-		actual := computeNodeAffinity(&cassdcapi.CassandraDatacenter{
-			Spec: cassdcapi.CassandraDatacenterSpec{
-				NodeAffinityLabels: map[string]string{zoneLabel: "zone1"},
-				Racks: []cassdcapi.Rack{{
-					Name: "rack1",
-					Zone: "zone1",
-				}},
-			}}, "rack1")
-		require.NotNil(t, actual)
-		require.NotNil(t, actual.RequiredDuringSchedulingIgnoredDuringExecution)
-		assert.Equal(t, zoneLabel, actual.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Key)
-		assert.Equal(t, "zone1", actual.RequiredDuringSchedulingIgnoredDuringExecution.NodeSelectorTerms[0].MatchExpressions[0].Values[0])
-	})
-
 }
 
 func Test_computePodAntiAffinity(t *testing.T) {

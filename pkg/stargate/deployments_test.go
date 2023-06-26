@@ -329,7 +329,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	//goland:noinspection GoDeprecation
 	dc.Spec.Racks = []cassdcapi.Rack{
 		{Name: "rack1", NodeAffinityLabels: map[string]string{"rack1label": "value1"}},
-		{Name: "rack2", Zone: "zone2"},
+		{Name: "rack2"},
 		{Name: "rack3"},
 	}
 	dc.Spec.NodeAffinityLabels = map[string]string{"dc1label": "value1"}
@@ -412,7 +412,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	//goland:noinspection GoDeprecation
 	dc.Spec.Racks = []cassdcapi.Rack{
 		{Name: "rack1", NodeAffinityLabels: map[string]string{"rack1label": "value1"}},
-		{Name: "rack2", Zone: "zone2"},
+		{Name: "rack2"},
 		{Name: "rack3"},
 	}
 	dc.Spec.NodeAffinityLabels = map[string]string{"dc1label": "value1"}
