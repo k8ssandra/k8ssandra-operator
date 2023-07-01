@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#1005](https://github.com/k8ssandra/k8ssandra-operator/issues/1005) Support 7.x.x version numbers for DSE and 5.x.x for Cassandra
 * [CHANGE] [#985](https://github.com/k8ssandra/k8ssandra-operator/issues/985) CI/CD does not produce images for some commits
 * [ENHANCEMENT] [#842](https://github.com/k8ssandra/k8ssandra-operator/issues/842) Remove usages of deprecated created-by label
+* [ENHANCEMENT] [#1010](https://github.com/k8ssandra/k8ssandra-operator/issues/1010) Add nodeSelector and tolerations parameters to operator helm chart
