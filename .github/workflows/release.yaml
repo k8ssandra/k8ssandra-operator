@@ -43,7 +43,7 @@ jobs:
           file: Dockerfile
           context: .
           push: true
-          tags: alexdejanovski269/k8ssandra-operator:${{ steps.vars.outputs.tag_name}}
+          tags: k8ssandra/k8ssandra-operator:${{ steps.vars.outputs.tag_name}}
           platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
