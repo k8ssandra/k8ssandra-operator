@@ -18,6 +18,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: 'arm64,arm'
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to DockerHub
@@ -40,7 +44,7 @@ jobs:
           context: .
           push: true
           tags: k8ssandra/k8ssandra-operator:${{ steps.vars.outputs.tag_name}}
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
