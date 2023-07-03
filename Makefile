@@ -166,7 +166,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build:
-	docker buildx build --load -t ${IMG} .
+	docker buildx build --load -t ${IMG} --build-arg TARGETARCH=${ARCH} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
