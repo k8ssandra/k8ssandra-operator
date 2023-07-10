@@ -19,5 +19,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#985](https://github.com/k8ssandra/k8ssandra-operator/issues/985) CI/CD does not produce images for some commits
 * [CHANGE] [#483](https://github.com/k8ssandra/k8ssandra-operator/issues/483) Deploy a standalone Medusa pod for operator to Medusa direct interactions
 * [CHANGE] Upgrade to Medusa v0.15.0
+* [CHANGE] Upgrade to cass-operator v1.16.0
 * [ENHANCEMENT] [#693](https://github.com/k8ssandra/k8ssandra-operator/issues/693) Build and publish arm64 images
 * [ENHANCEMENT] [#842](https://github.com/k8ssandra/k8ssandra-operator/issues/842) Remove usages of deprecated created-by label
