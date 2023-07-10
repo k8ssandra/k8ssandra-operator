@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	DefaultMedusaImageRepository = "alexdejanovski269"
+	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "env-restore-mapping3"
+	DefaultMedusaVersion         = "0.15.0"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
