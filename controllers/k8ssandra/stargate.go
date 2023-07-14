@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -52,7 +53,10 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 		if err := remoteClient.Get(ctx, stargateKey, actualStargate); err != nil {
 			if errors.IsNotFound(err) {
 				logger.Info("Creating Stargate resource")
-				if err := remoteClient.Create(ctx, desiredStargate); err != nil {
+				if err := controllerutil.SetControllerReference(actualDc, desiredStargate, r.Scheme); err != nil {
+					logger.Error(err, "Failed to set controller reference on Stargate resource")
+					return result.Error(err)
+				} else if err := remoteClient.Create(ctx, desiredStargate); err != nil {
 					logger.Error(err, "Failed to create Stargate resource")
 					return result.Error(err)
 				} else {
@@ -72,7 +76,10 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				resourceVersion := actualStargate.GetResourceVersion()
 				desiredStargate.DeepCopyInto(actualStargate)
 				actualStargate.SetResourceVersion(resourceVersion)
-				if err = remoteClient.Update(ctx, actualStargate); err == nil {
+				if err := controllerutil.SetControllerReference(actualDc, actualStargate, r.Scheme); err != nil {
+					logger.Error(err, "Failed to set controller reference on Stargate resource")
+					return result.Error(err)
+				} else if err = remoteClient.Update(ctx, actualStargate); err == nil {
 					return result.RequeueSoon(r.DefaultDelay)
 				} else {
 					logger.Error(err, "Failed to update Stargate")
