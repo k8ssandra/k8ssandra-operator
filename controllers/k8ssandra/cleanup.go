@@ -8,7 +8,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
@@ -61,10 +60,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			}
 		} else if err = remoteClient.Delete(ctx, dc); err != nil {
 			logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
-			hasErrors = true
-		}
-
-		if r.deleteReapers(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 
@@ -137,19 +132,7 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 	kcKey := utils.GetKey(kc)
 
-	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dcName, nil)
-	if err != nil {
-		return result.Error(err)
-	}
-
-	if reaper != nil {
-		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dcName, err))
-		}
-		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
-	}
-
-	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
+	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName)
 	if err != nil {
 		return result.Error(err)
 	}
@@ -182,72 +165,19 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) findReaperForDeletion(
-	ctx context.Context,
-	kcKey client.ObjectKey,
-	dcName string,
-	remoteClient client.Client) (*reaperapi.Reaper, client.Client, error) {
-
-	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	reaperList := &reaperapi.ReaperList{}
-	reaperName := kcKey.Name + "-" + dcName + "-reaper"
-
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, reaperList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
-			}
-			for _, reaper := range reaperList.Items {
-				if reaper.Name == reaperName {
-					return &reaper, remoteClient, nil
-				}
-			}
-		}
-	} else {
-		err := remoteClient.List(ctx, reaperList, options)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
-		}
-
-		for _, reaper := range reaperList.Items {
-			if reaper.Name == reaperName {
-				return &reaper, remoteClient, nil
-			}
-		}
-	}
-
-	return nil, nil, nil
-}
-
 func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	ctx context.Context,
 	kcKey client.ObjectKey,
-	dcName string,
-	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+	dcName string) (*cassdcapi.CassandraDatacenter, client.Client, error) {
 	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	dcList := &cassdcapi.CassandraDatacenterList{}
 
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, dcList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
-			}
-			for _, dc := range dcList.Items {
-				if dc.Name == dcName {
-					return &dc, remoteClient, nil
-				}
-			}
-		}
-	} else {
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
 		err := remoteClient.List(ctx, dcList, options)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
+			return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
 		}
-
 		for _, dc := range dcList.Items {
 			if dc.Name == dcName {
 				return &dc, remoteClient, nil
