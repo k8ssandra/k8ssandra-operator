@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#981](https://github.com/k8ssandra/k8ssandra-operator/issues/981) Fix race condition in K8ssandraTask status update
+* [DOCS] [#1019](https://github.com/k8ssandra/k8ssandra-operator/issues/1019) Add PR review guidelines documentation

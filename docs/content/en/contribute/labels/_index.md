@@ -2,7 +2,7 @@
 title: "Kubernetes labels"
 linkTitle: "Kubernetes labels"
 toc_hide: false
-weight: 10
+weight: 15
 description: How Kubernetes labels are used on K8ssandra objects.
 ---
 

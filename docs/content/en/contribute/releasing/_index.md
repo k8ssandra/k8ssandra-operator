@@ -2,7 +2,7 @@
 title: "Releasing k8ssandra-operator"
 linkTitle: "Release process"
 no_list: false
-weight: 11
+weight: 20
 description: "How to perform releases of k8ssandra-operator"
 ---
 
