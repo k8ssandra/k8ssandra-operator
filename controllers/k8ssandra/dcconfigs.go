@@ -84,7 +84,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// The new metrics endpoint is available since 3.11.13 and 4.0.4.
 		// If MCAC is disabled and the new metrics endpoint is not available then we should return an error.
 		mergedTelemetrySpec := MergeTelemetrySpecs(kc, dcTemplate)
-		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(kc.Spec.Cassandra.ServerVersion) && kc.Spec.Cassandra.ServerType == k8ssandraapi.ServerDistributionCassandra {
+		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == k8ssandraapi.ServerDistributionCassandra {
 			return dcConfigs, errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled")
 		} else {
 			logger.Info("new metrics endpoint is available, so MCAC can be disabled", "serverVersion", kc.Spec.Cassandra.ServerVersion)

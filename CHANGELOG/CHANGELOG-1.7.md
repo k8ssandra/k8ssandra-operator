@@ -15,10 +15,12 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1023](https://github.com/k8ssandra/k8ssandra-operator/issues/1023) Ensure merged serverVersion passed to IsNewMetricsEndpointAvailable()
+
 ## v1.7.0 - 2023-06-05
 
 * [CHANGE] [#991](https://github.com/k8ssandra/k8ssandra-operator/issues/991) If EncryptionStores and all the Keystore/Truststore passwords are not set, the operator will not touch the cassandra-yaml's encryption fields.
-* [ENHANCEMENT] [#932](https://github.com/k8ssandra/k8ssandra-operator/issues/932) Add ability to set variables to the secret-injection annotation. Supported are `POD_NAME`, `POD_NAMESPACE` and `POD_ORDINAL`. Also, changed JSON key from `secretName` to `name`
+* [ENHANCEMENT] [#932](https://github.com/k8ssandra/k8ssandra-operator/issues/932) Add ability to set variables to the secret-injection annotation. Supported are `POD_NAME`, `POD_NAMESPACE` and `POD_ORDINAL`. Also, changed JSON key from `secretName` to `name`
 * [BUGFIX] [#914](https://github.com/k8ssandra/k8ssandra-operator/issues/914) Don't parse logs by default when Vector telemetry is enabled.
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
 * [BUGFIX] [#946](https://github.com/k8ssandra/k8ssandra-operator/issues/946) Fix medusaClient to fetch the pods from correct namespace
