@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -30,6 +31,8 @@ const (
 	medusaImageRepo     = "test/medusa"
 	cassandraUserSecret = "medusa-secret"
 	defaultBackupName   = "backup1"
+	dc1PodPrefix        = "192.168.1."
+	dc2PodPrefix        = "192.168.2."
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -143,10 +146,10 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 
 	t.Log("verify that medusa gRPC clients are invoked")
 	require.Equal(map[string][]string{
-		fmt.Sprintf("%s:%d", getPodIpAddress(0), shared.BackupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(1), shared.BackupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(2), shared.BackupSidecarPort): {defaultBackupName},
-	}, medusaClientFactory.GetRequestedBackups())
+		fmt.Sprintf("%s:%d", getPodIpAddress(0, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(1, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(2, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
+	}, medusaClientFactory.GetRequestedBackups(dc1.DatacenterName()))
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
@@ -208,7 +211,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 
 	t.Log("verify that the backups are started")
 	require.Eventually(func() bool {
-		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups())
+		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
 		updated := &api.MedusaBackupJob{}
 		err := f.Get(ctx, backupKey, updated)
 		if err != nil {
@@ -220,7 +223,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 
 	t.Log("verify the backup finished")
 	require.Eventually(func() bool {
-		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups())
+		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
 		updated := &api.MedusaBackupJob{}
 		err := f.Get(ctx, backupKey, updated)
 		if err != nil {
@@ -232,7 +235,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
 
-	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups()))
+	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups(dc.DatacenterName())))
 
 	return true
 }
@@ -266,8 +269,15 @@ func reconcileReplicatedSecret(ctx context.Context, t *testing.T, f *framework.F
 }
 
 // Creates a fake ip address with the pod's original index from the StatefulSet
-func getPodIpAddress(index int) string {
-	return "192.168.1." + strconv.Itoa(50+index)
+func getPodIpAddress(index int, dcName string) string {
+	switch dcName {
+	case "dc1":
+		return dc1PodPrefix + strconv.Itoa(50+index)
+	case "dc2":
+		return dc2PodPrefix + strconv.Itoa(50+index)
+	default:
+		return "192.168.3." + strconv.Itoa(50+index)
+	}
 }
 
 type fakeMedusaClientFactory struct {
@@ -284,27 +294,36 @@ func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, erro
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]
 	if !ok {
-		f.clients[address] = newFakeMedusaClient()
+		if strings.HasPrefix(address, dc1PodPrefix) {
+			f.clients[address] = newFakeMedusaClient("dc1")
+		} else if strings.HasPrefix(address, dc2PodPrefix) {
+			f.clients[address] = newFakeMedusaClient("dc2")
+		} else {
+			f.clients[address] = newFakeMedusaClient("")
+		}
 	}
 	return f.clients[address], nil
 }
 
-func (f *fakeMedusaClientFactory) GetRequestedBackups() map[string][]string {
+func (f *fakeMedusaClientFactory) GetRequestedBackups(dc string) map[string][]string {
 	f.clientsMutex.Lock()
 	defer f.clientsMutex.Unlock()
 	requestedBackups := make(map[string][]string)
 	for k, v := range f.clients {
-		requestedBackups[k] = v.RequestedBackups
+		if v.DcName == dc {
+			requestedBackups[k] = v.RequestedBackups
+		}
 	}
 	return requestedBackups
 }
 
 type fakeMedusaClient struct {
 	RequestedBackups []string
+	DcName           string
 }
 
-func newFakeMedusaClient() *fakeMedusaClient {
-	return &fakeMedusaClient{RequestedBackups: make([]string, 0)}
+func newFakeMedusaClient(dcName string) *fakeMedusaClient {
+	return &fakeMedusaClient{RequestedBackups: make([]string, 0), DcName: dcName}
 }
 
 func (c *fakeMedusaClient) Close() error {
@@ -361,12 +380,12 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 	_ = f.CreateNamespace(dcKey.Namespace)
 	for i := int32(0); i < dc.Spec.Size; i++ {
 		pod := &corev1.Pod{}
-		podName := fmt.Sprintf("%s-%d", dc.Spec.ClusterName, i)
+		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
 		err := f.Get(ctx, podKey, pod)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				t.Logf("pod %s-%d not found", dc.Spec.ClusterName, i)
+				t.Logf("pod %s-%s-%d not found", dc.Spec.ClusterName, dc.DatacenterName(), i)
 				pod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
@@ -393,7 +412,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 				require.NoError(t, err, "failed to create datacenter pod")
 
 				patch := client.MergeFrom(pod.DeepCopy())
-				pod.Status.PodIP = getPodIpAddress(int(i))
+				pod.Status.PodIP = getPodIpAddress(int(i), dc.DatacenterName())
 
 				err = f.PatchStatus(ctx, pod, patch, podKey)
 				require.NoError(t, err, "failed to patch datacenter pod status")
@@ -410,7 +429,7 @@ func verifyObjectDoesNotExist(ctx context.Context, t *testing.T, f *framework.Fr
 }
 
 func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *framework.Framework, kc *k8ss.K8ssandraCluster, dcName string, k8sContext string) {
-	t.Log("check ReplicatedSecret reconciled")
+	t.Logf("start reconcileMedusaStandaloneDeployment for dc %s", dcName)
 
 	medusaDepl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

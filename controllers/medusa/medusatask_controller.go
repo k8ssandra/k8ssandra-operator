@@ -294,7 +294,7 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 				return ctrl.Result{}, err
 			}
 			for _, backup := range localBackups.Items {
-				if !backupExistsRemotely(remoteBackups, backup.ObjectMeta.Name) {
+				if !backupExistsRemotely(remoteBackups, backup.ObjectMeta.Name) && backup.Spec.CassandraDatacenter == task.Spec.CassandraDatacenter {
 					logger.Info("Deleting Cassandra Backup", "Backup", backup.ObjectMeta.Name)
 					if err := r.Delete(ctx, &backup); err != nil {
 						logger.Error(err, "failed to delete backup", "MedusaBackup", backup.ObjectMeta.Name)
