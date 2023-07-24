@@ -15,6 +15,10 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.8.1 - 2023-07-24
+
+* [BUGFIX] [#1023](https://github.com/k8ssandra/k8ssandra-operator/issues/1023) Ensure merged serverVersion passed to IsNewMetricsEndpointAvailable()
+
 ## v1.8.0 - 2023-07-10
 
 * [CHANGE] [#1005](https://github.com/k8ssandra/k8ssandra-operator/issues/1005) Support 7.x.x version numbers for DSE and 5.x.x for Cassandra
