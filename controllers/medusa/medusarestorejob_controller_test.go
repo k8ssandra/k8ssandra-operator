@@ -45,7 +45,8 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 						K8sContext: k8sCtx0,
 						Size:       3,
 						DatacenterOptions: k8ss.DatacenterOptions{
-							ServerVersion: "3.11.14",
+							DatacenterName: "real-dc1",
+							ServerVersion:  "3.11.14",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
@@ -76,7 +77,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
-	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "real-dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -169,7 +170,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	}), timeout, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
 
 	t.Log("delete datacenter pods to simulate shutdown")
-	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "dc1"})
+	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "real-dc1"})
 	require.NoError(err, "failed to delete datacenter pods")
 
 	restore = &api.MedusaRestoreJob{}
@@ -283,8 +284,8 @@ func findContainer(containers []corev1.Container, name string) *corev1.Container
 }
 
 func TestMedusaServiceAddress(t *testing.T) {
-	serviceUrl := medusaServiceUrl("k8c-cluster", "dc1", "dc-namespace")
-	assert.Equal(t, "k8c-cluster-dc1-medusa-service.dc-namespace.svc:50051", serviceUrl)
+	serviceUrl := medusaServiceUrl("k8c-cluster", "real-dc1", "dc-namespace")
+	assert.Equal(t, "k8c-cluster-real-dc1-medusa-service.dc-namespace.svc:50051", serviceUrl)
 }
 
 type fakeMedusaRestoreClientFactory struct {
@@ -334,13 +335,13 @@ func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.Bac
 			Status:     *medusa.StatusType_SUCCESS.Enum(),
 			Nodes: []*medusa.BackupNode{
 				{
-					Host: "node1", Datacenter: "dc1", Rack: "rack1",
+					Host: "node1", Datacenter: "real-dc1", Rack: "rack1",
 				},
 				{
-					Host: "node2", Datacenter: "dc1", Rack: "rack1",
+					Host: "node2", Datacenter: "real-dc1", Rack: "rack1",
 				},
 				{
-					Host: "node3", Datacenter: "dc1", Rack: "rack1",
+					Host: "node3", Datacenter: "real-dc1", Rack: "rack1",
 				},
 			},
 		},

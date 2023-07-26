@@ -2020,7 +2020,7 @@ func DcPrefix(
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(context.Background(), dcKey, cassdc)
 	require.NoError(t, err)
-	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.Name))
+	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.DatacenterName()))
 }
 
 func DcClusterName(
@@ -2130,7 +2130,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
 
-	cassandraPods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey)
+	cassandraPods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey, cassdc.DatacenterName())
 	require.NoError(t, err, "failed listing Cassandra pods")
 	cassandraIndex, cassandraFound := findContainerInPod(t, cassandraPods[0], "cassandra")
 	require.True(t, cassandraFound, "cannot find cassandra container in cassandra pod")

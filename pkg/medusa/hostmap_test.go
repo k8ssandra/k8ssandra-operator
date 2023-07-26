@@ -76,7 +76,7 @@ func TestGetSourceRacksIPs(t *testing.T) {
 	mockgRPCClient := mockgRPCClient{}
 	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
 	ctx := context.Background()
-	sourceRacks, err := getSourceRacksIPs(*medusaBackup, mockgRPCClient, ctx)
+	sourceRacks, err := getSourceRacksIPs(*medusaBackup, mockgRPCClient, ctx, "test-dc2")
 	assert.NoError(t, err, err)
 	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "test-rack1", DC: "test-dc2"}: {"192.168.1.5"},
@@ -89,12 +89,13 @@ func TestGetSourceRacksIPs(t *testing.T) {
 func TestGetTargetRackFQDNs(t *testing.T) {
 	cassDc := &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dc2",
+			Name:      "dc2",
 			Namespace: "default",
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			ClusterName: "test-cluster",
-			Size:        3,
+			ClusterName:    "test-cluster",
+			DatacenterName: "test-dc2",
+			Size:           3,
 		},
 	}
 
