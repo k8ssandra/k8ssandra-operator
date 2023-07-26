@@ -269,13 +269,13 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
 		if dcStatus, found := kc.Status.Datacenters[dc.Meta.Name]; found {
 			if dcStatus.Cassandra.GetConditionStatus(cassdcapi.DatacenterReady) == corev1.ConditionTrue {
-				dcNames = append(dcNames, dc.Meta.Name)
+				dcNames = append(dcNames, dc.CassDcName())
 			}
 		}
 	}
 
 	if rebuildFrom, found := kc.Annotations[api.RebuildSourceDcAnnotation]; found {
-		if rebuildFrom == targetDc.Name {
+		if rebuildFrom == targetDc.DatacenterName() {
 			return "", fmt.Errorf("rebuild error: src dc and target dc cannot be the same")
 		}
 

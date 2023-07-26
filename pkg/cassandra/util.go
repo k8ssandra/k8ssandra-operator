@@ -49,7 +49,7 @@ func ComputeReplicationFromDatacenters(maxReplicationPerDc int, externalDatacent
 	desiredReplication := make(map[string]int, len(datacenters))
 	for _, dcTemplate := range datacenters {
 		replicationFactor := int(math.Min(float64(maxReplicationPerDc), float64(dcTemplate.Size)))
-		desiredReplication[dcTemplate.Meta.Name] = replicationFactor
+		desiredReplication[dcTemplate.CassDcName()] = replicationFactor
 	}
 	for _, dcName := range externalDatacenters {
 		desiredReplication[dcName] = maxReplicationPerDc

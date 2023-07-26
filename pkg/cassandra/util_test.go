@@ -132,6 +132,36 @@ func TestComputeReplicationWithExternalDc(t *testing.T) {
 	}
 }
 
+func TestComputeReplicationFromDatacentersWithDcNameOverride(t *testing.T) {
+	// Define the input parameters
+	maxReplicationPerDc := 3
+	var externalDatacenters []string
+	datacenters := []api.CassandraDatacenterTemplate{
+		{
+			Meta: api.EmbeddedObjectMeta{
+				Name: "dc1",
+			},
+			DatacenterOptions: api.DatacenterOptions{
+				DatacenterName: "dc1-override",
+			},
+			Size: 2,
+		},
+		{
+			Meta: api.EmbeddedObjectMeta{
+				Name: "dc2",
+			},
+			Size: 5,
+		},
+	}
+
+	// Call the ComputeReplicationFromDatacenters function
+	desiredReplication := ComputeReplicationFromDatacenters(maxReplicationPerDc, externalDatacenters, datacenters...)
+
+	// Assert the desired replication factors
+	assert.Equal(t, 2, desiredReplication["dc1-override"])
+	assert.Equal(t, 3, desiredReplication["dc2"])
+}
+
 func TestCompareReplications(t *testing.T) {
 	tests := []struct {
 		name     string

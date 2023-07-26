@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	"net/http"
 	"net/url"
 	"os"
@@ -742,6 +743,14 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
+	require.Eventually(func() bool {
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		if err != nil {
+			return false
+		}
+		return "{\"real-dc1\":3}" == k8ssandra.ObjectMeta.Annotations["k8ssandra.io/initial-system-replication"]
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "initial-system-replication annotation not set correctly according to dc name override")
+
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	// Check that the Cassandra cluster name override is passed to the cassdc without being modified
@@ -1193,6 +1202,18 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 		return true
 	}, 30*time.Second, 1*time.Second, "timed out waiting to add DC to K8ssandraCluster")
+
+	rebuildDc2CassandraTask := &v1alpha1.CassandraTask{}
+	rebuildDc2CassandraTaskKey := client.ObjectKey{Namespace: namespace, Name: "rebuild-dc2-cassandra"}
+
+	require.Eventually(func() bool {
+		err = f.Client.Get(ctx, rebuildDc2CassandraTaskKey, rebuildDc2CassandraTask)
+		if err != nil {
+			t.Logf("failed to add DC: failed to get rebuild-dc2-cassandra task: %v", err)
+			return false
+		}
+		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == "real-dc1"
+	}, 30*time.Second, 1*time.Second, "timed out waiting for CassandraTask to be created with the right source DC")
 
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
