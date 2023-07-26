@@ -74,3 +74,5 @@ For anything specific to K8ssandra 1.x, please create the issue in the [k8ssandr
 
 ## Development
 See the development [guide](docs/development/README.md).
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=af8bf51c-d84e-43bf-875d-0c8f3b5169b9" />
