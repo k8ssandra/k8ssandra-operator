@@ -38,7 +38,7 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 			MountPath: "/etc/vector",
 			VolumeSource: &corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(k8cName, dcConfig.Meta.Name)},
+					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(k8cName, dcConfig.CassDcName())},
 				},
 			},
 		})

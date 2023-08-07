@@ -32,7 +32,7 @@ func VectorAgentConfigMapName(clusterName, dcName string) string {
 func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name),
+			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
 			Namespace: namespace,
 			Labels: utils.MergeMap(
 				map[string]string{

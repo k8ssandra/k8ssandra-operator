@@ -37,9 +37,9 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 	cfg := telemetry.PrometheusResourcer{
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
-		ServiceMonitorName:   kc.SanitizedName() + "-" + actualDc.Name + "-" + "cass-servicemonitor",
+		ServiceMonitorName:   kc.SanitizedName() + "-" + actualDc.DatacenterName() + "-" + "cass-servicemonitor",
 		Logger:               logger,
-		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.Name, commonLabels),
+		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.DatacenterName(), commonLabels),
 	}
 	logger.Info("merged TelemetrySpec constructed", "mergedSpec", mergedSpec, "cluster", kc.Name)
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)

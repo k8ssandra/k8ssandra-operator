@@ -12,9 +12,9 @@ import (
 
 func GetCassandraDatacenterPods(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter, r client.Reader, logger logr.Logger) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: cassdc.Name}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: cassdc.DatacenterName()}
 	if err := r.List(ctx, podList, labels, client.InNamespace(cassdc.Namespace)); err != nil {
-		logger.Error(err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", cassdc.Name)
+		logger.Error(err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", cassdc.DatacenterName())
 		return nil, err
 	}
 

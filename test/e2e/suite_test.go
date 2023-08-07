@@ -2034,6 +2034,17 @@ func DcClusterName(
 	return cassdc.Spec.ClusterName
 }
 
+func DcName(
+	t *testing.T,
+	f *framework.E2eFramework,
+	dcKey framework.ClusterKey) string {
+	// Get the cassdc object
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(context.Background(), dcKey, cassdc)
+	require.NoError(t, err)
+	return cassdc.DatacenterName()
+}
+
 func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash string) string {
 	stargateChan := make(chan string)
 	go func() {
@@ -2229,7 +2240,7 @@ func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFr
 func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) {
 	configMapName := types.NamespacedName{
 		Namespace: dcKey.Namespace,
-		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), dcKey.Name)),
+		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), DcName(t, f, dcKey))),
 	}
 	t.Logf("check that Vector agent config map %v is present in cluster %s", configMapName, dcKey.K8sContext)
 	configMapKey := framework.ClusterKey{

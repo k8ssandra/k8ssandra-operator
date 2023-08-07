@@ -102,7 +102,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	if reaperTemplate != nil {
 		reaperTemplate.SecretsProvider = kc.Spec.SecretsProvider
 
-		logger.Info("Reaper present for DC " + actualDc.Name)
+		logger.Info("Reaper present for DC " + actualDc.DatacenterName())
 
 		desiredReaper, err := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
 		if err != nil {
@@ -154,7 +154,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 	} else {
 
-		logger.Info("Reaper not present for DC " + actualDc.Name)
+		logger.Info("Reaper not present for DC " + actualDc.DatacenterName())
 
 		// Test if Reaper was removed
 		if err := remoteClient.Get(ctx, reaperKey, actualReaper); err != nil {
