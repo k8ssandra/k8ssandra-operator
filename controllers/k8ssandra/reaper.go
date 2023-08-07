@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -30,7 +31,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -113,7 +113,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		if err := remoteClient.Get(ctx, reaperKey, actualReaper); err != nil {
 			if errors.IsNotFound(err) {
 				logger.Info("Creating Reaper resource")
-				if err := remoteClient.Create(ctx, desiredReaper); err != nil {
+				if err := controllerutil.SetControllerReference(actualDc, desiredReaper, r.Scheme); err != nil {
+					logger.Error(err, "Failed to set controller reference on Reaper resource")
+					return result.Error(err)
+				} else if err := remoteClient.Create(ctx, desiredReaper); err != nil {
 					logger.Error(err, "Failed to create Reaper resource")
 					return result.Error(err)
 				} else {
@@ -137,7 +140,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 			resourceVersion := actualReaper.GetResourceVersion()
 			desiredReaper.DeepCopyInto(actualReaper)
 			actualReaper.SetResourceVersion(resourceVersion)
-			if err := remoteClient.Update(ctx, actualReaper); err != nil {
+			if err := controllerutil.SetControllerReference(actualDc, desiredReaper, r.Scheme); err != nil {
+				logger.Error(err, "Failed to set controller reference on Reaper resource")
+				return result.Error(err)
+			} else if err := remoteClient.Update(ctx, actualReaper); err != nil {
 				logger.Error(err, "Failed to update Reaper resource")
 				return result.Error(err)
 			}
@@ -177,37 +183,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		}
 		return result.Continue()
 	}
-}
-
-func (r *K8ssandraClusterReconciler) deleteReapers(
-	ctx context.Context,
-	kc *api.K8ssandraCluster,
-	dcTemplate api.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	reaperList := &reaperapi.ReaperList{}
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	if err := remoteClient.List(ctx, reaperList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list Reaper objects", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, rp := range reaperList.Items {
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Reaper", "Reaper", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-	return
 }
 
 func (r *K8ssandraClusterReconciler) setStatusForReaper(kc *api.K8ssandraCluster, reaper *reaperapi.Reaper, dcName string) error {
