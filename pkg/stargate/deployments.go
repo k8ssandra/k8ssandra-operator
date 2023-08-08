@@ -333,7 +333,7 @@ func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatac
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
+					Name: GeneratedConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
 				},
 			},
 		},

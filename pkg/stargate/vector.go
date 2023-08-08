@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +33,7 @@ func VectorAgentConfigMapName(clusterName, dcName string) string {
 func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name),
+			Name:      VectorAgentConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
 			Namespace: namespace,
 			Labels: utils.MergeMap(
 				map[string]string{
@@ -77,7 +78,7 @@ func configureVector(stargate *api.Stargate, deployment *appsv1.Deployment, dc *
 			Name: "stargate-vector-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name)},
+					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(dc.Spec.ClusterName, dc.DatacenterName())},
 				},
 			},
 		}

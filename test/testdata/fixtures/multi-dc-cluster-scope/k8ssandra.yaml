@@ -42,6 +42,7 @@ spec:
           namespace: test-1
         k8sContext: kind-k8ssandra-0
         size: 2
+        datacenterName: real-dc1
         racks:
           - name: rack1
             nodeAffinityLabels:
@@ -54,6 +55,7 @@ spec:
           namespace: test-2
         k8sContext: kind-k8ssandra-1
         size: 2
+        datacenterName: real-dc2
         racks:
           - name: rack1
             nodeAffinityLabels:

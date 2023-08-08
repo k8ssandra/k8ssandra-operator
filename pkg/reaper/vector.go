@@ -2,6 +2,7 @@ package reaper
 
 import (
 	"fmt"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,7 +78,7 @@ func configureVector(reaper *api.Reaper, deployment *appsv1.Deployment, dc *cass
 			Name: "reaper-vector-config",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(dc.Spec.ClusterName, dc.Name)},
+					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName(dc.Spec.ClusterName, dc.DatacenterName())},
 				},
 			},
 		}

@@ -27,12 +27,14 @@ spec:
           name: search
         k8sContext: kind-k8ssandra-0
         size: 1
+        datacenterName: search-dc
         dseWorkloads:
           searchEnabled: true
       - metadata:
           name: cassandra
         k8sContext: kind-k8ssandra-1
         size: 1
+          datacenterName: cass-dc
         
           
 

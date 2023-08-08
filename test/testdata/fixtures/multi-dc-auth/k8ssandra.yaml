@@ -11,6 +11,7 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 1
+        datacenterName: real-dc1
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -28,6 +29,7 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 1
+        datacenterName: real-dc2
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
