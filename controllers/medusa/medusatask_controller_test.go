@@ -19,6 +19,7 @@ const (
 	backup1 = "backup1"
 	backup2 = "backup2"
 	backup3 = "backup3"
+	backup4 = "backup4"
 )
 
 func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -37,6 +38,21 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 					{
 						Meta: k8ss.EmbeddedObjectMeta{
 							Name: "dc1",
+						},
+						K8sContext: k8sCtx0,
+						Size:       3,
+						DatacenterOptions: k8ss.DatacenterOptions{
+							ServerVersion: "3.11.14",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
+							},
+						},
+					},
+					{
+						Meta: k8ss.EmbeddedObjectMeta{
+							Name: "dc2",
 						},
 						K8sContext: k8sCtx0,
 						Size:       3,
@@ -68,65 +84,66 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 		},
 	}
 
-	t.Log("Creating k8ssandracluster with Medusa")
+	t.Log("Creating k8ssandracluster test1 with Medusa")
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	reconcileReplicatedSecret(ctx, t, f, kc)
-	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
-	t.Log("check that dc1 was created")
-	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
-	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-
-	t.Log("update datacenter status to scaling up")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterScalingUp,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to patch datacenter status")
-
 	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, "test")
 
-	t.Log("check that the K8ssandraCluster status is updated")
-	require.Eventually(func() bool {
-		kc := &k8ss.K8ssandraCluster{}
-		err = f.Get(ctx, kcKey, kc)
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
+	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc2")
 
-		if err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
+	reconcileReplicatedSecret(ctx, t, f, kc)
 
-		if len(kc.Status.Datacenters) == 0 {
-			return false
-		}
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		reconcileMedusaStandaloneDeployment(ctx, t, f, kc, dcKey.Name, f.DataPlaneContexts[0])
+		t.Logf("check that %s was created", dcKey.Name)
+		require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 
-		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc1Key)
-			return false
-		}
+		t.Log("update datacenter status to scaling up")
+		err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+			dc.SetCondition(cassdcapi.DatacenterCondition{
+				Type:               cassdcapi.DatacenterScalingUp,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.Now(),
+			})
+		})
+		require.NoError(err, "failed to patch datacenter status")
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return condition != nil && condition.Status == corev1.ConditionTrue
-	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+		t.Log("check that the K8ssandraCluster status is updated")
+		require.Eventually(func() bool {
+			kc := &k8ss.K8ssandraCluster{}
+			err = f.Get(ctx, kcKey, kc)
+
+			if err != nil {
+				t.Logf("failed to get K8ssandraCluster: %v", err)
+				return false
+			}
+
+			if len(kc.Status.Datacenters) == 0 {
+				return false
+			}
+
+			k8ssandraStatus, found := kc.Status.Datacenters[dcKey.Name]
+			if !found {
+				t.Logf("status for datacenter %s not found", dcKey)
+				return false
+			}
+			condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+			return condition != nil && condition.Status == corev1.ConditionTrue
+		}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+		err = f.SetDatacenterStatusReady(ctx, dcKey)
+		require.NoError(err, "failed to set dcKey status ready")
+	}
 
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(err, "failed to get dc1")
 
-	t.Log("update dc1 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to update dc1 status to ready")
+	dc2 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc2Key, dc2)
+	require.NoError(err, "failed to get dc2")
 
 	backup1Created := createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backup1)
 	require.True(backup1Created, "failed to create backup1")
@@ -134,6 +151,8 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	require.True(backup2Created, "failed to create backup2")
 	backup3Created := createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backup3)
 	require.True(backup3Created, "failed to create backup3")
+	backup4Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup4)
+	require.True(backup4Created, "failed to create backup4")
 
 	// Purge backups and verify that only one out of three remains
 	t.Log("purge backups")
@@ -178,7 +197,13 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 		return !updated.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
+	medusaBackup4Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, backup4)
+	medusaBackup4 := &api.MedusaBackup{}
+	err = f.Get(ctx, medusaBackup4Key, medusaBackup4)
+	require.NoError(err, "failed to get medusaBackup4")
+
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
