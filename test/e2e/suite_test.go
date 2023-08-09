@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 
@@ -872,7 +873,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	replication := map[string]int{"dc1": 1}
+	replication := map[string]int{DcName(t, f, dcKey): 1}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 
 	t.Log("Disable Vector in k8ssandracluster and Stargate resources")
@@ -954,7 +955,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	replication := map[string]int{"dc1": 1}
+	replication := map[string]int{DcName(t, f, dcKey): 1}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 }
 
@@ -991,7 +992,7 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
 
-	replication := map[string]int{"dc1": 1}
+	replication := map[string]int{DcName(t, f, dcKey): 1}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, true, replication)
 }
 
@@ -1043,7 +1044,7 @@ func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace st
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	replication := map[string]int{"dc1": 3}
+	replication := map[string]int{DcName(t, f, dcKey): 3}
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 }
 
@@ -1123,7 +1124,7 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
-	replication := map[string]int{"dc1": 2, "dc2": 1}
+	replication := map[string]int{DcName(t, f, dc1Key): 2, DcName(t, f, dc2Key): 1}
 	checkKeyspaceReplication(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		"system_auth", replication)
 }
@@ -1168,11 +1169,11 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	dcSize := 2
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("add dc2 to cluster")
@@ -1192,7 +1193,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			K8sContext: f.DataPlaneContexts[1],
 			Size:       int32(dcSize),
 		})
-		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -1212,7 +1213,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			t.Logf("failed to add DC: failed to get rebuild-dc2-cassandra task: %v", err)
 			return false
 		}
-		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == "real-dc1"
+		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == "dc1"
 	}, 30*time.Second, 1*time.Second, "timed out waiting for CassandraTask to be created with the right source DC")
 
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
@@ -1244,8 +1245,8 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
-			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
-		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
+			return strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc1Key), dcSize)) && strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc2Key), dcSize))
+		}, 5*time.Minute, 15*time.Second, "failed to veify replication updated for keyspace %s", ks)
 	}
 
 	sg2Key := framework.ClusterKey{
@@ -1289,11 +1290,11 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 	dcSize := 2
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s' : %d}", DcName(t, f, dc1Key), dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : %d}", dcSize))
+		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s' : %d}", DcName(t, f, dc1Key), dcSize))
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("add dc2 to cluster")
@@ -1314,7 +1315,7 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 			K8sContext: f.DataPlaneContexts[0],
 			Size:       int32(dcSize),
 		})
-		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -1354,7 +1355,7 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
-			return strings.Contains(output, fmt.Sprintf("'dc1': '%d'", dcSize)) && strings.Contains(output, fmt.Sprintf("'dc2': '%d'", dcSize))
+			return strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc1Key), dcSize)) && strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc2Key), dcSize))
 		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 }
@@ -1442,11 +1443,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 
 	t.Log("create keyspaces")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		"CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
+		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s': 1, '%s': 2}", DcName(t, f, dc1Key), DcName(t, f, dc2Key)))
 	require.NoError(err, "failed to create keyspace")
 
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		"CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 2}")
+		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s': 1, '%s': 2}", DcName(t, f, dc1Key), DcName(t, f, dc2Key)))
 	require.NoError(err, "failed to create keyspace")
 
 	t.Log("remove dc2 from cluster")
@@ -1485,7 +1486,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
-			return strings.Contains(output, "'dc1': '1'") && !strings.Contains(output, "'dc2': '1'")
+			return strings.Contains(output, "'"+DcName(t, f, dc1Key)+"': '1'") && !strings.Contains(output, "'"+DcName(t, f, dc2Key)+"': '1'")
 		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 
@@ -1656,7 +1657,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	replication := map[string]int{"dc1": 1, "dc2": 1}
+	replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
@@ -1761,7 +1762,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
 
-	replication := map[string]int{"dc1": 1, "dc2": 1}
+	replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, true, replication)
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, true, replication)

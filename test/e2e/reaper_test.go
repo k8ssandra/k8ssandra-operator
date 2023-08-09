@@ -256,7 +256,7 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	dcPrefix := DcPrefix(t, f, dcKey)
 	t.Log("create Reaper keyspace")
 	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0",
-		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 3} ")
+		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dcKey)+"' : 3} ")
 	require.NoError(t, err, "failed to create Reaper keyspace")
 
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0", "reaper_db")

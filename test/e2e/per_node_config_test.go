@@ -2,6 +2,10 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"testing"
+	"time"
+
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -9,8 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"testing"
-	"time"
 )
 
 func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -23,7 +25,8 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "dc2")
-
+	dc1Prefix := DcPrefix(t, f, dc1Key)
+	dc2Prefix := DcPrefix(t, f, dc2Key)
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
@@ -32,17 +35,17 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	t.Log("check that the ConfigMaps were created")
 
-	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "test-dc1-per-node-config")
-	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "test-dc2-per-node-config")
+	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-per-node-config", dc1Prefix))
+	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-per-node-config", dc2Prefix))
 
 	assert.Eventually(t, func() bool {
 		return f.Get(ctx, perNodeConfigMapKey1, &corev1.ConfigMap{}) == nil &&
 			f.Get(ctx, perNodeConfigMapKey2, &corev1.ConfigMap{}) == nil
 	}, time.Minute, time.Second)
 
-	dc1Pod1 := DcPrefix(t, f, dc1Key) + "-rack1-sts-0"
-	dc1Pod2 := DcPrefix(t, f, dc1Key) + "-rack2-sts-0"
-	dc1Pod3 := DcPrefix(t, f, dc1Key) + "-rack3-sts-0"
+	dc1Pod1 := dc1Prefix + "-rack1-sts-0"
+	dc1Pod2 := dc1Prefix + "-rack2-sts-0"
+	dc1Pod3 := dc1Prefix + "-rack3-sts-0"
 
 	// dc 1 num_tokens 4
 
@@ -66,9 +69,9 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'3074457345618258600'")
 	assert.Contains(t, output, "'7686143364045646503'")
 
-	dc2Pod1 := DcPrefix(t, f, dc2Key) + "-rack1-sts-0"
-	dc2Pod2 := DcPrefix(t, f, dc2Key) + "-rack2-sts-0"
-	dc2Pod3 := DcPrefix(t, f, dc2Key) + "-rack3-sts-0"
+	dc2Pod1 := dc2Prefix + "-rack1-sts-0"
+	dc2Pod2 := dc2Prefix + "-rack2-sts-0"
+	dc2Pod3 := dc2Prefix + "-rack3-sts-0"
 
 	//dc 2 num_tokens 8
 

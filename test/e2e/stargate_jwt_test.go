@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 // https://stargate.io/docs/stargate/1.0/developers-guide/authnz.html#_jwt_based_authenticationauthorization
@@ -24,11 +25,11 @@ func stargateJwt(t *testing.T, ctx context.Context, namespace string, f *framewo
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	jwtCreateAndPopulateSchema(t, f, ctx, namespace)
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
 	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-real-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	restClient := resty.New()
 	adminToken := jwtCreateAdminAccessToken(t, restClient)
@@ -73,7 +74,7 @@ func jwtUndeployKeycloak(t *testing.T, f *framework.E2eFramework, namespace stri
 }
 
 func jwtCreateAndPopulateSchema(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string) {
-	jwtExecuteCql(t, f, ctx, namespace, "CREATE KEYSPACE IF NOT EXISTS store WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':'1'}")
+	jwtExecuteCql(t, f, ctx, namespace, "CREATE KEYSPACE IF NOT EXISTS store WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'real-dc1':'1'}")
 	jwtExecuteCql(t, f, ctx, namespace, "CREATE TABLE IF NOT EXISTS store.shopping_cart (userid text PRIMARY KEY, item_count int, last_update_timestamp timestamp);")
 	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('9876', 2, toTimeStamp(toDate(now())))")
 	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('1234', 5, toTimeStamp(toDate(now())))")
@@ -83,7 +84,7 @@ func jwtCreateAndPopulateSchema(t *testing.T, f *framework.E2eFramework, ctx con
 }
 
 func jwtExecuteCql(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, query string) {
-	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "cluster1", "cluster1-dc1-default-sts-0", query)
+	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "cluster1", "cluster1-real-dc1-default-sts-0", query)
 	require.NoError(t, err)
 }
 

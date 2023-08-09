@@ -166,7 +166,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 								{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
 								{Name: "CLUSTER_VERSION", Value: string(clusterVersion)},
 								{Name: "SEED", Value: seedService},
-								{Name: "DATACENTER_NAME", Value: dc.Name},
+								{Name: "DATACENTER_NAME", Value: dc.DatacenterName()},
 								{Name: "RACK_NAME", Value: rack.Name},
 								// Watching bundles is unnecessary in a k8s deployment. See
 								// https://github.com/stargate/stargate/issues/1286 for
