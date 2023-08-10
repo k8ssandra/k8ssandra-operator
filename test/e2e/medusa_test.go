@@ -176,7 +176,7 @@ func checkMedusaStandaloneDeploymentExists(t *testing.T, ctx context.Context, dc
 	// Get the medusa standalone pod and check that it is running
 	require.Eventually(func() bool {
 		deployment := &appsv1.Deployment{}
-		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandaloneDeploymentName(kc.Name, dcKey.Name)}}
+		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandaloneDeploymentName(kc.Name, DcName(t, f, dcKey))}}
 		err := f.Get(ctx, deploymentKey, deployment)
 		require.NoError(err, "Error getting the medusa standalone pod")
 		return deployment.Status.ReadyReplicas == 1
@@ -189,7 +189,7 @@ func checkMedusaStandaloneServiceExists(t *testing.T, ctx context.Context, dcKey
 	// Get the medusa standalone pod and check that it is running
 	require.Eventually(func() bool {
 		service := &corev1.Service{}
-		serviceKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaServiceName(kc.Name, dcKey.Name)}}
+		serviceKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaServiceName(kc.Name, DcName(t, f, dcKey))}}
 		err := f.Get(ctx, serviceKey, service)
 		return err == nil
 	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone service doesn't exist")

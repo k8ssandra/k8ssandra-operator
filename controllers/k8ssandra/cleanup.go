@@ -139,7 +139,7 @@ func (r *K8ssandraClusterReconciler) checkFinalizer(ctx context.Context, kc *api
 }
 
 func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	dcName := k8ssandra.GetDatacenterForDecommission(kc)
+	dcName, dcNameOverride := k8ssandra.GetDatacenterForDecommission(kc)
 	if dcName == "" {
 		return result.Continue()
 	}
@@ -157,33 +157,38 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 		return result.Continue()
 	default:
 		logger.Info("Proceeding with DC deletion", "DC", dcName)
-		return r.deleteDc(ctx, kc, dcName, logger)
+
+		cassDcName := dcName
+		if dcNameOverride != nil && *dcNameOverride != "" {
+			cassDcName = *dcNameOverride
+		}
+		return r.deleteDc(ctx, kc, dcName, cassDcName, logger)
 	}
 }
 
-func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, cassDcName string, logger logr.Logger) result.ReconcileResult {
 	kcKey := utils.GetKey(kc)
 
-	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, dcName, nil)
+	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, cassDcName, nil)
 	if err != nil {
 		return result.Error(err)
 	}
 
 	if stargate != nil {
 		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", dcName, err))
+			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", cassDcName, err))
 		}
 		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
 	}
 
-	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dcName, remoteClient)
+	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, cassDcName, remoteClient)
 	if err != nil {
 		return result.Error(err)
 	}
 
 	if reaper != nil {
 		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dcName, err))
+			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", cassDcName, err))
 		}
 		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
 	}

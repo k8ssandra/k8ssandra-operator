@@ -29,11 +29,11 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
-	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc1Key))}}
-	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc2Key))}}
+	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc1-reaper"}}
+	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-reaper"}}
 
-	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-stargate", DcPrefix(t, f, dc1Key))}}
-	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-stargate", DcPrefix(t, f, dc2Key))}}
+	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc1-stargate"}}
+	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
 
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
@@ -72,7 +72,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
+	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name, DcPrefix(t, f, dc1Key), DcPrefix(t, f, dc2Key))
 }
 
 func waitForAllComponentsReady(
@@ -164,6 +164,7 @@ func testAuthenticationEnabled(
 	kcKey, reaperUiSecretKey types.NamespacedName,
 	replication map[string]int,
 	pod1Name, pod2Name string,
+	dc1Prefix, dc2Prefix string,
 ) {
 	t.Log("retrieve superuser credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")
@@ -191,8 +192,8 @@ func testAuthenticationEnabled(
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
 		t.Run("Stargate", func(t *testing.T) {
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, false, replication)
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, false, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
 			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])

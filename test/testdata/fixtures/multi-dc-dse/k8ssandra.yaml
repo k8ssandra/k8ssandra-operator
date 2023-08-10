@@ -34,7 +34,7 @@ spec:
           name: cassandra
         k8sContext: kind-k8ssandra-1
         size: 1
-          datacenterName: cass-dc
+        datacenterName: cass-dc
         
           
 

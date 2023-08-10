@@ -52,19 +52,23 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		return recResult
 	}
 
-	decommDcName := k8ssandra.GetDatacenterForDecommission(kc)
+	decommCassDcName, dcNameOverride := k8ssandra.GetDatacenterForDecommission(kc)
 	decommission := false
-	if decommDcName != "" {
-		decommission = kc.Status.Datacenters[decommDcName].DecommissionProgress == api.DecommUpdatingReplication
+	if decommCassDcName != "" {
+		decommission = kc.Status.Datacenters[decommCassDcName].DecommissionProgress == api.DecommUpdatingReplication
 	}
-	status := kc.Status.Datacenters[decommDcName]
+	status := kc.Status.Datacenters[decommCassDcName]
 
 	if decommission {
+		decommDcName := decommCassDcName
+		if dcNameOverride != nil && *dcNameOverride != "" {
+			decommDcName = *dcNameOverride
+		}
 		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
 			return recResult
 		}
 		status.DecommissionProgress = api.DecommDeleting
-		kc.Status.Datacenters[decommDcName] = status
+		kc.Status.Datacenters[decommCassDcName] = status
 		return result.RequeueSoon(r.DefaultDelay)
 	} else if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dc.Name) {
 		if recResult := r.updateUserKeyspacesReplication(kc, dc, mgmtApi, logger); recResult.Completed() {
@@ -221,12 +225,12 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	replication = getReplicationForDeployedDcs(kc, replication)
 
 	for _, ks := range userKeyspaces {
-		replicationFactor := replication.ReplicationFactor(dc.Name, ks)
+		replicationFactor := replication.ReplicationFactor(dc.DatacenterName(), ks)
 		logger.Info("computed replication factor", "keyspace", ks, "replication_factor", replicationFactor)
 		if replicationFactor == 0 {
 			continue
 		}
-		if err = ensureKeyspaceReplication(mgmtApi, ks, dc.Name, replicationFactor); err != nil {
+		if err = ensureKeyspaceReplication(mgmtApi, ks, dc.DatacenterName(), replicationFactor); err != nil {
 			if kerrors.IsSchemaDisagreement(err) {
 				return result.RequeueSoon(r.DefaultDelay)
 			}
@@ -306,7 +310,7 @@ func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 func getReplicationForDeployedDcs(kc *api.K8ssandraCluster, replication *cassandra.Replication) *cassandra.Replication {
 	dcNames := make([]string, 0)
 	for _, template := range kc.GetInitializedDatacenters() {
-		dcNames = append(dcNames, template.Meta.Name)
+		dcNames = append(dcNames, template.CassDcName())
 	}
 
 	return replication.ForDcs(dcNames...)

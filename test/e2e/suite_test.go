@@ -212,7 +212,7 @@ func TestOperator(t *testing.T) {
 		testFunc: createMultiDatacenterClusterDifferentTopologies,
 		fixture:  framework.NewTestFixture("multi-dc-mixed", controlPlane),
 	}))
-	t.Run("AddDcToCluster", e2eTest(ctx, &e2eTestOpts{
+	t.Run("AddDcToClusterDiffDataplane", e2eTest(ctx, &e2eTestOpts{
 		testFunc: addDcToCluster,
 		fixture:  framework.NewTestFixture("add-dc", controlPlane),
 	}))
@@ -1192,6 +1192,9 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			},
 			K8sContext: f.DataPlaneContexts[1],
 			Size:       int32(dcSize),
+			DatacenterOptions: api.DatacenterOptions{
+				DatacenterName: "real-dc2",
+			},
 		})
 		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
@@ -1204,20 +1207,20 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		return true
 	}, 30*time.Second, 1*time.Second, "timed out waiting to add DC to K8ssandraCluster")
 
-	rebuildDc2CassandraTask := &v1alpha1.CassandraTask{}
-	rebuildDc2CassandraTaskKey := client.ObjectKey{Namespace: namespace, Name: "rebuild-dc2-cassandra"}
-
-	require.Eventually(func() bool {
-		err = f.Client.Get(ctx, rebuildDc2CassandraTaskKey, rebuildDc2CassandraTask)
-		if err != nil {
-			t.Logf("failed to add DC: failed to get rebuild-dc2-cassandra task: %v", err)
-			return false
-		}
-		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == "dc1"
-	}, 30*time.Second, 1*time.Second, "timed out waiting for CassandraTask to be created with the right source DC")
-
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	rebuildDc2CassandraTask := &v1alpha1.CassandraTask{}
+	rebuildDc2CassandraTaskKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2-rebuild"}}
+
+	require.Eventually(func() bool {
+		err = f.Get(ctx, rebuildDc2CassandraTaskKey, rebuildDc2CassandraTask)
+		if err != nil {
+			t.Logf("failed to add DC: failed to get dc2-rebuild task: %v", err)
+			return false
+		}
+		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == DcName(t, f, dc1Key)
+	}, 3*time.Minute, 10*time.Second, "timed out waiting for CassandraTask to be created with the right source DC")
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
@@ -1314,6 +1317,9 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 			},
 			K8sContext: f.DataPlaneContexts[0],
 			Size:       int32(dcSize),
+			DatacenterOptions: api.DatacenterOptions{
+				DatacenterName: "real-dc2",
+			},
 		})
 		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
@@ -1355,6 +1361,7 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
+			t.Logf("replication check for keyspace %s: %s", ks, output)
 			return strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc1Key), dcSize)) && strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc2Key), dcSize))
 		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
@@ -1449,6 +1456,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s': 1, '%s': 2}", DcName(t, f, dc1Key), DcName(t, f, dc2Key)))
 	require.NoError(err, "failed to create keyspace")
+	dc2Name := DcName(t, f, dc2Key)
 
 	t.Log("remove dc2 from cluster")
 	err = f.Client.Get(ctx, kcKey, kc)
@@ -1461,16 +1469,16 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	require.Eventually(func() bool {
 		err = f.Client.Get(ctx, kcKey, kc)
 		require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
-		return kc.Status.Error != "None" && strings.Contains(kc.Status.Error, "cannot decommission DC dc2")
+		return kc.Status.Error != "None" && strings.Contains(kc.Status.Error, fmt.Sprintf("cannot decommission DC %s", dc2Name))
 	}, 5*time.Minute, 5*time.Second, "timed out waiting for an error on dc2 removal")
 
 	t.Log("alter keyspaces to remove replicas from DC2")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		"ALTER KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1}")
+		"ALTER KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"': 1}")
 	require.NoError(err, "failed to alter keyspace")
 
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		"ALTER KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1': 1}")
+		"ALTER KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"': 1}")
 	require.NoError(err, "failed to alter keyspace")
 
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
@@ -1486,7 +1494,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
 				return false
 			}
-			return strings.Contains(output, "'"+DcName(t, f, dc1Key)+"': '1'") && !strings.Contains(output, "'"+DcName(t, f, dc2Key)+"': '1'")
+			return strings.Contains(output, "'"+DcName(t, f, dc1Key)+"': '1'") && !strings.Contains(output, "'"+dc2Name+"': '1'")
 		}, 1*time.Minute, 5*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
 

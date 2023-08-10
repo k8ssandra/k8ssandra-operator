@@ -28,17 +28,18 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
-	dc1Prefix := DcPrefix(t, f, dc1Key)
-	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate", dc1Prefix))
-	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper", dc1Prefix))
-
 	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "dc2")
-	dc2Prefix := DcPrefix(t, f, dc2Key)
-	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate", dc2Prefix))
-	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper", dc2Prefix))
 
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
+
+	dc1Prefix := DcPrefix(t, f, dc1Key)
+	dc2Prefix := DcPrefix(t, f, dc2Key)
+	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate", dc1Prefix))
+	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper", dc1Prefix))
+	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate", dc2Prefix))
+	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper", dc2Prefix))
+
 	checkStargateReady(t, f, ctx, sg1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 	checkStargateReady(t, f, ctx, sg2Key)

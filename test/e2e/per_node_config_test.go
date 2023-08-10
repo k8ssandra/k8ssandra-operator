@@ -25,13 +25,14 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, "dc2")
-	dc1Prefix := DcPrefix(t, f, dc1Key)
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
+	dc1Prefix := DcPrefix(t, f, dc1Key)
 
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc2Key.Name)
+	dc2Prefix := DcPrefix(t, f, dc2Key)
 
 	t.Log("check that the ConfigMaps were created")
 
