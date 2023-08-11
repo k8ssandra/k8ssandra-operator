@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -39,6 +40,16 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
 	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
+
+	// Scale the cluster to verify that the previous restore won't break the new pod
+	t.Log("Scaling the cluster to 3 nodes")
+	err = f.Get(ctx, kcKey, kc)
+	require.NoError(err, "Error getting the K8ssandraCluster")
+	kcPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Cassandra.Datacenters[0].Size = 3
+	err = f.Client.Patch(ctx, kc, kcPatch)
+	require.NoError(err, "Error scaling the cluster")
+	checkDatacenterReady(t, ctx, dcKey, f)
 }
 
 func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
