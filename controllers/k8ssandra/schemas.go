@@ -61,8 +61,8 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 
 	if decommission {
 		decommDcName := decommCassDcName
-		if dcNameOverride != nil && *dcNameOverride != "" {
-			decommDcName = *dcNameOverride
+		if dcNameOverride != "" {
+			decommDcName = dcNameOverride
 		}
 		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
 			return recResult

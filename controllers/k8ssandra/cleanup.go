@@ -159,8 +159,8 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 		logger.Info("Proceeding with DC deletion", "DC", dcName)
 
 		cassDcName := dcName
-		if dcNameOverride != nil && *dcNameOverride != "" {
-			cassDcName = *dcNameOverride
+		if dcNameOverride != "" {
+			cassDcName = dcNameOverride
 		}
 		return r.deleteDc(ctx, kc, dcName, cassDcName, logger)
 	}
