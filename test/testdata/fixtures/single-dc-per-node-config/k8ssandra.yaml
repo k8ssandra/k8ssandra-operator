@@ -3,10 +3,10 @@ kind: ConfigMap
 metadata:
   name: custom-per-node-config
 data:
-  test-real-dc1-default-sts-0_cassandra.yaml: |
+  test-dc1-default-sts-0_cassandra.yaml: |
     num_tokens: 4
     initial_token: -9223372036854775808,-4611686018427387905,-2,4611686018427387901
-  test-real-dc1-default-sts-1_cassandra.yaml: |
+  test-dc1-default-sts-1_cassandra.yaml: |
     num_tokens: 4
     initial_token: -7686143364045646507,-3074457345618258604,1537228672809129299,6148914691236517202
 ---

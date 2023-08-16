@@ -749,7 +749,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		if err != nil {
 			return false
 		}
-		return "{\"real-dc1\":3}" == k8ssandra.ObjectMeta.Annotations["k8ssandra.io/initial-system-replication"]
+		return "{\"dc1\":3}" == k8ssandra.ObjectMeta.Annotations["k8ssandra.io/initial-system-replication"]
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "initial-system-replication annotation not set correctly according to dc name override")
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
