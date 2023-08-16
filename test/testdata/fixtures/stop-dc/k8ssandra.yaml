@@ -37,7 +37,6 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 1
-        datacenterName: real-dc1
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1

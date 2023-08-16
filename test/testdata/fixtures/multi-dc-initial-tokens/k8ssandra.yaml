@@ -10,7 +10,6 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 3
-        datacenterName: real-dc1
         networking:
           hostNetwork: true
         racks:

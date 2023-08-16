@@ -26,7 +26,6 @@ spec:
       - metadata:
           name: dc1
         size: 2
-        datacenterName: real-dc1
       - metadata:
           name: dc2
         size: 2
