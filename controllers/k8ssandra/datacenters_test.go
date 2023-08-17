@@ -6,6 +6,8 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
 )
 
@@ -134,4 +136,130 @@ func sortNoChangeTest(t *testing.T) {
 	assert.Equal("dc1", sortedDatacenters[0].Meta.Name, "Datacenter order should not change")
 	assert.Equal("dc2", sortedDatacenters[1].Meta.Name, "Datacenter order should not change")
 	assert.Equal("dc3", sortedDatacenters[2].Meta.Name, "Datacenter order should not change")
+}
+
+func TestGetSourceDatacenterName_Found(t *testing.T) {
+	targetDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "dc2",
+		},
+	}
+
+	kc := &api.K8ssandraCluster{
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						DatacenterOptions: api.DatacenterOptions{
+							DatacenterName: "dc1-cass",
+						},
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						DatacenterOptions: api.DatacenterOptions{
+							DatacenterName: "dc2-cass",
+						},
+					},
+				},
+			},
+		},
+		Status: api.K8ssandraClusterStatus{
+			Datacenters: map[string]api.K8ssandraStatus{
+				"dc1": {
+					Cassandra: &cassdcapi.CassandraDatacenterStatus{
+						Conditions: []cassdcapi.DatacenterCondition{
+							{
+								Type:   cassdcapi.DatacenterReady,
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+				"dc2": {
+					Cassandra: &cassdcapi.CassandraDatacenterStatus{
+						Conditions: []cassdcapi.DatacenterCondition{},
+					},
+				},
+			},
+		},
+	}
+
+	expectedResult := "dc1-cass"
+
+	result, err := getSourceDatacenterName(targetDc, kc)
+	if err != nil {
+		t.Errorf("Error occurred: %v", err)
+	}
+
+	if result != expectedResult {
+		t.Errorf("Expected result: %s, but got: %s", expectedResult, result)
+	}
+}
+
+func TestGetSourceDatacenterName_Conflict(t *testing.T) {
+	targetDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "dc2",
+		},
+	}
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				api.RebuildSourceDcAnnotation: "dc2",
+			},
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						DatacenterOptions: api.DatacenterOptions{
+							DatacenterName: "dc1-cass",
+						},
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
+						},
+						DatacenterOptions: api.DatacenterOptions{
+							DatacenterName: "dc2-cass",
+						},
+					},
+				},
+			},
+		},
+		Status: api.K8ssandraClusterStatus{
+			Datacenters: map[string]api.K8ssandraStatus{
+				"dc1": {
+					Cassandra: &cassdcapi.CassandraDatacenterStatus{
+						Conditions: []cassdcapi.DatacenterCondition{
+							{
+								Type:   cassdcapi.DatacenterReady,
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+				"dc2": {
+					Cassandra: &cassdcapi.CassandraDatacenterStatus{
+						Conditions: []cassdcapi.DatacenterCondition{},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := getSourceDatacenterName(targetDc, kc)
+	if err == nil {
+		t.Errorf("An error was expected as src dc and target dc should be different")
+	}
+
 }

@@ -30,10 +30,10 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-reaper"}}
+	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-reaper"}}
 
 	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
-	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc2-stargate"}}
+	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
 
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
@@ -46,33 +46,33 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, "cluster1-dc1-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate-service", DcPrefix(t, f, dc1Key)), stargateRestHostAndPort, stargateGrpcHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper-service", DcPrefix(t, f, dc1Key)), reaperRestHostAndPort)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key), stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, "cluster1-dc2-reaper-service", reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate-service", DcPrefix(t, f, dc2Key)), stargateRestHostAndPort, stargateGrpcHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper-service", DcPrefix(t, f, dc2Key)), reaperRestHostAndPort)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key), stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
 
-	pod1Name := "cluster1-dc1-default-sts-0"
-	pod2Name := "cluster1-dc2-default-sts-0"
-	replication := map[string]int{"dc1": 1, "dc2": 1}
+	pod1Name := fmt.Sprintf("%s-default-sts-0", DcPrefix(t, f, dc1Key))
+	pod2Name := fmt.Sprintf("%s-default-sts-0", DcPrefix(t, f, dc2Key))
+	replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
 	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
-	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name)
+	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name, DcPrefix(t, f, dc1Key), DcPrefix(t, f, dc2Key))
 }
 
 func waitForAllComponentsReady(
@@ -98,13 +98,13 @@ func waitForAllComponentsReady(
 	// pod that has authentication enabled while we just turned it off.
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[0]}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[1]}
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", "cluster1-dc1-default-stargate-deployment")
+	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", DcPrefix(t, f, dc1Key)))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options1, "deployment", "cluster1-dc1-reaper")
+	err = kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc1Key)))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", "cluster1-dc2-default-stargate-deployment")
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", DcPrefix(t, f, dc2Key)))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", "cluster1-dc2-reaper")
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc2Key)))
 	assert.NoError(t, err)
 }
 
@@ -164,6 +164,7 @@ func testAuthenticationEnabled(
 	kcKey, reaperUiSecretKey types.NamespacedName,
 	replication map[string]int,
 	pod1Name, pod2Name string,
+	dc1Prefix, dc2Prefix string,
 ) {
 	t.Log("retrieve superuser credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")
@@ -191,8 +192,8 @@ func testAuthenticationEnabled(
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
 		t.Run("Stargate", func(t *testing.T) {
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, "cluster1-dc1", username, password, false, replication)
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, "cluster1-dc2", username, password, false, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
+			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
 			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
 			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])

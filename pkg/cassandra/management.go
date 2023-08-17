@@ -134,7 +134,7 @@ func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 
 func (r *defaultManagementApiFacade) fetchDatacenterPods() ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: r.dc.Name}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: r.dc.DatacenterName()}
 	if err := r.k8sClient.List(r.ctx, podList, labels); err != nil {
 		return nil, err
 	} else {

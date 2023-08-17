@@ -302,6 +302,15 @@ type CassandraDatacenterTemplate struct {
 	PerNodeConfigMapRef corev1.LocalObjectReference `json:"perNodeConfigMapRef,omitempty"`
 }
 
+// CassDcName returns the Cassandra datacenter name override if it exists,
+// otherwise the cassdc object name.
+func (in *CassandraDatacenterTemplate) CassDcName() string {
+	if in.DatacenterName != "" {
+		return in.DatacenterName
+	}
+	return in.Meta.Name
+}
+
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
 type DatacenterOptions struct {
 	// ServerVersion is the Cassandra or DSE version. The following versions are supported:

@@ -59,7 +59,7 @@ jobs:
         e2e_test:
           - CreateMultiDatacenterCluster
           - CreateMixedMultiDataCenterCluster
-          - AddDcToCluster
+          - AddDcToClusterDiffDataplane
           - RemoveDcFromCluster
           - CheckStargateApisWithMultiDcCluster
           - CreateMultiStargateAndDatacenter

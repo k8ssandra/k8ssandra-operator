@@ -86,6 +86,7 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 2
+        datacenterName: real-dc2
     serverEncryptionStores:
       keystoreSecretRef:
         name: server-encryption-stores

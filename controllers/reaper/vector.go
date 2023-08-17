@@ -29,7 +29,7 @@ func (r *ReaperReconciler) reconcileVectorConfigMap(
 	namespace := reaper.Namespace
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      reaperpkg.VectorAgentConfigMapName(actualDc.Spec.ClusterName, actualDc.Name),
+		Name:      reaperpkg.VectorAgentConfigMapName(actualDc.Spec.ClusterName, actualDc.DatacenterName()),
 	}
 	if reaper.Spec.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content

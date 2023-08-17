@@ -29,7 +29,7 @@ func (r *StargateReconciler) reconcileVectorConfigMap(
 	namespace := stargate.Namespace
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      stargatepkg.VectorAgentConfigMapName(actualDc.Spec.ClusterName, actualDc.Name),
+		Name:      stargatepkg.VectorAgentConfigMapName(actualDc.Spec.ClusterName, actualDc.DatacenterName()),
 	}
 	if stargate.Spec.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content

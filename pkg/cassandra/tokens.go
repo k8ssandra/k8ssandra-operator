@@ -3,10 +3,11 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"strconv"
 	"strings"
+
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
 // ComputeInitialTokens computes initial tokens for each DC, assign those tokens to the first RF
@@ -154,7 +155,7 @@ func assignInitialTokens(dcConfigs []*DatacenterConfig, infos []*tokenAllocation
 			podIndex := i / len(racks)
 			podName := fmt.Sprintf("%s-%s-%s-sts-%d",
 				cassdcapi.CleanupForKubernetes(dcConfig.Cluster),
-				dcConfig.Meta.Name,
+				dcConfig.CassDcName(),
 				cassdcapi.CleanupSubdomain(racks[rackIndex].Name),
 				podIndex)
 			podNames = append(podNames, podName)

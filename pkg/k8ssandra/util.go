@@ -5,7 +5,7 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
-func GetDatacenterForDecommission(kc *api.K8ssandraCluster) string {
+func GetDatacenterForDecommission(kc *api.K8ssandraCluster) (string, string) {
 	dcNames := make([]string, 0)
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
 		dcNames = append(dcNames, dc.Meta.Name)
@@ -15,17 +15,24 @@ func GetDatacenterForDecommission(kc *api.K8ssandraCluster) string {
 	for dcName, status := range kc.Status.Datacenters {
 		if !slices.Contains(dcNames, dcName) {
 			if status.DecommissionProgress != api.DecommNone {
-				return dcName
+				return dcName, dcNameOverride(kc.Status.Datacenters[dcName].Cassandra.DatacenterName)
 			}
 		}
 	}
 
 	// No decommissions are in progress. Pick the first one we find.
-	for dcName, _ := range kc.Status.Datacenters {
+	for dcName := range kc.Status.Datacenters {
 		if !slices.Contains(dcNames, dcName) {
-			return dcName
+			return dcName, dcNameOverride(kc.Status.Datacenters[dcName].Cassandra.DatacenterName)
 		}
 	}
 
+	return "", ""
+}
+
+func dcNameOverride(datacenterName *string) string {
+	if datacenterName != nil {
+		return *datacenterName
+	}
 	return ""
 }

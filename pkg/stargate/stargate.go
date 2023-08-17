@@ -16,15 +16,15 @@ import (
 )
 
 func ResourceName(dc *cassdcapi.CassandraDatacenter) string {
-	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-stargate")
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.DatacenterName() + "-stargate")
 }
 
 func ServiceName(dc *cassdcapi.CassandraDatacenter) string {
-	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-stargate-service")
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.DatacenterName() + "-stargate-service")
 }
 
 func DeploymentName(dc *cassdcapi.CassandraDatacenter, rack *cassdcapi.Rack) string {
-	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-" + rack.Name + "-stargate-deployment")
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.DatacenterName() + "-" + rack.Name + "-stargate-deployment")
 }
 
 func NewStargate(

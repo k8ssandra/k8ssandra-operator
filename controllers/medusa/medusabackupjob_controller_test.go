@@ -392,7 +392,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 						Name:      podName,
 						Labels: map[string]string{
 							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
-							cassdcapi.DatacenterLabel: dc.Name,
+							cassdcapi.DatacenterLabel: dc.DatacenterName(),
 						},
 					},
 					Spec: corev1.PodSpec{

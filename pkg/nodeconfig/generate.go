@@ -2,8 +2,9 @@ package nodeconfig
 
 import (
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"strings"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -37,7 +38,7 @@ func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, dcConfig *cassandra.
 
 func NewDefaultPerNodeConfigMapKey(kcKey types.NamespacedName, dcConfig *cassandra.DatacenterConfig) types.NamespacedName {
 	return types.NamespacedName{
-		Name:      fmt.Sprintf("%s-%s-per-node-config", kcKey.Name, dcConfig.Meta.Name),
+		Name:      fmt.Sprintf("%s-%s-per-node-config", kcKey.Name, dcConfig.CassDcName()),
 		Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace),
 	}
 }

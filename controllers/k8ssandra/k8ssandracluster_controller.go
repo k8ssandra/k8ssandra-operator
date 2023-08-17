@@ -162,7 +162,7 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 		dc := dcs[i]
 		dcKey := utils.GetKey(dc)
 		logger := logger.WithValues("CassandraDatacenter", dcKey)
-		logger.Info("Reconciling Stargate and Reaper for dc " + dc.Name)
+		logger.Info("Reconciling Stargate and Reaper for dc " + dc.DatacenterName())
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			logger.Error(err, "Failed to get remote client")
 			return result.Error(err)

@@ -781,9 +781,9 @@ func (f *E2eFramework) GetContainerLogs(k8sContext, namespace, pod, container st
 }
 
 // GetCassandraPodIPs returns the Cassandra pods for a given cassdc.
-func (f *E2eFramework) GetCassandraDatacenterPods(t *testing.T, ctx context.Context, dcKey ClusterKey) ([]corev1.Pod, error) {
+func (f *E2eFramework) GetCassandraDatacenterPods(t *testing.T, ctx context.Context, dcKey ClusterKey, dcName string) ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcKey.Name}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcName}
 	err := f.List(ctx, dcKey, podList, labels)
 	require.NoError(t, err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", dcKey.Name)
 

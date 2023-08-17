@@ -24,7 +24,7 @@ const (
 // DefaultResourceName generates a name for a new Reaper resource that is derived from the Cassandra cluster and DC
 // names.
 func DefaultResourceName(dc *cassdcapi.CassandraDatacenter) string {
-	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.Name + "-reaper")
+	return cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName + "-" + dc.DatacenterName() + "-reaper")
 }
 
 func NewReaper(

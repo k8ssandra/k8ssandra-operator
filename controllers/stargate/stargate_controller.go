@@ -435,7 +435,7 @@ func (r *StargateReconciler) reconcileStargateConfigMap(
 
 	configMapKey := client.ObjectKey{
 		Namespace: namespace,
-		Name:      stargate.GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
+		Name:      stargate.GeneratedConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
 	}
 
 	logger = logger.WithValues("StargateConfigMap", configMapKey)

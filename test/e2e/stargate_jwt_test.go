@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"path/filepath"
+	"testing"
+	"time"
+
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
-	"path/filepath"
-	"testing"
-	"time"
 )
 
 // https://stargate.io/docs/stargate/1.0/developers-guide/authnz.html#_jwt_based_authenticationauthorization

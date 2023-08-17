@@ -83,7 +83,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		},
 		{
 			Name:  "REAPER_CASS_LOCAL_DC",
-			Value: dc.Name,
+			Value: dc.DatacenterName(),
 		},
 		{
 			Name:  "REAPER_CASS_KEYSPACE",

@@ -80,7 +80,7 @@ type NodeLocation struct {
 }
 
 // getSourceRacksIPs gets a map of racks to IPs or hostnames from a Medusa CassandraBackup k8s object.
-func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client Client, ctx context.Context) (map[NodeLocation][]string, error) {
+func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client Client, ctx context.Context, dcName string) (map[NodeLocation][]string, error) {
 	backups, err := client.GetBackups(ctx)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client Client, ctx
 	}
 	out := make(map[NodeLocation][]string)
 	for _, i := range namedBackup.Nodes {
-		if i.Datacenter == k8sRestore.Spec.CassandraDatacenter {
+		if i.Datacenter == dcName {
 			location := NodeLocation{
 				Rack: i.Rack,
 				DC:   i.Datacenter,
@@ -176,7 +176,7 @@ func getPodNames(clusterName string, DCName string, rackName string, rackSize in
 
 // GetHostMap gets the hostmap for a given CassandraBackup from IP or DNS name sources to DNS named targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
 func GetHostMap(cassDC *cassdcapi.CassandraDatacenter, k8sbackup medusaapi.MedusaRestoreJob, client Client, ctx context.Context) (HostMappingSlice, error) {
-	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx)
+	sourceRacks, err := getSourceRacksIPs(k8sbackup, client, ctx, cassDC.DatacenterName())
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func GetHostMap(cassDC *cassdcapi.CassandraDatacenter, k8sbackup medusaapi.Medus
 	sortedSource := sortLocations(sourceRacks)
 	sortedDests := sortLocations(destRacks)
 	if len(sortedDests) != len(sortedSource) {
-		return nil, errors.New("number of racks in source != racks in destination")
+		return nil, errors.New(fmt.Sprintf("number of racks in source != racks in destination. Source: %v, Dest: %v", sortedSource, sortedDests))
 	}
 	out := HostMappingSlice{}
 	for i, sourceRack := range sortedSource {
