@@ -19,6 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	"net"
 	"sync"
 
@@ -427,6 +428,6 @@ func taskFinished(task *medusav1alpha1.MedusaTask) bool {
 // SetupWithManager sets up the controller with the Manager.
 func (r *MedusaTaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusav1alpha1.MedusaTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&medusav1alpha1.MedusaTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Complete(r)
 }

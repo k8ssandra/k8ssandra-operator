@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	"net"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -296,7 +297,7 @@ func updateMedusaRestoreInitContainer(req *medusa.RestoreRequest) error {
 // SetupWithManager sets up the controller with the Manager.
 func (r *MedusaRestoreJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusav1alpha1.MedusaRestoreJob{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&medusav1alpha1.MedusaRestoreJob{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Complete(r)
 }
 

@@ -3,6 +3,7 @@ package replication
 import (
 	"context"
 	"fmt"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
@@ -390,7 +391,7 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	}
 
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 
 	for _, c := range clusters {

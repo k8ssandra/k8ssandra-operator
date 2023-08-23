@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -482,7 +483,7 @@ func reconcileStargateConfigFile(
 // SetupWithManager sets up the controller with the Manager.
 func (r *StargateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Complete(r)

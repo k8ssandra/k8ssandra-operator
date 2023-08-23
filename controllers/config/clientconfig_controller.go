@@ -24,6 +24,7 @@ import (
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
@@ -104,7 +105,7 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 	}
 
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
 
 	return cb.Complete(r)

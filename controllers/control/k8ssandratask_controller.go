@@ -49,6 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 )
 
 const (
@@ -352,7 +353,7 @@ func (r *K8ssandraTaskReconciler) reportInvalidSpec(
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate()))
 
 	kTaskLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)

@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
@@ -180,7 +181,7 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
+		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())) // No generation changed predicate here?
 
 	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)

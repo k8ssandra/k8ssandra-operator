@@ -18,6 +18,7 @@ package reaper
 
 import (
 	"context"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -410,7 +411,7 @@ func (r *ReaperReconciler) getSecret(ctx context.Context, secretKey types.Namesp
 
 func (r *ReaperReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&reaperapi.Reaper{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&reaperapi.Reaper{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Complete(r)

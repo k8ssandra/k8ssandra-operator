@@ -19,6 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	custompredicate "github.com/k8ssandra/k8ssandra-operator/pkg/predicate"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,6 +138,6 @@ func getPreviousExecutionTime(ctx context.Context, backupSchedule *medusav1alpha
 // SetupWithManager sets up the controller with the Manager.
 func (r *MedusaBackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&medusav1alpha1.MedusaBackupSchedule{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&medusav1alpha1.MedusaBackupSchedule{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}, custompredicate.NewExcludeNamespacePredicate())).
 		Complete(r)
 }
