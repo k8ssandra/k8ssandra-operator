@@ -2,15 +2,16 @@ package framework
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/yq"
-	"os"
-	"path/filepath"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 var (
@@ -42,14 +43,14 @@ func NewTestFixture(name, k8sContext string) *TestFixture {
 	}
 }
 
-func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture, zones map[string]string, storage string, hostNetwork bool) error {
+func (f *E2eFramework) DeployFixture(namespace string, fixture *TestFixture, zones map[string]string, storage string, hostNetwork bool, medusaImageTag string) error {
 	contexts := make(map[string]string)
 	for i, context := range f.DataPlaneContexts {
 		contexts[fmt.Sprintf("kind-k8ssandra-%v", i)] = context
 	}
 	if fixturesKustomizeTemplate, err := os.ReadFile(filepath.Join("..", "framework", "fixtures.tmpl")); err != nil {
 		return err
-	} else if kustomization, err := generateFixtureKustomization(namespace, fixture, contexts, zones, storage, hostNetwork); err != nil {
+	} else if kustomization, err := generateFixtureKustomization(namespace, fixture, contexts, zones, storage, hostNetwork, medusaImageTag); err != nil {
 		return err
 	} else if err = generateKustomizationFile("fixtures/"+fixture.Name, kustomization, string(fixturesKustomizeTemplate)); err != nil {
 		return err
@@ -68,6 +69,7 @@ type fixtureKustomization struct {
 	K8ssandraCluster    *coreapi.K8ssandraClusterSpec
 	CassandraDatacenter *cassdcapi.CassandraDatacenterSpec
 	Stargate            *stargateapi.StargateSpec
+	MedusaImageTag      string
 }
 
 // For now, we only read and kustomize:
@@ -76,14 +78,15 @@ type fixtureKustomization struct {
 // - the single (standalone) Stargate declared in stargate.yaml, if present.
 // If some fixtures in the future decide to create more resources, we'll have to revisit this and
 // create more fine-grained kustomizations.
-func generateFixtureKustomization(namespace string, fixture *TestFixture, contexts map[string]string, zones map[string]string, storage string, hostNetwork bool) (*fixtureKustomization, error) {
+func generateFixtureKustomization(namespace string, fixture *TestFixture, contexts map[string]string, zones map[string]string, storage string, hostNetwork bool, medusaImageTag string) (*fixtureKustomization, error) {
 	kustomization := &fixtureKustomization{
 		Namespace:    namespace,
 		Fixture:      fixture.Name,
 		FixtureDepth: strings.Repeat("../", 4+strings.Count(fixture.Name, "/")), Contexts: contexts,
-		Zones:       zones,
-		Storage:     storage,
-		HostNetwork: hostNetwork,
+		Zones:          zones,
+		Storage:        storage,
+		HostNetwork:    hostNetwork,
+		MedusaImageTag: medusaImageTag,
 	}
 	if k8c, err := getFixtureK8ssandraCluster(fixture); err != nil {
 		return nil, err

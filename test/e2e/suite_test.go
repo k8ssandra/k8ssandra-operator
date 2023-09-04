@@ -155,6 +155,11 @@ var (
 		"latest",
 		"The k8ssandra-operator image tag to use.",
 	)
+	medusaImageTag = flag.String(
+		"medusaImageTag",
+		"",
+		"The medusa image tag to use.",
+	)
 )
 
 var (
@@ -497,6 +502,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		ClusterScoped:       opts.clusterScoped,
 		ImageName:           *imageName,
 		ImageTag:            *imageTag,
+		MedusaImageTag:      *medusaImageTag,
 		GithubKustomization: false,
 	}
 
@@ -556,7 +562,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.fixture != nil {
-		if err := f.DeployFixture(opts.sutNamespace, opts.fixture, zoneMappings, *storageClassFlag, *hostNetworkFlag); err != nil {
+		if err := f.DeployFixture(opts.sutNamespace, opts.fixture, zoneMappings, *storageClassFlag, *hostNetworkFlag, deploymentConfig.MedusaImageTag); err != nil {
 			t.Logf("failed to deploy fixture")
 			return err
 		}
