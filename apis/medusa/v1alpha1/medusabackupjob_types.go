@@ -49,8 +49,10 @@ type MedusaBackupJobStatus struct {
 	Failed []string `json:"failed,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Started",type=date,JSONPath=".status.startTime",description="Backup start time"
+// +kubebuilder:printcolumn:name="Finished",type=date,JSONPath=".status.finishTime",description="Backup finish time"
 
 // MedusaBackupJob is the Schema for the medusabackupjobs API
 type MedusaBackupJob struct {

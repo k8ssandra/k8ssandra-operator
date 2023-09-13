@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [ENHANCEMENT] [#1046](https://github.com/k8ssandra/k8ssandra-operator/issues/1046) Add detailed backup information in the MedusaBackup CRD status
 * [BUGFIX] [#1027](https://github.com/k8ssandra/k8ssandra-operator/issues/1027) Point system-logger image to use the v1.16.0 tag instead of latest
 * [BUGFIX] [#1026](https://github.com/k8ssandra/k8ssandra-operator/issues/1026) Fix DC name overrides not being properly handled
 * [BUGFIX] [#981](https://github.com/k8ssandra/k8ssandra-operator/issues/981) Fix race condition in K8ssandraTask status update

@@ -15,7 +15,16 @@ spec:
     singular: medusabackupjob
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Backup start time
+      jsonPath: .status.startTime
+      name: Started
+      type: date
+    - description: Backup finish time
+      jsonPath: .status.finishTime
+      name: Finished
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MedusaBackupJob is the Schema for the medusabackupjobs API

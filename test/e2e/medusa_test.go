@@ -127,6 +127,19 @@ func verifyBackupJobFinished(t *testing.T, ctx context.Context, f *framework.E2e
 		t.Logf("backup in progress: %v", updated.Status.InProgress)
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.InProgress) == 0
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "backup didn't finish within timeout")
+
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	require.NoError(err, "failed to get CassandraDatacenter")
+
+	medusaBackupKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: backupKey.Namespace, Name: backupName}}
+	medusaBackup := &medusa.MedusaBackup{}
+	err = f.Get(ctx, medusaBackupKey, medusaBackup)
+	require.NoError(err, "failed to get MedusaBackup")
+	require.Equal(dc.Spec.Size, medusaBackup.Status.TotalNodes, "backup total nodes doesn't match dc nodes")
+	require.Equal(dc.Spec.Size, medusaBackup.Status.FinishedNodes, "backup finished nodes doesn't match dc nodes")
+	require.Equal(int(dc.Spec.Size), len(medusaBackup.Status.Nodes), "backup topology doesn't match dc topology")
+	require.Equal(medusapkg.StatusType_SUCCESS.String(), medusaBackup.Status.Status, "backup topology doesn't match dc topology")
 }
 
 func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {

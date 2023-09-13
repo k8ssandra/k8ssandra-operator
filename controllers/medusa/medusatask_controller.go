@@ -265,7 +265,7 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 	}
 	for _, pod := range pods {
 		logger.Info("Listing Backups...", "CassandraPod", pod.Name)
-		if remoteBackups, err := getBackups(ctx, &pod, r.ClientFactory); err != nil {
+		if remoteBackups, err := GetBackups(ctx, &pod, r.ClientFactory); err != nil {
 			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
 		} else {
 			for _, backup := range remoteBackups {
@@ -344,6 +344,19 @@ func createMedusaBackup(logger logr.Logger, backup *medusa.BackupSummary, datace
 		backupPatch := client.MergeFrom(backupResource.DeepCopy())
 		backupResource.Status.StartTime = startTime
 		backupResource.Status.FinishTime = finishTime
+		backupResource.Status.TotalNodes = backup.TotalNodes
+		backupResource.Status.FinishedNodes = backup.FinishedNodes
+		backupResource.Status.Nodes = make([]*medusav1alpha1.MedusaBackupNode, len(backup.Nodes))
+		for i, node := range backup.Nodes {
+			backupResource.Status.Nodes[i] = &medusav1alpha1.MedusaBackupNode{
+				Host:       node.Host,
+				Tokens:     node.Tokens,
+				Datacenter: node.Datacenter,
+				Rack:       node.Rack,
+			}
+		}
+		backupResource.Status.Status = backup.Status.String()
+
 		if err := r.Status().Patch(ctx, backupResource, backupPatch); err != nil {
 			logger.Error(err, "failed to patch status with finish time")
 			return true, ctrl.Result{}, err
@@ -401,7 +414,7 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 	}
 }
 
-func getBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
+func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return nil, err
