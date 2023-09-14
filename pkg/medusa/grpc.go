@@ -33,7 +33,7 @@ func (f *DefaultFactory) NewClient(address string) (Client, error) {
 type Client interface {
 	Close() error
 
-	CreateBackup(ctx context.Context, name string, backupType string) error
+	CreateBackup(ctx context.Context, name string, backupType string) (*BackupResponse, error)
 
 	GetBackups(ctx context.Context) ([]*BackupSummary, error)
 
@@ -48,7 +48,7 @@ func (c *defaultClient) Close() error {
 	return c.connection.Close()
 }
 
-func (c *defaultClient) CreateBackup(ctx context.Context, name string, backupType string) error {
+func (c *defaultClient) CreateBackup(ctx context.Context, name string, backupType string) (*BackupResponse, error) {
 	backupMode := BackupRequest_DIFFERENTIAL
 	if backupType == "full" {
 		backupMode = BackupRequest_FULL
@@ -58,9 +58,13 @@ func (c *defaultClient) CreateBackup(ctx context.Context, name string, backupTyp
 		Name: name,
 		Mode: backupMode,
 	}
-	_, err := c.grpcClient.Backup(ctx, &request)
 
-	return err
+	resp, err := c.grpcClient.AsyncBackup(ctx, &request)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, err
 }
 
 func (c *defaultClient) GetBackups(ctx context.Context) ([]*BackupSummary, error) {

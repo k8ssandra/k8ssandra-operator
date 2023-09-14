@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +39,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
 // MedusaBackupJobReconciler reconciles a MedusaBackupJob object
@@ -105,10 +103,47 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	}
 
-	// If there is anything in progress, simply requeue the request
+	// If there is anything in progress, simply requeue the request until each pod has finished or errored
 	if len(backup.Status.InProgress) > 0 {
-		logger.Info("MedusaBackupJob is being processed already", "Backup", req.NamespacedName)
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		logger.Info("There are backups in progress, checking them..")
+		progress := make([]string, 0, len(backup.Status.InProgress))
+		patch := client.MergeFrom(backup.DeepCopy())
+
+	StatusCheck:
+		for _, podName := range backup.Status.InProgress {
+			for _, pod := range pods {
+				if podName == pod.Name {
+					status, err := backupStatus(ctx, backup.ObjectMeta.Name, &pod, r.ClientFactory, logger)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+
+					if status == medusa.StatusType_IN_PROGRESS {
+						progress = append(progress, podName)
+					} else if status == medusa.StatusType_SUCCESS {
+						backup.Status.Finished = append(backup.Status.Finished, podName)
+					} else if status == medusa.StatusType_FAILED || status == medusa.StatusType_UNKNOWN {
+						backup.Status.Failed = append(backup.Status.Failed, podName)
+					}
+
+					continue StatusCheck
+				}
+			}
+		}
+
+		if len(backup.Status.InProgress) != len(progress) {
+			backup.Status.InProgress = progress
+			if err := r.Status().Patch(ctx, backup, patch); err != nil {
+				logger.Error(err, "failed to patch status")
+				return ctrl.Result{}, err
+			}
+		}
+
+		if len(progress) > 0 {
+			logger.Info("MedusaBackupJob is still being processed", "Backup", req.NamespacedName)
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// If the backup is already finished, there is nothing to do.
@@ -121,7 +156,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if !backup.Status.StartTime.IsZero() {
 		// If there is anything in progress, simply requeue the request
 		if len(backup.Status.InProgress) > 0 {
-			logger.Info("Backups already in progress")
+			logger.Info("Backup is still in progress")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
@@ -158,9 +193,6 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	patch := client.MergeFromWithOptions(backup.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
 	backup.Status.StartTime = metav1.Now()
-	for _, pod := range pods {
-		backup.Status.InProgress = append(backup.Status.InProgress, pod.Name)
-	}
 
 	if err := r.Status().Patch(ctx, backup, patch); err != nil {
 		logger.Error(err, "Failed to patch status")
@@ -169,43 +201,21 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	logger.Info("Starting backups")
-	// Do the actual backup in the background
-	go func() {
-		wg := sync.WaitGroup{}
+	patch = client.MergeFrom(backup.DeepCopy())
 
-		// Mutex to prevent concurrent updates to the backup.Status object
-		backupMutex := sync.Mutex{}
-		patch := client.MergeFrom(backup.DeepCopy())
+	for _, p := range pods {
+		logger.Info("starting backup", "CassandraPod", p.Name)
+		_, err := doMedusaBackup(ctx, backup.ObjectMeta.Name, backup.Spec.Type, &p, r.ClientFactory, logger)
+		if err != nil {
+			logger.Error(err, "backup failed", "CassandraPod", p.Name)
+		}
 
-		for _, p := range pods {
-			pod := p
-			wg.Add(1)
-			go func() {
-				logger.Info("starting backup", "CassandraPod", pod.Name)
-				succeeded := false
-				if err := doMedusaBackup(ctx, backup.ObjectMeta.Name, backup.Spec.Type, &pod, r.ClientFactory, logger); err == nil {
-					logger.Info("finished backup", "CassandraPod", pod.Name)
-					succeeded = true
-				} else {
-					logger.Error(err, "backup failed", "CassandraPod", pod.Name)
-				}
-				backupMutex.Lock()
-				defer backupMutex.Unlock()
-				defer wg.Done()
-				backup.Status.InProgress = utils.RemoveValue(backup.Status.InProgress, pod.Name)
-				if succeeded {
-					backup.Status.Finished = append(backup.Status.Finished, pod.Name)
-				} else {
-					backup.Status.Failed = append(backup.Status.Failed, pod.Name)
-				}
-			}()
-		}
-		wg.Wait()
-		logger.Info("finished backup operations")
-		if err := r.Status().Patch(context.Background(), backup, patch); err != nil {
-			logger.Error(err, "failed to patch status", "Backup", fmt.Sprintf("%s/%s", backup.Name, backup.Namespace))
-		}
-	}()
+		backup.Status.InProgress = append(backup.Status.InProgress, p.Name)
+	}
+	// logger.Info("finished backup operations")
+	if err := r.Status().Patch(context.Background(), backup, patch); err != nil {
+		logger.Error(err, "failed to patch status", "Backup", fmt.Sprintf("%s/%s", backup.Name, backup.Namespace))
+	}
 
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
@@ -249,15 +259,35 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 	return nil
 }
 
-func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) error {
+func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (string, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
-		return err
+		return "", err
 	} else {
 		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name, "Address", addr)
 		defer medusaClient.Close()
-		return medusaClient.CreateBackup(ctx, name, string(backupType))
+		resp, err := medusaClient.CreateBackup(ctx, name, string(backupType))
+		if err != nil {
+			return "", err
+		}
+
+		return resp.BackupName, nil
+	}
+}
+
+func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (medusa.StatusType, error) {
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+		return medusa.StatusType_UNKNOWN, err
+	} else {
+		resp, err := medusaClient.BackupStatus(ctx, name)
+		if err != nil {
+			return medusa.StatusType_UNKNOWN, err
+		}
+
+		return resp.Status, nil
 	}
 }
 

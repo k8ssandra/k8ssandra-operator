@@ -56,8 +56,8 @@ func (c mockgRPCClient) Close() error {
 	return nil
 }
 
-func (c mockgRPCClient) CreateBackup(ctx context.Context, name string, backupType string) error {
-	return nil
+func (c mockgRPCClient) CreateBackup(ctx context.Context, name string, backupType string) (*BackupResponse, error) {
+	return nil, nil
 }
 
 func (c mockgRPCClient) PurgeBackups(ctx context.Context) (*PurgeBackupsResponse, error) {

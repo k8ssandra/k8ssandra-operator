@@ -314,7 +314,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 CERT_MANAGER_VERSION ?= v1.9.1
 KUSTOMIZE_VERSION ?= v4.5.7
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
+CONTROLLER_TOOLS_VERSION ?= v0.11.4
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml

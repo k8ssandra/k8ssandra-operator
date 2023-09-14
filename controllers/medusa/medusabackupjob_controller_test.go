@@ -330,9 +330,9 @@ func (c *fakeMedusaClient) Close() error {
 	return nil
 }
 
-func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backupType string) error {
+func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backupType string) (*medusa.BackupResponse, error) {
 	c.RequestedBackups = append(c.RequestedBackups, name)
-	return nil
+	return &medusa.BackupResponse{BackupName: name, Status: medusa.StatusType_IN_PROGRESS}, nil
 }
 
 func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
@@ -350,7 +350,9 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 }
 
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
-	return nil, nil
+	return &medusa.BackupStatusResponse{
+		Status: medusa.StatusType_SUCCESS,
+	}, nil
 }
 
 func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
