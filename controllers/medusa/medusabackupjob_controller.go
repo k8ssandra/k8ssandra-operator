@@ -128,7 +128,12 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		logger.Info("backup complete")
 
 		// The MedusaBackupJob is finished and we now need to create the MedusaBackup object.
-		if err := r.createMedusaBackup(ctx, backup, logger); err != nil {
+		backupSummary, err := r.getBackupSummary(ctx, backup, pods, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get backup summary")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		}
+		if err := r.createMedusaBackup(ctx, backup, backupSummary, logger); err != nil {
 			logger.Error(err, "Failed to create MedusaBackup")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 		}
@@ -210,7 +215,25 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
-func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, logger logr.Logger) error {
+func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, pods []corev1.Pod, logger logr.Logger) (*medusa.BackupSummary, error) {
+	for _, pod := range pods {
+		if remoteBackups, err := GetBackups(ctx, &pod, r.ClientFactory); err != nil {
+			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
+			return nil, err
+		} else {
+			for _, remoteBackup := range remoteBackups {
+				logger.Info("found backup", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
+				if backup.ObjectMeta.Name == remoteBackup.BackupName {
+					return remoteBackup, nil
+				}
+				logger.Info("backup name does not match", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, backupSummary *medusa.BackupSummary, logger logr.Logger) error {
 	// Create a MedusaBackup object after a successful MedusaBackupJob execution.
 	logger.Info("Creating MedusaBackup object", "MedusaBackup", backup.Name)
 	backupKey := types.NamespacedName{Namespace: backup.ObjectMeta.Namespace, Name: backup.Name}
@@ -239,6 +262,18 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 				backupPatch := client.MergeFrom(backupResource.DeepCopy())
 				backupResource.Status.StartTime = startTime
 				backupResource.Status.FinishTime = finishTime
+				backupResource.Status.TotalNodes = backupSummary.TotalNodes
+				backupResource.Status.FinishedNodes = backupSummary.FinishedNodes
+				backupResource.Status.Nodes = make([]*medusav1alpha1.MedusaBackupNode, len(backupSummary.Nodes))
+				for i, node := range backupSummary.Nodes {
+					backupResource.Status.Nodes[i] = &medusav1alpha1.MedusaBackupNode{
+						Host:       node.Host,
+						Tokens:     node.Tokens,
+						Datacenter: node.Datacenter,
+						Rack:       node.Rack,
+					}
+				}
+				backupResource.Status.Status = backupSummary.Status.String()
 				if err := r.Status().Patch(ctx, backupResource, backupPatch); err != nil {
 					logger.Error(err, "failed to patch status with finish time")
 					return err

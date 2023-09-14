@@ -235,6 +235,16 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
 
+	t.Log("verify that the MedusaBackup is created")
+	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
+	medusaBackup := &api.MedusaBackup{}
+	err = f.Get(ctx, medusaBackupKey, medusaBackup)
+	require.NoError(err, "failed to get MedusaBackup")
+	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")
+	require.Equal(medusaBackup.Status.FinishedNodes, dc.Spec.Size, "backup finished nodes doesn't match dc nodes")
+	require.Equal(len(medusaBackup.Status.Nodes), int(dc.Spec.Size), "backup topology doesn't match dc topology")
+	require.Equal(medusa.StatusType_SUCCESS.String(), medusaBackup.Status.Status, "backup status is not success")
+
 	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups(dc.DatacenterName())))
 
 	return true
@@ -339,10 +349,32 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 	backups := make([]*medusa.BackupSummary, 0)
 	for _, name := range c.RequestedBackups {
 		backup := &medusa.BackupSummary{
-			BackupName: name,
-			StartTime:  0,
-			FinishTime: 10,
-			Status:     *medusa.StatusType_SUCCESS.Enum(),
+			BackupName:    name,
+			StartTime:     0,
+			FinishTime:    10,
+			TotalNodes:    3,
+			FinishedNodes: 3,
+			Status:        *medusa.StatusType_SUCCESS.Enum(),
+			Nodes: []*medusa.BackupNode{
+				{
+					Host:       "host1",
+					Tokens:     []int64{1, 2, 3},
+					Datacenter: "dc1",
+					Rack:       "rack1",
+				},
+				{
+					Host:       "host2",
+					Tokens:     []int64{1, 2, 3},
+					Datacenter: "dc1",
+					Rack:       "rack1",
+				},
+				{
+					Host:       "host3",
+					Tokens:     []int64{1, 2, 3},
+					Datacenter: "dc1",
+					Rack:       "rack1",
+				},
+			},
 		}
 		backups = append(backups, backup)
 	}

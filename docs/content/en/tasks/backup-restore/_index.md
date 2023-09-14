@@ -147,8 +147,63 @@ status:
 
 ```
 
+The start and finish times are also displayed in the output of the kubectl get command:
+
+```sh
+% kubectl get MedusaBackupJob -A
+NAME             STARTED   FINISHED
+backup1          25m       24m
+medusa-backup1   19m       19m
+```
+
+
 All pods having completed the backup will be in the `finished` list.
 At the end of the backup operation, a `MedusaBackup` custom resource will be created with the same name as the `MedusaBackupJob` object. It materializes the backup locally on the Kubernetes cluster.
+The MedusaBackup object status contains the total number of node in the cluster at the time of the backup, the number of nodes that successfully achieved the backup, and the topology of the DC at the time of the backup:
+
+```yaml
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaBackup
+metadata:
+  name: backup1
+status:
+  startTime: '2023-09-13T12:15:57Z'
+  finishTime: '2023-09-13T12:16:12Z'
+  totalNodes: 2
+  finishedNodes: 2
+  nodes:
+    - datacenter: dc1
+      host: firstcluster-dc1-default-sts-0
+      rack: default
+      tokens:
+        - -110555885826893
+        - -1149279817337332700
+        - -1222258121654772000
+        - -127355705089199870
+    - datacenter: dc1
+      host: firstcluster-dc1-default-sts-1
+      rack: default
+      tokens:
+        - -1032268962284829800
+        - -1054373523049285200
+        - -1058110708807841300
+        - -107256661843445790
+  status: SUCCESS
+spec:
+  backupType: differential
+  cassandraDatacenter: dc1
+
+```
+
+The `kubectl get`` output for MedusaBackup objects will show a subset of this information :
+
+```sh
+kubectl get MedusaBackup -A
+NAME             STARTED   FINISHED   NODES   COMPLETED   STATUS
+backup1          29m       28m        2       2           SUCCESS
+medusa-backup1   23m       23m        2       2           SUCCESS
+```
+
 For a restore to be possible, a `MedusaBackup` object must exist.
 
 

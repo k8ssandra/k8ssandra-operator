@@ -15,7 +15,28 @@ spec:
     singular: medusabackup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Backup start time
+      jsonPath: .status.startTime
+      name: Started
+      type: date
+    - description: Backup finish time
+      jsonPath: .status.finishTime
+      name: Finished
+      type: date
+    - description: Total number of nodes at the time of the backup
+      jsonPath: .status.totalNodes
+      name: Nodes
+      type: string
+    - description: Number of nodes that completed this backup
+      jsonPath: .status.finishedNodes
+      name: Completed
+      type: string
+    - description: Backup completion status
+      jsonPath: .status.status
+      name: Status
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MedusaBackup is the Schema for the medusabackups API
@@ -54,9 +75,33 @@ spec:
               finishTime:
                 format: date-time
                 type: string
+              finishedNodes:
+                format: int32
+                type: integer
+              nodes:
+                items:
+                  properties:
+                    datacenter:
+                      type: string
+                    host:
+                      type: string
+                    rack:
+                      type: string
+                    tokens:
+                      items:
+                        format: int64
+                        type: integer
+                      type: array
+                  type: object
+                type: array
               startTime:
                 format: date-time
                 type: string
+              status:
+                type: string
+              totalNodes:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true
