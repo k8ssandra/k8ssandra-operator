@@ -322,8 +322,8 @@ func (c *fakeMedusaRestoreClient) Close() error {
 	return nil
 }
 
-func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string, backupType string) error {
-	return nil
+func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string, backupType string) (*medusa.BackupResponse, error) {
+	return nil, nil
 }
 
 func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
