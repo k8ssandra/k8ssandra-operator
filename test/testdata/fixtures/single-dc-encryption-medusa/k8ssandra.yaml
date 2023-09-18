@@ -23,8 +23,8 @@ spec:
       host: minio-service.minio.svc.cluster.local
       port: 9000
       secure: false 
-    certificatesSecretRef:
-      name: client-certificates
+    #certificatesSecretRef:
+    #  name: client-certificates
   cassandra:
     clusterName: "First Cluster"
     serverVersion: 3.11.14
@@ -45,9 +45,9 @@ spec:
           cassandraYaml:
             server_encryption_options:
               internode_encryption: all
-            client_encryption_options:
-              enabled: true
-              require_client_auth: true
+            #client_encryption_options:
+            #  enabled: true
+            #  require_client_auth: true
           jvmOptions:
             heapSize: 512Mi
     serverEncryptionStores:
@@ -55,8 +55,8 @@ spec:
         name: server-encryption-stores
       truststoreSecretRef:
         name: server-encryption-stores
-    clientEncryptionStores:
-      keystoreSecretRef:
-        name: client-encryption-stores
-      truststoreSecretRef:
-        name: client-encryption-stores
+    #clientEncryptionStores:
+    #  keystoreSecretRef:
+    #    name: client-encryption-stores
+    #  truststoreSecretRef:
+    #    name: client-encryption-stores
