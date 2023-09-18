@@ -104,6 +104,19 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
+	// Verify the backup can be used for restore
+	if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
+		request.RestoreJob.Status.FinishTime = metav1.Now()
+		request.RestoreJob.Status.Message = err.Error()
+		if err = r.Status().Update(ctx, request.RestoreJob); err != nil {
+			logger.Error(err, "failed to update MedusaRestoreJob with error message", "MedusaRestoreJob", req.NamespacedName.Name)
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		}
+
+		logger.Error(fmt.Errorf("unable to use target backup for restore of CassandraDatacenter: %s", request.RestoreJob.Status.Message), "backup can not be used for restore")
+		return ctrl.Result{}, nil // No requeue, because this error is not transient
+	}
+
 	// Prepare the restore by placing a mapping file in the Cassandra data volume.
 	if !request.RestoreJob.Status.RestorePrepared {
 		restorePrepared := false
@@ -259,6 +272,56 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 	}
 
 	return &medusaRestoreMapping, nil
+}
+
+func validateBackupForRestore(backup *medusav1alpha1.MedusaBackup, cassdc *cassdcapi.CassandraDatacenter) error {
+	if backup.Status.FinishTime.IsZero() {
+		return fmt.Errorf("target backup has not finished")
+	}
+
+	if backup.Status.FinishedNodes != backup.Status.TotalNodes {
+		// In Medusa, a failed backup is not considered Finished. In MedusaBackupJob, a failed backup is considered finished, but failed.
+		return fmt.Errorf("target backup has not completed successfully")
+	}
+
+	if backup.Status.TotalNodes != cassdc.Spec.Size {
+		return fmt.Errorf("node counts differ for source backup and destination datacenter")
+	}
+
+	rackSizes := make(map[string]int)
+	for _, n := range backup.Status.Nodes {
+		if n.Datacenter != cassdc.DatacenterName() {
+			return fmt.Errorf("target datacenter has different name than backup")
+		}
+		if c, found := rackSizes[n.Rack]; !found {
+			rackSizes[n.Rack] = 1
+		} else {
+			rackSizes[n.Rack] = c + 1
+		}
+	}
+
+	if len(cassdc.Spec.Racks) > 0 {
+		if len(rackSizes) != len(cassdc.Spec.Racks) {
+			return fmt.Errorf("amount of racks must match in backup and target datacenter")
+		}
+
+		for _, r := range cassdc.Spec.Racks {
+			if _, found := rackSizes[r.Name]; !found {
+				return fmt.Errorf("rack names must match in backup and target datacenter")
+			}
+		}
+	} else {
+		// cass-operator treats this as single rack setup, with name "default"
+		if len(rackSizes) > 1 {
+			return fmt.Errorf("amount of racks must match in backup and target datacenter")
+		}
+
+		if backup.Status.Nodes[0].Rack != "default" {
+			return fmt.Errorf("rack names must match in backup and target datacenter")
+		}
+	}
+
+	return nil
 }
 
 // stopDatacenter sets the Stopped property in the Datacenter spec to true. Returns true if

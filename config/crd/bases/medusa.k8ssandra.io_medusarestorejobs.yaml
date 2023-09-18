@@ -66,6 +66,9 @@ spec:
                 items:
                   type: string
                 type: array
+              message:
+                description: Message gives the reason why restore operation failed
+                type: string
               restoreKey:
                 description: A unique key that identifies the restore operation.
                 type: string
@@ -90,8 +93,6 @@ spec:
                   in_place:
                     description: Whether the restore is in-place or not
                     type: boolean
-                required:
-                - in_place
                 type: object
               restorePrepared:
                 type: boolean
