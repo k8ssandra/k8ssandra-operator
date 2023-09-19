@@ -47,6 +47,8 @@ func TestCassandraBackupRestore(t *testing.T) {
 	defer testEnv3.Stop(t)
 	defer cancel()
 	t.Run("TestMedusaRestoreDatacenter", testEnv3.ControllerTest(ctx, testMedusaRestoreDatacenter))
+
+	t.Run("TestValidationErrorStopsRestore", testEnv3.ControllerTest(ctx, testValidationErrorStopsRestore))
 }
 
 func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {

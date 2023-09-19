@@ -14,7 +14,20 @@ spec:
     singular: medusarestorejob
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Restore start time
+      jsonPath: .status.startTime
+      name: Started
+      type: date
+    - description: Restore finish time
+      jsonPath: .status.finishTime
+      name: Finished
+      type: date
+    - description: Error message
+      jsonPath: .status.message
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MedusaRestoreJob is the Schema for the medusarestorejobs API
@@ -66,6 +79,9 @@ spec:
                 items:
                   type: string
                 type: array
+              message:
+                description: Message gives the reason why restore operation failed
+                type: string
               restoreKey:
                 description: A unique key that identifies the restore operation.
                 type: string
@@ -90,8 +106,6 @@ spec:
                   in_place:
                     description: Whether the restore is in-place or not
                     type: boolean
-                required:
-                - in_place
                 type: object
               restorePrepared:
                 type: boolean

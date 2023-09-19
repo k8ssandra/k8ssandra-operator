@@ -54,10 +54,16 @@ type MedusaRestoreJobStatus struct {
 	Finished []string `json:"finished,omitempty"`
 
 	Failed []string `json:"failed,omitempty"`
+
+	// Message gives the reason why restore operation failed
+	Message string `json:"message,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Started",type=date,JSONPath=".status.startTime",description="Restore start time"
+//+kubebuilder:printcolumn:name="Finished",type=date,JSONPath=".status.finishTime",description="Restore finish time"
+//+kubebuilder:printcolumn:name="Error",type=string,JSONPath=".status.message",description="Error message"
 
 // MedusaRestoreJob is the Schema for the medusarestorejobs API
 type MedusaRestoreJob struct {
@@ -70,6 +76,7 @@ type MedusaRestoreJob struct {
 
 type MedusaRestoreMapping struct {
 	// Whether the restore is in-place or not
+	// +optional
 	InPlace *bool `json:"in_place"`
 
 	// Mapping between source and target nodes for a restore
