@@ -14,8 +14,6 @@ metadata:
   name: test
 spec:
   medusa:
-    containerImage:
-      tag: efa37a9-tmp
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
