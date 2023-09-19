@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/zapr v1.2.3
 	github.com/google/uuid v1.3.0
 	github.com/gruntwork-io/terratest v0.37.7
-	github.com/k8ssandra/cass-operator v1.16.0
+	github.com/k8ssandra/cass-operator v1.17.1
 	github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
@@ -82,6 +82,7 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
