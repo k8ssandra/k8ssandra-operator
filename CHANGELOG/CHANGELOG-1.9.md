@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1023](https://github.com/k8ssandra/k8ssandra-operator/issues/1023) Ensure merged serverVersion passed to IsNewMetricsEndpointAvailable()
 * [DOCS] [#1019](https://github.com/k8ssandra/k8ssandra-operator/issues/1019) Add PR review guidelines documentation
 * [BUGFIX] [#1017](https://github.com/k8ssandra/k8ssandra-operator/issues/1017) Fix MedusaTask to delete only its own backups
+* [CHANGE] Upgrade to cass-operator v1.17.1
