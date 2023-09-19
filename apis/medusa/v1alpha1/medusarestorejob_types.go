@@ -61,6 +61,9 @@ type MedusaRestoreJobStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Started",type=date,JSONPath=".status.startTime",description="Restore start time"
+//+kubebuilder:printcolumn:name="Finished",type=date,JSONPath=".status.finishTime",description="Restore finish time"
+//+kubebuilder:printcolumn:name="Error",type=string,JSONPath=".status.message",description="Error message"
 
 // MedusaRestoreJob is the Schema for the medusarestorejobs API
 type MedusaRestoreJob struct {

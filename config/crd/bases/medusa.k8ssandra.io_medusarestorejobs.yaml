@@ -14,7 +14,20 @@ spec:
     singular: medusarestorejob
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Restore start time
+      jsonPath: .status.startTime
+      name: Started
+      type: date
+    - description: Restore finish time
+      jsonPath: .status.finishTime
+      name: Finished
+      type: date
+    - description: Error message
+      jsonPath: .status.message
+      name: Error
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MedusaRestoreJob is the Schema for the medusarestorejobs API

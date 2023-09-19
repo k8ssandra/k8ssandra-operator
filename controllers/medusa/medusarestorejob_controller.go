@@ -275,6 +275,11 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 }
 
 func validateBackupForRestore(backup *medusav1alpha1.MedusaBackup, cassdc *cassdcapi.CassandraDatacenter) error {
+	if backup.Status.TotalNodes == 0 && backup.Status.FinishedNodes == 0 {
+		// This is an old backup without enough data, need to skip for backwards compatibility
+		return nil
+	}
+
 	if backup.Status.FinishTime.IsZero() {
 		return fmt.Errorf("target backup has not finished")
 	}
