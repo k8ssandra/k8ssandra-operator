@@ -30,7 +30,7 @@ You could clone the [cassandra-toolbox](https://github.com/thelastpickle/cassand
 distinguished_name     = req_distinguished_name
 prompt                 = no
 output_password        = MyPassWord123!
-default_bits           = 3078
+default_bits           = 3072
 
 [ req_distinguished_name ]
 C                      = FR
@@ -66,7 +66,7 @@ Replace the `<keystore password>` and `<truststore password>` above with each st
 
 {{% alert title="Tip" color="success" %}}
 You can repeat the above procedure to generate encryption stores for client-to-node encryption, changing the secret name appropriately.
-Check the following section for more details on setting iup cleint encryption with Medusa.
+Check the following section for more details on setting up client encryption with Medusa.
 {{% /alert %}}
 
 ### Medusa client certificates
@@ -79,7 +79,7 @@ First, create a `client.conf` file with the matching the root CA conf:
 distinguished_name     = req_distinguished_name
 prompt                 = no
 output_password        = MyPassWord123!
-default_bits           = 3078
+default_bits           = 3072
 
 [ req_distinguished_name ]
 C                      = FR
