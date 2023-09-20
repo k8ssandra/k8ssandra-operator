@@ -5,4 +5,4 @@ resources:
   - ../../default
 images:
   - name: k8ssandra/k8ssandra-operator
-    newTag: v1.9.0
+    newTag: 1.9-latest
