@@ -82,6 +82,7 @@ jobs:
           - CreateSingleReaper
           - CreateReaperAndDatacenter
           - CreateSingleMedusaJob
+          - CreateSingleDseMedusaJob
           - ConfigControllerRestarts
           # TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
           #- SingleDcEncryptionWithStargate

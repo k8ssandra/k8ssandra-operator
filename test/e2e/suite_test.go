@@ -276,6 +276,13 @@ func TestOperator(t *testing.T) {
 		doCassandraDatacenterCleanup: false,
 		installMinio:                 true,
 	}))
+	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusaJob,
+		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
+	}))
 	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusaJob,
 		fixture:                      framework.NewTestFixture("multi-dc-encryption-medusa", controlPlane),
@@ -680,7 +687,7 @@ func applyPollingDefaults() {
 	polling.reaperReady.timeout = 10 * time.Minute
 	polling.reaperReady.interval = 15 * time.Second
 
-	polling.medusaBackupDone.timeout = 2 * time.Minute
+	polling.medusaBackupDone.timeout = 5 * time.Minute
 	polling.medusaBackupDone.interval = 5 * time.Second
 
 	polling.medusaRestoreDone.timeout = 10 * time.Minute

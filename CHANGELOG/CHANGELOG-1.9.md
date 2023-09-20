@@ -26,3 +26,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1017](https://github.com/k8ssandra/k8ssandra-operator/issues/1017) Fix MedusaTask to delete only its own backups
 * [DOCS] [#1019](https://github.com/k8ssandra/k8ssandra-operator/issues/1019) Add PR review guidelines documentation
 * [TESTING] [#1037](https://github.com/k8ssandra/k8ssandra-operator/issues/1037) Add non regression test for Medusa issue with scale up after a restore
+* [TESTING] [#1037](https://github.com/k8ssandra/k8ssandra-operator/issues/1037) Add e2e test for Medusa against DSE

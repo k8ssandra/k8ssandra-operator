@@ -42,14 +42,17 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 
 	// Scale the cluster to verify that the previous restore won't break the new pod
-	t.Log("Scaling the cluster to 3 nodes")
-	err = f.Get(ctx, kcKey, kc)
-	require.NoError(err, "Error getting the K8ssandraCluster")
-	kcPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Cassandra.Datacenters[0].Size = 3
-	err = f.Client.Patch(ctx, kc, kcPatch)
-	require.NoError(err, "Error scaling the cluster")
-	checkDatacenterReady(t, ctx, dcKey, f)
+	// Not doing this for DSE tests as it takes too long
+	if kc.Spec.Cassandra.ServerType == "cassandra" {
+		t.Log("Scaling the cluster to 3 nodes")
+		err = f.Get(ctx, kcKey, kc)
+		require.NoError(err, "Error getting the K8ssandraCluster")
+		kcPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		kc.Spec.Cassandra.Datacenters[0].Size = 3
+		err = f.Client.Patch(ctx, kc, kcPatch)
+		require.NoError(err, "Error scaling the cluster")
+		checkDatacenterReady(t, ctx, dcKey, f)
+	}
 }
 
 func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
