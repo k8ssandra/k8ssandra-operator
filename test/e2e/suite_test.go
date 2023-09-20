@@ -155,6 +155,11 @@ var (
 		"latest",
 		"The k8ssandra-operator image tag to use.",
 	)
+	medusaImageTag = flag.String(
+		"medusaImageTag",
+		"",
+		"The medusa image tag to use.",
+	)
 )
 
 var (
@@ -267,6 +272,13 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-encryption-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
+	}))
+	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusaJob,
+		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 		installMinio:                 true,
@@ -497,6 +509,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		ClusterScoped:       opts.clusterScoped,
 		ImageName:           *imageName,
 		ImageTag:            *imageTag,
+		MedusaImageTag:      *medusaImageTag,
 		GithubKustomization: false,
 	}
 
@@ -556,7 +569,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.fixture != nil {
-		if err := f.DeployFixture(opts.sutNamespace, opts.fixture, zoneMappings, *storageClassFlag, *hostNetworkFlag); err != nil {
+		if err := f.DeployFixture(opts.sutNamespace, opts.fixture, zoneMappings, *storageClassFlag, *hostNetworkFlag, deploymentConfig.MedusaImageTag); err != nil {
 			t.Logf("failed to deploy fixture")
 			return err
 		}
@@ -674,7 +687,7 @@ func applyPollingDefaults() {
 	polling.reaperReady.timeout = 10 * time.Minute
 	polling.reaperReady.interval = 15 * time.Second
 
-	polling.medusaBackupDone.timeout = 2 * time.Minute
+	polling.medusaBackupDone.timeout = 5 * time.Minute
 	polling.medusaBackupDone.interval = 5 * time.Second
 
 	polling.medusaRestoreDone.timeout = 10 * time.Minute

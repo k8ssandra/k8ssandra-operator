@@ -30,7 +30,7 @@ You could clone the [cassandra-toolbox](https://github.com/thelastpickle/cassand
 distinguished_name     = req_distinguished_name
 prompt                 = no
 output_password        = MyPassWord123!
-default_bits           = 2048
+default_bits           = 3072
 
 [ req_distinguished_name ]
 C                      = FR
@@ -66,7 +66,48 @@ Replace the `<keystore password>` and `<truststore password>` above with each st
 
 {{% alert title="Tip" color="success" %}}
 You can repeat the above procedure to generate encryption stores for client-to-node encryption, changing the secret name appropriately.
+Check the following section for more details on setting up client encryption with Medusa.
 {{% /alert %}}
+
+### Medusa client certificates
+
+In order to work with a cluster with client to node encryption, Medusa will require an additional client certificate to be created.
+First, create a `client.conf` file with the matching the root CA conf:
+
+```conf
+[ req ]
+distinguished_name     = req_distinguished_name
+prompt                 = no
+output_password        = MyPassWord123!
+default_bits           = 3072
+
+[ req_distinguished_name ]
+C                      = FR
+O                      = YourCompany
+OU                     = SSLTestCluster
+CN                     = client
+```
+
+Then, run the following command to create the certificate/key pair:
+
+```bash
+openssl req -newkey rsa:3078 -nodes -keyout client.key -out client.csr -config client.conf
+```
+
+When generating the encryption stores in the previous step, you should have created a root CA certificate and key. You can find them in the `certs` folder, with names like `ca_<date_time>.cert` and `ca_<date_time>.key`.
+Rename them as : `rootca.crt` and `rootca.key`.   
+Now, sign the client certificate using these files:
+  
+```bash
+openssl x509 -req -CA rootca.crt -CAkey rootca.key -passin pass:MyPassWord123! -in client.csr -out client.crt_signed -days 3650 -CAcreateserial
+```
+
+Finally, create a Kubernetes secret with the following command:
+
+```bash
+kubectl create secret generic client-certificates --from-file=rootca.crt --from-file=client.key --from-file=client.crt_signed  -o yaml > client-certificates.yaml
+```
+
 
 ## Creating a cluster with internode encryption
 
@@ -187,6 +228,22 @@ spec:
   reaper:
     deploymentMode: SINGLE
 ```
+
+## Medusa encryption
+
+In order to work with a cluster with client to node encryption, Medusa will require an additional client certificate to be created as previously instructed.
+After having created the `client-certificates` secret, you will need to reference it in the `medusa` section of the `K8ssandraCluster` manifest:
+
+```yaml
+...
+spec:
+  ...
+  medusa:
+    certificatesSecretRef:
+      name: client-certificates
+```
+
+This will provide Medusa with the client certificate and key, as well as the root CA certificate, which will be used to connect to the Cassandra cluster through the Python Driver.
 
 ## Next steps
 

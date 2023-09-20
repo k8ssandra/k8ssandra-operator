@@ -27,6 +27,14 @@ patches:
         value: {{ $.HostNetwork }}
   {{ end }}
 
+  {{ if $.MedusaImageTag }}
+      - op: add
+        path: /spec/medusa/containerImage
+        value:
+          tag: {{ $.MedusaImageTag }}
+  {{ end }}
+
+
   {{if $.Zones }}
     {{ range $rackIndex, $rack := .Cassandra.Racks }}
       {{ if index $rack.NodeAffinityLabels "topology.kubernetes.io/zone" }}

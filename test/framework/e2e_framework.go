@@ -421,6 +421,7 @@ type OperatorDeploymentConfig struct {
 	ClusterScoped         bool
 	ImageName             string
 	ImageTag              string
+	MedusaImageTag        string
 	GithubKustomization   bool // If true, use the kustomization.yaml from the github repo
 	ControlPlaneComponent string
 	DataPlaneComponent    string
