@@ -71395,12 +71395,92 @@ MedusaBackupStatus defines the observed state of MedusaBackup
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>finishedNodes</b></td>
+        <td>integer</td>
+        <td>
+          <br/>
+          <br/>
+            <i>Format</i>: int32<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#medusabackupstatusnodesindex">nodes</a></b></td>
+        <td>[]object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>startTime</b></td>
         <td>string</td>
         <td>
           <br/>
           <br/>
             <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>status</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>totalNodes</b></td>
+        <td>integer</td>
+        <td>
+          <br/>
+          <br/>
+            <i>Format</i>: int32<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### MedusaBackup.status.nodes[index]
+<sup><sup>[↩ Parent](#medusabackupstatus)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>datacenter</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>host</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>rack</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tokens</b></td>
+        <td>[]integer</td>
+        <td>
+          <br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -71726,6 +71806,13 @@ MedusaRestoreJobStatus defines the observed state of MedusaRestoreJob
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>message</b></td>
+        <td>string</td>
+        <td>
+          Message gives the reason why restore operation failed<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#medusarestorejobstatusrestoremapping">restoreMapping</a></b></td>
         <td>object</td>
         <td>
@@ -71769,17 +71856,17 @@ Mapping between source and target nodes for a restore
         </tr>
     </thead>
     <tbody><tr>
-        <td><b>in_place</b></td>
-        <td>boolean</td>
-        <td>
-          Whether the restore is in-place or not<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
         <td><b><a href="#medusarestorejobstatusrestoremappinghost_mapkey">host_map</a></b></td>
         <td>map[string]object</td>
         <td>
           Mapping between source and target nodes for a restore<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>in_place</b></td>
+        <td>boolean</td>
+        <td>
+          Whether the restore is in-place or not<br/>
         </td>
         <td>false</td>
       </tr></tbody>
