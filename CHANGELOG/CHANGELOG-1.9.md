@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.9.0 - 2023-09-20
+
 * [CHANGE] [#1037](https://github.com/k8ssandra/k8ssandra-operator/issues/1037) Upgrade Medusa to v0.16.1
 * [CHANGE] Upgrade to cass-operator v1.17.1
 * [ENHANCEMENT] [#1045](https://github.com/k8ssandra/k8ssandra-operator/issues/1045) Validate MedusaBackup before doing restore to prevent data loss scenarios
