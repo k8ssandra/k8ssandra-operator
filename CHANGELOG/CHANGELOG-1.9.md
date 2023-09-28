@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Upgrade to cass-operator v1.17.2 to fix issues with Medusa modifying initContainers when used with Cassandra 4.1
+
 ## v1.9.0 - 2023-09-20
 
 * [CHANGE] [#1037](https://github.com/k8ssandra/k8ssandra-operator/issues/1037) Upgrade Medusa to v0.16.1
