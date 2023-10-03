@@ -12,11 +12,13 @@ description: "K8ssandra documentation: architecture, configuration, guided tasks
 type: docs
 ---
 
-k8ssandra-operator is a turnkey solution to manage [Apache Cassandra](https://cassandra.apache.org/_/index.html) on Kubernetes. Apache Cassandra is the premiere wide column NoSQL data store, offering low latency, geo-replication, and the capacity to store petabytes of data. Apache Cassandra is in use in 90% of the Fortune 500 in some capacity.
+k8ssandra-operator is a turnkey solution to manage [Apache Cassandra](https://cassandra.apache.org/_/index.html) and [DSE](https://www.datastax.com/products/datastax-enterprise) on Kubernetes. Apache Cassandra is the premiere wide column NoSQL data store, offering low latency, geo-replication, and the capacity to store petabytes of data. Apache Cassandra is in use in 90% of the Fortune 500 in some capacity. 
+
+DSE is the DataStax distribution of Apache Cassandra, offering additional features such as advanced security, analytics, and search, as well as features not yet available in Cassandra like vector search for generative AI applications.
 
 k8ssandra-operator allows for the deployment of multiple Apache Cassandra datacenters, spanned over multiple Kubernetes clusters. The intention of this architecture is to provide geo-replication to enhance latency (by moving data closer to the end user) and availability (by providing multiple datacenters to serve requests in the event of a datacenter failure or network partition).
 
-Apache Cassandra offers rack and failure zone aware data replication which is both replicated and sharded for performance and protection.
+Apache Cassandra offers rack and failure zone aware data replication which is both replicated and sharded for performance and protection. 
 
 It incorporates the following functionality;
 
