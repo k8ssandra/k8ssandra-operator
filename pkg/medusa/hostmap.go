@@ -139,11 +139,13 @@ func sortLocations(m map[NodeLocation][]string) []rack {
 			Rack: k,
 			DC:   DC,
 		}
+		nodes := m[loc]
+		sort.Strings(nodes)
 		out = append(out,
 			rack{
 				Location: loc,
 				Size:     len(m[loc]),
-				Nodes:    m[loc],
+				Nodes:    nodes,
 			},
 		)
 	}
