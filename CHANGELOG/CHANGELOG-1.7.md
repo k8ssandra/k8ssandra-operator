@@ -25,8 +25,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#601](https://github.com/k8ssandra/k8ssandra-operator/issues/601) Add injection annotation to Cassandra and Reaper pods
 * [ENHANCEMENT] [#965](https://github.com/k8ssandra/k8ssandra-operator/issues/965) Allow for ability to specify containers where webhook will mount secrets
 * [ENHANCEMENT] [#932](https://github.com/k8ssandra/k8ssandra-operator/issues/932) Add ability to set variables to the secret-injection annotation. Supported are `POD_NAME`, `POD_NAMESPACE` and `POD_ORDINAL`. Also, changed JSON key from `secretName` to `name`
-* [ENHANCEMENT] [#955](https://github.com/k8ssandra/k8ssandra-operator/issues/955) Update Kustomize templates to 5.0.x compatible format
-* [ENHANCEMENT] [#956](https://github.com/k8ssandra/k8ssandra-operator/issues/956) Enable linting in the project
 * [BUGFIX] [#914](https://github.com/k8ssandra/k8ssandra-operator/issues/914) Don't parse logs by default when Vector telemetry is enabled.
 * [BUGFIX] [#916](https://github.com/k8ssandra/k8ssandra-operator/issues/916) Deprecate jmxInitContainerImage field.
 * [BUGFIX] [#946](https://github.com/k8ssandra/k8ssandra-operator/issues/946) Fix medusaClient to fetch the pods from correct namespace
