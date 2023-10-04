@@ -7,7 +7,6 @@ import (
 	"text/template"
 
 	"github.com/adutra/goalesce"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -346,12 +345,6 @@ func medusaEnvVars(medusaSpec *api.MedusaClusterTemplate, k8cName string, useExt
 
 type medusaVolume struct {
 	Volume      *corev1.Volume
-	VolumeIndex int
-	Exists      bool
-}
-
-type medusaAdditionalVolume struct {
-	Volume      *v1beta1.AdditionalVolumes
 	VolumeIndex int
 	Exists      bool
 }

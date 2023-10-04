@@ -75,7 +75,9 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			if dcConfig.Meta.Pods.Annotations == nil {
 				dcConfig.Meta.Pods.Annotations = map[string]string{}
 			}
-			secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Pods, cassandraUserSecretName)
+			if err := secret.AddInjectionAnnotationMedusaContainers(&dcConfig.Meta.Pods, cassandraUserSecretName); err != nil {
+				return result.Error(err)
+			}
 		}
 
 		// Reconcile the Medusa standalone deployment

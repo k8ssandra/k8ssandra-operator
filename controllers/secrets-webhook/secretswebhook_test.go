@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	log "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -45,8 +44,8 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 	sort.Slice(resp.Patches, func(i, j int) bool {
 		return resp.Patches[i].Path > resp.Patches[j].Path
 	})
-	assert.Equal(resp.Patches[1].Path == "/spec/volumes")
-	assert.Equal(resp.Patches[0].Path == "/spec/containers/0/volumeMounts")
+	assert.Equal(resp.Patches[0].Path, "/spec/volumes")
+	assert.Equal(resp.Patches[1].Path, "/spec/containers/0/volumeMounts")
 	assert.Equal(resp.Patches[0].Operation, "add")
 	assert.Equal(resp.Patches[1].Operation, "add")
 }
@@ -287,7 +286,7 @@ func TestMutatePodsSpecifyContainer(t *testing.T) {
 	injectionAnnotation := `[{"name": "mySecret", "path": "/my/secret/path", "containers": ["test"]}]`
 
 	want := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": injectionAnnotation,
@@ -322,7 +321,7 @@ func TestMutatePodsSpecifyContainer(t *testing.T) {
 	}
 
 	pod := &corev1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 			Annotations: map[string]string{
 				"k8ssandra.io/inject-secret": injectionAnnotation,

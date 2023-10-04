@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type defaultClient struct {
@@ -14,18 +15,20 @@ type defaultClient struct {
 }
 
 type ClientFactory interface {
-	NewClient(address string) (Client, error)
+	NewClient(ctx context.Context, address string) (Client, error)
 }
 
 type DefaultFactory struct {
+	cancelFunc context.CancelFunc
 }
 
-func (f *DefaultFactory) NewClient(address string) (Client, error) {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)), grpc.WithTimeout(5*time.Second))
-	// TODO Modify to use DialContext
-	// conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)))
+func (f *DefaultFactory) NewClient(ctx context.Context, address string) (Client, error) {
+	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	conn, err := grpc.DialContext(callCtx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false)))
+	f.cancelFunc = cancel
 
 	if err != nil {
+		defer cancel()
 		return nil, fmt.Errorf("failed to create gRPC connection to %s: %s", address, err)
 	}
 

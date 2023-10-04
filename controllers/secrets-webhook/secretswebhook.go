@@ -158,7 +158,7 @@ func injectVolume(pod *corev1.Pod, volume corev1.Volume) {
 func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount, containers []string) {
 	var all bool
 	s := make(map[string]bool)
-	if containers == nil || len(containers) == 0 {
+	if len(containers) == 0 {
 		all = true
 	} else {
 		for _, c := range containers {

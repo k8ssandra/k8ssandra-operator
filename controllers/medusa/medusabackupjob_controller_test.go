@@ -299,7 +299,7 @@ func NewMedusaClientFactory() *fakeMedusaClientFactory {
 	return &fakeMedusaClientFactory{clients: make(map[string]*fakeMedusaClient, 0)}
 }
 
-func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, error) {
+func (f *fakeMedusaClientFactory) NewClient(ctx context.Context, address string) (medusa.Client, error) {
 	f.clientsMutex.Lock()
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]
@@ -490,7 +490,7 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 		},
 	}
 	medusaKey := framework.ClusterKey{NamespacedName: utils.GetKey(medusaDepl), K8sContext: k8sContext}
-	f.Create(ctx, medusaKey, medusaDepl)
+	require.NoError(t, f.Create(ctx, medusaKey, medusaDepl))
 
 	actualMedusaDepl := &appsv1.Deployment{}
 	assert.Eventually(t, func() bool {
