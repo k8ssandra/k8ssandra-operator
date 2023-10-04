@@ -91,3 +91,5 @@ client:
     tag: latest
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
+  # -- Node labels for pod assignment
+  nodeSelector: {}

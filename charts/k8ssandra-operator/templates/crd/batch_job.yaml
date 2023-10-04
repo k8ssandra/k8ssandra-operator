@@ -34,3 +34,7 @@ spec:
             - {{ .Chart.Version }}
             - --chartName
             - {{ .Chart.Name }}
+      {{- with .Values.client.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
