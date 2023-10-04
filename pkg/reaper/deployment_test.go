@@ -28,6 +28,7 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
+	reaper.Spec.HttpManagement.Enabled = true
 	reaper.Spec.ClientEncryptionStores = &encryption.Stores{
 		KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "keystore-secret",
@@ -114,6 +115,10 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		},
 	})

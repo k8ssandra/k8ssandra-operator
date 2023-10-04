@@ -139,6 +139,9 @@ type ReaperTemplate struct {
 	// labels and annotations for Reaper resources
 	// +optional
 	ResourceMeta *meta.ResourceMeta `json:"metadata,omitempty"`
+
+	// +kubebuilder:default={enabled: "false"}
+	HttpManagement HttpManagement `json:"httpManagement"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and
@@ -365,6 +368,14 @@ type Reaper struct {
 
 	Spec   ReaperSpec   `json:"spec,omitempty"`
 	Status ReaperStatus `json:"status,omitempty"`
+}
+
+type HttpManagement struct {
+	// Enable/disable the HTTP management connection between Reaper and Cassandra.
+	// When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
+	// and Reaper. In future, this will be true by default
+	// +kubebuilder:default=false
+	Enabled bool `json:"enabled"`
 }
 
 // +kubebuilder:object:root=true

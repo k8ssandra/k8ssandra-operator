@@ -260,6 +260,12 @@ func TestOperator(t *testing.T) {
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
+	t.Run("CreateReaperHttpManagement", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createReaperAndDatacenter, // same as above, ensure we can trigger repair. Only difference is that we use a fixture which enabled the HTTP management interface.
+		fixture:                      framework.NewTestFixture("reaper-http-management", dataPlanes[0]),
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,
