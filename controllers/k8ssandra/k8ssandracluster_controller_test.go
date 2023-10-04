@@ -91,33 +91,33 @@ func TestK8ssandraCluster(t *testing.T) {
 	defer testEnv.Stop(t)
 	defer cancel()
 
-	// t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
-	// t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
-	// t.Run("AddDcToExistingCluster", testEnv.ControllerTest(ctx, addDc))
-	// t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
-	// t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
-	// t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
-	// t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
-	// t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
-	// t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
-	// t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
-	// t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
-	// t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
-	// t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
-	// t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
+	t.Run("CreateSingleDcCluster", testEnv.ControllerTest(ctx, createSingleDcCluster))
+	t.Run("CreateMultiDcCluster", testEnv.ControllerTest(ctx, createMultiDcCluster))
+	t.Run("AddDcToExistingCluster", testEnv.ControllerTest(ctx, addDc))
+	t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
+	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
+	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
+	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
+	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
+	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
+	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
+	t.Run("CreateSingleDcClusterNoAuth", testEnv.ControllerTest(ctx, createSingleDcClusterNoAuth))
+	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
+	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
+	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
 	t.Run("ApplyClusterWithEncryptionOptionsFail", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsFail))
 	t.Run("ApplyClusterWithEncryptionOptionsExternalSecrets", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsExternalSecrets))
-	// t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
-	// t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
-	// t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
-	// t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
-	// t.Run("CreateMultiDcDseCluster", testEnv.ControllerTest(ctx, createMultiDcDseCluster))
-	// t.Run("PerNodeConfiguration", testEnv.ControllerTest(ctx, perNodeConfiguration))
-	// t.Run("CreateSingleDcClusterWithVector", testEnv.ControllerTest(ctx, createSingleDcClusterWithVector))
-	// t.Run("createSingleDcClusterWithMetricsAgent", testEnv.ControllerTest(ctx, createSingleDcClusterWithMetricsAgent))
+	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
+	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
+	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
+	t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
+	t.Run("CreateMultiDcDseCluster", testEnv.ControllerTest(ctx, createMultiDcDseCluster))
+	t.Run("PerNodeConfiguration", testEnv.ControllerTest(ctx, perNodeConfiguration))
+	t.Run("CreateSingleDcClusterWithVector", testEnv.ControllerTest(ctx, createSingleDcClusterWithVector))
+	t.Run("createSingleDcClusterWithMetricsAgent", testEnv.ControllerTest(ctx, createSingleDcClusterWithMetricsAgent))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -1594,7 +1594,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
 
 	medusaKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), "dc1")}, K8sContext: f.DataPlaneContexts[0]}
-	f.SetMedusaDeplAvailable(ctx, medusaKey)
+	require.NoError(f.SetMedusaDeplAvailable(ctx, medusaKey))
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -1969,7 +1969,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 
 	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
 	medusaKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandaloneDeploymentName(kc.SanitizedName(), "dc1")}, K8sContext: f.DataPlaneContexts[0]}
-	f.SetMedusaDeplAvailable(ctx, medusaKey)
+	require.NoError(f.SetMedusaDeplAvailable(ctx, medusaKey))
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
