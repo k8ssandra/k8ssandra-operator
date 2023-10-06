@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.9.1 - 2023-10-06
+
 * [CHANGE] Upgrade to Reaper v3.3.4 for arm64 support
 * [CHANGE] Upgrade to cass-operator v1.17.2 to fix issues with Medusa modifying initContainers when used with Cassandra 4.1
 * [BUGFIX] Upgrade to Medusa v0.16.2 to fix issues with listing backups
