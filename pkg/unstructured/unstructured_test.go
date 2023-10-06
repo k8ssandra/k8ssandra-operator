@@ -2,8 +2,9 @@ package unstructured
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUnstructured_MarshalJSON(t *testing.T) {
@@ -200,9 +201,7 @@ func TestUnstructured_DeepCopyInto(t *testing.T) {
 			out := new(Unstructured) // out not allowed to be nil
 			tt.in.DeepCopyInto(out)
 			assert.Equal(t, tt.in, out)
-			if out != nil {
-				assert.NotSame(t, tt.in, out)
-			}
+			assert.NotSame(t, tt.in, out)
 		})
 	}
 }

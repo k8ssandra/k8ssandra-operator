@@ -1009,32 +1009,6 @@ func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Conte
 	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, true, replication)
 }
 
-// createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
-// and one Reaper instance that are deployed in the local cluster with encryption on.
-func createSingleDatacenterClusterReaperEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
-
-	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-
-	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dcKey, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
-	dcPrefix := DcPrefix(t, f, dcKey)
-
-	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-reaper"}}
-	checkReaperReady(t, f, ctx, reaperKey)
-
-	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
-
-	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
-}
-
 // createStargateAndDatacenter creates a CassandraDatacenter with 3 nodes, one per rack. It also creates 1 or 3 Stargate
 // nodes, one per rack, all deployed in the local cluster. Note that no K8ssandraCluster object is created.
 func createStargateAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -2174,22 +2148,6 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 	return nil
 }
 
-func checkVectorAgentPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) {
-	t.Logf("check that vector agent is present in %s cass pods in cluster %s", dcKey.Name, dcKey.K8sContext)
-	cassdc := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, cassdc)
-	require.NoError(t, err, "failed to get cassandra datacenter")
-
-	vectorContainerIdx, containerFound := cassandra.FindContainer(cassdc.Spec.PodTemplateSpec, "vector-agent")
-	require.True(t, containerFound, "cannot find vector agent container in pod template spec")
-	clusterNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "CLUSTER_NAME")
-	require.NotNil(t, clusterNameEnvVar, "cannot find CLUSTER_NAME env var in vector agent container")
-	dcNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "DATACENTER_NAME")
-	require.NotNil(t, dcNameEnvVar, "cannot find DATACENTER_NAME env var in vector agent container")
-	rackNameEnvVar := utils.FindEnvVarInContainer(&cassdc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx], "RACK_NAME")
-	require.NotNil(t, rackNameEnvVar, "cannot find RACK_NAME env var in vector agent container")
-}
-
 func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (index int, found bool) {
 	for i, container := range pod.Spec.Containers {
 		t.Logf("checking container %s in pod %s", container.Name, pod.Name)
@@ -2231,13 +2189,6 @@ func checkVectorConfigMapDeleted(t *testing.T, ctx context.Context, f *framework
 
 }
 
-func getPodTemplateSpecForCassandra(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) *corev1.PodTemplateSpec {
-	cassdc := &cassdcapi.CassandraDatacenter{}
-	require.NoError(t, f.Get(ctx, dcKey, cassdc), "failed to get Cassandra Datacenter")
-
-	return cassdc.Spec.PodTemplateSpec
-}
-
 func getPodTemplateSpecForDeployment(t *testing.T, ctx context.Context, f *framework.E2eFramework, deploymentKey framework.ClusterKey) *corev1.PodTemplateSpec {
 	sg := &appsv1.Deployment{}
 	require.NoError(t, f.Get(ctx, deploymentKey, sg), "failed to get Deployment")
@@ -2272,10 +2223,7 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 	require.Eventually(t, func() bool {
 		cm := &corev1.ConfigMap{}
 		err := f.Get(ctx, configMapKey, cm)
-		if err != nil {
-			return false
-		}
-		return true
+		return err == nil
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
 
 }

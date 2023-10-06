@@ -24,6 +24,7 @@ func gcTest(gcName string) e2eTestFunc {
 		checkDatacenterReady(t, ctx, dc1Key, f)
 
 		logs, err := f.GetContainerLogs(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key)+"-default-sts-0", "server-system-logger")
+		require.NoError(t, err)
 		require.Containsf(t, logs, gcName, "Could not find %s in logs", gcName)
 
 		switch gcName {

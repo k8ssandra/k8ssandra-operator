@@ -375,7 +375,7 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 		},
 	}
 	medusaKey := framework.ClusterKey{NamespacedName: utils.GetKey(medusaDepl), K8sContext: k8sContext}
-	f.Create(ctx, medusaKey, medusaDepl)
+	require.NoError(t, f.Create(ctx, medusaKey, medusaDepl))
 
 	actualMedusaDepl := &appsv1.Deployment{}
 	assert.Eventually(t, func() bool {

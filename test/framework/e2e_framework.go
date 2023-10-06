@@ -52,8 +52,8 @@ type E2eFramework struct {
 }
 
 var (
-	nodeToolStatusUN = regexp.MustCompile("UN\\s\\s")
-	nodeToolStatusDN = regexp.MustCompile("DN\\s\\s")
+	nodeToolStatusUN = regexp.MustCompile(`UN\s\s`)
+	nodeToolStatusDN = regexp.MustCompile(`DN\s\s`)
 )
 
 func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
@@ -589,7 +589,9 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 				f.logger.Info("dump failed", "output", output, "error", err)
 				errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", "pods", ctx, err))
 			}
-			f.storeOutput(outputDir, namespace, "pods", "out", output)
+			if err := f.storeOutput(outputDir, namespace, "pods", "out", output); err != nil {
+				errs = append(errs, err)
+			}
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
 			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
@@ -604,7 +606,9 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 					f.logger.Info("dump failed", "output", output, "error", err)
 					errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
 				}
-				f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "out", output)
+				if err := f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "out", output); err != nil {
+					errs = append(errs, err)
+				}
 
 				// Get the yamls for each object
 				outputYaml, err := kubectl.Get(kubectl.Options{Context: ctx, Namespace: namespace}, objectType, "-o", "yaml")
@@ -612,7 +616,9 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 					f.logger.Info("dump failed", "output", output, "error", err)
 					errs = append(errs, fmt.Errorf("failed to dump %s for cluster %s: %w", objectType, ctx, err))
 				}
-				f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "yaml", outputYaml)
+				if err := f.storeOutput(outputDir, fmt.Sprintf("%s/objects/%s", namespace, objectType), objectType, "yaml", outputYaml); err != nil {
+					errs = append(errs, err)
+				}
 			}
 		}
 	}
@@ -631,8 +637,12 @@ func (f *E2eFramework) storeOutput(outputDir, subdirectory, objectType, ext, out
 		return err
 	}
 	defer outputFile.Close()
-	outputFile.WriteString(output)
-	outputFile.Sync()
+	if _, err := outputFile.WriteString(output); err != nil {
+		return err
+	}
+	if err := outputFile.Sync(); err != nil {
+		return err
+	}
 	return nil
 }
 

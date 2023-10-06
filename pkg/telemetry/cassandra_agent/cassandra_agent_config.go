@@ -162,7 +162,9 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 		return recRes
 	}
 
-	c.AddVolumeSource(dc)
+	if err := c.AddVolumeSource(dc); err != nil {
+		return result.Error(err)
+	}
 
 	return result.Done()
 }

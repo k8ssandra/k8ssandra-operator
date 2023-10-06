@@ -31,7 +31,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.BoolPtr(false),
+			Auth: pointer.Bool(false),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -141,7 +141,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.BoolPtr(true),
+			Auth: pointer.Bool(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -255,7 +255,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.BoolPtr(true),
+			Auth: pointer.Bool(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -383,7 +383,7 @@ func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.BoolPtr(true),
+			Auth: pointer.Bool(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},

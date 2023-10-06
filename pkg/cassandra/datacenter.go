@@ -346,7 +346,6 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 		dcConfig.ServerVersion = semver.MustParse(mergedOptions.ServerVersion)
 	}
 	dcConfig.ServerImage = mergedOptions.ServerImage
-	dcConfig.JmxInitContainerImage = mergedOptions.JmxInitContainerImage
 	dcConfig.Racks = mergedOptions.Racks
 	dcConfig.Resources = mergedOptions.Resources
 	dcConfig.StorageConfig = mergedOptions.StorageConfig

@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -517,7 +518,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 
 	// Loop over the secrets and create them
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
-		testClient.Create(ctx, secret)
+		require.NoError(t, testClient.Create(ctx, secret))
 	}
 
 	serverEncryption := map[string]interface{}{
@@ -793,7 +794,11 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 
 	// Loop over the secrets and create them
 	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore} {
-		testClient.Create(ctx, secret)
+		// This test and other encryption tests in this file are badly designed, they write the same secret names to the
+		// same namespace and conflict.
+		if err := testClient.Create(ctx, secret); err != nil && !errors.IsAlreadyExists(err) {
+			require.NoError(t, err)
+		}
 	}
 
 	serverEncryption := map[string]interface{}{

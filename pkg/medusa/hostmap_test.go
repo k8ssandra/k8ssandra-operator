@@ -231,6 +231,6 @@ func Test_HostMappingSlice_IsInPlace(t *testing.T) {
 	s = HostMappingSlice{
 		{Source: "1", Target: ""},
 	}
-	res, err = s.IsInPlace()
+	_, err = s.IsInPlace()
 	assert.Error(t, err, err)
 }

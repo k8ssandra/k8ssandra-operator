@@ -395,7 +395,7 @@ func (r *MedusaTaskReconciler) scheduleSyncForPurge(task *medusav1alpha1.MedusaT
 
 func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -405,7 +405,7 @@ func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.P
 
 func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -416,7 +416,7 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 
 func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()

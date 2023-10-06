@@ -3,6 +3,8 @@ package test
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
@@ -11,7 +13,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 type ManagementApiFactoryAdapter func(
@@ -144,14 +145,4 @@ func (f *FakeManagementApiFacade) GetFirstCall(method ManagementApiMethod, args 
 	}
 
 	return -1
-}
-
-func (f *FakeManagementApiFacade) getCallsForMethod(method ManagementApiMethod) []mock.Call {
-	calls := make([]mock.Call, 0)
-	for _, call := range f.Calls {
-		if call.Method == string(method) {
-			calls = append(calls, call)
-		}
-	}
-	return calls
 }

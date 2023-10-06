@@ -9,10 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Deprecated label name used in cass-operator.
-// See pkg/reconciliation/construct_statefulset.go
-const zoneLabel = "failure-domain.beta.kubernetes.io/zone"
-
 // computeNodeAffinityLabels computes a set of labels to select worker nodes for the Stargate pods.
 // We use the same labels that were used to select worker nodes for the data pods. This means that Stargate pods will
 // be scheduled on the same category of nodes that can host data pods.

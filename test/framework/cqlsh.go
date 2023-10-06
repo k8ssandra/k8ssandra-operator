@@ -10,8 +10,7 @@ import (
 )
 
 func (f *E2eFramework) RetrieveSuperuserSecret(ctx context.Context, k8sContext, namespace, clusterName string) (*corev1.Secret, error) {
-	var superUserSecret *corev1.Secret
-	superUserSecret = &corev1.Secret{}
+	superUserSecret := &corev1.Secret{}
 	superUserSecretKey := ClusterKey{
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,

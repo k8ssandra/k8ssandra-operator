@@ -818,12 +818,6 @@ func verifyReplicationOfKeyspaceUpdated(t *testing.T, mockMgmtApi *testutils.Fak
 	}, timeout, interval, fmt.Sprintf("failed to verify replication for keyspace %s updated", keyspace))
 }
 
-func verifyKeyspaceReplicationAltered(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, keyspace string, replication map[string]int) {
-	require.Eventually(t, func() bool {
-		return mockMgmtApi.GetFirstCall(testutils.AlterKeyspace, keyspace, replication) > -1
-	}, timeout, interval, fmt.Sprintf("failed to verify replication for keyspace %s updated", keyspace))
-}
-
 func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Framework, targetDcKey, srcDcKey framework.ClusterKey) {
 	t.Log("check that rebuild task was created")
 	require := require.New(t)

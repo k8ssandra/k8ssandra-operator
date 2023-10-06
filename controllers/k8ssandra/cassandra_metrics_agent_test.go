@@ -80,7 +80,6 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 	// Check that we have the right volumes and volume mounts.
 	dc := &cassdcapi.CassandraDatacenter{}
-	f.Get(ctx, dcKey, dc)
 	if err := f.Get(ctx, dcKey, dc); err != nil {
 		require.Fail("could not find dc")
 	}
