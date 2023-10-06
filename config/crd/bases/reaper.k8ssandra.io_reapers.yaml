@@ -1046,9 +1046,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.2.1
+                  tag: 3.3.4
                 description: The image to use for the Reaper pod main container. The
-                  default is "thelastpickle/cassandra-reaper:3.2.1".
+                  default is "thelastpickle/cassandra-reaper:3.3.4".
                 properties:
                   name:
                     description: The image name to use.
@@ -1131,9 +1131,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.2.1
+                  tag: 3.3.4
                 description: The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.2.1".
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
                 properties:
                   name:
                     description: The image name to use.
