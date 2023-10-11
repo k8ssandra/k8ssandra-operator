@@ -7,6 +7,8 @@ resources:
 components:
   - ../../components/cass-operator-image-config
 
+# TODO: remove these image changes before release so that they don't pull a dev release of cass-operator.
+# This is required when a new feature of cass-operator is needed that is not yet released.
 images:
 - name: k8ssandra/cass-operator
   newTag: v1.18.0-dev.34e2ae6-20231002

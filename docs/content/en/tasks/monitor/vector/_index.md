@@ -49,11 +49,18 @@ condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
 mode = "halt_before"
 timeout_ms = 10000
 
+[transforms.parse_cassandra_log]
+type = "remap"
+inputs = [ "systemlog" ]
+source = '''
+del(.source_type)
+. |= parse_groks!(.message, patterns: [
+  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
 
 [sources.cassandra_metrics_raw]
 type = "prometheus_scrape"
-endpoints = [ "http://localhost:9103" ]
-scrape_interval_secs = 30
+endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
+scrape_interval_secs = {{ .ScrapeInterval }}
 
 [transforms.cassandra_metrics]
 type = "remap"
@@ -98,6 +105,9 @@ Metrics sources are predefined in the Vector configuration for Cassandra, Reaper
 They can be used as input in custom components added through configuration.
 
 `systemlog` input is defined as the default source for Cassandra logs.
+
+We provide the `parse_cassandra_log` transform out of the box because it's likely to be a common need for users who ship the logs to a remote system such as Grafana Loki; however by default we don't use it and will be filtered out unless it's referenced by a custom transform/sink.
+This transform will parse the Cassandra logs and extract the log level, thread, timestamp, class, line and message fields. It will also remove the `source_type` field which is added by the `systemlog` source.
 
 ## Custom Vector configuration
 
