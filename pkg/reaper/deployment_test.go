@@ -161,6 +161,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+			Value: "true",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
