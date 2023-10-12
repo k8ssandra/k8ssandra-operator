@@ -186,7 +186,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 6)
+	assert.Len(t, container.Env, 7)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -197,7 +197,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 16)
+	assert.Len(t, container.Env, 17)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
