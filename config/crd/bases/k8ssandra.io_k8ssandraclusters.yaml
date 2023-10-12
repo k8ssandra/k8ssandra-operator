@@ -28459,7 +28459,7 @@ spec:
                     x-kubernetes-int-or-string: true
                   httpManagement:
                     default:
-                      enabled: "false"
+                      enabled: false
                     properties:
                       enabled:
                         default: false
