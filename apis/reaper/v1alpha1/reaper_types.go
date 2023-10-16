@@ -69,13 +69,15 @@ type ReaperTemplate struct {
 	// The image to use for the Reaper pod main container.
 	// The default is "thelastpickle/cassandra-reaper:3.3.4".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.3.4"}
+	// TODO: update with real release version.
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"8a26f9d"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// The image to use for the Reaper pod init container (that performs schema migrations).
 	// The default is "thelastpickle/cassandra-reaper:3.3.4".
 	// +optional
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.3.4"}
+	// TODO: update with real release version.
+	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"8a26f9d"}
 	InitContainerImage *images.Image `json:"initContainerImage,omitempty"`
 
 	// +kubebuilder:default="default"
