@@ -247,8 +247,10 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("multi-dc-stargate", controlPlane),
 	}))
 	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleReaper,
-		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
+		testFunc:                     createSingleReaper,
+		fixture:                      framework.NewTestFixture("single-dc-reaper", controlPlane),
+		skipK8ssandraClusterCleanup:  true,  // TODO: reinstate cleanup
+		doCassandraDatacenterCleanup: false, // TODO: reinstate cleanup
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiReaper,

@@ -152,8 +152,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
 		})
 	}
-
+	println("Reconciling new Reaper deployment: ", reaper)
 	if reaper.Spec.HttpManagement.Enabled {
+		println("Reconciling new Reaper deployment,HttpManagement.Enabled ")
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
