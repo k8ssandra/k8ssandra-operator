@@ -4,6 +4,8 @@ metadata:
   name: test
 spec:
   reaper:
+    httpManagement:
+      enabled: true
     heapSize: 256Mi
     autoScheduling:
       enabled: false

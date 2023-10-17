@@ -192,7 +192,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 		return vectorReconcileResult, nil
 	}
 
-	logger.Info(fmt.Sprintf("Reconciling reaper deployment, req was %#v", actualReaper))
+	logger.Info("Reconciling reaper deployment", "actualReaper", actualReaper)
 	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
 
 	actualDeployment := &appsv1.Deployment{}
