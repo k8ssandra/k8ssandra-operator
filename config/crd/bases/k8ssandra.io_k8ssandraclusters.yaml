@@ -29795,8 +29795,6 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
-                required:
-                - httpManagement
                 type: object
               secretsProvider:
                 default: internal

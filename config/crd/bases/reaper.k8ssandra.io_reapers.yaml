@@ -2428,7 +2428,6 @@ spec:
                 x-kubernetes-map-type: atomic
             required:
             - datacenterRef
-            - httpManagement
             type: object
           status:
             description: ReaperStatus defines the observed state of Reaper
