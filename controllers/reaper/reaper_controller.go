@@ -159,7 +159,6 @@ func (r *ReaperReconciler) reconcileDeployment(
 	deploymentKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Name}
 	logger = logger.WithValues("Deployment", deploymentKey)
 	logger.Info(fmt.Sprintf("Reconciling reaper deployment, req was %#v", actualReaper))
-	println("reaper http management proxy was: ", actualReaper.Spec.HttpManagement.Enabled)
 
 	authVars, err := r.collectAuthVars(ctx, actualReaper, logger)
 	if err != nil {
