@@ -1046,9 +1046,10 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.3.4
-                description: The image to use for the Reaper pod main container. The
-                  default is "thelastpickle/cassandra-reaper:3.3.4".
+                  tag: 7162ea3
+                description: 'The image to use for the Reaper pod main container.
+                  The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update
+                  with real release version.'
                 properties:
                   name:
                     description: The image name to use.
@@ -1127,13 +1128,28 @@ spec:
                 description: HeapSize sets the JVM heap size to use for Reaper.
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
+              httpManagement:
+                default:
+                  enabled: false
+                properties:
+                  enabled:
+                    default: false
+                    description: Enable/disable the HTTP management connection between
+                      Reaper and Cassandra. When enabled, HTTP will be used instead
+                      of JMX for management connectivity between Cassandra and Reaper.
+                      In future, this will be true by default
+                    type: boolean
+                required:
+                - enabled
+                type: object
               initContainerImage:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.3.4
-                description: The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
+                  tag: 7162ea3
+                description: 'The image to use for the Reaper pod init container (that
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3".
+                  TODO: update with real release version.'
                 properties:
                   name:
                     description: The image name to use.

@@ -18,6 +18,7 @@ package reaper
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -157,7 +158,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 
 	deploymentKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Name}
 	logger = logger.WithValues("Deployment", deploymentKey)
-	logger.Info("Reconciling Reaper Deployment")
+	logger.Info(fmt.Sprintf("Reconciling reaper deployment, req was %#v", actualReaper))
 
 	authVars, err := r.collectAuthVars(ctx, actualReaper, logger)
 	if err != nil {
@@ -190,6 +191,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 		return vectorReconcileResult, nil
 	}
 
+	logger.Info("Reconciling reaper deployment", "actualReaper", actualReaper)
 	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
 
 	actualDeployment := &appsv1.Deployment{}

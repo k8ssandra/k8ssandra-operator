@@ -28,6 +28,7 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
+	reaper.Spec.HttpManagement.Enabled = true
 	reaper.Spec.ClientEncryptionStores = &encryption.Stores{
 		KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "keystore-secret",
@@ -116,6 +117,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+			Value: "true",
+		},
 	})
 
 	assert.Len(t, podSpec.InitContainers, 1)
@@ -156,6 +161,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+			Value: "true",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
@@ -177,7 +186,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 6)
+	assert.Len(t, container.Env, 7)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -188,7 +197,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 16)
+	assert.Len(t, container.Env, 17)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -302,8 +311,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.3.4", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.3.4", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:7162ea3", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:7162ea3", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -318,8 +327,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.3.4", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.3.4", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:7162ea3", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:7162ea3", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
