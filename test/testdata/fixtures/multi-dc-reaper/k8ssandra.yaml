@@ -24,6 +24,8 @@ metadata:
   name: test
 spec:
   reaper:
+    httpManagement:
+      enabled: true
     keyspace: reaper_ks # custom name
     cassandraUserSecretRef:
       name: reaper-cql-secret # pre-existing secret with non-default name
