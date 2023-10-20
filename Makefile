@@ -281,7 +281,8 @@ create-kind-multicluster:
 	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 kind-load-image:
-	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
+	docker tag ${IMG} cr.k8ssandra.io/${IMG}
+	kind load docker-image --name $(KIND_CLUSTER) cr.k8ssandra.io/${IMG}
 
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \

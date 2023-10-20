@@ -21,7 +21,7 @@ image:
   # -- Container registry containing the repository where the image resides
   registry: docker.io
   # -- Docker repository for cass-operator
-  repository: k8ssandra/k8ssandra-operator
+  repository: cr.k8ssandra.io/k8ssandra/k8ssandra-operator
   # -- Pull policy for the operator container
   pullPolicy: IfNotPresent
   # -- Tag of the k8ssandra-operator image to pull from image.repository
