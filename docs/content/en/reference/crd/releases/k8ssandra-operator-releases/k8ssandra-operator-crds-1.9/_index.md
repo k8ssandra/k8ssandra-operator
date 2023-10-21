@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.9"
+linkTitle: "K8ssandra-operator CRDs v1.9"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.9.  
 ---
 
 Packages:
@@ -45205,9 +45205,9 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         <td><b><a href="#k8ssandraclusterspecreapercontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -45230,21 +45230,12 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecreaperhttpmanagement">httpManagement</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Default</i>: map[enabled:false]<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecreaperinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46788,7 +46779,7 @@ Defines the username and password that Reaper will use to authenticate CQL conne
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -46878,41 +46869,12 @@ The secret to use when pulling the image from private repositories. If specified
 </table>
 
 
-#### K8ssandraCluster.spec.reaper.httpManagement
-<sup><sup>[↩ Parent](#k8ssandraclusterspecreaper)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>enabled</b></td>
-        <td>boolean</td>
-        <td>
-          Enable/disable the HTTP management connection between Reaper and Cassandra. When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra and Reaper. In future, this will be true by default<br/>
-          <br/>
-            <i>Default</i>: false<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
 #### K8ssandraCluster.spec.reaper.initContainerImage
 <sup><sup>[↩ Parent](#k8ssandraclusterspecreaper)</sup></sup>
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -72875,9 +72837,9 @@ ReaperSpec defines the desired state of Reaper
         <td><b><a href="#reaperspeccontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -72900,21 +72862,12 @@ ReaperSpec defines the desired state of Reaper
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#reaperspechttpmanagement">httpManagement</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Default</i>: map[enabled:false]<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#reaperspecinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -74685,7 +74638,7 @@ ref to the secret that contains the truststore password if password stored in di
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -74775,41 +74728,12 @@ The secret to use when pulling the image from private repositories. If specified
 </table>
 
 
-#### Reaper.spec.httpManagement
-<sup><sup>[↩ Parent](#reaperspec)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>enabled</b></td>
-        <td>boolean</td>
-        <td>
-          Enable/disable the HTTP management connection between Reaper and Cassandra. When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra and Reaper. In future, this will be true by default<br/>
-          <br/>
-            <i>Default</i>: false<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
 #### Reaper.spec.initContainerImage
 <sup><sup>[↩ Parent](#reaperspec)</sup></sup>
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
