@@ -24,6 +24,11 @@ metadata:
   name: test
 spec:
   reaper:
+    containerImage:
+      name: cassandra-reaper
+      registry: australia-southeast1-docker.pkg.dev
+      repository: k8ssandra/miles
+      tag: http-management4
     httpManagement:
       enabled: true
     keyspace: reaper_ks # custom name
