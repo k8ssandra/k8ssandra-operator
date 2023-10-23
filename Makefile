@@ -325,7 +325,7 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
 CERT_MANAGER_VERSION ?= v1.12.2
 KUSTOMIZE_VERSION ?= v5.0.3
 CONTROLLER_TOOLS_VERSION ?= v0.12.0
-GOLINT_VERSION ?= 1.54.2
+GOLINT_VERSION ?= 1.55.0
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
