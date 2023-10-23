@@ -80,6 +80,7 @@ jobs:
           - CreateSingleDatacenterCluster
           - CreateStargateAndDatacenter
           - CreateSingleReaper
+          - CreateSingleReaperWStargateAndHTTP
           - CreateReaperAndDatacenter
           - CreateSingleMedusaJob
           - CreateSingleDseMedusaJob
