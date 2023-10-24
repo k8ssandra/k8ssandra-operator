@@ -231,7 +231,7 @@ inputs = ["cassandra_metrics_raw"]
 source = '''
 namespace, err = get_env_var("NAMESPACE")
 if err == null {
-  .namespace = namespace
+  .tags.namespace = namespace
 }
 '''
 

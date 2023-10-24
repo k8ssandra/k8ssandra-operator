@@ -175,7 +175,7 @@ if err == null {
 		Config: `source = '''
 namespace, err = get_env_var("NAMESPACE")
 if err == null {
-  .namespace = namespace
+  .tags.namespace = namespace
 }
 '''
 `,
