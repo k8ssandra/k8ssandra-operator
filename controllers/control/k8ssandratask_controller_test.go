@@ -445,6 +445,7 @@ func SetCondition(task *cassapi.CassandraTask, condition cassapi.JobConditionTyp
 	if !existing {
 		cond := metav1.Condition{
 			Type:               string(condition),
+			Reason:             string(condition),
 			Status:             status,
 			LastTransitionTime: metav1.Now(),
 		}
