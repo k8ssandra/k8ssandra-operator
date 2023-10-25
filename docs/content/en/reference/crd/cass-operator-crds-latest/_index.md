@@ -19082,6 +19082,20 @@ Arguments are additional parameters for the command
         </tr>
     </thead>
     <tbody><tr>
+        <td><b>end_token</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>jobs</b></td>
+        <td>integer</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>keyspace_name</b></td>
         <td>string</td>
         <td>
@@ -19093,6 +19107,20 @@ Arguments are additional parameters for the command
         <td>map[string]string</td>
         <td>
           NewTokens is a map of pod names to their newly-assigned tokens. Required for the move command, ignored otherwise. Pods referenced in this map must exist; any existing pod not referenced in this map will not be moved.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>no_snapshot</b></td>
+        <td>boolean</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>no_validate</b></td>
+        <td>boolean</td>
+        <td>
+          Scrub arguments<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19110,8 +19138,36 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>skip_corrupted</b></td>
+        <td>boolean</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>source_datacenter</b></td>
         <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>split_output</b></td>
+        <td>boolean</td>
+        <td>
+          Compaction arguments<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>start_token</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tables</b></td>
+        <td>[]string</td>
         <td>
           <br/>
         </td>
@@ -19191,7 +19247,9 @@ CassandraTaskStatus defines the observed state of CassandraJob
 
 
 
-
+Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, 
+ type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: "Available", "Progressing", and "Degraded" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` 
+ // other fields }
 
 <table>
     <thead>
@@ -19203,49 +19261,52 @@ CassandraTaskStatus defines the observed state of CassandraJob
         </tr>
     </thead>
     <tbody><tr>
-        <td><b>status</b></td>
+        <td><b>lastTransitionTime</b></td>
         <td>string</td>
         <td>
-          Status of the condition, one of True, False, Unknown.<br/>
+          lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>message</b></td>
+        <td>string</td>
+        <td>
+          message is a human readable message indicating details about the transition. This may be an empty string.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>reason</b></td>
+        <td>string</td>
+        <td>
+          reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>status</b></td>
+        <td>enum</td>
+        <td>
+          status of the condition, one of True, False, Unknown.<br/>
+          <br/>
+            <i>Enum</i>: True, False, Unknown<br/>
         </td>
         <td>true</td>
       </tr><tr>
         <td><b>type</b></td>
         <td>string</td>
         <td>
-          Type of job condition, Complete or Failed.<br/>
+          type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)<br/>
         </td>
         <td>true</td>
       </tr><tr>
-        <td><b>lastProbeTime</b></td>
-        <td>string</td>
+        <td><b>observedGeneration</b></td>
+        <td>integer</td>
         <td>
-          Last time the condition was checked.<br/>
+          observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.<br/>
           <br/>
-            <i>Format</i>: date-time<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>lastTransitionTime</b></td>
-        <td>string</td>
-        <td>
-          Last time the condition transit from one status to another.<br/>
-          <br/>
-            <i>Format</i>: date-time<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>message</b></td>
-        <td>string</td>
-        <td>
-          Human readable message indicating details about last transition.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>reason</b></td>
-        <td>string</td>
-        <td>
-          (brief) reason for the condition's last transition.<br/>
+            <i>Format</i>: int64<br/>
+            <i>Minimum</i>: 0<br/>
         </td>
         <td>false</td>
       </tr></tbody>
