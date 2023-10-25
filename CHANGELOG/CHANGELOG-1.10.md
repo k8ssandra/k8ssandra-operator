@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#1088](https://github.com/k8ssandra/k8ssandra-operator/issues/1088) Use the Scarf proxy for image coordinates
+* [CHANGE] Update to cass-operator v1.18.0
 * [ENHANCEMENT] [#1073](https://github.com/k8ssandra/k8ssandra-operator/issues/1073) Add a namespace label to the Cassandra metrics 
 * [BUGFIX] [#1060](https://github.com/k8ssandra/k8ssandra-operator/issues/1060) Fix restore mapping shuffling nodes when restoring in place
 * [BUGFIX] [#1061](https://github.com/k8ssandra/k8ssandra-operator/issues/1061) Point to cass-config-builder 1.0.7 for arm64 compatibility

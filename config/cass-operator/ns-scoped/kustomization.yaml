@@ -2,13 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- github.com/k8ssandra/cass-operator/config/deployments/default?ref=master
+- github.com/k8ssandra/cass-operator/config/deployments/default?ref=v1.18.0
 
 components:
   - ../../components/cass-operator-image-config
-
-# TODO: remove these image changes before release so that they don't pull a dev release of cass-operator.
-# This is required when a new feature of cass-operator is needed that is not yet released.
-images:
-- name: k8ssandra/cass-operator
-  newTag: v1.18.0-dev.5189beb-20231020
