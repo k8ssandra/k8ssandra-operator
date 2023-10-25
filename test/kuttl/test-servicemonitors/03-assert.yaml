@@ -33,7 +33,7 @@ spec:
             - name: DSE_MGMT_EXPLICIT_START
               value: "true"
           name: cassandra
-        - image: k8ssandra/system-logger:v1.18.0
+        - image: k8ssandra/system-logger:v1.18.1
           name: server-system-logger
 status:
   readyReplicas: 1
