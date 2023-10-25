@@ -24,7 +24,7 @@ type DefaultFactory struct {
 
 func (f *DefaultFactory) NewClient(ctx context.Context, address string) (Client, error) {
 	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	conn, err := grpc.DialContext(callCtx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false), grpc.MaxCallRecvMsgSize(1024*1024*256)))
+	conn, err := grpc.DialContext(callCtx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false), grpc.MaxCallRecvMsgSize(1024*1024*512)))
 	f.cancelFunc = cancel
 
 	if err != nil {
