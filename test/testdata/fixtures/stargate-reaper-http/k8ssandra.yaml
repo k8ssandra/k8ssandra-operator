@@ -1,0 +1,58 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  reaper:
+    httpManagement:
+      enabled: true
+    heapSize: 256Mi
+    autoScheduling:
+      enabled: false
+    telemetry:
+      vector:
+        enabled: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 512Mi
+  stargate:
+    size: 1
+    heapSize: 384Mi
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+  cassandra:
+    serverVersion: "3.11.14"
+    jmxInitContainerImage:
+      repository: library
+      name: busybox
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 2
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heapSize: 384Mi
+    mgmtAPIHeap: 64Mi

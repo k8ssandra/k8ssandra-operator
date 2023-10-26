@@ -252,6 +252,12 @@ func TestOperator(t *testing.T) {
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: true,
 	}))
+	t.Run("CreateSingleReaperWStargateAndHTTP", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleReaper,
+		fixture:                      framework.NewTestFixture("stargate-reaper-http", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiReaper,
 		fixture:  framework.NewTestFixture("multi-dc-reaper", controlPlane),
@@ -259,12 +265,6 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateReaperAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createReaperAndDatacenter,
 		fixture:                      framework.NewTestFixture("reaper", dataPlanes[0]),
-		skipK8ssandraClusterCleanup:  true,
-		doCassandraDatacenterCleanup: true,
-	}))
-	t.Run("CreateReaperHttpManagement", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createReaperAndDatacenter, // same as above, ensure we can trigger repair. Only difference is that we use a fixture which enabled the HTTP management interface.
-		fixture:                      framework.NewTestFixture("reaper-http-management", dataPlanes[0]),
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
