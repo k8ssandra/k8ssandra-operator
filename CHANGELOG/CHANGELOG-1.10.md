@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.10.0 - 2023-10-26
+
 * [CHANGE] [#1072](https://github.com/k8ssandra/k8ssandra-operator/issues/1072) Add settings to configure reaper HTTP management interface
 * [CHANGE] Upgrade Reaper to v3.4.0
 * [CHANGE] [#1088](https://github.com/k8ssandra/k8ssandra-operator/issues/1088) Use the Scarf proxy for image coordinates
