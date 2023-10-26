@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.9"
+linkTitle: "K8ssandra-operator CRDs v1.9"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.9.  
 ---
 
 Packages:
@@ -429,20 +429,6 @@ Arguments are additional parameters for the command
         </tr>
     </thead>
     <tbody><tr>
-        <td><b>end_token</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>jobs</b></td>
-        <td>integer</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>keyspace_name</b></td>
         <td>string</td>
         <td>
@@ -454,20 +440,6 @@ Arguments are additional parameters for the command
         <td>map[string]string</td>
         <td>
           NewTokens is a map of pod names to their newly-assigned tokens. Required for the move command, ignored otherwise. Pods referenced in this map must exist; any existing pod not referenced in this map will not be moved.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>no_snapshot</b></td>
-        <td>boolean</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>no_validate</b></td>
-        <td>boolean</td>
-        <td>
-          Scrub arguments<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -485,36 +457,8 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>skip_corrupted</b></td>
-        <td>boolean</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>source_datacenter</b></td>
         <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>split_output</b></td>
-        <td>boolean</td>
-        <td>
-          Compaction arguments<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>start_token</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>tables</b></td>
-        <td>[]string</td>
         <td>
           <br/>
         </td>
@@ -601,9 +545,7 @@ K8ssandraTaskStatus defines the observed state of K8ssandraTask
 
 
 
-Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, 
- type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: "Available", "Progressing", and "Degraded" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` 
- // other fields }
+
 
 <table>
     <thead>
@@ -615,52 +557,49 @@ Condition contains details for one aspect of the current state of this API Resou
         </tr>
     </thead>
     <tbody><tr>
-        <td><b>lastTransitionTime</b></td>
-        <td>string</td>
-        <td>
-          lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.<br/>
-          <br/>
-            <i>Format</i>: date-time<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>message</b></td>
-        <td>string</td>
-        <td>
-          message is a human readable message indicating details about the transition. This may be an empty string.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>reason</b></td>
-        <td>string</td>
-        <td>
-          reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
         <td><b>status</b></td>
-        <td>enum</td>
+        <td>string</td>
         <td>
-          status of the condition, one of True, False, Unknown.<br/>
-          <br/>
-            <i>Enum</i>: True, False, Unknown<br/>
+          Status of the condition, one of True, False, Unknown.<br/>
         </td>
         <td>true</td>
       </tr><tr>
         <td><b>type</b></td>
         <td>string</td>
         <td>
-          type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)<br/>
+          Type of job condition, Complete or Failed.<br/>
         </td>
         <td>true</td>
       </tr><tr>
-        <td><b>observedGeneration</b></td>
-        <td>integer</td>
+        <td><b>lastProbeTime</b></td>
+        <td>string</td>
         <td>
-          observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.<br/>
+          Last time the condition was checked.<br/>
           <br/>
-            <i>Format</i>: int64<br/>
-            <i>Minimum</i>: 0<br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>lastTransitionTime</b></td>
+        <td>string</td>
+        <td>
+          Last time the condition transit from one status to another.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>message</b></td>
+        <td>string</td>
+        <td>
+          Human readable message indicating details about last transition.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>reason</b></td>
+        <td>string</td>
+        <td>
+          (brief) reason for the condition's last transition.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -738,9 +677,7 @@ CassandraTaskStatus defines the observed state of CassandraJob
 
 
 
-Condition contains details for one aspect of the current state of this API Resource. --- This struct is intended for direct use as an array at the field path .status.conditions.  For example, 
- type FooStatus struct{ // Represents the observations of a foo's current state. // Known .status.conditions.type are: "Available", "Progressing", and "Degraded" // +patchMergeKey=type // +patchStrategy=merge // +listType=map // +listMapKey=type Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"` 
- // other fields }
+
 
 <table>
     <thead>
@@ -752,52 +689,49 @@ Condition contains details for one aspect of the current state of this API Resou
         </tr>
     </thead>
     <tbody><tr>
-        <td><b>lastTransitionTime</b></td>
-        <td>string</td>
-        <td>
-          lastTransitionTime is the last time the condition transitioned from one status to another. This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.<br/>
-          <br/>
-            <i>Format</i>: date-time<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>message</b></td>
-        <td>string</td>
-        <td>
-          message is a human readable message indicating details about the transition. This may be an empty string.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>reason</b></td>
-        <td>string</td>
-        <td>
-          reason contains a programmatic identifier indicating the reason for the condition's last transition. Producers of specific condition types may define expected values and meanings for this field, and whether the values are considered a guaranteed API. The value should be a CamelCase string. This field may not be empty.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
         <td><b>status</b></td>
-        <td>enum</td>
+        <td>string</td>
         <td>
-          status of the condition, one of True, False, Unknown.<br/>
-          <br/>
-            <i>Enum</i>: True, False, Unknown<br/>
+          Status of the condition, one of True, False, Unknown.<br/>
         </td>
         <td>true</td>
       </tr><tr>
         <td><b>type</b></td>
         <td>string</td>
         <td>
-          type of condition in CamelCase or in foo.example.com/CamelCase. --- Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)<br/>
+          Type of job condition, Complete or Failed.<br/>
         </td>
         <td>true</td>
       </tr><tr>
-        <td><b>observedGeneration</b></td>
-        <td>integer</td>
+        <td><b>lastProbeTime</b></td>
+        <td>string</td>
         <td>
-          observedGeneration represents the .metadata.generation that the condition was set based upon. For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date with respect to the current state of the instance.<br/>
+          Last time the condition was checked.<br/>
           <br/>
-            <i>Format</i>: int64<br/>
-            <i>Minimum</i>: 0<br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>lastTransitionTime</b></td>
+        <td>string</td>
+        <td>
+          Last time the condition transit from one status to another.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>message</b></td>
+        <td>string</td>
+        <td>
+          Human readable message indicating details about last transition.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>reason</b></td>
+        <td>string</td>
+        <td>
+          (brief) reason for the condition's last transition.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -45271,9 +45205,9 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         <td><b><a href="#k8ssandraclusterspecreapercontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -45296,21 +45230,12 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspecreaperhttpmanagement">httpManagement</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Default</i>: map[enabled:false]<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecreaperinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46854,7 +46779,7 @@ Defines the username and password that Reaper will use to authenticate CQL conne
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -46944,41 +46869,12 @@ The secret to use when pulling the image from private repositories. If specified
 </table>
 
 
-#### K8ssandraCluster.spec.reaper.httpManagement
-<sup><sup>[↩ Parent](#k8ssandraclusterspecreaper)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>enabled</b></td>
-        <td>boolean</td>
-        <td>
-          Enable/disable the HTTP management connection between Reaper and Cassandra. When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra and Reaper. In future, this will be true by default<br/>
-          <br/>
-            <i>Default</i>: false<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
 #### K8ssandraCluster.spec.reaper.initContainerImage
 <sup><sup>[↩ Parent](#k8ssandraclusterspecreaper)</sup></sup>
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -72941,9 +72837,9 @@ ReaperSpec defines the desired state of Reaper
         <td><b><a href="#reaperspeccontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -72966,21 +72862,12 @@ ReaperSpec defines the desired state of Reaper
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#reaperspechttpmanagement">httpManagement</a></b></td>
-        <td>object</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Default</i>: map[enabled:false]<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#reaperspecinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:7162ea3]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.3.4]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -74751,7 +74638,7 @@ ref to the secret that contains the truststore password if password stored in di
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
@@ -74841,41 +74728,12 @@ The secret to use when pulling the image from private repositories. If specified
 </table>
 
 
-#### Reaper.spec.httpManagement
-<sup><sup>[↩ Parent](#reaperspec)</sup></sup>
-
-
-
-
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>enabled</b></td>
-        <td>boolean</td>
-        <td>
-          Enable/disable the HTTP management connection between Reaper and Cassandra. When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra and Reaper. In future, this will be true by default<br/>
-          <br/>
-            <i>Default</i>: false<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
 #### Reaper.spec.initContainerImage
 <sup><sup>[↩ Parent](#reaperspec)</sup></sup>
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:7162ea3". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.3.4".
 
 <table>
     <thead>
