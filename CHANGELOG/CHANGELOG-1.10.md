@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.10.1 - 2023-10-27
+
 * [BUGFIX] [#1109](https://github.com/k8ssandra/k8ssandra-operator/issues/1109) Correctly configure the cr.k8ssandra.io registry
 
 ## v1.10.0 - 2023-10-26
