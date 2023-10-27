@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1109](https://github.com/k8ssandra/k8ssandra-operator/issues/1109) Correctly configure the cr.k8ssandra.io registry
+
 ## v1.10.0 - 2023-10-26
 
 * [CHANGE] [#1072](https://github.com/k8ssandra/k8ssandra-operator/issues/1072) Add settings to configure reaper HTTP management interface
