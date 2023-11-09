@@ -19,6 +19,9 @@ package control
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/go-logr/logr"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -40,8 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -218,7 +219,7 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 	// If the K8ssandraCluster was deleted, the CassandraDatacenters and CassandraTasks will be deleted automatically.
 	// If the spec was invalid, we didn't create the CassandraTasks in the first place.
 	if !kcExists ||
-		kTask.GetConditionStatus(api.JobInvalid) == corev1.ConditionTrue {
+		kTask.GetConditionStatus(api.JobInvalid) == metav1.ConditionTrue {
 		return nil
 	}
 
@@ -344,7 +345,7 @@ func (r *K8ssandraTaskReconciler) reportInvalidSpec(
 	r.Recorder.Event(kTask, "Warning", "InvalidSpec", fmt.Sprintf(format, arguments...))
 
 	patch := client.MergeFrom(kTask.DeepCopy())
-	kTask.SetCondition(api.JobInvalid, corev1.ConditionTrue)
+	kTask.SetCondition(api.JobInvalid, metav1.ConditionTrue)
 	err := r.Status().Patch(ctx, kTask, patch)
 	return ctrl.Result{}, err
 }

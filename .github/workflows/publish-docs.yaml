@@ -5,7 +5,7 @@ on:
     tags:
       - 'docs-v*.*.*'
       - 'docs-v*.*.*-*'
-      - 'v*.*.*'
+      - 'v*.*.0'
 
 jobs:
   build_and_publish:

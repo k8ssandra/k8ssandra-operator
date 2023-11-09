@@ -27,7 +27,8 @@ const (
 
 func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
+	err := f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
+	require.NoError(err)
 	k8sCtx0 := f.DataPlaneContexts[0]
 
 	kc := &k8ss.K8ssandraCluster{
@@ -73,8 +74,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	}
 
 	t.Log("Creating k8ssandracluster with Medusa")
-	err := f.Client.Create(ctx, kc)
-	require.NoError(err, "failed to create K8ssandraCluster")
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
 	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "real-dc1", f.DataPlaneContexts[0])
@@ -298,7 +298,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 
 func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
-	f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
+	require.NoError(f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace)))
 	k8sCtx0 := f.DataPlaneContexts[0]
 
 	kc := &k8ss.K8ssandraCluster{
@@ -572,7 +572,7 @@ func NewMedusaClientRestoreFactory() *fakeMedusaRestoreClientFactory {
 	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
 }
 
-func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Client, error) {
+func (f *fakeMedusaRestoreClientFactory) NewClient(ctx context.Context, address string) (medusa.Client, error) {
 	f.clientsMutex.Lock()
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]

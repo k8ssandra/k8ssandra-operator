@@ -19,6 +19,21 @@ spec:
           limits:
             cpu: 100m
             memory: 512Mi
+  stargate:
+    size: 1
+    heapSize: 384Mi
+    livenessProbe:
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      failureThreshold: 20
+      successThreshold: 1
+      timeoutSeconds: 20
   cassandra:
     serverVersion: "3.11.14"
     jmxInitContainerImage:

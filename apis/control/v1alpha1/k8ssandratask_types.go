@@ -118,13 +118,13 @@ func (t *K8ssandraTask) RefreshGlobalStatus(expectedDcCount int) {
 		totalActive += dcStatus.Active
 		totalSucceeded += dcStatus.Succeeded
 		totalFailed += dcStatus.Failed
-		if getConditionStatus(dcStatus, cassapi.JobRunning) == corev1.ConditionTrue {
+		if getConditionStatus(dcStatus, cassapi.JobRunning) == metav1.ConditionTrue {
 			anyRunning = true
 		}
-		if getConditionStatus(dcStatus, cassapi.JobFailed) == corev1.ConditionTrue {
+		if getConditionStatus(dcStatus, cassapi.JobFailed) == metav1.ConditionTrue {
 			anyFailed = true
 		}
-		if getConditionStatus(dcStatus, cassapi.JobComplete) != corev1.ConditionTrue {
+		if getConditionStatus(dcStatus, cassapi.JobComplete) != metav1.ConditionTrue {
 			allComplete = false
 		}
 	}
@@ -137,15 +137,15 @@ func (t *K8ssandraTask) RefreshGlobalStatus(expectedDcCount int) {
 	t.SetCondition(cassapi.JobFailed, toConditionStatus(anyFailed))
 	if allComplete && len(t.Status.Datacenters) == expectedDcCount {
 		t.Status.CompletionTime = lastCompletionTime
-		t.SetCondition(cassapi.JobComplete, corev1.ConditionTrue)
+		t.SetCondition(cassapi.JobComplete, metav1.ConditionTrue)
 	}
 }
 
-func (t *K8ssandraTask) SetCondition(condition cassapi.JobConditionType, status corev1.ConditionStatus) bool {
+func (t *K8ssandraTask) SetCondition(condition cassapi.JobConditionType, status metav1.ConditionStatus) bool {
 	existing := false
 	for i := 0; i < len(t.Status.Conditions); i++ {
 		cond := t.Status.Conditions[i]
-		if cond.Type == condition {
+		if cond.Type == string(condition) {
 			if cond.Status == status {
 				// Already correct status
 				return false
@@ -159,8 +159,9 @@ func (t *K8ssandraTask) SetCondition(condition cassapi.JobConditionType, status 
 	}
 
 	if !existing {
-		cond := cassapi.JobCondition{
-			Type:               condition,
+		cond := metav1.Condition{
+			Type:               string(condition),
+			Reason:             string(condition),
 			Status:             status,
 			LastTransitionTime: metav1.Now(),
 		}
@@ -170,22 +171,22 @@ func (t *K8ssandraTask) SetCondition(condition cassapi.JobConditionType, status 
 	return true
 }
 
-func (t *K8ssandraTask) GetConditionStatus(conditionType cassapi.JobConditionType) corev1.ConditionStatus {
+func (t *K8ssandraTask) GetConditionStatus(conditionType cassapi.JobConditionType) metav1.ConditionStatus {
 	for _, condition := range t.Status.Conditions {
-		if condition.Type == conditionType {
+		if condition.Type == string(conditionType) {
 			return condition.Status
 		}
 	}
-	return corev1.ConditionUnknown
+	return metav1.ConditionUnknown
 }
 
-func getConditionStatus(s cassapi.CassandraTaskStatus, conditionType cassapi.JobConditionType) corev1.ConditionStatus {
+func getConditionStatus(s cassapi.CassandraTaskStatus, conditionType cassapi.JobConditionType) metav1.ConditionStatus {
 	for _, condition := range s.Conditions {
-		if condition.Type == conditionType {
+		if condition.Type == string(conditionType) {
 			return condition.Status
 		}
 	}
-	return corev1.ConditionUnknown
+	return metav1.ConditionUnknown
 }
 
 func init() {
@@ -193,9 +194,9 @@ func init() {
 }
 
 // toConditionStatus converts a primitive boolean into a k8s ConditionStatus
-func toConditionStatus(condition bool) corev1.ConditionStatus {
+func toConditionStatus(condition bool) metav1.ConditionStatus {
 	if condition {
-		return corev1.ConditionTrue
+		return metav1.ConditionTrue
 	}
-	return corev1.ConditionFalse
+	return metav1.ConditionFalse
 }

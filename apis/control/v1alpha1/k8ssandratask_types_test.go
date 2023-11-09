@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	controlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -15,7 +14,7 @@ func TestRefreshGlobalStatus(t *testing.T) {
 	dcMap := generateDatacenters()
 
 	kts := K8ssandraTaskStatus{
-		CassandraTaskStatus: v1alpha1.CassandraTaskStatus{},
+		CassandraTaskStatus: controlapi.CassandraTaskStatus{},
 		Datacenters:         dcMap,
 	}
 	kt := K8ssandraTask{
@@ -26,14 +25,14 @@ func TestRefreshGlobalStatus(t *testing.T) {
 	assert.Equal(t, 1, kt.Status.Failed)
 	assert.Equal(t, 1, kt.Status.Succeeded)
 	assert.Equal(t, 0, kt.Status.StartTime.Compare(time.Date(2023, 6, 10, 10, 10, 10, 10, time.UTC)))
-	assert.Equal(t, v1.ConditionTrue, kt.GetConditionStatus(v1alpha1.JobRunning))
-	assert.Equal(t, v1.ConditionTrue, kt.GetConditionStatus(v1alpha1.JobFailed))
+	assert.Equal(t, metav1.ConditionTrue, kt.GetConditionStatus(controlapi.JobRunning))
+	assert.Equal(t, metav1.ConditionTrue, kt.GetConditionStatus(controlapi.JobFailed))
 	// the test data does not have a completion time, so it should be Unknown
-	assert.Equal(t, v1.ConditionUnknown, kt.GetConditionStatus(v1alpha1.JobComplete))
+	assert.Equal(t, metav1.ConditionUnknown, kt.GetConditionStatus(controlapi.JobComplete))
 }
 
-func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
-	return map[string]v1alpha1.CassandraTaskStatus{
+func generateDatacenters() map[string]controlapi.CassandraTaskStatus {
+	return map[string]controlapi.CassandraTaskStatus{
 		"dc1": {
 			StartTime: &metav1.Time{
 				Time: time.Date(2023, 6, 13, 13, 13, 13, 13, time.UTC),
@@ -44,10 +43,10 @@ func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 			Active:    1,
 			Succeeded: 1,
 			Failed:    0,
-			Conditions: []v1alpha1.JobCondition{
+			Conditions: []metav1.Condition{
 				{
-					Type:   v1alpha1.JobComplete,
-					Status: v1.ConditionTrue,
+					Type:   string(controlapi.JobComplete),
+					Status: metav1.ConditionTrue,
 				},
 			},
 		},
@@ -61,10 +60,10 @@ func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 			Active:    0,
 			Succeeded: 0,
 			Failed:    1,
-			Conditions: []v1alpha1.JobCondition{
+			Conditions: []metav1.Condition{
 				{
-					Type:   v1alpha1.JobFailed,
-					Status: v1.ConditionTrue,
+					Type:   string(controlapi.JobFailed),
+					Status: metav1.ConditionTrue,
 				},
 			},
 		},
@@ -76,10 +75,10 @@ func generateDatacenters() map[string]v1alpha1.CassandraTaskStatus {
 			Active:         1,
 			Succeeded:      0,
 			Failed:         0,
-			Conditions: []v1alpha1.JobCondition{
+			Conditions: []metav1.Condition{
 				{
-					Type:   v1alpha1.JobRunning,
-					Status: v1.ConditionTrue,
+					Type:   string(controlapi.JobRunning),
+					Status: metav1.ConditionTrue,
 				},
 			},
 		},

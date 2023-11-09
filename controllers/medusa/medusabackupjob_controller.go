@@ -297,7 +297,7 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (string, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return "", err
 	} else {
 		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name, "Address", addr)
@@ -314,7 +314,7 @@ func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupTy
 func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (medusa.StatusType, error) {
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return medusa.StatusType_UNKNOWN, err
 	} else {
 		resp, err := medusaClient.BackupStatus(ctx, name)

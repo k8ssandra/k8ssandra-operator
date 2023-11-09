@@ -41,7 +41,8 @@ func TestScheduler(t *testing.T) {
 			},
 		},
 	}
-	medusav1alpha1.AddToScheme(scheme.Scheme)
+	err := medusav1alpha1.AddToScheme(scheme.Scheme)
+	require.NoError(err)
 
 	fakeClient := fake.NewClientBuilder().
 		WithRuntimeObjects(backupSchedule).
@@ -163,7 +164,8 @@ func TestSchedulerParseError(t *testing.T) {
 			},
 		},
 	}
-	medusav1alpha1.AddToScheme(scheme.Scheme)
+	err := medusav1alpha1.AddToScheme(scheme.Scheme)
+	require.NoError(err)
 
 	fakeClient := fake.NewClientBuilder().
 		WithRuntimeObjects(backupSchedule).
@@ -183,6 +185,6 @@ func TestSchedulerParseError(t *testing.T) {
 		Namespace: backupSchedule.Namespace,
 	}
 
-	_, err := r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
 	require.Error(err)
 }

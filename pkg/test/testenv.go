@@ -45,7 +45,7 @@ import (
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d-%s"
-	cassOperatorVersion       = "v1.17.2"
+	cassOperatorVersion       = "v1.18.1"
 	prometheusOperatorVersion = "v0.9.0"
 )
 
@@ -99,6 +99,9 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 
 	e.TestClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	if err != nil {
+		return err
+	}
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
 	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
@@ -294,9 +297,9 @@ func (e *MultiClusterTestEnv) GetDataPlaneEnvTests() []*envtest.Environment {
 type ControllerTest func(*testing.T, context.Context, *framework.Framework, string)
 
 func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test ControllerTest) func(*testing.T) {
-	namespace := "ns-" + framework.CleanupForKubernetes(rand.String(9))
-
 	return func(t *testing.T) {
+		namespace := "ns-" + framework.CleanupForKubernetes(rand.String(9))
+
 		f := framework.NewFramework(e.Clients[e.controlPlane], e.controlPlane, e.dataPlanes, e.Clients)
 
 		if err := f.CreateNamespace(namespace); err != nil {

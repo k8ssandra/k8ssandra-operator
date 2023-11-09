@@ -117,7 +117,7 @@ timeout_ms = 10000
 	}
 
 	metricsInput := telemetry.VectorSourceSpec{
-		Name:   "cassandra_metrics",
+		Name:   "cassandra_metrics_raw",
 		Type:   "prometheus_scrape",
 		Config: fmt.Sprintf("endpoints = [ \"http://localhost:%v%s\" ]\nscrape_interval_secs = %v", config.ScrapePort, config.ScrapeEndpoint, config.ScrapeInterval),
 	}
@@ -157,11 +157,31 @@ rack, err = get_env_var("RACK_NAME")
 if err == null {
   .rack = rack
 }
+namespace, err = get_env_var("NAMESPACE")
+if err == null {
+  .namespace = namespace
+}
 '''
 `,
 	}
 
 	transformers = append(transformers, systemLogParser)
+
+	// Add the namespace label to the Cassandra metrics
+	metricsParser := telemetry.VectorTransformSpec{
+		Name:   "cassandra_metrics",
+		Type:   "remap",
+		Inputs: []string{"cassandra_metrics_raw"},
+		Config: `source = '''
+namespace, err = get_env_var("NAMESPACE")
+if err == null {
+  .tags.namespace = namespace
+}
+'''
+`,
+	}
+
+	transformers = append(transformers, metricsParser)
 
 	systemLogSink := telemetry.VectorSinkSpec{
 		Name:   "console_log",

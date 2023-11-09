@@ -42,17 +42,12 @@ The following content will be added automatically to the vector.toml file:
 type = "file"
 include = [ "/var/log/cassandra/system.log" ]
 read_from = "beginning"
-fingerprint.strategy = "device_and_inode
+fingerprint.strategy = "device_and_inode"
 [sources.systemlog.multiline]
 start_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
 condition_pattern = "^(INFO|WARN|ERROR|DEBUG|TRACE|FATAL)"
 mode = "halt_before"
 timeout_ms = 10000
-
-[sources.cassandra_metrics]
-type = "prometheus_scrape"
-endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
-scrape_interval_secs = {{ .ScrapeInterval }}
 
 [transforms.parse_cassandra_log]
 type = "remap"
@@ -61,38 +56,44 @@ source = '''
 del(.source_type)
 . |= parse_groks!(.message, patterns: [
   "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
-  ]
-)
-pod_name, err = get_env_var("POD_NAME")
-if err == null {
-  .pod_name = pod_name
 
-node_name, err = get_env_var("NODE_NAME")
-if err == null {
-  .node_name = node_name
+[sources.cassandra_metrics_raw]
+type = "prometheus_scrape"
+endpoints = [ "http://localhost:{{ .ScrapePort }}" ]
+scrape_interval_secs = {{ .ScrapeInterval }}
 
-cluster, err = get_env_var("CLUSTER_NAME")
+[transforms.cassandra_metrics]
+type = "remap"
+inputs = ["cassandra_metrics_raw"]
+source = '''
+namespace, err = get_env_var("NAMESPACE")
 if err == null {
-  .cluster = cluster
-
-datacenter, err = get_env_var("DATACENTER_NAME")
-if err == null {
-  .datacenter = datacenter
-
-rack, err = get_env_var("RACK_NAME")
-if err == null {
-  .rack = rack
+  .namespace = namespace
 }
 '''
 
-[sinks.console]
+
+[sinks.console_output]
+type = "console"
+inputs = ["cassandra_metrics"]
+target = "stdout"
+[sinks.console_output.encoding]
+codec = "json"    
+
+
+[sinks.prometheus]
+type = "prometheus_exporter"
+inputs = ["cassandra_metrics"]
+
+[sinks.console_log]
 type = "console"
 inputs = ["systemlog"]
 target = "stdout"
 encoding.codec = "text"
 ```
 
-The default options are always added to the configuration, but one may override them and if not used, they're automatically cleaned up (see next section).
+The default options are always added to the configuration, but one may override them and if not used, they're automatically cleaned up (see next section).  
+The `cassandra_metrics` transform adds the namespace of the datacenter to the exposed metrics and should be used as the input for any transform or sink that would modify or route the metrics to a remote system.
 
 ## Automated cleanup of unused sources
 
@@ -104,6 +105,9 @@ Metrics sources are predefined in the Vector configuration for Cassandra, Reaper
 They can be used as input in custom components added through configuration.
 
 `systemlog` input is defined as the default source for Cassandra logs.
+
+We provide the `parse_cassandra_log` transform out of the box because it's likely to be a common need for users who ship the logs to a remote system such as Grafana Loki; however by default we don't use it and will be filtered out unless it's referenced by a custom transform/sink.
+This transform will parse the Cassandra logs and extract the log level, thread, timestamp, class, line and message fields. It will also remove the `source_type` field which is added by the `systemlog` source.
 
 ## Custom Vector configuration
 

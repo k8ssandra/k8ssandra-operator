@@ -24,7 +24,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.2.1"
+	DefaultVersion         = "3.4.0"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 
@@ -150,6 +150,12 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_HEAP_SIZE",
 			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
+		})
+	}
+	if reaper.Spec.HttpManagement.Enabled != nil && *reaper.Spec.HttpManagement.Enabled {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+			Value: "true",
 		})
 	}
 

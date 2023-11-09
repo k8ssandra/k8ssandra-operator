@@ -220,10 +220,21 @@ mode = "halt_before"
 timeout_ms = 10000
 
 
-[sources.cassandra_metrics]
+[sources.cassandra_metrics_raw]
 type = "prometheus_scrape"
 endpoints = [ "http://localhost:9000/metrics" ]
 scrape_interval_secs = 30
+
+[transforms.cassandra_metrics]
+type = "remap"
+inputs = ["cassandra_metrics_raw"]
+source = '''
+namespace, err = get_env_var("NAMESPACE")
+if err == null {
+  .tags.namespace = namespace
+}
+'''
+
 
 [sinks.console]
 type = "console"
@@ -246,7 +257,7 @@ func TestDefaultRemoveUnusedSources(t *testing.T) {
 	assert := assert.New(t)
 	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
 	assert.Equal(2, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
 
 	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
@@ -260,7 +271,7 @@ func TestRemoveUnusedSourcesModified(t *testing.T) {
 	assert := assert.New(t)
 	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
 	assert.Equal(2, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
 
 	sinks = append(sinks, telemetry.VectorSinkSpec{Name: "a", Inputs: []string{"cassandra_metrics"}})
@@ -268,7 +279,7 @@ func TestRemoveUnusedSourcesModified(t *testing.T) {
 	sources, transformers, sinks = FilterUnusedPipelines(sources, transformers, sinks)
 
 	assert.Equal(2, len(sources))
-	assert.Equal(0, len(transformers))
+	assert.Equal(1, len(transformers))
 	assert.Equal(2, len(sinks))
 }
 
@@ -335,7 +346,7 @@ func TestOverrideSourcePossible(t *testing.T) {
 	assert := assert.New(t)
 	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
 	assert.Equal(2, len(sources))
-	assert.Equal(1, len(transformers))
+	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
 
 	newSources := []telemetry.VectorSourceSpec{

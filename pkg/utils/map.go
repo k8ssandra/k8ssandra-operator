@@ -7,10 +7,8 @@ import "fmt"
 func MergeMap(sources ...map[string]string) map[string]string {
 	destination := make(map[string]string, 0)
 	for _, source := range sources {
-		if source != nil {
-			for k, v := range source {
-				destination[k] = v
-			}
+		for k, v := range source {
+			destination[k] = v
 		}
 	}
 	return destination
@@ -24,26 +22,24 @@ func MergeMap(sources ...map[string]string) map[string]string {
 func MergeMapNested(allowOverwrite bool, sources ...map[string]interface{}) (map[string]interface{}, error) {
 	destination := make(map[string]interface{}, 0)
 	for _, source := range sources {
-		if source != nil {
-			for k, sourceVal := range source {
-				destVal, destValFound := destination[k]
-				if destValFound {
-					sourceMap, sourceValIsMap := sourceVal.(map[string]interface{})
-					destMap, destValIsMap := destVal.(map[string]interface{})
-					if sourceValIsMap && destValIsMap {
-						if merged, err := MergeMapNested(allowOverwrite, destMap, sourceMap); err != nil {
-							return nil, err
-						} else {
-							destination[k] = merged
-						}
-					} else if allowOverwrite || destVal == nil {
-						destination[k] = sourceVal
+		for k, sourceVal := range source {
+			destVal, destValFound := destination[k]
+			if destValFound {
+				sourceMap, sourceValIsMap := sourceVal.(map[string]interface{})
+				destMap, destValIsMap := destVal.(map[string]interface{})
+				if sourceValIsMap && destValIsMap {
+					if merged, err := MergeMapNested(allowOverwrite, destMap, sourceMap); err != nil {
+						return nil, err
 					} else {
-						return nil, fmt.Errorf("key %v already exists", k)
+						destination[k] = merged
 					}
-				} else {
+				} else if allowOverwrite || destVal == nil {
 					destination[k] = sourceVal
+				} else {
+					return nil, fmt.Errorf("key %v already exists", k)
 				}
+			} else {
+				destination[k] = sourceVal
 			}
 		}
 	}

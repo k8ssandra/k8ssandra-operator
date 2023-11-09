@@ -124,20 +124,28 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=k8ssandra-operator webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+.PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
+.PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: lint
+lint: golangci-lint ## Run golangci-lint against code.
+	$(GOLANGCI_LINT) run ./...
+
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate fmt vet lint envtest ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -covermode=atomic -coverprofile coverage.out
@@ -273,7 +281,8 @@ create-kind-multicluster:
 	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 kind-load-image:
-	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
+	docker tag ${IMG} cr.k8ssandra.io/${IMG}
+	kind load docker-image --name $(KIND_CLUSTER) cr.k8ssandra.io/${IMG}
 
 kind-load-image-multi:
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
@@ -310,11 +319,13 @@ $(LOCALBIN):
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
 
 ## Tool Versions
-CERT_MANAGER_VERSION ?= v1.9.1
-KUSTOMIZE_VERSION ?= v4.5.7
-CONTROLLER_TOOLS_VERSION ?= v0.11.4
+CERT_MANAGER_VERSION ?= v1.12.2
+KUSTOMIZE_VERSION ?= v5.0.3
+CONTROLLER_TOOLS_VERSION ?= v0.12.0
+GOLINT_VERSION ?= 1.55.0
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
@@ -370,17 +381,29 @@ create-clientconfig:
 		  --dest-context kind-k8ssandra-0; \
 	done
 
-
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
+	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
+		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/kustomize; \
+	fi
 	test -s $(LOCALBIN)/kustomize || { curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: golangci-lint
+golangci-lint:
+	@if test -x $(LOCALBIN)/golangci-lint && ! $(LOCALBIN)/golangci-lint version | grep -q $(GOLINT_VERSION); then \
+		echo "$(LOCALBIN)/golangci-lint version is not expected $(GOLINT_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/golangci-lint; \
+	fi
+	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLINT_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.

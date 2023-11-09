@@ -473,7 +473,10 @@ func testCreateReaperWithAuthEnabledExternalSecret(t *testing.T, ctx context.Con
 	// these shouldn't be set when SecretsProvider=='external', but verifying
 	// the env vars aren't created even if they are set
 	rpr.Spec.CassandraUserSecretRef.Name = "top-secret-cass"
-	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx"
+
+	//lint:ignore SA1019 Verify deprecated method is ineffective
+	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx" //nolint:staticcheck
+
 	rpr.Spec.UiUserSecretRef.Name = "top-secret-ui"
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)

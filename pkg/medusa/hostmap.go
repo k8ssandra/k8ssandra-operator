@@ -18,11 +18,6 @@ type HostMapping struct {
 }
 type HostMappingSlice []HostMapping
 
-type mappable interface {
-	ToSourceTargetMap() map[string]string
-	ToTargetSourceMap() map[string]string
-}
-
 // Transform HostMappingSlice into a map with source IPs as keys and Target IPs as values.
 func (m HostMappingSlice) ToSourceTargetMap() map[string]string {
 	out := make(map[string]string)
@@ -139,11 +134,13 @@ func sortLocations(m map[NodeLocation][]string) []rack {
 			Rack: k,
 			DC:   DC,
 		}
+		nodes := m[loc]
+		sort.Strings(nodes)
 		out = append(out,
 			rack{
 				Location: loc,
 				Size:     len(m[loc]),
-				Nodes:    m[loc],
+				Nodes:    nodes,
 			},
 		)
 	}
@@ -187,7 +184,7 @@ func GetHostMap(cassDC *cassdcapi.CassandraDatacenter, k8sbackup medusaapi.Medus
 	sortedSource := sortLocations(sourceRacks)
 	sortedDests := sortLocations(destRacks)
 	if len(sortedDests) != len(sortedSource) {
-		return nil, errors.New(fmt.Sprintf("number of racks in source != racks in destination. Source: %v, Dest: %v", sortedSource, sortedDests))
+		return nil, fmt.Errorf("number of racks in source != racks in destination. Source: %v, Dest: %v", sortedSource, sortedDests)
 	}
 	out := HostMappingSlice{}
 	for i, sourceRack := range sortedSource {

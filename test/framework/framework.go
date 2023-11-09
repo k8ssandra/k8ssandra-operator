@@ -132,8 +132,7 @@ func NewClusterKey(context, namespace, name string) ClusterKey {
 }
 
 func NewFramework(client client.Client, controlPlaneContext string, dataPlaneContexts []string, remoteClients map[string]client.Client) *Framework {
-	var log logr.Logger
-	log = logrusr.New(logrus.New())
+	log := logrusr.New(logrus.New())
 	terratestlogger.Default = terratestlogger.New(&terratestLoggerBridge{logger: log})
 	return &Framework{
 		Client:              client,
@@ -462,7 +461,7 @@ func (f *Framework) PatchCassandraTaskStatus(ctx context.Context, key ClusterKey
 // remote clusters.
 func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval time.Duration) error {
 	if len(key.K8sContext) == 0 {
-		for k8sContext, _ := range f.remoteClients {
+		for k8sContext := range f.remoteClients {
 			opts := kubectl.Options{Namespace: key.Namespace, Context: k8sContext}
 			err := wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
 				if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {

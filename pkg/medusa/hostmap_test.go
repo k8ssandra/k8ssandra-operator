@@ -18,34 +18,34 @@ func (client mockgRPCClient) GetBackups(ctx context.Context) ([]*BackupSummary, 
 			BackupName: "remote-backupname",
 			Nodes: []*BackupNode{
 				{
-					Host:       "192.168.1.2",
+					Host:       "test-cluster-test-dc1-default-sts-0",
 					Datacenter: "test-dc1",
 					Rack:       "default",
 				},
 				{
-					Host:       "192.168.1.3",
+					Host:       "test-cluster-test-dc1-default-sts-2",
 					Datacenter: "test-dc1",
 					Rack:       "default",
 				},
 				{
-					Host:       "192.168.1.4",
+					Host:       "test-cluster-test-dc1-default-sts-1",
 					Datacenter: "test-dc1",
 					Rack:       "default",
 				},
 				{
-					Host:       "192.168.1.5",
+					Host:       "test-cluster-test-dc2-test-rack1-sts-0",
 					Datacenter: "test-dc2",
 					Rack:       "test-rack1",
 				},
 				{
-					Host:       "192.168.1.6",
-					Datacenter: "test-dc2",
-					Rack:       "test-rack2",
-				},
-				{
-					Host:       "192.168.1.7",
+					Host:       "test-cluster-test-dc2-test-rack3-sts-0",
 					Datacenter: "test-dc2",
 					Rack:       "test-rack3",
+				},
+				{
+					Host:       "test-cluster-test-dc2-test-rack2-sts-0",
+					Datacenter: "test-dc2",
+					Rack:       "test-rack2",
 				},
 			},
 		},
@@ -79,9 +79,9 @@ func TestGetSourceRacksIPs(t *testing.T) {
 	sourceRacks, err := getSourceRacksIPs(*medusaBackup, mockgRPCClient, ctx, "test-dc2")
 	assert.NoError(t, err, err)
 	expectedSourceRacks := map[NodeLocation][]string{
-		{Rack: "test-rack1", DC: "test-dc2"}: {"192.168.1.5"},
-		{Rack: "test-rack2", DC: "test-dc2"}: {"192.168.1.6"},
-		{Rack: "test-rack3", DC: "test-dc2"}: {"192.168.1.7"},
+		{Rack: "test-rack1", DC: "test-dc2"}: {"test-cluster-test-dc2-test-rack1-sts-0"},
+		{Rack: "test-rack2", DC: "test-dc2"}: {"test-cluster-test-dc2-test-rack2-sts-0"},
+		{Rack: "test-rack3", DC: "test-dc2"}: {"test-cluster-test-dc2-test-rack3-sts-0"},
 	}
 	assert.Equal(t, expectedSourceRacks, sourceRacks)
 }
@@ -176,15 +176,15 @@ func TestGetHostMap(t *testing.T) {
 	assert.NoError(t, err, err)
 	expected := HostMappingSlice{
 		{
-			Source: "192.168.1.2",
+			Source: "test-cluster-test-dc1-default-sts-0",
 			Target: "test-cluster-test-dc1-default-sts-0",
 		},
 		{
-			Source: "192.168.1.3",
+			Source: "test-cluster-test-dc1-default-sts-1",
 			Target: "test-cluster-test-dc1-default-sts-1",
 		},
 		{
-			Source: "192.168.1.4",
+			Source: "test-cluster-test-dc1-default-sts-2",
 			Target: "test-cluster-test-dc1-default-sts-2",
 		},
 	}
@@ -201,15 +201,15 @@ func TestGetHostMap(t *testing.T) {
 	cassDc.ObjectMeta.Name = "test-dc2"
 	expected = HostMappingSlice{
 		{
-			Source: "192.168.1.5",
+			Source: "test-cluster-test-dc2-test-rack1-sts-0",
 			Target: "test-cluster-test-dc2-rack1-sts-0",
 		},
 		{
-			Source: "192.168.1.6",
+			Source: "test-cluster-test-dc2-test-rack2-sts-0",
 			Target: "test-cluster-test-dc2-rack2-sts-0",
 		},
 		{
-			Source: "192.168.1.7",
+			Source: "test-cluster-test-dc2-test-rack3-sts-0",
 			Target: "test-cluster-test-dc2-rack3-sts-0",
 		},
 	}
@@ -231,6 +231,6 @@ func Test_HostMappingSlice_IsInPlace(t *testing.T) {
 	s = HostMappingSlice{
 		{Source: "1", Target: ""},
 	}
-	res, err = s.IsInPlace()
+	_, err = s.IsInPlace()
 	assert.Error(t, err, err)
 }

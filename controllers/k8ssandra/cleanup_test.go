@@ -7,6 +7,7 @@ import (
 	testlogr "github.com/go-logr/logr/testing"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,7 +18,7 @@ import (
 )
 
 func TestK8ssandraClusterReconciler_DeleteServices(t *testing.T) {
-	k8sMock := fake.NewFakeClient()
+	k8sMock := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	ctx := context.Background()
 	logger := testlogr.NewTestLogger(t)
 
@@ -38,7 +39,7 @@ func TestK8ssandraClusterReconciler_DeleteServices(t *testing.T) {
 		},
 	}
 
-	k8sMock.Create(ctx, service)
+	require.NoError(t, k8sMock.Create(ctx, service))
 
 	res := K8ssandraClusterReconciler{
 		Client: k8sMock,
@@ -46,20 +47,15 @@ func TestK8ssandraClusterReconciler_DeleteServices(t *testing.T) {
 	}
 
 	hasError := res.deleteServices(ctx, kc, k8ssandraapi.CassandraDatacenterTemplate{}, namespace, k8sMock, logger)
-
-	if hasError != false {
-		t.Errorf("Error while deleting services")
-	}
+	require.False(t, hasError, "Error while deleting services")
 
 	err := k8sMock.Get(ctx, client.ObjectKeyFromObject(service), service)
-	if err == nil || !errors.IsNotFound(err) {
-		t.Errorf("Service was not deleted: %v", err)
-	}
-
+	require.Error(t, err)
+	require.True(t, errors.IsNotFound(err))
 }
 
 func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
-	k8sMock := fake.NewFakeClient()
+	k8sMock := fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 	ctx := context.Background()
 	logger := testlogr.NewTestLogger(t)
 
@@ -80,7 +76,7 @@ func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
 		},
 	}
 
-	k8sMock.Create(ctx, deployment)
+	require.NoError(t, k8sMock.Create(ctx, deployment))
 
 	res := K8ssandraClusterReconciler{
 		Client: k8sMock,
