@@ -20,7 +20,7 @@ spec:
             cpu: 100m
             memory: 512Mi
   cassandra:
-    serverVersion: "3.11.14"
+    serverVersion: "4.1.2"
     jmxInitContainerImage:
       repository: library
       name: busybox

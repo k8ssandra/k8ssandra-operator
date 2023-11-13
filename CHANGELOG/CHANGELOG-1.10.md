@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#1110](https://github.com/k8ssandra/k8ssandra-operator/issues/1110) Fix cluster name being set to "Test Cluster" when running Cassandra 4.1+
+* [CHANGE] Update to cass-operator v1.18.2
 
 ## v1.10.2 - 2023-10-30
 
