@@ -79,7 +79,7 @@ jobs:
         e2e_test:
           - CreateSingleDatacenterCluster
           - CreateStargateAndDatacenter
-          - CreateSingleReaper
+          - CreateSingleReaperNoHttp
           - CreateSingleReaperWStargateAndHTTP
           - CreateReaperAndDatacenter
           - CreateSingleMedusaJob

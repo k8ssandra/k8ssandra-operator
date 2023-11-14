@@ -246,7 +246,7 @@ func TestOperator(t *testing.T) {
 		testFunc: checkStargateApisWithMultiDcCluster,
 		fixture:  framework.NewTestFixture("multi-dc-stargate", controlPlane),
 	}))
-	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
+	t.Run("CreateSingleReaperNoHttp", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleReaper,
 		fixture:                      framework.NewTestFixture("single-dc-reaper", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
