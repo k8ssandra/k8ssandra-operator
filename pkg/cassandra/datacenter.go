@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -505,6 +506,11 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 	actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
 	if err != nil {
 		return err
+	}
+
+	// Skip validation if upgrading from 3.x to 4.x, num_tokens defaults were changed
+	if strings.HasPrefix(actualDc.Spec.ServerVersion, "3.") && strings.HasPrefix(desiredDc.Spec.ServerVersion, "4.") {
+		return nil
 	}
 
 	actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
