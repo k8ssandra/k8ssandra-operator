@@ -144,6 +144,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("StorageConfigValidation", testStorageConfigValidation)
 	t.Run("NumTokensValidation", testNumTokens)
 	t.Run("NumTokensValidationInUpdate", testNumTokensInUpdate)
+	t.Run("StsNameTooLong", testStsNameTooLong)
 }
 
 func testContextValidation(t *testing.T) {
@@ -337,6 +338,15 @@ func testNumTokens(t *testing.T) {
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
 }
 
+func testStsNameTooLong(t *testing.T) {
+	required := require.New(t)
+	createNamespace(required, "too-long-namespace")
+	cluster := createMinimalClusterObj("create-very-long-cluster-name-which-will-overflow-our-limit", "too-long-namespace")
+
+	err := k8sClient.Create(ctx, cluster)
+	required.Error(err)
+}
+
 func createNamespace(require *require.Assertions, namespace string) {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -386,6 +396,9 @@ func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
 				},
 				Datacenters: []CassandraDatacenterTemplate{
 					{
+						Meta: EmbeddedObjectMeta{
+							Name: "dc1",
+						},
 						K8sContext: "envtest",
 						Size:       1,
 					},
