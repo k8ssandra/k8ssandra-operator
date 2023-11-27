@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -524,3 +525,11 @@ const (
 	ServerDistributionCassandra = ServerDistribution("cassandra")
 	ServerDistributionDse       = ServerDistribution("dse")
 )
+
+func (cassConfig *CassandraConfig) defaultNumTokens(serverVersion *semver.Version) {
+	if serverVersion.Major() == 3 {
+		cassConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(256))
+	} else {
+		cassConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(16))
+	}
+}

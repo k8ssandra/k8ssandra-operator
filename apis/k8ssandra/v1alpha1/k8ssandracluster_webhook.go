@@ -120,6 +120,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	if oldCassConfig != nil {
 		oldNumTokens = oldCassConfig.CassandraYaml["num_tokens"]
 	}
+
 	if newCassConfig != nil {
 		newNumTokens = newCassConfig.CassandraYaml["num_tokens"]
 	}
