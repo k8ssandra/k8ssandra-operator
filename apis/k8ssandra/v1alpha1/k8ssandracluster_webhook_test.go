@@ -176,17 +176,6 @@ func testNumTokensInUpdate(t *testing.T) {
 	// This should be acceptable change, since 3.11.10 defaulted to 256 and so it is the same value
 	err = k8sClient.Update(ctx, cluster)
 	require.NoError(err)
-
-	// However, not setting the num_tokens, when the defaults have changed should be rejected - otherwise the cluster will reject the update
-	cluster2 := createMinimalClusterObj("numtokens-test-update-2", "numtokensupdate-namespace")
-	cluster2.Spec.Cassandra.ServerVersion = "3.11.10"
-	cluster2.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
-	err = k8sClient.Create(ctx, cluster2)
-	require.NoError(err)
-
-	cluster2.Spec.Cassandra.ServerVersion = "4.1.3"
-	err = k8sClient.Update(ctx, cluster2)
-	require.Error(err)
 }
 
 func testReaperKeyspaceValidation(t *testing.T) {

@@ -117,7 +117,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	if oldCassConfig != nil && newCassConfig != nil {
 		oldNumTokens, oldNumTokensExists := oldCassConfig.CassandraYaml["num_tokens"]
-		newNumTokens := newCassConfig.CassandraYaml["num_tokens"]
+		newNumTokens, newNumTokensExists := newCassConfig.CassandraYaml["num_tokens"]
 
 		if !oldNumTokensExists {
 			cassVersion, err := semver.NewVersion(oldCluster.Spec.Cassandra.ServerVersion)
@@ -125,7 +125,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 				return err
 			}
 			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
-			if int64(newNumTokens.(float64)) != defaultNumTokens {
+			if newNumTokensExists && int64(newNumTokens.(float64)) != defaultNumTokens {
 				return ErrNumTokens
 			}
 		} else {
