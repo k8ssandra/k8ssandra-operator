@@ -115,18 +115,20 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	oldCassConfig := oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
 
-	var oldNumTokens, newNumTokens interface{}
+	if oldCassConfig != nil && newCassConfig != nil {
+		oldNumTokens, oldNumTokensExists := oldCassConfig.CassandraYaml["num_tokens"]
+		newNumTokens, newNumTokensExists := newCassConfig.CassandraYaml["num_tokens"]
 
-	if oldCassConfig != nil {
-		oldNumTokens = oldCassConfig.CassandraYaml["num_tokens"]
-	}
+		if (oldNumTokensExists && newNumTokensExists) && oldNumTokens != newNumTokens {
+			return ErrNumTokens
+		}
 
-	if newCassConfig != nil {
-		newNumTokens = newCassConfig.CassandraYaml["num_tokens"]
-	}
-
-	if oldNumTokens != newNumTokens {
-		return ErrNumTokens
+		if !oldNumTokensExists {
+			defaultNumTokens := oldCluster.DefaultNumTokens()
+			if newCassConfig.CassandraYaml["num_tokens"] != defaultNumTokens {
+				return ErrNumTokens
+			}
+		}
 	}
 
 	// Verify that the cluster name override was not changed

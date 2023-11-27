@@ -526,10 +526,9 @@ const (
 	ServerDistributionDse       = ServerDistribution("dse")
 )
 
-func (cassConfig *CassandraConfig) defaultNumTokens(serverVersion *semver.Version) {
-	if serverVersion.Major() == 3 {
-		cassConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(256))
-	} else {
-		cassConfig.CassandraYaml.PutIfAbsent("num_tokens", int64(16))
+func (kc *K8ssandraCluster) DefaultNumTokens() int64 {
+	if kc.Spec.Cassandra.ServerType == ServerDistributionCassandra && semver.MustParse(kc.Spec.Cassandra.ServerVersion).Major() == 3 {
+		return int64(256)
 	}
+	return int64(16)
 }

@@ -143,6 +143,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("ReaperKeyspaceValidation", testReaperKeyspaceValidation)
 	t.Run("StorageConfigValidation", testStorageConfigValidation)
 	t.Run("NumTokensValidation", testNumTokens)
+	t.Run("NumTokensValidationInUpdate", testNumTokensInUpdate)
 }
 
 func testContextValidation(t *testing.T) {
@@ -157,6 +158,35 @@ func testContextValidation(t *testing.T) {
 	cluster.Spec.Cassandra.Datacenters[0].K8sContext = "wrong"
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
+}
+
+func testNumTokensInUpdate(t *testing.T) {
+	require := require.New(t)
+	createNamespace(require, "numtokensupdate-namespace")
+	cluster := createMinimalClusterObj("numtokens-test", "numtokensupdate-namespace")
+	cluster.Spec.Cassandra.ServerVersion = "3.11.10"
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
+	err := k8sClient.Create(ctx, cluster)
+	require.NoError(err)
+
+	// Now update to 4.1.3
+	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": 256}
+	cluster.Spec.Cassandra.ServerVersion = "4.1.3"
+
+	// This should be acceptable change, since 3.11.10 defaulted to 256 and so it is the same value
+	err = k8sClient.Update(ctx, cluster)
+	require.NoError(err)
+
+	// However, not setting the num_tokens, when the defaults have changed should be rejected - otherwise the cluster will reject the update
+	cluster2 := createMinimalClusterObj("numtokens-test", "numtokensupdate-namespace")
+	cluster2.Spec.Cassandra.ServerVersion = "3.11.10"
+	cluster2.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
+	err = k8sClient.Create(ctx, cluster2)
+	require.NoError(err)
+
+	cluster2.Spec.Cassandra.ServerVersion = "4.1.3"
+	err = k8sClient.Update(ctx, cluster2)
+	require.Error(err)
 }
 
 func testReaperKeyspaceValidation(t *testing.T) {
@@ -316,7 +346,6 @@ func testNumTokens(t *testing.T) {
 
 	errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
-
 }
 
 func createNamespace(require *require.Assertions, namespace string) {

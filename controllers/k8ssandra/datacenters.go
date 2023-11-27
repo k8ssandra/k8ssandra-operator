@@ -158,7 +158,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					dcLogger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
 				}
 
-				if err := cassandra.ValidateConfig(desiredDc, actualDc); err != nil {
+				if desiredDc, err = cassandra.ValidateConfig(kc, desiredDc, actualDc); err != nil {
 					return result.Error(fmt.Errorf("invalid Cassandra config: %v", err)), actualDcs
 				}
 
