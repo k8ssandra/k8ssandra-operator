@@ -163,7 +163,7 @@ func testContextValidation(t *testing.T) {
 func testNumTokensInUpdate(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "numtokensupdate-namespace")
-	cluster := createMinimalClusterObj("numtokens-test", "numtokensupdate-namespace")
+	cluster := createMinimalClusterObj("numtokens-test-update", "numtokensupdate-namespace")
 	cluster.Spec.Cassandra.ServerVersion = "3.11.10"
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
@@ -178,7 +178,7 @@ func testNumTokensInUpdate(t *testing.T) {
 	require.NoError(err)
 
 	// However, not setting the num_tokens, when the defaults have changed should be rejected - otherwise the cluster will reject the update
-	cluster2 := createMinimalClusterObj("numtokens-test", "numtokensupdate-namespace")
+	cluster2 := createMinimalClusterObj("numtokens-test-update-2", "numtokensupdate-namespace")
 	cluster2.Spec.Cassandra.ServerVersion = "3.11.10"
 	cluster2.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
 	err = k8sClient.Create(ctx, cluster2)
