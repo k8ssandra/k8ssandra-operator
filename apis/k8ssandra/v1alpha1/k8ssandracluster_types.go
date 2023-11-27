@@ -526,8 +526,8 @@ const (
 	ServerDistributionDse       = ServerDistribution("dse")
 )
 
-func (kc *K8ssandraCluster) DefaultNumTokens() int64 {
-	if kc.Spec.Cassandra.ServerType == ServerDistributionCassandra && semver.MustParse(kc.Spec.Cassandra.ServerVersion).Major() == 3 {
+func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) int64 {
+	if kc.Spec.Cassandra.ServerType == ServerDistributionCassandra && serverVersion.Major() == 3 {
 		return int64(256)
 	}
 	return int64(16)
