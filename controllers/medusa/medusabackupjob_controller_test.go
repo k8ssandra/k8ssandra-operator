@@ -33,6 +33,9 @@ const (
 	defaultBackupName   = "backup1"
 	dc1PodPrefix        = "192.168.1."
 	dc2PodPrefix        = "192.168.2."
+	fakeBackupFileCount = int64(13)
+	fakeBackupByteSize  = int64(42)
+	fakeBackupHumanSize = "42.00 B"
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -243,6 +246,8 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")
 	require.Equal(medusaBackup.Status.FinishedNodes, dc.Spec.Size, "backup finished nodes doesn't match dc nodes")
 	require.Equal(len(medusaBackup.Status.Nodes), int(dc.Spec.Size), "backup topology doesn't match dc topology")
+	require.Equal(medusaBackup.Status.TotalFiles, fakeBackupFileCount, "backup total files doesn't match")
+	require.Equal(medusaBackup.Status.TotalSize, fakeBackupHumanSize, "backup total size doesn't match")
 	require.Equal(medusa.StatusType_SUCCESS.String(), medusaBackup.Status.Status, "backup status is not success")
 
 	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups(dc.DatacenterName())))
@@ -354,6 +359,8 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 			FinishTime:    10,
 			TotalNodes:    3,
 			FinishedNodes: 3,
+			TotalObjects:  fakeBackupFileCount,
+			TotalSize:     fakeBackupByteSize,
 			Status:        *medusa.StatusType_SUCCESS.Enum(),
 			Nodes: []*medusa.BackupNode{
 				{
@@ -501,4 +508,23 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 	err := f.SetMedusaDeplAvailable(ctx, medusaKey)
 
 	require.NoError(t, err, "Failed to update Medusa Deployment status")
+}
+
+func TestHumanize(t *testing.T) {
+	t.Run("humanizeTrivialSizes", humanizeTrivialSizes)
+	t.Run("humanizeArbitrarySizes", humanizeArbitrarySizes)
+}
+
+func humanizeTrivialSizes(t *testing.T) {
+	assert.Equal(t, "1.00 B", humanize(1))
+	assert.Equal(t, "1.00 KB", humanize(1024))
+	assert.Equal(t, "1.00 MB", humanize(1024*1024))
+	assert.Equal(t, "1.00 GB", humanize(1024*1024*1024))
+}
+
+func humanizeArbitrarySizes(t *testing.T) {
+	assert.Equal(t, "127.50 KB", humanize(130557))
+	assert.Equal(t, "4.03 GB", humanize(4325130557))
+	assert.Equal(t, "7.67 TB", humanize(8434729356343))
+	assert.Equal(t, "1096.52 PB", humanize(1234567890123456790))
 }
