@@ -514,9 +514,11 @@ func ValidateConfig(kc *api.K8ssandraCluster, desiredDc, actualDc *cassdcapi.Cas
 	if cassConfig := kc.Spec.Cassandra.CassandraConfig; cassConfig == nil {
 		if semver.MustParse(actualDc.Spec.ServerVersion).Major() == 3 && semver.MustParse(desiredDc.Spec.ServerVersion).Major() > 3 {
 			desiredCassYaml["num_tokens"] = actualCassYaml["num_tokens"]
-			// Assigning desiredCassYaml to desiredDc.Spec.Config
 			desiredConfig["cassandra-yaml"] = desiredCassYaml
-			newConfig, _ := json.Marshal(desiredConfig)
+			newConfig, err := json.Marshal(desiredConfig)
+			if err != nil {
+				return nil, err
+			}
 			desiredDc.Spec.Config = newConfig
 		}
 	}

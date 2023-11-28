@@ -118,17 +118,20 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	if oldCassConfig != nil && newCassConfig != nil {
 		oldNumTokens, oldNumTokensExists := oldCassConfig.CassandraYaml["num_tokens"]
 		newNumTokens, newNumTokensExists := newCassConfig.CassandraYaml["num_tokens"]
-
+		// Check if num_tokens is not present in old configuration
 		if !oldNumTokensExists {
+			// Determine the default num_tokens based on Cassandra version
 			cassVersion, err := semver.NewVersion(oldCluster.Spec.Cassandra.ServerVersion)
 			if err != nil {
 				return err
 			}
 			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
-			if newNumTokensExists && int64(newNumTokens.(float64)) != defaultNumTokens {
+			// If new configuration has num_tokens and it's not equal to the default, return an error
+			if newNumTokensExists && newNumTokens.(float64) != defaultNumTokens {
 				return ErrNumTokens
 			}
 		} else {
+			// If num_tokens is present in both old and new configurations, check if they are equal
 			if oldNumTokens != newNumTokens {
 				return ErrNumTokens
 			}
