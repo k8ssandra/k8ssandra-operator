@@ -498,7 +498,27 @@ func FindVolumeMount(container *corev1.Container, name string) *corev1.VolumeMou
 	return nil
 }
 
-func ValidateConfig(kc *api.K8ssandraCluster, desiredDc, actualDc *cassdcapi.CassandraDatacenter) (*cassdcapi.CassandraDatacenter, error) {
+func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
+	desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+	actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+	if err != nil {
+		return err
+	}
+
+	actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+	desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+	if (foundActualYaml && foundDesiredYaml) && actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
+		return fmt.Errorf("tried to change num_tokens in an existing datacenter")
+	}
+
+	return nil
+}
+
+func SetNewDefaultNumTokens(kc *api.K8ssandraCluster, desiredDc, actualDc *cassdcapi.CassandraDatacenter) (*cassdcapi.CassandraDatacenter, error) {
 	desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
 	if err != nil {
 		return nil, err
@@ -508,23 +528,23 @@ func ValidateConfig(kc *api.K8ssandraCluster, desiredDc, actualDc *cassdcapi.Cas
 		return nil, err
 	}
 
-	actualCassYaml, foundActualYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
-	desiredCassYaml, foundDesiredYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+	actualCassYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+	desiredCassYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
 
-	if cassConfig := kc.Spec.Cassandra.CassandraConfig; cassConfig == nil {
-		if semver.MustParse(actualDc.Spec.ServerVersion).Major() == 3 && semver.MustParse(desiredDc.Spec.ServerVersion).Major() > 3 {
-			desiredCassYaml["num_tokens"] = actualCassYaml["num_tokens"]
-			desiredConfig["cassandra-yaml"] = desiredCassYaml
-			newConfig, err := json.Marshal(desiredConfig)
-			if err != nil {
-				return nil, err
-			}
-			desiredDc.Spec.Config = newConfig
-		}
+	var numTokensExists bool
+	cassConfig := kc.Spec.Cassandra.CassandraConfig
+	if cassConfig != nil {
+		_, numTokensExists = cassConfig.CassandraYaml["num_tokens"]
 	}
 
-	if (foundActualYaml && foundDesiredYaml) && actualCassYaml["num_tokens"] != desiredCassYaml["num_tokens"] {
-		return nil, fmt.Errorf("tried to change num_tokens in an existing datacenter")
+	if !numTokensExists {
+		desiredCassYaml["num_tokens"] = actualCassYaml["num_tokens"]
+		desiredConfig["cassandra-yaml"] = desiredCassYaml
+		newConfig, err := json.Marshal(desiredConfig)
+		if err != nil {
+			return nil, err
+		}
+		desiredDc.Spec.Config = newConfig
 	}
 
 	return desiredDc, nil

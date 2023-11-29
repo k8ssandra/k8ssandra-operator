@@ -3,23 +3,21 @@ package cassandra
 import (
 	"testing"
 
-	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
-	"k8s.io/utils/pointer"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 func TestCoalesce(t *testing.T) {
@@ -1480,5 +1478,78 @@ func GetDatacenterConfig() DatacenterConfig {
 			},
 		},
 		McacEnabled: true,
+	}
+}
+
+func TestSetNewDefaultNumTokens(t *testing.T) {
+	testCases := []struct {
+		name                string
+		kc                  *api.K8ssandraCluster
+		actualDcConfig      *unstructured.Unstructured
+		desiredDcConfig     *unstructured.Unstructured
+		expectedDcNumTokens float64
+	}{
+		{
+			name: "num_tokens exists in CassandraConfig",
+			kc: &api.K8ssandraCluster{
+				Spec: api.K8ssandraClusterSpec{
+					Cassandra: &api.CassandraClusterTemplate{
+						DatacenterOptions: api.DatacenterOptions{
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: unstructured.Unstructured{"num_tokens": 33},
+							},
+						},
+					},
+				},
+			},
+			actualDcConfig:      &unstructured.Unstructured{"num_tokens": 24},
+			desiredDcConfig:     &unstructured.Unstructured{"num_tokens": 33},
+			expectedDcNumTokens: 33,
+		},
+		{
+			name: "num_tokens does not exist, set to value from actualDc",
+			kc: &api.K8ssandraCluster{
+				Spec: api.K8ssandraClusterSpec{
+					Cassandra: &api.CassandraClusterTemplate{
+						DatacenterOptions: api.DatacenterOptions{
+							CassandraConfig: &api.CassandraConfig{
+								CassandraYaml: unstructured.Unstructured{"other": "setting"},
+							},
+						},
+					},
+				},
+			},
+			actualDcConfig:      &unstructured.Unstructured{"num_tokens": 256},
+			desiredDcConfig:     &unstructured.Unstructured{"num_tokens": 16},
+			expectedDcNumTokens: 256,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualDcConfig := GetDatacenterConfig()
+
+			actualDcConfig.CassandraConfig.CassandraYaml = *tc.actualDcConfig
+			actualDc, err := NewDatacenter(
+				types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+				&actualDcConfig,
+			)
+			assert.NoError(t, err)
+			desiredDcConfig := GetDatacenterConfig()
+			desiredDcConfig.CassandraConfig.CassandraYaml = *tc.desiredDcConfig
+			desiredDc, err := NewDatacenter(
+				types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+				&desiredDcConfig,
+			)
+			assert.NoError(t, err)
+
+			got, err := SetNewDefaultNumTokens(tc.kc, desiredDc, actualDc)
+			assert.NoError(t, err)
+
+			config, err := utils.UnmarshalToMap(got.Spec.Config)
+			assert.NoError(t, err)
+			cassYaml := config["cassandra-yaml"].(map[string]interface{})
+			assert.Equal(t, tc.expectedDcNumTokens, cassYaml["num_tokens"])
+		})
 	}
 }
