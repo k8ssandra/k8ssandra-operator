@@ -177,7 +177,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build:
-	docker buildx build --load -t ${IMG} --build-arg TARGETARCH=${ARCH} .
+	docker buildx build --platform linux/amd64 --load -t ${IMG} --build-arg TARGETARCH=${ARCH} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
@@ -195,7 +195,7 @@ docker-buildx: test ## Build and push docker image for the manager for cross-pla
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross
+	- docker buildx build --platform linux/amd64 --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.cross
 
@@ -415,7 +415,7 @@ $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 OS=$(shell go env GOOS)
-ARCH=$(shell go env GOARCH)
+ARCH = amd64
 .PHONY: operator-sdk
 OPSDK = ./bin/operator-sdk
 operator-sdk: ## Download operator-sdk locally if necessary

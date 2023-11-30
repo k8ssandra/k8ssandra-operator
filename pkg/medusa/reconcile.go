@@ -68,7 +68,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     use_sudo_for_restore = false
     storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
     bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
+    {{- if .Spec.Medusa.StorageProperties.StorageSecretRef }}
     key_file = /etc/medusa-secrets/credentials
+    {{- end }}
     {{- if .Spec.Medusa.StorageProperties.Prefix }}
     prefix = {{ .Spec.Medusa.StorageProperties.Prefix }}
     {{- else }}
@@ -289,12 +291,13 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 		})
 	}
 
-	// Mount secret with Medusa storage backend credentials
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		// Medusa storage secret volume
-		Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
-		MountPath: "/etc/medusa-secrets",
-	})
+	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
+	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
+			MountPath: "/etc/medusa-secrets",
+		})
+	}
 
 	return volumeMounts
 }

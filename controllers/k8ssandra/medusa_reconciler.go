@@ -49,8 +49,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}
 		}
+		// if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
+		// 	return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
+		// }
 		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
-			return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
+			medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
 		}
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res
