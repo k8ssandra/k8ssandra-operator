@@ -125,7 +125,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 				return err
 			}
 			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
-			if newNumTokensExists && int64(newNumTokens.(float64)) != defaultNumTokens {
+			if newNumTokensExists && newNumTokens.(float64) != defaultNumTokens {
 				return ErrNumTokens
 			}
 		} else {
