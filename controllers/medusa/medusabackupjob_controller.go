@@ -274,6 +274,8 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 				backupResource.Status.FinishTime = finishTime
 				backupResource.Status.TotalNodes = backupSummary.TotalNodes
 				backupResource.Status.FinishedNodes = backupSummary.FinishedNodes
+				backupResource.Status.TotalFiles = backupSummary.TotalObjects
+				backupResource.Status.TotalSize = humanize(backupSummary.TotalSize)
 				backupResource.Status.Nodes = make([]*medusav1alpha1.MedusaBackupNode, len(backupSummary.Nodes))
 				for i, node := range backupSummary.Nodes {
 					backupResource.Status.Nodes[i] = &medusav1alpha1.MedusaBackupNode{
@@ -335,4 +337,14 @@ func (r *MedusaBackupJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&medusav1alpha1.MedusaBackupJob{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
+}
+
+func humanize(bytes int64) string {
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB"}
+	size := float64(bytes)
+	i := 0
+	for ; size >= 1024 && i < len(units)-1; i++ {
+		size /= 1024
+	}
+	return fmt.Sprintf("%.2f %s", size, units[i])
 }

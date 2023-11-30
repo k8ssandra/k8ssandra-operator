@@ -42,6 +42,8 @@ type MedusaBackupStatus struct {
 	TotalNodes    int32               `json:"totalNodes,omitempty"`
 	FinishedNodes int32               `json:"finishedNodes,omitempty"`
 	Nodes         []*MedusaBackupNode `json:"nodes,omitempty"`
+	TotalFiles    int64               `json:"totalFiles,omitempty"`
+	TotalSize     string              `json:"totalSize,omitempty"`
 	Status        string              `json:"status,omitempty"`
 }
 
@@ -57,6 +59,8 @@ type MedusaBackupNode struct {
 //+kubebuilder:printcolumn:name="Started",type=date,JSONPath=".status.startTime",description="Backup start time"
 //+kubebuilder:printcolumn:name="Finished",type=date,JSONPath=".status.finishTime",description="Backup finish time"
 //+kubebuilder:printcolumn:name="Nodes",type=string,JSONPath=".status.totalNodes",description="Total number of nodes at the time of the backup"
+//+kubebuilder:printcolumn:name="Files",type=integer,JSONPath=".status.totalFiles",description="Total number of files in the backup"
+//+kubebuilder:printcolumn:name="Size",type=string,JSONPath=".status.totalSize",description="Human-readable total size of the backup"
 //+kubebuilder:printcolumn:name="Completed",type=string,JSONPath=".status.finishedNodes",description="Number of nodes that completed this backup"
 //+kubebuilder:printcolumn:name="Status",type=string,JSONPath=".status.status",description="Backup completion status"
 

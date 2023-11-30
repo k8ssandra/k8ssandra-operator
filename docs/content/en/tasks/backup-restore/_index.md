@@ -128,7 +128,7 @@ K8ssandra Operator will detect the `MedusaBackupJob` object creation and trigger
 To monitor the backup completion, check if the `finishTime` is set in the `MedusaBackupJob` object status. Example:
 
 ```sh
-% kubectl get medusabackupjob/medusa-backup1 -o yaml
+% kubectl get medusabackupjob/backup1 -o yaml
 
 kind: MedusaBackupJob
 metadata:
@@ -159,7 +159,7 @@ medusa-backup1   19m       19m
 
 All pods having completed the backup will be in the `finished` list.
 At the end of the backup operation, a `MedusaBackup` custom resource will be created with the same name as the `MedusaBackupJob` object. It materializes the backup locally on the Kubernetes cluster.
-The MedusaBackup object status contains the total number of node in the cluster at the time of the backup, the number of nodes that successfully achieved the backup, and the topology of the DC at the time of the backup:
+The MedusaBackup object status contains the total number of node in the cluster at the time of the backup, the number of nodes that successfully achieved the backup, the topology of the DC at the time of the backup, the number of files backed up and their total size:
 
 ```yaml
 apiVersion: medusa.k8ssandra.io/v1alpha1
@@ -189,6 +189,8 @@ status:
         - -1058110708807841300
         - -107256661843445790
   status: SUCCESS
+  totalFiles: 120
+  totalSize: 127.67 KB  
 spec:
   backupType: differential
   cassandraDatacenter: dc1
@@ -199,9 +201,9 @@ The `kubectl get`` output for MedusaBackup objects will show a subset of this in
 
 ```sh
 kubectl get MedusaBackup -A
-NAME             STARTED   FINISHED   NODES   COMPLETED   STATUS
-backup1          29m       28m        2       2           SUCCESS
-medusa-backup1   23m       23m        2       2           SUCCESS
+NAME             STARTED   FINISHED   NODES   FILES   SIZE       COMPLETED   STATUS
+backup1          29m       28m        2       120     127.67 KB  2           SUCCESS
+medusa-backup1   23m       23m        2       137     241.61 KB  2           SUCCESS
 ```
 
 For a restore to be possible, a `MedusaBackup` object must exist.

@@ -27,6 +27,14 @@ spec:
       jsonPath: .status.totalNodes
       name: Nodes
       type: string
+    - description: Total number of files in the backup
+      jsonPath: .status.totalFiles
+      name: Files
+      type: integer
+    - description: Human-readable total size of the backup
+      jsonPath: .status.totalSize
+      name: Size
+      type: string
     - description: Number of nodes that completed this backup
       jsonPath: .status.finishedNodes
       name: Completed
@@ -98,9 +106,14 @@ spec:
                 type: string
               status:
                 type: string
+              totalFiles:
+                format: int64
+                type: integer
               totalNodes:
                 format: int32
                 type: integer
+              totalSize:
+                type: string
             type: object
         type: object
     served: true

@@ -11,6 +11,8 @@ service Medusa {
 
   rpc DeleteBackup(DeleteBackupRequest) returns (DeleteBackupResponse);
 
+  rpc GetBackup(GetBackupRequest) returns (GetBackupResponse);
+
   rpc GetBackups(GetBackupsRequest) returns (GetBackupsResponse);
 
   rpc PurgeBackups(PurgeBackupsRequest) returns (PurgeBackupsResponse);
@@ -36,7 +38,7 @@ message BackupRequest {
 
 message BackupResponse {
   string           backupName = 1;
-  StatusType status = 2;
+  StatusType       status = 2;
 }
 
 message BackupStatusRequest {
@@ -44,12 +46,9 @@ message BackupStatusRequest {
 }
 
 message BackupStatusResponse {
-  repeated string  finishedNodes = 1;
-  repeated string  unfinishedNodes = 2;
-  repeated string  missingNodes = 3;
-  string           startTime = 4;
-  string           finishTime = 5;
-  StatusType status = 6;
+  string           startTime = 1;
+  string           finishTime = 2;
+  StatusType       status = 3;
 }
 
 message DeleteBackupRequest {
@@ -59,6 +58,15 @@ message DeleteBackupRequest {
 message DeleteBackupResponse {
   string name = 1;
   StatusType status = 2;
+}
+
+message GetBackupRequest {
+  string backupName = 1;
+}
+
+message GetBackupResponse {
+  BackupSummary backup = 1;
+  StatusType    status = 2;
 }
 
 message GetBackupsRequest {
@@ -76,8 +84,10 @@ message BackupSummary {
   int32               totalNodes = 4;
   int32               finishedNodes = 5;
   repeated BackupNode nodes = 6;
-  StatusType    status = 7;
-  string    backupType = 8;
+  StatusType          status = 7;
+  string              backupType = 8;
+  int64               totalSize = 9;
+  int64               totalObjects = 10;
 }
 
 message BackupNode {
