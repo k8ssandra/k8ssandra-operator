@@ -107,12 +107,6 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 
 		podMeta := createPodMeta(stargate, deploymentName)
 
-		isDse := "0"
-		if coreapi.ServerDistribution(dc.Spec.ServerType) == coreapi.ServerDistributionDse {
-			// Stargate requires a DSE env variable set to "1" to use the right backend.
-			isDse = "1"
-		}
-
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        deploymentName,
@@ -179,7 +173,6 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 								{Name: "JAVA_OPTS", Value: jvmOptions},
 								{Name: "CLUSTER_NAME", Value: dc.Spec.ClusterName},
 								{Name: "CLUSTER_VERSION", Value: string(clusterVersion)},
-								{Name: "DSE", Value: isDse},
 								{Name: "SEED", Value: seedService},
 								{Name: "DATACENTER_NAME", Value: dc.DatacenterName()},
 								{Name: "RACK_NAME", Value: rack.Name},
@@ -202,6 +195,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 					},
 				},
 			},
+		}
+
+		if coreapi.ServerDistribution(dc.Spec.ServerType) == coreapi.ServerDistributionDse {
+			// Stargate requires a DSE env variable set to "1" to use the right backend.
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "DSE", Value: "1"})
 		}
 
 		klusterName, nameFound := stargate.Labels[coreapi.K8ssandraClusterNameLabel]
