@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.10"
+linkTitle: "K8ssandra-operator CRDs v1.10"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.10.  
 ---
 
 Packages:
@@ -71531,28 +71531,12 @@ MedusaBackupStatus defines the observed state of MedusaBackup
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>totalFiles</b></td>
-        <td>integer</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>totalNodes</b></td>
         <td>integer</td>
         <td>
           <br/>
           <br/>
             <i>Format</i>: int32<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>totalSize</b></td>
-        <td>string</td>
-        <td>
-          <br/>
         </td>
         <td>false</td>
       </tr></tbody>
