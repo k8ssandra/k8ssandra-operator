@@ -826,6 +826,7 @@ func testImages(t *testing.T) {
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
+		assert.Equal(t, "0", utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "DSE").Value)
 	})
 	t.Run("default image DSE 6.8", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
@@ -843,6 +844,7 @@ func testImages(t *testing.T) {
 		assert.Equal(t, defaultImage68.String(), deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
+		assert.Equal(t, "1", utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "DSE").Value)
 	})
 	t.Run("custom image DSE 6.8", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
@@ -863,6 +865,7 @@ func testImages(t *testing.T) {
 		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
+		assert.Equal(t, "1", utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "DSE").Value)
 	})
 }
 
