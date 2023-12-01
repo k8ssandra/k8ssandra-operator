@@ -827,6 +827,43 @@ func testImages(t *testing.T) {
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
 	})
+	t.Run("default image DSE 6.8", func(t *testing.T) {
+		stargate := stargate.DeepCopy()
+		stargate.Spec.ContainerImage = &images.Image{
+			Repository: "stargateio",
+			Tag:        "v" + DefaultVersion,
+		}
+		dc := dc.DeepCopy()
+		dc.Spec.ServerVersion = "6.8.40"
+		dc.Spec.ServerType = "dse"
+		logger := testlogr.NewTestLogger(t)
+		deployments := NewDeployments(stargate, dc, logger)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		assert.Equal(t, defaultImage68.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
+	})
+	t.Run("custom image DSE 6.8", func(t *testing.T) {
+		stargate := stargate.DeepCopy()
+		image := &images.Image{
+			Repository:    "my-custom-repo",
+			Tag:           "latest",
+			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
+		}
+		stargate.Spec.ContainerImage = image
+		dc := dc.DeepCopy()
+		dc.Spec.ServerVersion = "6.8.40"
+		dc.Spec.ServerType = "dse"
+		logger := testlogr.NewTestLogger(t)
+		deployments := NewDeployments(stargate, dc, logger)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		assert.Equal(t, "docker.io/my-custom-repo/stargate-dse-68:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
+		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
+	})
 }
 
 func affinityForRack(dc *cassdcapi.CassandraDatacenter, rackName string) *corev1.Affinity {

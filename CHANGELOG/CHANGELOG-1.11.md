@@ -15,4 +15,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [ENHANCEMENT] [#1125](https://github.com/k8ssandra/k8ssandra-operator/issues/1125) Support Stargate with DSE and upgrade Stargate to 1.0.77
 * [ENHANCEMENT] [#1122](https://github.com/k8ssandra/k8ssandra-operator/issues/1122) Expose backup size in MedusaBackup CRD

@@ -31,9 +31,10 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
 
 	t.Log("Check that we can communicate through CQL with DSE")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 
@@ -67,6 +68,11 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT server_id FROM system.local")
 	require.Error(t, err, "expected CQL query without auth to fail")
+
+	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
+	checkStargateReady(t, f, ctx, stargateKey)
+
+	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 }
 
 // createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled
