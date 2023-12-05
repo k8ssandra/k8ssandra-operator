@@ -34,7 +34,8 @@ const (
 	DefaultImageRepository = "stargateio"
 	DefaultImageName3      = "stargate-3_11"
 	DefaultImageName4      = "stargate-4_0"
-	DefaultVersion         = "1.0.67"
+	DefaultImageNameDse68  = "stargate-dse-68"
+	DefaultVersion         = "1.0.77"
 	// When changing the default version above, please also change the kubebuilder marker in
 	// apis/stargate/v1alpha1/stargate_types.go accordingly.
 )
@@ -42,8 +43,9 @@ const (
 type ClusterVersion string
 
 const (
-	ClusterVersion3 ClusterVersion = "3.11"
-	ClusterVersion4 ClusterVersion = "4.0"
+	ClusterVersion3  ClusterVersion = "3.11"
+	ClusterVersion4  ClusterVersion = "4.0"
+	ClusterVersion68 ClusterVersion = "6.8"
 )
 
 var (
@@ -57,6 +59,12 @@ var (
 		Registry:   images.DefaultRegistry,
 		Repository: DefaultImageRepository,
 		Name:       DefaultImageName4,
+		Tag:        "v" + DefaultVersion,
+	}
+	defaultImage68 = images.Image{
+		Registry:   images.DefaultRegistry,
+		Repository: DefaultImageRepository,
+		Name:       DefaultImageNameDse68,
 		Tag:        "v" + DefaultVersion,
 	}
 )
@@ -189,6 +197,11 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 			},
 		}
 
+		if coreapi.ServerDistribution(dc.Spec.ServerType) == coreapi.ServerDistributionDse {
+			// Stargate requires a DSE env variable set to "1" to use the right backend.
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "DSE", Value: "1"})
+		}
+
 		klusterName, nameFound := stargate.Labels[coreapi.K8ssandraClusterNameLabel]
 		klusterNamespace, namespaceFound := stargate.Labels[coreapi.K8ssandraClusterNamespaceLabel]
 
@@ -219,6 +232,9 @@ func computeSeedServiceUrl(dc *cassdcapi.CassandraDatacenter) string {
 }
 
 func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
+	if coreapi.ServerDistribution(dc.Spec.ServerType) == coreapi.ServerDistributionDse {
+		return ClusterVersion68
+	}
 	cassandraVersion := dc.Spec.ServerVersion
 	if strings.HasPrefix(cassandraVersion, "3") {
 		return ClusterVersion3
@@ -228,11 +244,13 @@ func computeClusterVersion(dc *cassdcapi.CassandraDatacenter) ClusterVersion {
 }
 
 func computeImage(template *api.StargateTemplate, clusterVersion ClusterVersion) *images.Image {
+	if clusterVersion == ClusterVersion68 {
+		return template.ContainerImage.ApplyDefaults(defaultImage68)
+	}
 	if clusterVersion == ClusterVersion3 {
 		return template.ContainerImage.ApplyDefaults(defaultImage3)
-	} else {
-		return template.ContainerImage.ApplyDefaults(defaultImage4)
 	}
+	return template.ContainerImage.ApplyDefaults(defaultImage4)
 }
 
 func computeResourceRequirements(template *api.StargateTemplate) corev1.ResourceRequirements {
