@@ -263,7 +263,7 @@ func setImage(containerImage *images.Image, container *corev1.Container) {
 	container.ImagePullPolicy = image.PullPolicy
 }
 
-func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) []corev1.VolumeMount {
+func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
