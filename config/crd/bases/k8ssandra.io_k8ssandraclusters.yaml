@@ -26824,6 +26824,9 @@ spec:
                           to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
+                  credentialsType:
+                    description: Type of credentials to use for authentication.
+                    type: string
                   initContainerResources:
                     description: medusa-restore init container resources.
                     properties:
