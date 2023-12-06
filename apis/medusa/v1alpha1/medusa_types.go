@@ -175,4 +175,8 @@ type MedusaClusterTemplate struct {
 	// Define the liveness probe settings to use for the Medusa containers.
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// Type of credentials to use for authentication.
+	// +optional
+	CredentialsType string `json:"credentialsType,omitempty"`
 }
