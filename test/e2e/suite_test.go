@@ -185,9 +185,10 @@ func TestOperator(t *testing.T) {
 		dse:      true,
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleDseSearchDatacenterCluster,
-		fixture:  framework.NewTestFixture("single-dc-dse-search", controlPlane),
-		dse:      true,
+		testFunc:     createSingleDseSearchDatacenterCluster,
+		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
+		dse:          true,
+		installMinio: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseGraphDatacenterCluster,
