@@ -293,7 +293,6 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 
 	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
-		logger.Info("Info: Mounting secret with Medusa storage backend credentials")
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
