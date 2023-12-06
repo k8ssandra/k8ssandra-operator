@@ -92,7 +92,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		// Reconcile the Medusa standalone deployment
 		kcKey := utils.GetKey(kc)
 		desiredMedusaStandalone.SetLabels(labels.CleanedUpByLabels(kcKey))
-		logger.Debug("Desired Medusa standalone deployment", "deployment", desiredMedusaStandalone)
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredMedusaStandalone)
 		switch {
 		case recRes.IsError():
