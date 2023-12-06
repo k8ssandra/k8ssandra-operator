@@ -169,7 +169,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
-	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
 	if !found {
@@ -229,7 +229,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 	medusaContainer.ReadinessProbe = readinessProbe
 	medusaContainer.LivenessProbe = livenessProbe
-	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
+	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 	return medusaContainer, nil
 }
@@ -298,8 +298,6 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
 		})
-	} else {
-		logger.Info("Info: No secret with Medusa storage backend credentials provided")
 	}
 
 	return volumeMounts
