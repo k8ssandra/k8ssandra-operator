@@ -68,7 +68,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     use_sudo_for_restore = false
     storage_provider = {{ .Spec.Medusa.StorageProperties.StorageProvider }}
     bucket_name = {{ .Spec.Medusa.StorageProperties.BucketName }}
-    {{- if .Spec.Medusa.StorageProperties.StorageSecretRef }}
+    {{- if .Spec.Medusa.StorageProperties.StorageSecretRef.Name }}
     key_file = /etc/medusa-secrets/credentials
     {{- end }}
     {{- if .Spec.Medusa.StorageProperties.Prefix }}
@@ -169,7 +169,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
-	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
+	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
 	if !found {
@@ -229,7 +229,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 	medusaContainer.ReadinessProbe = readinessProbe
 	medusaContainer.LivenessProbe = livenessProbe
-	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
+	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName, logger)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 	return medusaContainer, nil
 }
@@ -263,7 +263,7 @@ func setImage(containerImage *images.Image, container *corev1.Container) {
 	container.ImagePullPolicy = image.PullPolicy
 }
 
-func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {
+func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string, logger logr.Logger) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
@@ -293,10 +293,13 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 
 	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
+		logger.Info("Info: Mounting secret with Medusa storage backend credentials")
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
 		})
+	} else {
+		logger.Info("Info: No secret with Medusa storage backend credentials provided")
 	}
 
 	return volumeMounts
@@ -383,21 +386,23 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 	})
 
 	// Medusa credentials volume using the referenced secret
-	secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
-	secretVolume := &corev1.Volume{
-		Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
+	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
+		secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
+		secretVolume := &corev1.Volume{
+			Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
+				},
 			},
-		},
-	}
+		}
 
-	newVolumes = append(newVolumes, medusaVolume{
-		Volume:      secretVolume,
-		VolumeIndex: secretVolumeIndex,
-		Exists:      found,
-	})
+		newVolumes = append(newVolumes, medusaVolume{
+			Volume:      secretVolume,
+			VolumeIndex: secretVolumeIndex,
+			Exists:      found,
+		})
+	}
 
 	// Pod info volume
 	podInfoVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "podinfo")
