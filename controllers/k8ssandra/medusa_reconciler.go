@@ -49,9 +49,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}
 		}
-		// if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
-		// 	return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
-		// }
 		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
 			medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
 		}
@@ -68,23 +65,17 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Create required volumes for the Medusa containers
 		volumes := medusa.GenerateMedusaVolumes(dcConfig, medusaSpec, kc.SanitizedName())
-		logger.Info("Starting to create volumes for Medusa containers")
 		for _, volume := range volumes {
-			logger.Info("Created volume for Medusa container", "volume", volume.Volume.Name)
 			cassandra.AddOrUpdateVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
-		logger.Info("Finished creating volumes for Medusa containers")
 
 		// Create the Medusa standalone pod
 		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), namespace, logger)
 
 		// Add the volumes previously computed to the Medusa standalone pod
-		logger.Info("Starting to add volumes to the Medusa standalone pod")
 		for _, volume := range volumes {
-			logger.Info("Adding volume to the Medusa standalone pod", "volume", volume.Volume.Name)
 			cassandra.AddOrUpdateVolumeToSpec(&desiredMedusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
-		logger.Info("Finished adding volumes to the Medusa standalone pod")
 
 		if !kc.Spec.UseExternalSecrets() {
 			cassandraUserSecretName := medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName())
@@ -101,7 +92,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		// Reconcile the Medusa standalone deployment
 		kcKey := utils.GetKey(kc)
 		desiredMedusaStandalone.SetLabels(labels.CleanedUpByLabels(kcKey))
-		logger.Info("Desired Medusa standalone deployment", "deployment", desiredMedusaStandalone)
+		logger.Debug("Desired Medusa standalone deployment", "deployment", desiredMedusaStandalone)
 		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredMedusaStandalone)
 		switch {
 		case recRes.IsError():
