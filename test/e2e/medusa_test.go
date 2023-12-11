@@ -7,6 +7,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusa "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -211,6 +212,17 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 
 		return !restore.Status.FinishTime.IsZero()
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
+
+	require.Eventually(func() bool {
+		secret := &corev1.Secret{}
+		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "cass-superuser"), secret)
+		if err != nil {
+			return false
+		}
+		_, exists := secret.Annotations[k8ssandraapi.RefreshAnnotation]
+		return exists
+	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "superuser secret wasn't updated with refresh annotation")
+
 }
 
 func checkMedusaStandaloneDeploymentExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
