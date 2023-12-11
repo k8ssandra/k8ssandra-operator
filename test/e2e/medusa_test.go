@@ -217,6 +217,7 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 		secret := &corev1.Secret{}
 		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "cass-superuser"), secret)
 		if err != nil {
+			t.Log(err)
 			return false
 		}
 		_, exists := secret.Annotations[k8ssandraapi.RefreshAnnotation]
