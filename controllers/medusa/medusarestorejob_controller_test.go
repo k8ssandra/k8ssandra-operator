@@ -8,6 +8,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -292,8 +293,12 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		return !restore.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
+	superuserSecret := corev1.Secret{}
+	require.NoError(f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "cass-superuser"}, &superuserSecret))
+	assert.Contains(t, superuserSecret.ObjectMeta.Annotations, k8ssandraapi.RefreshAnnotation)
+
 }
 
 func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
