@@ -293,11 +293,12 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		return !restore.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: kc.Name}, timeout, interval)
-	require.NoError(err, "failed to delete K8ssandraCluster")
 	superuserSecret := corev1.Secret{}
 	require.NoError(f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "cass-superuser"}, &superuserSecret))
 	assert.Contains(t, superuserSecret.ObjectMeta.Annotations, k8ssandraapi.RefreshAnnotation)
+
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: kc.Name}, timeout, interval)
+	require.NoError(err, "failed to delete K8ssandraCluster")
 
 }
 
