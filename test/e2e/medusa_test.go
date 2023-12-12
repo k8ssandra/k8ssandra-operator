@@ -215,11 +215,11 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "cass-superuser"), secret)
+		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "firstcluster-superuser"), secret)
 		if err != nil {
 			t.Log(err)
 			secretList := &corev1.SecretList{}
-			err = f.List(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "cass-superuser"), secretList)
+			err = f.List(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "firstcluster-superuser"), secretList)
 			if err != nil {
 				t.Log(err)
 			}

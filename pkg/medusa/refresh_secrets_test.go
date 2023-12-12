@@ -23,14 +23,14 @@ func TestRefreshSecrets_defaultSUSecret(t *testing.T) {
 	assert.NoError(t, fakeClient.Create(context.Background(), &cassDC))
 	secrets := []corev1.Secret{
 		{ObjectMeta: metav1.ObjectMeta{Name: "custom-user", Namespace: "test"}, Data: map[string][]byte{"username": []byte("test")}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "cass-superuser", Namespace: "test"}, Data: map[string][]byte{"username": []byte("test")}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "test-cluster-superuser", Namespace: "test"}, Data: map[string][]byte{"username": []byte("test")}},
 	}
 	for _, i := range secrets {
 		assert.NoError(t, fakeClient.Create(context.Background(), &i))
 	}
 	assert.NoError(t, RefreshSecrets(&cassDC, context.Background(), fakeClient, logr.Logger{}, 0))
 	suSecret := &corev1.Secret{}
-	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cass-superuser", Namespace: "test"}, suSecret))
+	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-cluster-superuser", Namespace: "test"}, suSecret))
 	_, exists := suSecret.ObjectMeta.Annotations["k8ssandra.io/refresh"]
 	assert.True(t, exists)
 	userSecret := &corev1.Secret{}
