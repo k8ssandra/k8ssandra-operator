@@ -14,10 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	defaultSUSecretName = "cass-superuser"
-)
-
 func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, client client.Client, logger logr.Logger, requeueDelay time.Duration) error {
 	logger.Info(fmt.Sprintf("Restore complete for DC %#v, Refreshing secrets", dc.ObjectMeta))
 	userSecrets := []string{}
@@ -26,7 +22,7 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 		userSecrets = append(userSecrets, user.SecretName)
 	}
 	if dc.Spec.SuperuserSecretName == "" {
-		userSecrets = append(userSecrets, defaultSUSecretName) //default SU secret
+		userSecrets = append(userSecrets, cassdcapi.CleanupForKubernetes(dc.Spec.ClusterName)+"-superuser") //default SU secret
 	} else {
 		userSecrets = append(userSecrets, dc.Spec.SuperuserSecretName)
 	}
