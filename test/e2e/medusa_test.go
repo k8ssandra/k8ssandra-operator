@@ -199,17 +199,9 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "firstcluster-superuser"), secret)
+		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, cassdcapi.CleanupForKubernetes(dcKey.Name)+"-superuser"), secret)
 		if err != nil {
 			t.Log(err)
-			secretList := &corev1.SecretList{}
-			err = f.List(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "firstcluster-superuser"), secretList)
-			if err != nil {
-				t.Log(err)
-			}
-			for _, i := range secretList.Items {
-				t.Log(i.Name)
-			}
 			return false
 		}
 		_, exists := secret.Annotations[k8ssandraapi.RefreshAnnotation]
