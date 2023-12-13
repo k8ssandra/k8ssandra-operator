@@ -214,8 +214,17 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
 
 	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		if err != nil {
+			t.Log(err)
+		}
+		superUserSecret := dc.Spec.SuperuserSecretName
+		if dc.Spec.SuperuserSecretName == "" {
+			superUserSecret = cassdcapi.CleanupForKubernetes(dcKey.Name) + "-superuser"
+		}
 		secret := &corev1.Secret{}
-		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "test-superuser"), secret)
+		err = f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, superUserSecret), secret)
 		if err != nil {
 			t.Log(err)
 			return false
