@@ -17,7 +17,6 @@ import (
 func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, client client.Client, logger logr.Logger, requeueDelay time.Duration) error {
 	logger.Info(fmt.Sprintf("Restore complete for DC %#v, Refreshing secrets", dc.ObjectMeta))
 	userSecrets := []string{}
-
 	for _, user := range dc.Spec.Users {
 		userSecrets = append(userSecrets, user.SecretName)
 	}
@@ -26,6 +25,7 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 	} else {
 		userSecrets = append(userSecrets, dc.Spec.SuperuserSecretName)
 	}
+	logger.Info(fmt.Sprintf("refreshing user secrets for %v", userSecrets))
 	//  Both Reaper and medusa secrets go into the userSecrets, so they don't need special handling.
 	for _, i := range userSecrets {
 		secret := &corev1.Secret{}
