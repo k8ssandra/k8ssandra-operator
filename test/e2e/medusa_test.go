@@ -215,7 +215,7 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, cassdcapi.CleanupForKubernetes(dcKey.Name)+"-superuser"), secret)
+		err := f.Get(ctx, framework.NewClusterKey(restoreClusterKey.K8sContext, restoreClusterKey.Namespace, "test-superuser", secret)
 		if err != nil {
 			t.Log(err)
 			return false
