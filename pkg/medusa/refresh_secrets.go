@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 )
 
 func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, client client.Client, logger logr.Logger, requeueDelay time.Duration) error {
-	println(fmt.Sprintf("Restore complete for DC %#v, Refreshing secrets", dc.ObjectMeta))
+	logger.Info(fmt.Sprintf("Restore complete for DC %#v, Refreshing secrets", dc.ObjectMeta))
 	userSecrets := []string{}
 	for _, user := range dc.Spec.Users {
 		userSecrets = append(userSecrets, user.SecretName)
@@ -25,7 +26,7 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 	} else {
 		userSecrets = append(userSecrets, dc.Spec.SuperuserSecretName)
 	}
-	println(fmt.Sprintf("refreshing user secrets for %v", userSecrets))
+	logger.Info(fmt.Sprintf("refreshing user secrets for %v", userSecrets))
 	//  Both Reaper and medusa secrets go into the userSecrets, so they don't need special handling.
 	for _, i := range userSecrets {
 		secret := &corev1.Secret{}
@@ -38,7 +39,9 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 			secret.ObjectMeta.Annotations = make(map[string]string)
 		}
 		secret.ObjectMeta.Annotations[k8ssandraapi.RefreshAnnotation] = time.Now().String()
-		reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret)
+		if err := reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret); err != nil {
+			return errors.New(err.GetError().Error())
+		}
 	}
 	return nil
 
