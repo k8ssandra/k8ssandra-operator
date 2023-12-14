@@ -178,8 +178,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	request.Log.Info("The restore operation is complete for DC", "CassandraDatacenter", request.Datacenter.Name)
 
-	err = medusa.RefreshSecrets(request.Datacenter, ctx, r.Client, request.Log, r.DefaultDelay)
-	if err != nil {
+	if err = medusa.RefreshSecrets(request.Datacenter, ctx, r.Client, logger, r.DefaultDelay); err != nil {
 		request.Log.Error(err, "Failed to refresh Cassandra users in the DB")
 		// Not going to bother applying updates here since we hit an error.
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
