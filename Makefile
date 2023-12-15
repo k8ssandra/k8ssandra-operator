@@ -167,8 +167,13 @@ endif
 
 ##@ Build
 
+DATE  ?= $(shell date)
+VERSION ?= $(VERSION)
+COMMIT ?= $(shell git rev-parse --short HEAD)
+
+
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build --ldflags "-X \"main.version=$(VERSION)\" -X \"main.date=$(DATE)\" -X \"main.commit=$(COMMIT)\"" -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
