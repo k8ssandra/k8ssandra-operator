@@ -91,7 +91,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	}
 }
 
-func createSingleMedusaJobMultiCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 	cluster2Name := "cluster2"
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: cluster2Name}}
