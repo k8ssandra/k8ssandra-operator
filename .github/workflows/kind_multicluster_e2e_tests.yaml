@@ -57,22 +57,22 @@ jobs:
     strategy:
       matrix:
         e2e_test:
-          # - CreateMultiDatacenterCluster
-          # - CreateMixedMultiDataCenterCluster
-          # - AddDcToClusterDiffDataplane
-          # - RemoveDcFromCluster
-          # - CheckStargateApisWithMultiDcCluster
-          # - CreateMultiStargateAndDatacenter
-          # - CreateMultiReaper
-          # - ClusterScoped/MultiDcMultiCluster
+          - CreateMultiDatacenterCluster
+          - CreateMixedMultiDataCenterCluster
+          - AddDcToClusterDiffDataplane
+          - RemoveDcFromCluster
+          - CheckStargateApisWithMultiDcCluster
+          - CreateMultiStargateAndDatacenter
+          - CreateMultiReaper
+          - ClusterScoped/MultiDcMultiCluster
           - CreateMultiMedusaJob
-          # - MultiDcAuthOnOff
+          - MultiDcAuthOnOff
           # TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
           #- MultiDcEncryptionWithStargate
-          # - MultiDcEncryptionWithReaper
-          # - StopAndRestartDc
-          # - CreateMultiDatacenterDseCluster
-          # - PerNodeConfig/InitialTokens
+          - MultiDcEncryptionWithReaper
+          - StopAndRestartDc
+          - CreateMultiDatacenterDseCluster
+          - PerNodeConfig/InitialTokens
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
