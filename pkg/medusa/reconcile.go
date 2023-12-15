@@ -24,7 +24,6 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	// DefaultMedusaVersion pins to an unreleased version to be compatible. will revert back to a release version once we have it
 	DefaultMedusaVersion         = "0.17.0"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
