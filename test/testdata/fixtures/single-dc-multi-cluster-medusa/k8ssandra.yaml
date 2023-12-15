@@ -1,0 +1,59 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: cluster1
+spec:
+  cassandra:
+    serverVersion: 4.0.11
+    datacenters:
+      - metadata:
+          name: cluster1-dc1
+        datacenterName: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 2
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heapSize: 512Mi
+---
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: cluster2
+spec:
+  cassandra:
+    serverVersion: 4.0.11
+    datacenters:
+      - metadata:
+          name: cluster2-dc1
+        datacenterName: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 2
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          jvmOptions:
+            heapSize: 512Mi
+  medusa:
+    storageProperties:
+      storageProvider: s3_compatible
+      bucketName: k8ssandra-medusa
+      prefix: test
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: minio-service.minio.svc.cluster.local
+      port: 9000
+      secure: false

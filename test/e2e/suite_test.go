@@ -285,6 +285,13 @@ func TestOperator(t *testing.T) {
 		doCassandraDatacenterCleanup: false,
 		installMinio:                 true,
 	}))
+	t.Run("CreateSingleMedusaJobMultiCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleMedusaJobMultiCluster,
+		fixture:                      framework.NewTestFixture("single-dc-multi-cluster-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
+	}))
 	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
