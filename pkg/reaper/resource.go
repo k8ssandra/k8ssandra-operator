@@ -1,6 +1,7 @@
 package reaper
 
 import (
+	"github.com/adutra/goalesce"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -39,12 +40,13 @@ func NewReaper(
 		labels = utils.MergeMap(labels, m.Labels)
 		anns = m.Annotations
 	}
+	commonAnnotations := goalesce.MustDeepMerge(kc.ObjectMeta.Annotations, dc.ObjectMeta.Annotations)
 
 	desiredReaper := &reaperapi.Reaper{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   reaperKey.Namespace,
 			Name:        reaperKey.Name,
-			Annotations: anns,
+			Annotations: goalesce.MustDeepMerge(commonAnnotations, anns),
 			Labels:      labels,
 		},
 		Spec: reaperapi.ReaperSpec{
