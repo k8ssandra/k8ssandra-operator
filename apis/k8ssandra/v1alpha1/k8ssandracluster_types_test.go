@@ -1,8 +1,9 @@
 package v1alpha1
 
 import (
-	"sigs.k8s.io/yaml"
 	"testing"
+
+	"sigs.k8s.io/yaml"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
@@ -137,8 +138,6 @@ func TestUnmarshallDatacenterMeta(t *testing.T) {
 metadata:
   labels:
     label1: labelValue1
-  annotations:
-    annotation1: annotationValue1
   commonLabels:
     commonLabel1: commonLabelValue1
   pods:

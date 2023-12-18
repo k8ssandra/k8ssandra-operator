@@ -902,7 +902,10 @@ func TestCoalesce(t *testing.T) {
 				DatacenterOptions: api.DatacenterOptions{},
 				Meta: meta.CassandraClusterMeta{
 					CommonLabels: map[string]string{
-						"common": "label",
+						"clusterLevelCommonLabel": "clusterLevellabelvalue",
+					},
+					CommonAnnotations: map[string]string{
+						"clusterLevelCommonAnnotation": "clusterLevelCommonAnnotationValue",
 					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
@@ -911,13 +914,26 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
+				Meta: api.EmbeddedObjectMeta{
+					CommonLabels: map[string]string{
+						"dcLevelCommonLabel": "dcLevellabelvalue",
+					},
+					CommonAnnotations: map[string]string{
+						"dcLevelCommonAnnotation": "dcLevelCommonAnnotationValue",
+					},
+				},
 				DatacenterOptions: api.DatacenterOptions{},
 			},
 			want: &DatacenterConfig{
 				Meta: api.EmbeddedObjectMeta{
 					Name: "",
 					CommonLabels: map[string]string{
-						"common": "label",
+						"clusterLevelCommonLabel": "clusterLevellabelvalue",
+						"dcLevelCommonLabel":      "dcLevellabelvalue",
+					},
+					CommonAnnotations: map[string]string{
+						"clusterLevelCommonAnnotation": "clusterLevelCommonAnnotationValue",
+						"dcLevelCommonAnnotation":      "dcLevelCommonAnnotationValue",
 					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},

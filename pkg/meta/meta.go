@@ -38,10 +38,15 @@ type CassandraClusterMeta struct {
 	// +optional
 	Tags `json:",inline"`
 
-	// labels/annotations that will be applied to all components
+	// labels that will be applied to all components
 	// created by the CRD
 	// +optional
 	CommonLabels map[string]string `json:"commonLabels,omitempty"`
+
+	// annotations that will be applied to all components
+	// created by the CRD
+	// +optional
+	CommonAnnotations map[string]string `json:"commonAnnotations,omitempty"`
 
 	// labels/annotations for the pod components
 	// +optional
