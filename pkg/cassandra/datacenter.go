@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
@@ -157,7 +158,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   namespace,
 			Name:        template.Meta.Name,
-			Annotations: map[string]string{},
+			Annotations: template.Meta.Annotations,
 			Labels: utils.MergeMap(map[string]string{
 				api.NameLabel:      api.NameLabelValue,
 				api.PartOfLabel:    api.PartOfLabelValue,
@@ -223,15 +224,22 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	m := template.Meta
 	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
 	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
-
-	if m.CommonLabels != nil {
-		dc.Spec.AdditionalLabels = m.CommonLabels
-	}
+	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.CommonAnnotations)
 
 	if m.CommonLabels != nil {
 		dc.Spec.AdditionalLabels = m.CommonLabels
 	} else {
 		dc.Spec.AdditionalLabels = map[string]string{}
+	}
+
+	if m.CommonAnnotations != nil {
+		m.ServiceConfig.AdditionalSeedService.Annotations = goalesce.MustDeepMerge(template.Meta.CommonAnnotations, m.ServiceConfig.AdditionalSeedService.Annotations)
+		m.ServiceConfig.AllPodsService.Annotations = goalesce.MustDeepMerge(template.Meta.CommonAnnotations, m.ServiceConfig.AllPodsService.Annotations)
+		m.ServiceConfig.DatacenterService.Annotations = goalesce.MustDeepMerge(template.Meta.CommonAnnotations, m.ServiceConfig.DatacenterService.Annotations)
+		m.ServiceConfig.NodePortService.Annotations = goalesce.MustDeepMerge(template.Meta.CommonAnnotations, m.ServiceConfig.NodePortService.Annotations)
+		m.ServiceConfig.SeedService.Annotations = goalesce.MustDeepMerge(template.Meta.CommonAnnotations, m.ServiceConfig.SeedService.Annotations)
+	} else {
+		dc.Spec.PodTemplateSpec.Annotations = map[string]string{}
 	}
 
 	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
@@ -370,8 +378,10 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 
 	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
 	dcConfig.Meta.CommonLabels = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonLabels, dcTemplate.Meta.CommonLabels)
+
 	dcConfig.Meta.CommonAnnotations = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonAnnotations, dcTemplate.Meta.CommonAnnotations)
 	dcConfig.Meta.Pods = goalesceutils.MergeCRs(clusterTemplate.Meta.Pods, dcTemplate.Meta.Pods)
+	dcConfig.Meta.Pods.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.CommonAnnotations, dcConfig.Meta.Pods.Annotations)
 	dcConfig.Meta.ServiceConfig = goalesceutils.MergeCRs(clusterTemplate.Meta.ServiceConfig, dcTemplate.Meta.ServiceConfig)
 
 	AddPodTemplateSpecMeta(dcConfig, dcConfig.Meta)
