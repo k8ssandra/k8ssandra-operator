@@ -1,3 +1,21 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster2-medusa
+data:
+  password: MjdrdU5adHQ3Q1YxYjJCWlZuN2c=
+  username: Y2x1c3RlcjItbWVkdXNh
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster2-superuser
+data:
+  password: dGVzdGVycw==
+  username: dGVzdDJAdGVzdC5jb20=
+type: Opaque
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
@@ -30,6 +48,8 @@ metadata:
 spec:
   cassandra:
     serverVersion: 4.0.11
+    superuserSecretRef:
+      name: cluster2-superuser
     datacenters:
       - metadata:
           name: cluster2-dc1
@@ -48,6 +68,8 @@ spec:
           jvmOptions:
             heapSize: 512Mi
   medusa:
+    cassandraUserSecretRef:
+      name: cluster2-medusa
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
