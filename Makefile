@@ -285,8 +285,9 @@ kind-load-image:
 	kind load docker-image --name $(KIND_CLUSTER) cr.k8ssandra.io/${IMG}
 
 kind-load-image-multi:
+	docker tag ${IMG} cr.k8ssandra.io/${IMG}
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
-		kind load docker-image --name k8ssandra-$$i ${IMG}; \
+		kind load docker-image --name k8ssandra-$$i cr.k8ssandra.io/${IMG}; \
 	done
 
 ##@ Deployment
