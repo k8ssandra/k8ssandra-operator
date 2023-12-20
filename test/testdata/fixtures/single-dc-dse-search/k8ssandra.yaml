@@ -3,6 +3,16 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  medusa:
+    storageProperties:
+      storageProvider: s3_compatible
+      bucketName: k8ssandra-medusa
+      prefix: test
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: minio-service.minio.svc.cluster.local
+      port: 9000
+      secure: false
   cassandra:
     serverVersion: 6.8.26
     serverType: dse
