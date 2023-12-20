@@ -1,6 +1,7 @@
 package cassandra
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -515,6 +516,38 @@ func ValidateConfig(desiredDc, actualDc *cassdcapi.CassandraDatacenter) error {
 	}
 
 	return nil
+}
+
+func SetNewDefaultNumTokens(kc *api.K8ssandraCluster, desiredDc, actualDc *cassdcapi.CassandraDatacenter) (*cassdcapi.CassandraDatacenter, error) {
+	desiredConfig, err := utils.UnmarshalToMap(desiredDc.Spec.Config)
+	if err != nil {
+		return nil, err
+	}
+	actualConfig, err := utils.UnmarshalToMap(actualDc.Spec.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	actualCassYaml := actualConfig["cassandra-yaml"].(map[string]interface{})
+	desiredCassYaml := desiredConfig["cassandra-yaml"].(map[string]interface{})
+
+	var numTokensExists bool
+	cassConfig := kc.Spec.Cassandra.CassandraConfig
+	if cassConfig != nil {
+		_, numTokensExists = cassConfig.CassandraYaml["num_tokens"]
+	}
+
+	if !numTokensExists {
+		desiredCassYaml["num_tokens"] = actualCassYaml["num_tokens"]
+		desiredConfig["cassandra-yaml"] = desiredCassYaml
+		newConfig, err := json.Marshal(desiredConfig)
+		if err != nil {
+			return nil, err
+		}
+		desiredDc.Spec.Config = newConfig
+	}
+
+	return desiredDc, nil
 }
 
 func AddOrUpdateVolume(dcConfig *DatacenterConfig, volume *corev1.Volume, volumeIndex int, found bool) {

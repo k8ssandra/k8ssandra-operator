@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -158,7 +159,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					dcLogger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
 				}
 
-				if err := cassandra.ValidateConfig(desiredDc, actualDc); err != nil {
+				// Set the proper default during upgrade from 3.x to 4.x
+				if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra && semver.MustParse(actualDc.Spec.ServerVersion).Major() == 3 && semver.MustParse(desiredDc.Spec.ServerVersion).Major() > 3 {
+					if desiredDc, err = cassandra.SetNewDefaultNumTokens(kc, desiredDc, actualDc); err != nil {
+						return result.Error(fmt.Errorf("couldn't set the proper default during upgrade: %v", err)), actualDcs
+					}
+				}
+
+				if err = cassandra.ValidateConfig(desiredDc, actualDc); err != nil {
 					return result.Error(fmt.Errorf("invalid Cassandra config: %v", err)), actualDcs
 				}
 

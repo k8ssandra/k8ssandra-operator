@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -114,18 +115,24 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 
 	oldCassConfig := oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	if oldCassConfig != nil && newCassConfig != nil {
+		oldNumTokens, oldNumTokensExists := oldCassConfig.CassandraYaml["num_tokens"]
+		newNumTokens, newNumTokensExists := newCassConfig.CassandraYaml["num_tokens"]
 
-	var oldNumTokens, newNumTokens interface{}
-
-	if oldCassConfig != nil {
-		oldNumTokens = oldCassConfig.CassandraYaml["num_tokens"]
-	}
-	if newCassConfig != nil {
-		newNumTokens = newCassConfig.CassandraYaml["num_tokens"]
-	}
-
-	if oldNumTokens != newNumTokens {
-		return ErrNumTokens
+		if !oldNumTokensExists {
+			cassVersion, err := semver.NewVersion(oldCluster.Spec.Cassandra.ServerVersion)
+			if err != nil {
+				return err
+			}
+			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
+			if newNumTokensExists && newNumTokens.(float64) != defaultNumTokens {
+				return ErrNumTokens
+			}
+		} else {
+			if oldNumTokens != newNumTokens {
+				return ErrNumTokens
+			}
+		}
 	}
 
 	// Verify that the cluster name override was not changed
