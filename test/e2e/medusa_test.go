@@ -91,6 +91,22 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	}
 }
 
+func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	cluster2Name := "cluster2"
+	kc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: cluster2Name}}
+	kc := &api.K8ssandraCluster{}
+	err := f.Get(ctx, kc2Key, kc)
+	require.NoError(err, "Error getting the K8ssandraCluster")
+	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster2-dc1"}}
+	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
+
+	checkDatacenterReady(t, ctx, dcKey, f)
+	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+	createBackupJob(t, ctx, namespace, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+}
+
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
 	// Get the Cassandra pod
