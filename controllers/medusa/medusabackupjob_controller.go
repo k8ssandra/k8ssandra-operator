@@ -93,7 +93,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		} else {
 			logger.Info("updated MedusaBackupJob with owner reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 	}
 
