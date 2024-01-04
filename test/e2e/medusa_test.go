@@ -231,9 +231,6 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 			return false
 		}
 		_, exists := secret.Annotations[k8ssandraapi.RefreshAnnotation]
-		if !exists {
-			t.Logf("%#v", *secret)
-		}
 		return exists
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "superuser secret wasn't updated with refresh annotation")
 

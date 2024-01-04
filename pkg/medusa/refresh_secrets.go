@@ -32,23 +32,24 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 	}
 	logger.Info(fmt.Sprintf("refreshing user secrets for %v", userSecrets))
 	//  Both Reaper and medusa secrets go into the userSecrets, so they don't need special handling.
+	timestamp := time.Now().String()
 	for _, i := range userSecrets {
 		secret := &corev1.Secret{}
-		err := client.Get(ctx, types.NamespacedName{Name: i, Namespace: dc.Namespace}, secret)
-		if err != nil {
-			logger.Error(err, fmt.Sprintf("Failed to get secret %s", i))
-			return result.Error(err)
-		}
-		if secret.ObjectMeta.Annotations == nil {
-			secret.ObjectMeta.Annotations = make(map[string]string)
-		}
-		secret.ObjectMeta.Annotations[k8ssandraapi.RefreshAnnotation] = time.Now().String()
 		// We need to do our own retries here instead of delegating it back up to the reconciler, because of
 		// the nature (time based) of the annotation we're adding. Otherwise we never complete because the
 		// object on the server never matches the desired object with the new time.
 		retries := 0
 	InnerRetryLoop:
 		for retries <= maxRetries {
+			err := client.Get(ctx, types.NamespacedName{Name: i, Namespace: dc.Namespace}, secret)
+			if err != nil {
+				logger.Error(err, fmt.Sprintf("Failed to get secret %s", i))
+				return result.Error(err)
+			}
+			if secret.ObjectMeta.Annotations == nil {
+				secret.ObjectMeta.Annotations = make(map[string]string)
+			}
+			secret.ObjectMeta.Annotations[k8ssandraapi.RefreshAnnotation] = timestamp
 			recRes := reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret)
 			switch {
 			case recRes.IsError():
