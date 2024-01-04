@@ -28,3 +28,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Upgrade to cass-operator v1.16.0
 * [ENHANCEMENT] [#693](https://github.com/k8ssandra/k8ssandra-operator/issues/693) Build and publish arm64 images
 * [ENHANCEMENT] [#842](https://github.com/k8ssandra/k8ssandra-operator/issues/842) Remove usages of deprecated created-by label
+* [ENHANCEMENT] [#1010](https://github.com/k8ssandra/k8ssandra-operator/issues/1010) Add nodeSelector and tolerations parameters to operator helm chart
