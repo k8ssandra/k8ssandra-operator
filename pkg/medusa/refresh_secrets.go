@@ -2,7 +2,6 @@ package medusa
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -10,12 +9,17 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, client client.Client, logger logr.Logger, requeueDelay time.Duration) error {
+const (
+	maxRetries = 5
+)
+
+func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, client client.Client, logger logr.Logger, requeueDelay time.Duration) result.ReconcileResult {
 	logger.Info(fmt.Sprintf("Restore complete for DC %#v, Refreshing secrets", dc.ObjectMeta))
 	userSecrets := []string{}
 	for _, user := range dc.Spec.Users {
@@ -33,16 +37,32 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 		err := client.Get(ctx, types.NamespacedName{Name: i, Namespace: dc.Namespace}, secret)
 		if err != nil {
 			logger.Error(err, fmt.Sprintf("Failed to get secret %s", i))
-			return err
+			return result.Error(err)
 		}
 		if secret.ObjectMeta.Annotations == nil {
 			secret.ObjectMeta.Annotations = make(map[string]string)
 		}
 		secret.ObjectMeta.Annotations[k8ssandraapi.RefreshAnnotation] = time.Now().String()
-		if err := reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret); err != nil {
-			return errors.New(err.GetError().Error())
+		// We need to do our own retries here instead of delegating it back up to the reconciler, because of
+		// the nature (time based) of the annotation we're adding. Otherwise we never complete because the
+		// object on the server never matches the desired object with the new time.
+		retries := 0
+	InnerRetryLoop:
+		for retries <= maxRetries {
+			recRes := reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret)
+			switch {
+			case recRes.IsError():
+				return recRes
+			case recRes.IsRequeue():
+				retries++
+				continue
+			case recRes.IsDone():
+				break InnerRetryLoop
+			}
+		}
+		if retries == maxRetries {
+			return result.Error(fmt.Errorf("failed to refresh secret %s after %d retries", i, maxRetries))
 		}
 	}
-	return nil
-
+	return result.Done()
 }
