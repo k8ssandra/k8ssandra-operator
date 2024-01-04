@@ -69,7 +69,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	backup := instance.DeepCopy()
@@ -79,28 +79,28 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err = r.Get(ctx, cassdcKey, cassdc)
 	if err != nil {
 		logger.Error(err, "failed to get cassandradatacenter", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	// Set an owner reference on the backup job so that it can be cleaned up when the cassandra datacenter is deleted
 	if backup.OwnerReferences == nil {
 		if err = controllerutil.SetControllerReference(cassdc, backup, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 		if err = r.Update(ctx, backup); err != nil {
 			logger.Error(err, "failed to update MedusaBackupJob with owner reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			logger.Info("updated MedusaBackupJob with owner reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+			return ctrl.Result{}, nil
 		}
 	}
 
 	pods, err := medusa.GetCassandraDatacenterPods(ctx, cassdc, r, logger)
 	if err != nil {
 		logger.Error(err, "Failed to get datacenter pods")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	// If there is anything in progress, simply requeue the request until each pod has finished or errored
@@ -166,11 +166,11 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		backupSummary, err := r.getBackupSummary(ctx, backup, pods, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get backup summary")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 		if err := r.createMedusaBackup(ctx, backup, backupSummary, logger); err != nil {
 			logger.Error(err, "Failed to create MedusaBackup")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 
 		// Set the finish time
@@ -180,7 +180,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		backup.Status.FinishTime = metav1.Now()
 		if err := r.Status().Patch(ctx, backup, patch); err != nil {
 			logger.Error(err, "failed to patch status with finish time")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{Requeue: false}, nil
@@ -192,7 +192,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if !shared.IsMedusaDeployed(pods) {
 		// TODO generate event and/or update status to indicate error condition
 		logger.Error(medusa.BackupSidecarNotFound, "medusa is not deployed", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{RequeueAfter: r.LongDelay}, medusa.BackupSidecarNotFound
+		return ctrl.Result{}, medusa.BackupSidecarNotFound
 	}
 
 	patch := client.MergeFromWithOptions(backup.DeepCopy(), client.MergeFromWithOptimisticLock{})
