@@ -88,6 +88,27 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 		}
 	}
 
+	if err := r.validateStatefulsetNameSize(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *K8ssandraCluster) validateStatefulsetNameSize() error {
+	for _, dc := range r.Spec.Cassandra.Datacenters {
+		if len(dc.Racks) > 0 {
+			for _, rack := range dc.Racks {
+				if len(r.SanitizedName()+"-"+dc.CassDcName()+"-"+rack.Name+"-sts-") > 60 {
+					return fmt.Errorf("the name of the statefulset for rack %s in DC %s is too long", rack.Name, dc.CassDcName())
+				}
+			}
+		} else {
+			if len(r.SanitizedName()+"-"+dc.CassDcName()+"-default-sts-") > 60 {
+				return fmt.Errorf("the name of the statefulset for DC %s is too long", dc.CassDcName())
+			}
+		}
+	}
 	return nil
 }
 
@@ -147,6 +168,10 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	// TODO SoftPodAntiAffinity is not allowed to be modified
 	// TODO StorageConfig can not be modified (not Cluster or DC level) in existing datacenters
 	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
+
+	if err := r.validateStatefulsetNameSize(); err != nil {
+		return err
+	}
 
 	return nil
 }
