@@ -55,7 +55,7 @@ IMG ?= $(IMAGE_TAG_BASE):latest
 CRD_OPTIONS ?= "crd"
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.26.x
+ENVTEST_K8S_VERSION = 1.27.x
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -92,7 +92,7 @@ NUM_CLUSTERS = 2
 NUM_WORKER_NODES = 4
 
 # The version of the Kind image to run end-to-end tests.
-KIND_NODE_VERSION = v1.26.3
+KIND_NODE_VERSION = v1.27.1
 
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
