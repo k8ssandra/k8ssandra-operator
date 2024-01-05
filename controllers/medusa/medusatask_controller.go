@@ -81,18 +81,18 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = r.Get(ctx, cassdcKey, cassdc)
 	if err != nil {
 		logger.Error(err, "failed to get cassandradatacenter", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	// Set an owner reference on the task so that it can be cleaned up when the cassandra datacenter is deleted
 	if task.OwnerReferences == nil {
 		if err = controllerutil.SetControllerReference(cassdc, task, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 		if err = r.Update(ctx, task); err != nil {
 			logger.Error(err, "failed to update task with owner reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			logger.Info("updated task with owner reference", "CassandraDatacenter", cassdcKey)
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil

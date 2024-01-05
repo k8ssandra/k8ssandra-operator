@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 - [ENHANCEMENT] [#1115](https://github.com/k8ssandra/k8ssandra-operator/issues/1115) Add a validation check for the projected pod names length
+* [CHANGE] [#1050](https://github.com/k8ssandra/k8ssandra-operator/issues/1050) Remove unnecessary requeues in the Medusa controllers

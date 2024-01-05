@@ -86,18 +86,18 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	err = r.Get(ctx, cassdcKey, cassdc)
 	if err != nil {
 		logger.Error(err, "failed to get cassandradatacenter", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	// Set an owner reference on the restore job so that it can be cleaned up when the cassandra datacenter is deleted
 	if request.RestoreJob.OwnerReferences == nil {
 		if err = controllerutil.SetControllerReference(cassdc, request.RestoreJob, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 		if err = r.Update(ctx, request.RestoreJob); err != nil {
 			logger.Error(err, "failed to update MedusaRestoreJob with owner reference", "CassandraDatacenter", cassdcKey)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			logger.Info("updated MedusaRestoreJob with owner reference", "CassandraDatacenter", cassdcKey)
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
@@ -110,7 +110,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		request.RestoreJob.Status.Message = err.Error()
 		if err = r.Status().Update(ctx, request.RestoreJob); err != nil {
 			logger.Error(err, "failed to update MedusaRestoreJob with error message", "MedusaRestoreJob", req.NamespacedName.Name)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 
 		logger.Error(fmt.Errorf("unable to use target backup for restore of CassandraDatacenter: %s", request.RestoreJob.Status.Message), "backup can not be used for restore")
@@ -149,7 +149,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		request.Log.Error(err, "Failed to check if datacenter update is complete")
 		// Not going to bother applying updates here since we hit an error.
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	if !complete {
@@ -173,7 +173,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	request.SetMedusaRestoreFinishTime(metav1.Now())
 	if err := r.applyUpdates(ctx, request); err != nil {
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	request.Log.Info("The restore operation is complete")
@@ -206,7 +206,7 @@ func (r *MedusaRestoreJobReconciler) applyUpdates(ctx context.Context, req *medu
 func (r *MedusaRestoreJobReconciler) applyUpdatesAndRequeue(ctx context.Context, req *medusa.RestoreRequest) (ctrl.Result, error) {
 	if err := r.applyUpdates(ctx, req); err != nil {
 		req.Log.Error(err, "Failed to apply updates")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
