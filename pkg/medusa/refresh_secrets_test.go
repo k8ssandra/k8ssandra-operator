@@ -28,7 +28,8 @@ func TestRefreshSecrets_defaultSUSecret(t *testing.T) {
 	for _, i := range secrets {
 		assert.NoError(t, fakeClient.Create(context.Background(), &i))
 	}
-	recRes := RefreshSecrets(&cassDC, context.Background(), fakeClient, logr.Logger{}, 0)
+
+	recRes := RefreshSecrets(&cassDC, context.Background(), fakeClient, logr.Logger{}, 0, metav1.Now())
 	assert.True(t, recRes.IsDone())
 	suSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-cluster-superuser", Namespace: "test"}, suSecret))
@@ -57,7 +58,7 @@ func TestRefreshSecrets_customSecrets(t *testing.T) {
 		assert.NoError(t, fakeClient.Create(context.Background(), &i))
 	}
 
-	recRes := RefreshSecrets(&cassDC, context.Background(), fakeClient, logr.Logger{}, 0)
+	recRes := RefreshSecrets(&cassDC, context.Background(), fakeClient, logr.Logger{}, 0, metav1.Now())
 	assert.True(t, recRes.IsDone())
 	suSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cass-custom-superuser", Namespace: "test"}, suSecret))

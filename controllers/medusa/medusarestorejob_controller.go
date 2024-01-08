@@ -178,7 +178,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	request.Log.Info("The restore operation is complete for DC", "CassandraDatacenter", request.Datacenter.Name)
 
-	recRes := medusa.RefreshSecrets(request.Datacenter, ctx, r.Client, request.Log, r.DefaultDelay)
+	recRes := medusa.RefreshSecrets(request.Datacenter, ctx, r.Client, request.Log, r.DefaultDelay, request.RestoreJob.Status.FinishTime)
 	switch {
 	case recRes.IsError():
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, recRes.GetError()
