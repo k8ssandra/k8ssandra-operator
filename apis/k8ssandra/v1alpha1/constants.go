@@ -59,6 +59,8 @@ const (
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
 
 	DatacenterLabel = "k8ssandra.io/datacenter"
+	// Forces refresh of secrets which relate to roles and authn in Cassandra.
+	RefreshAnnotation = "k8ssandra.io/refresh"
 )
 
 var (

@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [FEATURE] [#1080](https://github.com/k8ssandra/k8ssandra-operator/issues/1080) When a restore is completed, an annotation is added to the user secrets that will cause cass-operator to refresh them on the Cassandra side.
+
 ## v1.10.3 - 2023-11-15
 
 * [BUGFIX] [#1110](https://github.com/k8ssandra/k8ssandra-operator/issues/1110) Fix cluster name being set to "Test Cluster" when running Cassandra 4.1+

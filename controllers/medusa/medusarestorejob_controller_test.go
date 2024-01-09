@@ -292,8 +292,9 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		return !restore.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
+	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
+
 }
 
 func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
