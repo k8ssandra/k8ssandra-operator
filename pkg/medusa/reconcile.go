@@ -11,6 +11,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
@@ -447,6 +448,10 @@ func MedusaStandaloneDeploymentName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-standalone", clusterName, dcName)
 }
 
+func MedusaPurgeCronJobName(clusterName string, dcName string) string {
+	return fmt.Sprintf("%s-%s-medusa-purge", clusterName, dcName)
+}
+
 func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, dcName, namespace string, logger logr.Logger) *appsv1.Deployment {
 	// The standalone medusa pod won't be able to resolve its own IP address using DNS entries
 	medusaContainer.Env = append(medusaContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
@@ -518,6 +523,52 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 	return medusaService
 }
 
+func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *batchv1.CronJob {
+	purgeCronJob := &batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      MedusaPurgeCronJobName(clusterName, dcConfig.SanitizedName()),
+			Namespace: namespace,
+		},
+		Spec: batchv1.CronJobSpec{
+			Schedule:                   "0 0 * * *",
+			Suspend:                    pointer.Bool(false),
+			SuccessfulJobsHistoryLimit: pointer.Int32(3),
+			FailedJobsHistoryLimit:     pointer.Int32(1),
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "k8ssandra-purge-backups",
+						},
+						Spec: corev1.PodSpec{
+							RestartPolicy:                 corev1.RestartPolicyOnFailure,
+							TerminationGracePeriodSeconds: pointer.Int64(30),
+							DNSPolicy:                     corev1.DNSClusterFirst,
+							SchedulerName:                 "default-scheduler",
+							Containers: []corev1.Container{
+								{
+									Name:                     "k8ssandra-purge-backups",
+									Image:                    "bitnami/kubectl:1.17.3",
+									ImagePullPolicy:          corev1.PullIfNotPresent,
+									TerminationMessagePath:   "/dev/termination-log",
+									TerminationMessagePolicy: "File",
+									Command: []string{
+										"/bin/bash",
+										"-c",
+										">-",
+										createPurgeTaskStr(dcConfig, namespace),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	return purgeCronJob
+}
+
 func generateMedusaProbe(configuredProbe *corev1.Probe) (*corev1.Probe, error) {
 	// Goalesce the custom probe with the default probe,
 	defaultProbe := defaultMedusaProbe()
@@ -550,4 +601,8 @@ func defaultMedusaProbe() *corev1.Probe {
 	}
 
 	return probe
+}
+
+func createPurgeTaskStr(dcConfig *cassandra.DatacenterConfig, namespace string) string {
+	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\nkind:MedusaTask\nmetadata:\n  name: purge-backups-timestamp\nnamespace: %s\nspec:\n  cassandraDatacenter: %s\n  operation: purge\" | sed \"s/timestamp/$(date+%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcConfig.CassDcName())
 }
