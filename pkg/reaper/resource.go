@@ -67,8 +67,8 @@ func NewReaper(
 			desiredReaper.Spec.CassandraUserSecretRef.Name = DefaultUserSecretName(kc.SanitizedName())
 		}
 		// Note: deliberately skip JmxUserSecretRef, which is deprecated.
-		if desiredReaper.Spec.UiUserSecretRef.Name == "" {
-			desiredReaper.Spec.UiUserSecretRef.Name = DefaultUiSecretName(kc.SanitizedName())
+		if desiredReaper.Spec.UiUserSecretRef == nil {
+			desiredReaper.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: DefaultUiSecretName(kc.SanitizedName())}
 		}
 
 		if desiredReaper.Spec.ResourceMeta == nil {

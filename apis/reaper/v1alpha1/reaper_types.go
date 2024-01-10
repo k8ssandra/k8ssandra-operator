@@ -56,7 +56,7 @@ type ReaperTemplate struct {
 
 	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
 	// +optional
-	UiUserSecretRef corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
+	UiUserSecretRef *corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
 	// SecretsProvider defines whether the secrets used for credentials and certs will be backed
 	// by an external secret backend. This moves the responsibility of generating and storing
