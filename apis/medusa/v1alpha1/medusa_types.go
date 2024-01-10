@@ -96,6 +96,10 @@ type Storage struct {
 	// +optional
 	Secure bool `json:"secure,omitempty"`
 
+	// When using SSL, whether to also verify the certificate.
+	// +optional
+	SslVerify bool `json:"sslVerify,omitempty"`
+
 	// Age after which orphan sstables can be deleted from the storage backend.
 	// Protects from race conditions between purge and ongoing backups.
 	// Defaults to 10 days.

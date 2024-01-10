@@ -27399,6 +27399,9 @@ spec:
                       secure:
                         description: Whether to use SSL for the storage backend.
                         type: boolean
+                      sslVerify:
+                        description: When using SSL, whether to also verify the certificate.
+                        type: boolean
                       storageProvider:
                         description: The storage backend to use for the backups.
                         enum:

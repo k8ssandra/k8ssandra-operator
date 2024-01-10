@@ -88,6 +88,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     {{- else }}
     secure = True
     {{- end }}
+    {{- if not .Spec.Medusa.StorageProperties.SslVerify }}
+    ssl_verify = False
+    {{- else }}
+    ssl_verify = True
+    {{- end }}
     {{- if .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
     backup_grace_period_in_days = {{ .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
     {{- end }}
