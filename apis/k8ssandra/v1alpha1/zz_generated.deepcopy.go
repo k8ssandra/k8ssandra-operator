@@ -313,6 +313,13 @@ func (in *EmbeddedObjectMeta) DeepCopyInto(out *EmbeddedObjectMeta) {
 			(*out)[key] = val
 		}
 	}
+	if in.CommonAnnotations != nil {
+		in, out := &in.CommonAnnotations, &out.CommonAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.Pods.DeepCopyInto(&out.Pods)
 	in.ServiceConfig.DeepCopyInto(&out.ServiceConfig)
 }

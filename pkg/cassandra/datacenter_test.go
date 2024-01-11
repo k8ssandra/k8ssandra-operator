@@ -902,6 +902,9 @@ func TestCoalesce(t *testing.T) {
 					CommonLabels: map[string]string{
 						"common": "label",
 					},
+					CommonAnnotations: map[string]string{
+						"common": "annotation",
+					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
 						Annotations: map[string]string{"annotation:": "avalue"},
@@ -916,6 +919,9 @@ func TestCoalesce(t *testing.T) {
 					Name: "",
 					CommonLabels: map[string]string{
 						"common": "label",
+					},
+					CommonAnnotations: map[string]string{
+						"common": "annotation",
 					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
@@ -946,6 +952,9 @@ func TestCoalesce(t *testing.T) {
 					CommonLabels: map[string]string{
 						"common": "label",
 					},
+					CommonAnnotations: map[string]string{
+						"common": "annotation",
+					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},
 						Annotations: map[string]string{"annotation:": "avalue"},
@@ -957,6 +966,9 @@ func TestCoalesce(t *testing.T) {
 					Name: "",
 					CommonLabels: map[string]string{
 						"common": "label",
+					},
+					CommonAnnotations: map[string]string{
+						"common": "annotation",
 					},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"label": "lvalue"},

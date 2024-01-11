@@ -229,6 +229,10 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		dc.Spec.AdditionalLabels = m.CommonLabels
 	}
 
+	if m.CommonAnnotations != nil {
+		dc.Spec.AdditionalAnnotations = m.CommonAnnotations
+	}
+
 	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
 
 	dc.Spec.Tolerations = template.Tolerations
@@ -365,6 +369,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 
 	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
 	dcConfig.Meta.CommonLabels = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonLabels, dcTemplate.Meta.CommonLabels)
+	dcConfig.Meta.CommonAnnotations = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonAnnotations, dcTemplate.Meta.CommonAnnotations)
 	dcConfig.Meta.Pods = goalesceutils.MergeCRs(clusterTemplate.Meta.Pods, dcTemplate.Meta.Pods)
 	dcConfig.Meta.ServiceConfig = goalesceutils.MergeCRs(clusterTemplate.Meta.ServiceConfig, dcTemplate.Meta.ServiceConfig)
 
