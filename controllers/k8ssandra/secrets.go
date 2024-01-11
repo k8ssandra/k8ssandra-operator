@@ -81,7 +81,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
 				return result.Error(err)
 			}
-			if kc.Spec.Reaper.UiUserSecretRef != nil {
+			if kc.Spec.Reaper.UiUserSecretRef == nil || kc.Spec.Reaper.UiUserSecretRef.Name != "" {
 				if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kcKey); err != nil {
 					logger.Error(err, "Failed to reconcile Reaper UI secret", "ReaperUiUserSecretRef", uiUserSecretRef)
 					return result.Error(err)

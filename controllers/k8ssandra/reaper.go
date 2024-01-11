@@ -29,6 +29,7 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -105,6 +106,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		logger.Info("Reaper present for DC " + actualDc.DatacenterName())
 
 		desiredReaper, err := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
+		if kc.Spec.Reaper.UiUserSecretRef == nil {
+			desiredReaper.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: reaper.DefaultUiSecretName(kc.SanitizedName())}
+		}
+		logger.Info("Desired Reaper", "Reaper", desiredReaper)
 		if err != nil {
 			logger.Error(err, "failed to create Reaper API object")
 			return result.Error(err)
