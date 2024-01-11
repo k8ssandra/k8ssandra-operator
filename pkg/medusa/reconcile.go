@@ -545,6 +545,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaCl
 							TerminationGracePeriodSeconds: pointer.Int64(30),
 							DNSPolicy:                     corev1.DNSClusterFirst,
 							SchedulerName:                 "default-scheduler",
+							ServiceAccountName:            "k8ssandra-operator",
 							Containers: []corev1.Container{
 								{
 									Name:                     "k8ssandra-purge-backups",
@@ -555,7 +556,6 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaCl
 									Command: []string{
 										"/bin/bash",
 										"-c",
-										">-",
 										createPurgeTaskStr(dcConfig, namespace),
 									},
 								},
@@ -604,5 +604,5 @@ func defaultMedusaProbe() *corev1.Probe {
 }
 
 func createPurgeTaskStr(dcConfig *cassandra.DatacenterConfig, namespace string) string {
-	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\nkind:MedusaTask\nmetadata:\n  name: purge-backups-timestamp\nnamespace: %s\nspec:\n  cassandraDatacenter: %s\n  operation: purge\" | sed \"s/timestamp/$(date+%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcConfig.CassDcName())
+	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\\nkind: MedusaTask\\nmetadata:\\n  name: purge-backups-timestamp\\n  namespace: %s\\nspec:\\n  cassandraDatacenter: %s\\n  operation: purge\" | sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcConfig.CassDcName())
 }
