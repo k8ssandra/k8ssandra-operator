@@ -109,7 +109,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		if kc.Spec.Reaper.UiUserSecretRef == nil {
 			desiredReaper.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: reaper.DefaultUiSecretName(kc.SanitizedName())}
 		}
-		logger.Info("Desired Reaper", "Reaper", desiredReaper)
 		if err != nil {
 			logger.Error(err, "failed to create Reaper API object")
 			return result.Error(err)
