@@ -250,7 +250,7 @@ true
 
 We could test for `K8SSANDRA_CONTROL_PLANE`, which for each of the three clusters in our example serving as data-planes, should return `false`. Just one example:
 
-```
+```bash
 kubectl config use-context kind-k8ssandra-1
 
 kubectl -n k8ssandra-operator get deployment k8ssandra-operator \
