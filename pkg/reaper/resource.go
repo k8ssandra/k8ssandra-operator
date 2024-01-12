@@ -82,9 +82,11 @@ func NewReaper(
 		if err != nil {
 			return desiredReaper, err
 		}
-		err = secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
-		if err != nil {
-			return desiredReaper, err
+		if desiredReaper.Spec.UiUserSecretRef != nil && desiredReaper.Spec.UiUserSecretRef.Name != "" {
+			err = secret.AddInjectionAnnotationReaperContainers(&desiredReaper.Spec.ResourceMeta.Pods, desiredReaper.Spec.UiUserSecretRef.Name)
+			if err != nil {
+				return desiredReaper, err
+			}
 		}
 	} else {
 		logger.Info("Auth not enabled, no secrets added to Reaper spec")
