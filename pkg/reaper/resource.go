@@ -1,6 +1,7 @@
 package reaper
 
 import (
+	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -32,6 +33,7 @@ func NewReaper(
 	kc *k8ssandraapi.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
 	reaperTemplate *reaperapi.ReaperClusterTemplate,
+	logger logr.Logger,
 ) (*reaperapi.Reaper, error) {
 	labels := createResourceLabels(kc)
 	var anns map[string]string
@@ -58,6 +60,7 @@ func NewReaper(
 		},
 	}
 	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
+		logger.Info("Auth is enabled, adding user secrets to Reaper spec")
 		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for
 		// Reaper: one for CQL and JMX connections, one for the UI. Here we assume that these secrets exist. If the
 		// secrets were specified by the user they should be already present in desiredReaper.Spec; otherwise, we assume
@@ -83,6 +86,8 @@ func NewReaper(
 		if err != nil {
 			return desiredReaper, err
 		}
+	} else {
+		logger.Info("Auth not enabled, no secrets added to Reaper spec")
 	}
 	// If the cluster is already initialized and some DCs are flagged as stopped, we cannot achieve QUORUM in the
 	// cluster for Reaper's keyspace. In this case we simply skip schema migration, otherwise Reaper wouldn't be able to
