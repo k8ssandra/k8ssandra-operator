@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	backupName  = "backup1"
+	backupName1 = "backup1"
+	backupName2 = "backup2"
 	clusterName = "test"
 )
 
@@ -33,14 +34,20 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	createBackupJob(t, ctx, namespace, f, dcKey)
-	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	restoreBackupJob(t, ctx, namespace, f, dcKey)
-	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
+
+	backupKey1 := types.NamespacedName{Namespace: namespace, Name: backupName1}
+	createBackupJob(t, ctx, namespace, backupName1, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey1, backupName1)
+
+	backupKey2 := types.NamespacedName{Namespace: namespace, Name: backupName2}
+	createBackupJob(t, ctx, namespace, backupName2, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey2, backupName2)
+
+	restoreBackupJob(t, ctx, namespace, backupName1, f, dcKey)
+	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey1)
 
 	// Scale the cluster to verify that the previous restore won't break the new pod
 	// Not doing this for DSE tests as it takes too long
@@ -63,7 +70,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	kc := &api.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
+	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName1}
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
@@ -77,15 +84,15 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 
 	// Create a backup in each DC and verify their completion
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		createBackupJob(t, ctx, namespace, f, dcKey)
+		createBackupJob(t, ctx, namespace, backupName1, f, dcKey)
 	}
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+		verifyBackupJobFinished(t, ctx, f, dcKey, backupKey, backupName1)
 	}
 
 	// Restore the backup in each DC and verify it finished correctly
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		restoreBackupJob(t, ctx, namespace, f, dcKey)
+		restoreBackupJob(t, ctx, namespace, backupName1, f, dcKey)
 	}
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
@@ -100,12 +107,12 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	err := f.Get(ctx, kc2Key, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster2-dc1"}}
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
+	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName1}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	createBackupJob(t, ctx, namespace, f, dcKey)
-	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+	createBackupJob(t, ctx, namespace, backupName1, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey, backupName1)
 }
 
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
@@ -126,7 +133,7 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
 }
 
-func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+func createBackupJob(t *testing.T, ctx context.Context, namespace string, backupName string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
 	require := require.New(t)
 	t.Log("creating MedusaBackupJob")
 
@@ -144,7 +151,7 @@ func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *fra
 	require.NoError(err, "failed to create MedusaBackupJob")
 }
 
-func verifyBackupJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {
+func verifyBackupJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName, backupName string) {
 	require := require.New(t)
 	t.Log("verify the backup finished")
 	backupClusterKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: backupKey}
@@ -170,10 +177,10 @@ func verifyBackupJobFinished(t *testing.T, ctx context.Context, f *framework.E2e
 	require.Equal(dc.Spec.Size, medusaBackup.Status.TotalNodes, "backup total nodes doesn't match dc nodes")
 	require.Equal(dc.Spec.Size, medusaBackup.Status.FinishedNodes, "backup finished nodes doesn't match dc nodes")
 	require.Equal(int(dc.Spec.Size), len(medusaBackup.Status.Nodes), "backup topology doesn't match dc topology")
-	require.Equal(medusapkg.StatusType_SUCCESS.String(), medusaBackup.Status.Status, "backup topology doesn't match dc topology")
+	require.Equal(medusapkg.StatusType_SUCCESS.String(), medusaBackup.Status.Status, "the backup wasn't a success")
 }
 
-func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, backupName string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
 	require := require.New(t)
 	t.Log("restoring MedusaBackup")
 	restore := &medusa.MedusaRestoreJob{

@@ -4,6 +4,8 @@ metadata:
   name: test
 spec:
   medusa:
+    containerImage:
+      tag: dse-snapshot-fix
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa

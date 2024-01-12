@@ -102,14 +102,20 @@ func createSingleDseSearchDatacenterCluster(t *testing.T, ctx context.Context, n
 	}, 2*time.Minute, 10*time.Second, "failed to reach solr endpoint")
 
 	kc := &api.K8ssandraCluster{}
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	createBackupJob(t, ctx, namespace, f, dcKey)
-	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	restoreBackupJob(t, ctx, namespace, f, dcKey)
-	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
+
+	backupKey1 := types.NamespacedName{Namespace: namespace, Name: backupName1}
+	createBackupJob(t, ctx, namespace, backupName1, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey1, backupName1)
+
+	backupKey2 := types.NamespacedName{Namespace: namespace, Name: backupName2}
+	createBackupJob(t, ctx, namespace, backupName2, f, dcKey)
+	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey2, backupName2)
+
+	restoreBackupJob(t, ctx, namespace, backupName1, f, dcKey)
+	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey1)
 
 	require.Eventually(t, func() bool {
 		return testSolrEndpoint(t, solrHostAndPort, username, password)
