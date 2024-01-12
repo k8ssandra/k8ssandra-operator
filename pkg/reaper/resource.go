@@ -72,8 +72,6 @@ func NewReaper(
 		// Note: deliberately skip JmxUserSecretRef, which is deprecated.
 		if kc.Spec.Reaper.UiUserSecretRef == nil && kc.Spec.IsAuthEnabled() {
 			desiredReaper.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: DefaultUiSecretName(kc.SanitizedName())}
-		} else {
-			desiredReaper.Spec.UiUserSecretRef = nil
 		}
 
 		if desiredReaper.Spec.ResourceMeta == nil {
