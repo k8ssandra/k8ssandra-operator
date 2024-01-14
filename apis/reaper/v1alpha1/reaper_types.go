@@ -54,7 +54,7 @@ type ReaperTemplate struct {
 	// this field is ignored.
 	JmxUserSecretRef corev1.LocalObjectReference `json:"jmxUserSecretRef,omitempty"`
 
-	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
+	// Defines the secret which contains the username and password for the Reaper UI and REST API authentication. When UiUserSecretRef.Name == "", authentication is turned off in the front-end only.
 	// +optional
 	UiUserSecretRef *corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 

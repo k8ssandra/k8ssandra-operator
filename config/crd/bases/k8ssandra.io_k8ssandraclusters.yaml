@@ -29787,7 +29787,9 @@ spec:
                     type: array
                   uiUserSecretRef:
                     description: Defines the secret which contains the username and
-                      password for the Reaper UI and REST API authentication.
+                      password for the Reaper UI and REST API authentication. When
+                      UiUserSecretRef.Name == "", authentication is turned off in
+                      the front-end only.
                     properties:
                       name:
                         description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
