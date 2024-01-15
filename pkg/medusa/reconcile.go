@@ -24,7 +24,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.17.0"
+	DefaultMedusaVersion         = "0.17.1"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
@@ -87,6 +87,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     secure = False
     {{- else }}
     secure = True
+    {{- end }}
+    {{- if not .Spec.Medusa.StorageProperties.SslVerify }}
+    ssl_verify = False
+    {{- else }}
+    ssl_verify = True
     {{- end }}
     {{- if .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
     backup_grace_period_in_days = {{ .Spec.Medusa.StorageProperties.BackupGracePeriodInDays }}
