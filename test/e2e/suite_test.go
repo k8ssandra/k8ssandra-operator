@@ -783,6 +783,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
+	require.NoError(CheckLabelsAnnotationsCreated(dcKey, t, ctx, f))
 	// Check that the Cassandra cluster name override is passed to the cassdc without being modified
 	checkCassandraClusterName(t, ctx, k8ssandra, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
@@ -2242,4 +2243,18 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 		return err == nil
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
 
+}
+
+func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx context.Context, f *framework.E2eFramework) error {
+	cassDC := &cassdcapi.CassandraDatacenter{}
+	t.Logf("check that Annotations and Labels fields are propagated to cassDC %v is present in cluster %s", cassDC.Name, dcKey.K8sContext)
+	err := f.Get(ctx, dcKey, cassDC)
+	if err != nil {
+		return err
+	}
+	assert.True(t, cassDC.Spec.AdditionalLabels["aLabelKeyClusterLevel"] == "aLabelValueClusterLevel")
+	assert.True(t, cassDC.Spec.AdditionalLabels["aLabelKeyDcLevel"] == "aLabelValueDcLevel")
+	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyDcLevel"] == "anAnnotationValueDCLevel")
+	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyClusterLevel"] == "anAnnotationValueClusterLevel")
+	return nil
 }
