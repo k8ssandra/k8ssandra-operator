@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1172](https://github.com/k8ssandra/k8ssandra-operator/issues/1172) Restrict the mutating webhook to cass-operator managed pods
+
 ## v1.11.0 - 2023-12-20
 
 * [CHANGE] Upgrade to Medusa v0.17.0
