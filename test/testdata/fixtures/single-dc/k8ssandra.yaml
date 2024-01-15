@@ -6,10 +6,10 @@ spec:
   cassandra:
     clusterName: "Weird Cluster Name"
     metadata:
-    commonLabels: 
-      aLabelKeyClusterLevel: aLabelValueClusterLevel
-    commonAnnotations:
-      anAnnotationKeyClusterLevel: anAnnotationValueClusterLevel
+      commonLabels: 
+        aLabelKeyClusterLevel: aLabelValueClusterLevel
+      commonAnnotations:
+        anAnnotationKeyClusterLevel: anAnnotationValueClusterLevel
     telemetry:
       mcac:
         enabled: false
@@ -36,7 +36,7 @@ spec:
             aLabelKeyDcLevel: aLabelValueDcLevel
           commonAnnotations:
             anAnnotationKeyDcLevel: anAnnotationValueDCLevel
-        k8sContext: kind-k8ssandra-0
+        # k8sContext: kind-k8ssandra-0
         size: 3
         serverVersion: 4.0.6
         storageConfig:
