@@ -328,7 +328,8 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 }
 
 func (r *ReaperReconciler) getReaperUICredentials(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
-	if actualReaper.Spec.UiUserSecretRef.Name == "" {
+
+	if actualReaper.Spec.UiUserSecretRef == nil || actualReaper.Spec.UiUserSecretRef.Name == "" {
 		// The UI user secret doesn't exist, meaning auth is disabled
 		return "", "", nil
 	}
@@ -383,11 +384,11 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 		secretRef = &actualReaper.Spec.CassandraUserSecretRef
 		envVars = []*corev1.EnvVar{}
 	case "ui":
-		secretRef = &actualReaper.Spec.UiUserSecretRef
+		secretRef = actualReaper.Spec.UiUserSecretRef
 		envVars = []*corev1.EnvVar{reaper.EnableAuthVar}
 	}
 
-	if len(secretRef.Name) > 0 && !actualReaper.Spec.UseExternalSecrets() {
+	if secretRef != nil && len(secretRef.Name) > 0 && !actualReaper.Spec.UseExternalSecrets() {
 		secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: secretRef.Name}
 		if secret, err := r.getSecret(ctx, secretKey); err != nil {
 			logger.Error(err, "Failed to get Cassandra authentication secret", authType, secretKey)
