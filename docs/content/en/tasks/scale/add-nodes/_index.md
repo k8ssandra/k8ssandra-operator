@@ -214,8 +214,6 @@ status set to `true`. You should also see one or more `ScalingUpRack` events, on
 finally, you should also see `StartedCassandra` events, one per pod:
 
 ```bash
-
-```bash
  kubectl describe cassandradatacenter dc1
 ```
 

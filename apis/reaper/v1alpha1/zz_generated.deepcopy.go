@@ -233,7 +233,11 @@ func (in *ReaperTemplate) DeepCopyInto(out *ReaperTemplate) {
 	*out = *in
 	out.CassandraUserSecretRef = in.CassandraUserSecretRef
 	out.JmxUserSecretRef = in.JmxUserSecretRef
-	out.UiUserSecretRef = in.UiUserSecretRef
+	if in.UiUserSecretRef != nil {
+		in, out := &in.UiUserSecretRef, &out.UiUserSecretRef
+		*out = new(v1.LocalObjectReference)
+		**out = **in
+	}
 	if in.ContainerImage != nil {
 		in, out := &in.ContainerImage, &out.ContainerImage
 		*out = new(images.Image)

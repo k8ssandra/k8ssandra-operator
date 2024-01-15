@@ -380,7 +380,7 @@ func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClien
 	t.Log("create the Reaper object and modify it")
 	rpr := newReaper(testNamespace)
 	rpr.Spec.CassandraUserSecretRef.Name = "top-secret-cass"
-	rpr.Spec.UiUserSecretRef.Name = "top-secret-ui"
+	rpr.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: "top-secret-ui"}
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)
 
@@ -477,7 +477,7 @@ func testCreateReaperWithAuthEnabledExternalSecret(t *testing.T, ctx context.Con
 	//lint:ignore SA1019 Verify deprecated method is ineffective
 	rpr.Spec.JmxUserSecretRef.Name = "top-secret-jmx" //nolint:staticcheck
 
-	rpr.Spec.UiUserSecretRef.Name = "top-secret-ui"
+	rpr.Spec.UiUserSecretRef = &corev1.LocalObjectReference{Name: "top-secret-ui"}
 	err = k8sClient.Create(ctx, rpr)
 	require.NoError(t, err)
 
