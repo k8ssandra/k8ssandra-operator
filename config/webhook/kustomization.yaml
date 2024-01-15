@@ -37,7 +37,5 @@ patchesJson6902:
     - op: add
       path: /webhooks/0/objectSelector
       value:
-        matchExpressions:
-          - key: control-plane
-            operator: NotIn
-            values: ["k8ssandra-operator"]
+        matchLabels:
+          app.kubernetes.io/created-by: cass-operator
