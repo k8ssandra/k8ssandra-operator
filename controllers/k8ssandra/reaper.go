@@ -104,7 +104,8 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 		logger.Info("Reaper present for DC " + actualDc.DatacenterName())
 
-		desiredReaper, err := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate)
+		desiredReaper, err := reaper.NewReaper(reaperKey, kc, actualDc, reaperTemplate, logger)
+
 		if err != nil {
 			logger.Error(err, "failed to create Reaper API object")
 			return result.Error(err)
