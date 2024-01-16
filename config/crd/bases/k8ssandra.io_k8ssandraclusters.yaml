@@ -14021,7 +14021,7 @@ spec:
                                   telemetry:
                                     description: Telemetry defines the desired telemetry
                                       integrations to deploy targeting the Stargate
-                                      pods for all DCs in this cluster (unless overriden
+                                      pods for all DCs in this cluster (unless overridden
                                       by DC specific settings)
                                     properties:
                                       cassandra:
@@ -14590,8 +14590,8 @@ spec:
                             telemetry:
                               description: Telemetry defines the desired telemetry
                                 integrations to deploy targeting the Stargate pods
-                                for all DCs in this cluster (unless overriden by DC
-                                specific settings)
+                                for all DCs in this cluster (unless overridden by
+                                DC specific settings)
                               properties:
                                 cassandra:
                                   properties:
@@ -27411,6 +27411,9 @@ spec:
                       secure:
                         description: Whether to use SSL for the storage backend.
                         type: boolean
+                      sslVerify:
+                        description: When using SSL, whether to also verify the certificate.
+                        type: boolean
                       storageProvider:
                         description: The storage backend to use for the backups.
                         enum:
@@ -29510,7 +29513,7 @@ spec:
                   telemetry:
                     description: Telemetry defines the desired telemetry integrations
                       to deploy targeting the Reaper pods for all DCs in this cluster
-                      (unless overriden by DC specific settings)
+                      (unless overridden by DC specific settings)
                     properties:
                       cassandra:
                         properties:
@@ -31227,7 +31230,7 @@ spec:
                   telemetry:
                     description: Telemetry defines the desired telemetry integrations
                       to deploy targeting the Stargate pods for all DCs in this cluster
-                      (unless overriden by DC specific settings)
+                      (unless overridden by DC specific settings)
                     properties:
                       cassandra:
                         properties:

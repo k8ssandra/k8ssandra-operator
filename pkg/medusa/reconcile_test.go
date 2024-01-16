@@ -189,6 +189,7 @@ func testMedusaIniSecured(t *testing.T) {
 					Region:                   "us-east-1",
 					Port:                     9001,
 					Secure:                   true,
+					SslVerify:                true,
 					BackupGracePeriodInDays:  7,
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
@@ -212,6 +213,7 @@ func testMedusaIniSecured(t *testing.T) {
 	assert.Contains(t, medusaIni, "region = us-east-1")
 	assert.Contains(t, medusaIni, "port = 9001")
 	assert.Contains(t, medusaIni, "secure = True")
+	assert.Contains(t, medusaIni, "ssl_verify = True")
 	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
 }
 
@@ -276,6 +278,7 @@ func testMedusaIniUnsecured(t *testing.T) {
 	assert.Contains(t, medusaIni, "region = us-east-1")
 	assert.Contains(t, medusaIni, "port = 9001")
 	assert.Contains(t, medusaIni, "secure = True")
+	assert.Contains(t, medusaIni, "ssl_verify = False")
 	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
 }
 

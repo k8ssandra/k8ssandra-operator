@@ -6122,7 +6122,7 @@ Stargate defines the desired deployment characteristics for Stargate in this dat
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetry">telemetry</a></b></td>
         <td>object</td>
         <td>
-          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)<br/>
+          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7910,7 +7910,7 @@ StargateRackTemplate defines custom rules for Stargate pods in a given rack. The
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetry">telemetry</a></b></td>
         <td>object</td>
         <td>
-          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)<br/>
+          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9877,7 +9877,7 @@ Resources is the Kubernetes resource requests and limits to apply, per Stargate 
 
 
 
-Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)
+Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)
 
 <table>
     <thead>
@@ -10274,7 +10274,7 @@ Resources is the Kubernetes resource requests and limits to apply, per Stargate 
 
 
 
-Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)
+Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)
 
 <table>
     <thead>
@@ -15930,7 +15930,7 @@ Stargate defines the desired deployment characteristics for Stargate in this K8s
         <td><b><a href="#k8ssandraclusterspecstargatetelemetry">telemetry</a></b></td>
         <td>object</td>
         <td>
-          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)<br/>
+          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17897,7 +17897,7 @@ Resources is the Kubernetes resource requests and limits to apply, per Stargate 
 
 
 
-Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)
+Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)
 
 <table>
     <thead>
@@ -36548,7 +36548,7 @@ Specification of the desired behavior of this Stargate resource.
         <td><b><a href="#stargatespectelemetry">telemetry</a></b></td>
         <td>object</td>
         <td>
-          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)<br/>
+          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -38573,7 +38573,7 @@ StargateRackTemplate defines custom rules for Stargate pods in a given rack. The
         <td><b><a href="#stargatespecracksindextelemetry">telemetry</a></b></td>
         <td>object</td>
         <td>
-          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)<br/>
+          Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -40540,7 +40540,7 @@ Resources is the Kubernetes resource requests and limits to apply, per Stargate 
 
 
 
-Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)
+Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)
 
 <table>
     <thead>
@@ -40937,7 +40937,7 @@ Resources is the Kubernetes resource requests and limits to apply, per Stargate 
 
 
 
-Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overriden by DC specific settings)
+Telemetry defines the desired telemetry integrations to deploy targeting the Stargate pods for all DCs in this cluster (unless overridden by DC specific settings)
 
 <table>
     <thead>
