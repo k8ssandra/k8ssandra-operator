@@ -79,7 +79,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context", f.DataPlaneContexts[0])
-		reaperUiSecretKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test-reaper-ui"}}
+		reaperUiSecretKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "mycluster-reaper-ui"}}
 		username, password := retrieveCredentials(t, f, ctx, reaperUiSecretKey)
 		testReaperApi(t, ctx, f.DataPlaneContexts[0], DcClusterName(t, f, dcKey), "reaper_db", username, password)
 	})

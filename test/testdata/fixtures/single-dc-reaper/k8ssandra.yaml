@@ -21,6 +21,7 @@ spec:
             memory: 512Mi
   cassandra:
     serverVersion: "3.11.14"
+    clusterName: "My Cluster"
     jmxInitContainerImage:
       repository: library
       name: busybox

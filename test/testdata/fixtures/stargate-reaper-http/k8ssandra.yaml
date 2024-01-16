@@ -36,6 +36,7 @@ spec:
       timeoutSeconds: 20
   cassandra:
     serverVersion: "3.11.14"
+    clusterName: "My Cluster"
     jmxInitContainerImage:
       repository: library
       name: busybox

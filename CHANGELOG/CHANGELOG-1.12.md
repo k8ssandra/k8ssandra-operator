@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#1165](https://github.com/k8ssandra/k8ssandra-operator/issues/1165) Expose Medusa ssl_verify option to allow disabling cert verification for some on prem S3 compatible systems
 * [ENHANCEMENT] [#1115](https://github.com/k8ssandra/k8ssandra-operator/issues/1115) Add a validation check for the projected pod names length
 * [ENHANCEMENT] [#1161](https://github.com/k8ssandra/k8ssandra-operator/issues/1161) Update cass-operator Helm chart to 0.46.1. Adds containerPort for cass-operator metrics and changes cass-config-builder base from UBI7 to UBI8
+* [BUGFIX] [#1002](https://github.com/k8ssandra/k8ssandra-operator/issues/1002) Fix reaper secret name sanitization with cluster overrides

@@ -2,6 +2,7 @@ package reaper
 
 import (
 	"fmt"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -36,11 +37,11 @@ var DisableAuthVar = &corev1.EnvVar{
 
 // DefaultUserSecretName generates a name for the Reaper CQL user, that is derived from the Cassandra cluster name.
 func DefaultUserSecretName(clusterName string) string {
-	return fmt.Sprintf("%v-reaper", clusterName)
+	return fmt.Sprintf("%v-reaper", cassdcapi.CleanupForKubernetes(clusterName))
 }
 
 func DefaultUiSecretName(clusterName string) string {
-	return fmt.Sprintf("%v-reaper-ui", clusterName)
+	return fmt.Sprintf("%v-reaper-ui", cassdcapi.CleanupForKubernetes(clusterName))
 }
 
 func GetAuthEnvironmentVars(secret *corev1.Secret, authType string) (*corev1.EnvVar, *corev1.EnvVar, error) {
