@@ -21,9 +21,9 @@ patchesJson6902:
       path: /webhooks/0/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
 
-# adding the objectSelector prevents the bootstrapping problem
-# where the mutation request for the operator pod would be 
-# sent before the operator pod is created
+# The objectSelector will be added to the MutatingWebhookConfiguration
+# to restrict the webhook to pods created by cass-operator.
+# They're the only pods that should be mutated to inject secrets.
 patchesJson6902:
 - target:
     group: admissionregistration.k8s.io
@@ -37,7 +37,5 @@ patchesJson6902:
     - op: add
       path: /webhooks/0/objectSelector
       value:
-        matchExpressions:
-          - key: control-plane
-            operator: NotIn
-            values: ["k8ssandra-operator"]
+        matchLabels:
+          app.kubernetes.io/created-by: cass-operator

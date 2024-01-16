@@ -9,3 +9,32 @@ status:
     type: Available
   - status: "True"
     type: Progressing
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: k8ssandra-operator-mutating-webhook-configuration
+webhooks:
+  - name: mpod.kb.io
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ''
+        apiVersions:
+          - v1
+        resources:
+          - pods
+        scope: '*'
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    namespaceSelector: {}
+    objectSelector:
+      matchLabels:
+        app.kubernetes.io/created-by: cass-operator
+    sideEffects: None
+    timeoutSeconds: 10
+    admissionReviewVersions:
+      - v1
+    reinvocationPolicy: Never
