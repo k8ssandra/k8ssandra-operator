@@ -45123,6 +45123,13 @@ Provides all storage backend related properties for backups.
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>sslVerify</b></td>
+        <td>boolean</td>
+        <td>
+          When using SSL, whether to also verify the certificate.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>storageProvider</b></td>
         <td>enum</td>
         <td>
@@ -45413,7 +45420,7 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         <td><b><a href="#k8ssandraclusterspecreaperuiusersecretref">uiUserSecretRef</a></b></td>
         <td>object</td>
         <td>
-          Defines the secret which contains the username and password for the Reaper UI and REST API authentication.<br/>
+          Defines the secret which contains the username and password for the Reaper UI and REST API authentication. When UiUserSecretRef.Name == "", authentication is turned off in the front-end only.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -49351,7 +49358,7 @@ The pod this Toleration is attached to tolerates any taint that matches the trip
 
 
 
-Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
+Defines the secret which contains the username and password for the Reaper UI and REST API authentication. When UiUserSecretRef.Name == "", authentication is turned off in the front-end only.
 
 <table>
     <thead>
@@ -73108,7 +73115,7 @@ ReaperSpec defines the desired state of Reaper
         <td><b><a href="#reaperspecuiusersecretref">uiUserSecretRef</a></b></td>
         <td>object</td>
         <td>
-          Defines the secret which contains the username and password for the Reaper UI and REST API authentication.<br/>
+          Defines the secret which contains the username and password for the Reaper UI and REST API authentication. When UiUserSecretRef.Name == "", authentication is turned off in the front-end only.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -77264,7 +77271,7 @@ The pod this Toleration is attached to tolerates any taint that matches the trip
 
 
 
-Defines the secret which contains the username and password for the Reaper UI and REST API authentication.
+Defines the secret which contains the username and password for the Reaper UI and REST API authentication. When UiUserSecretRef.Name == "", authentication is turned off in the front-end only.
 
 <table>
     <thead>

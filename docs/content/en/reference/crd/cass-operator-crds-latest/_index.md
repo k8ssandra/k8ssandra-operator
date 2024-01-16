@@ -131,6 +131,13 @@ CassandraDatacenterSpec defines the desired state of a CassandraDatacenter
         </td>
         <td>true</td>
       </tr><tr>
+        <td><b>additionalAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          Additional Annotations allows to define additional labels that will be included in all objects created by the operator. Note, user can override values set by default from the cass-operator and doing so could break cass-operator functionality.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>additionalLabels</b></td>
         <td>map[string]string</td>
         <td>
