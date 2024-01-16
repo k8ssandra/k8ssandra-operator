@@ -15,11 +15,8 @@ webhooks:
   failurePolicy: Fail
   name: mpod.kb.io
   objectSelector:
-    matchExpressions:
-    - key: control-plane
-      operator: NotIn
-      values:
-      - k8ssandra-operator
+    matchLabels:
+      app.kubernetes.io/created-by: cass-operator
   rules:
   - apiGroups:
     - ""

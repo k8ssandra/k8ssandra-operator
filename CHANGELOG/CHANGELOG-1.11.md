@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] [#1161](https://github.com/k8ssandra/k8ssandra-operator/issues/1161) Update cass-operator Helm chart to 0.46.1. Adds containerPort for cass-operator metrics and changes cass-config-builder base from UBI7 to UBI8
+* [BUGFIX] [#1172](https://github.com/k8ssandra/k8ssandra-operator/issues/1172) Restrict the mutating webhook to cass-operator managed pods
 
 ## v1.11.0 - 2023-12-20
 
