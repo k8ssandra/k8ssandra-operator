@@ -140,8 +140,8 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 	t.Log("Checking that all the Medusa related objects have been created and are in the expected state")
 	// check that the cronjob exists
 	cronJob := &batchv1.CronJob{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.Name)), cronJob)
-	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DataceneterName: %s", kc.SanitizedName(), dc1.Name)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
+	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DataceneterName: %s", kc.SanitizedName(), dc1.SanitizedName())
 	// create a Job from the cronjob spec
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -151,7 +151,7 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 		Spec: cronJob.Spec.JobTemplate.Spec,
 	}
 	err = f.Create(ctx, dcKey, job)
-	require.NoErrorf(err, "Error creating the Medusa purge Job. ClusterName: %s, DataceneterName: %s, Namespace: %s, JobName: test-purge-job", kc.SanitizedName(), dc1.Name, namespace)
+	require.NoErrorf(err, "Error creating the Medusa purge Job. ClusterName: %s, DataceneterName: %s, Namespace: %s, JobName: test-purge-job", kc.SanitizedName(), dc1.SanitizedName(), namespace)
 	// ensure the job run was successful
 	require.Eventually(func() bool {
 		updated := &batchv1.Job{}
