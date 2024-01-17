@@ -114,6 +114,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 		// Create a cron job to purge Medusa backups
 		purgeCronJob := medusa.PurgeCronJob(dcConfig, medusaSpec, kc.SanitizedName(), namespace, logger)
+		purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
 		switch {
 		case recRes.IsError():

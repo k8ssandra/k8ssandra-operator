@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/adutra/goalesce"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -526,7 +527,7 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *batchv1.CronJob {
 	purgeCronJob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaPurgeCronJobName(clusterName, dcConfig.SanitizedName()),
+			Name:      MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName()),
 			Namespace: namespace,
 		},
 		Spec: batchv1.CronJobSpec{
@@ -556,7 +557,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaCl
 									Command: []string{
 										"/bin/bash",
 										"-c",
-										createPurgeTaskStr(dcConfig, namespace),
+										createPurgeTaskStr(dcConfig.SanitizedName(), namespace),
 									},
 								},
 							},
@@ -603,6 +604,6 @@ func defaultMedusaProbe() *corev1.Probe {
 	return probe
 }
 
-func createPurgeTaskStr(dcConfig *cassandra.DatacenterConfig, namespace string) string {
-	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\\nkind: MedusaTask\\nmetadata:\\n  name: purge-backups-timestamp\\n  namespace: %s\\nspec:\\n  cassandraDatacenter: %s\\n  operation: purge\" | sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcConfig.CassDcName())
+func createPurgeTaskStr(dcName string, namespace string) string {
+	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\\nkind: MedusaTask\\nmetadata:\\n  name: purge-backups-timestamp\\n  namespace: %s\\nspec:\\n  cassandraDatacenter: %s\\n  operation: purge\" | sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcName)
 }

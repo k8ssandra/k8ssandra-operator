@@ -14,6 +14,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,6 +38,7 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
@@ -71,6 +73,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+		checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 		checkMedusaStandaloneDeploymentExists(t, ctx, dcKey, f, kc)
 		checkMedusaStandaloneServiceExists(t, ctx, dcKey, f, kc)
 	}
@@ -104,6 +107,7 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 }
@@ -124,6 +128,39 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 	require.True(foundConfig, fmt.Sprintf("%s doesn't have server-config-init container", dc1.Name))
 	_, found = cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "medusa")
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
+}
+
+func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	// Get the Cassandra pod
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc1)
+	// check medusa containers exist
+	require.NoError(err, "Error getting the CassandraDatacenter")
+	t.Log("Checking that all the Medusa related objects have been created and are in the expected state")
+	// check that the cronjob exists
+	cronJob := &batchv1.CronJob{}
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.Name)), cronJob)
+	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DataceneterName: %s", kc.SanitizedName(), dc1.Name)
+	// create a Job from the cronjob spec
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test-purge-job",
+		},
+		Spec: cronJob.Spec.JobTemplate.Spec,
+	}
+	err = f.Create(ctx, dcKey, job)
+	require.NoErrorf(err, "Error creating the Medusa purge Job. ClusterName: %s, DataceneterName: %s, Namespace: %s, JobName: test-purge-job", kc.SanitizedName(), dc1.Name, namespace)
+	// ensure the job run was successful
+	require.Eventually(func() bool {
+		updated := &batchv1.Job{}
+		err := f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, "test-purge-job"), updated)
+		if err != nil {
+			return false
+		}
+		return updated.Status.Succeeded == 1
+	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge Job didn't finish within timeout")
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {

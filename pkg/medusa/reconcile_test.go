@@ -1,6 +1,7 @@
 package medusa
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -515,4 +516,33 @@ func TestGenerateMedusaProbe(t *testing.T) {
 	probe, err := generateMedusaProbe(rejectedProbe)
 	assert.Error(t, err)
 	assert.Nil(t, probe)
+}
+
+func TestPurgeCronJob(t *testing.T) {
+	// Define your test inputs
+	dcConfig := &cassandra.DatacenterConfig{
+		DatacenterName: "testDc",
+	}
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "secret",
+			},
+			BucketName: "bucket",
+		},
+		CassandraUserSecretRef: corev1.LocalObjectReference{
+			Name: "test-superuser",
+		},
+	}
+	clusterName := "testCluster"
+	namespace := "testNamespace"
+	logger := logr.New(logr.Discard().GetSink())
+
+	// Call the function with the test inputs
+	actualCronJob := PurgeCronJob(dcConfig, medusaSpec, clusterName, namespace, logger)
+
+	assert.Equal(t, fmt.Sprintf("%s-%s-medusa-purge", "testcluster", "testdc"), actualCronJob.ObjectMeta.Name)
+	assert.Equal(t, 3, len(actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command))
+	assert.Contains(t, actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command[2], "\\nspec:\\n  cassandraDatacenter: testdc")
 }
