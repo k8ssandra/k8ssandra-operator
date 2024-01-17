@@ -527,7 +527,7 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *batchv1.CronJob {
 	purgeCronJob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName()),
+			Name:      MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), cassdcapi.CleanupForKubernetes(dcConfig.Meta.Name)),
 			Namespace: namespace,
 		},
 		Spec: batchv1.CronJobSpec{
