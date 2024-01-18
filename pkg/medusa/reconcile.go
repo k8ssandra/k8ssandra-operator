@@ -524,7 +524,7 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 	return medusaService
 }
 
-func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) (*batchv1.CronJob, error) {
+func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace string, logger logr.Logger) (*batchv1.CronJob, error) {
 	cronJobName := MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName())
 	logger.Info(fmt.Sprintf("Creating Medusa purge backups cronjob: %s", cronJobName))
 	if len(cronJobName) > 253 {

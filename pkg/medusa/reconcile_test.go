@@ -523,24 +523,12 @@ func TestPurgeCronJob(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
 		DatacenterName: "testDc",
 	}
-	medusaSpec := &medusaapi.MedusaClusterTemplate{
-		StorageProperties: medusaapi.Storage{
-			StorageProvider: "s3",
-			StorageSecretRef: corev1.LocalObjectReference{
-				Name: "secret",
-			},
-			BucketName: "bucket",
-		},
-		CassandraUserSecretRef: corev1.LocalObjectReference{
-			Name: "test-superuser",
-		},
-	}
 	clusterName := "testCluster"
 	namespace := "testNamespace"
 	logger := logr.New(logr.Discard().GetSink())
 
 	// Call the function with the test inputs
-	actualCronJob, err := PurgeCronJob(dcConfig, medusaSpec, clusterName, namespace, logger)
+	actualCronJob, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.Nil(t, err)
 	assert.Equal(t, fmt.Sprintf("%s-%s-medusa-purge", "testcluster", "testdc"), actualCronJob.ObjectMeta.Name)
 	assert.Equal(t, 3, len(actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command))
@@ -552,23 +540,11 @@ func TestPurgeCronJobNameTooLong(t *testing.T) {
 	dcConfig := &cassandra.DatacenterConfig{
 		DatacenterName: "testDatacentercWithAReallyLongNameToTestThatTheCharacterCountOfTheNameGoesOverTwoHundredFiftyThreeCharactersTestTestTestTest",
 	}
-	medusaSpec := &medusaapi.MedusaClusterTemplate{
-		StorageProperties: medusaapi.Storage{
-			StorageProvider: "s3",
-			StorageSecretRef: corev1.LocalObjectReference{
-				Name: "secret",
-			},
-			BucketName: "bucket",
-		},
-		CassandraUserSecretRef: corev1.LocalObjectReference{
-			Name: "test-superuser",
-		},
-	}
 	clusterName := "testClusterNameBeingWayTooLongToTestThatTheCharacterCountOfTheNameGoesOverTwoHundredFiftyThreeCharactersTestTestTestTest"
 	namespace := "testNamespace"
 	logger := logr.New(logr.Discard().GetSink())
 
 	// Call the function with the test inputs
-	_, err := PurgeCronJob(dcConfig, medusaSpec, clusterName, namespace, logger)
+	_, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.NotNil(t, err)
 }
