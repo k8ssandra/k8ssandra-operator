@@ -524,10 +524,15 @@ func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *a
 	return medusaService
 }
 
-func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *batchv1.CronJob {
+func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) (*batchv1.CronJob, error) {
+	cronJobName := MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName())
+	logger.Info(fmt.Sprintf("Creating Medusa purge backups cronjob: %s", cronJobName))
+	if len(cronJobName) > 253 {
+		return nil, fmt.Errorf("Medusa purge backups cronjob name too long (must be less than 253 characters). Length: %d, Job name: %s", len(cronJobName), cronJobName)
+	}
 	purgeCronJob := &batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName()),
+			Name:      cronJobName,
 			Namespace: namespace,
 		},
 		Spec: batchv1.CronJobSpec{
@@ -538,15 +543,9 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaCl
 			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: batchv1.JobSpec{
 					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "k8ssandra-purge-backups",
-						},
 						Spec: corev1.PodSpec{
-							RestartPolicy:                 corev1.RestartPolicyOnFailure,
-							TerminationGracePeriodSeconds: pointer.Int64(30),
-							DNSPolicy:                     corev1.DNSClusterFirst,
-							SchedulerName:                 "default-scheduler",
-							ServiceAccountName:            "k8ssandra-operator",
+							RestartPolicy:      corev1.RestartPolicyOnFailure,
+							ServiceAccountName: "k8ssandra-operator",
 							Containers: []corev1.Container{
 								{
 									Name:                     "k8ssandra-purge-backups",
@@ -567,7 +566,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaCl
 			},
 		},
 	}
-	return purgeCronJob
+	return purgeCronJob, nil
 }
 
 func generateMedusaProbe(configuredProbe *corev1.Probe) (*corev1.Probe, error) {
@@ -605,5 +604,16 @@ func defaultMedusaProbe() *corev1.Probe {
 }
 
 func createPurgeTaskStr(dcName string, namespace string) string {
-	return fmt.Sprintf("printf \"apiVersion: medusa.k8ssandra.io/v1alpha1\\nkind: MedusaTask\\nmetadata:\\n  name: purge-backups-timestamp\\n  namespace: %s\\nspec:\\n  cassandraDatacenter: %s\\n  operation: purge\" | sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" | kubectl apply -f -", namespace, dcName)
+	return fmt.Sprintf("printf \""+
+		"apiVersion: medusa.k8ssandra.io/v1alpha1\\n"+
+		"kind: MedusaTask\\n"+
+		"metadata:\\n"+
+		"  name: purge-backups-timestamp\\n"+
+		"  namespace: %s\\n"+
+		"spec:\\n"+
+		"  cassandraDatacenter: %s\\n"+
+		"  operation: purge"+
+		"\" "+
+		"| sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" "+
+		"| kubectl apply -f -", namespace, dcName)
 }

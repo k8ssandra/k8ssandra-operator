@@ -74,7 +74,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",namespace="k8ssandra",resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=batch,namespace="k8ssandra",resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,namespace="k8ssandra",resources=cronjobs,verbs=get;list;watch;create;update;delete
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("K8ssandraCluster", req.NamespacedName)
