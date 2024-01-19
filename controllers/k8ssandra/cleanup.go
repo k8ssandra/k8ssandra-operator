@@ -16,6 +16,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -104,6 +105,10 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 		}
 
 		if r.deleteK8ssandraConfigMaps(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
+			hasErrors = true
+		}
+
+		if r.deleteCronJobs(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 	}
@@ -435,5 +440,35 @@ func (r *K8ssandraClusterReconciler) deleteDeployments(
 		}
 	}
 
+	return
+}
+
+func (r *K8ssandraClusterReconciler) deleteCronJobs(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	kcLogger logr.Logger,
+) (hasErrors bool) {
+	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
+	options := client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labels.SelectorFromSet(selector),
+	}
+	cronJobList := &batchv1.CronJobList{}
+	if err := remoteClient.List(ctx, cronJobList, &options); err != nil {
+		kcLogger.Error(err, "Failed to list Medusa CronJobs", "Context", dcTemplate.K8sContext)
+		return true
+	}
+	for _, item := range cronJobList.Items {
+		kcLogger.Info("Deleting CronJob", "CronJob", utils.GetKey(&item))
+		if err := remoteClient.Delete(ctx, &item); err != nil {
+			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
+			if !errors.IsNotFound(err) {
+				kcLogger.Error(err, "Failed to delete CronJob", "CronJob", key, "Context", dcTemplate.K8sContext)
+			}
+		}
+	}
 	return
 }

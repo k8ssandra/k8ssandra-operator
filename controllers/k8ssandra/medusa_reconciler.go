@@ -112,6 +112,21 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			logger.Info("Medusa standalone deployment is not ready yet")
 			return result.RequeueSoon(r.DefaultDelay)
 		}
+		// Create a cron job to purge Medusa backups
+		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), namespace, logger)
+		if err != nil {
+			logger.Info("Failed to create Medusa purge backups cronjob", "error", err)
+			return result.Error(err)
+		}
+		purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
+		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
+		switch {
+		case recRes.IsError():
+			return recRes
+		case recRes.IsRequeue():
+			return recRes
+		}
+
 	} else {
 		logger.Info("Medusa is not enabled")
 	}
