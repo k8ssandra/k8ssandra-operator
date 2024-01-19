@@ -138,7 +138,7 @@ func testMedusaConfigurationNoSecret(t *testing.T, ctx context.Context, f *frame
 
 	medusaConfig := &api.MedusaConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "medusa-config",
+			Name:      "medusa-config-no-secret",
 			Namespace: namespace,
 		},
 		Spec: api.MedusaConfigurationSpec{
@@ -152,7 +152,7 @@ func testMedusaConfigurationNoSecret(t *testing.T, ctx context.Context, f *frame
 	require.NoError(err, "failed to create medusa configuration")
 	require.Eventually(func() bool {
 		updated := &api.MedusaConfiguration{}
-		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config", Namespace: namespace}, updated)
+		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config-no-secret", Namespace: namespace}, updated)
 		if err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
