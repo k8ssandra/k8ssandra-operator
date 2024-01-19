@@ -64,17 +64,18 @@ type ingressConfig struct {
 
 var (
 	polling struct {
-		nodetoolStatus          pollingConfig
-		datacenterReady         pollingConfig
-		operatorDeploymentReady pollingConfig
-		k8ssandraClusterStatus  pollingConfig
-		stargateReady           pollingConfig
-		reaperReady             pollingConfig
-		medusaReady             pollingConfig
-		medusaBackupDone        pollingConfig
-		medusaRestoreDone       pollingConfig
-		datacenterUpdating      pollingConfig
-		cassandraTaskCreated    pollingConfig
+		nodetoolStatus           pollingConfig
+		datacenterReady          pollingConfig
+		operatorDeploymentReady  pollingConfig
+		k8ssandraClusterStatus   pollingConfig
+		stargateReady            pollingConfig
+		reaperReady              pollingConfig
+		medusaReady              pollingConfig
+		medusaBackupDone         pollingConfig
+		medusaRestoreDone        pollingConfig
+		datacenterUpdating       pollingConfig
+		cassandraTaskCreated     pollingConfig
+		medusaConfigurationReady pollingConfig
 	}
 )
 
@@ -378,6 +379,10 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiDatacenterTask", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterTask,
 		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
+	}))
+	t.Run("CreateMedusaConfiguration", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createMedusaConfiguration,
+		fixture:  framework.NewTestFixture("medusa-configuration", controlPlane),
 	}))
 }
 
@@ -717,6 +722,9 @@ func applyPollingDefaults() {
 
 	polling.medusaReady.timeout = 5 * time.Minute
 	polling.medusaReady.interval = 5 * time.Second
+
+	polling.medusaConfigurationReady.timeout = 1 * time.Minute
+	polling.medusaConfigurationReady.interval = 5 * time.Second
 }
 
 func afterTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) {

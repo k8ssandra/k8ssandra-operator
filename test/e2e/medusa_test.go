@@ -297,3 +297,26 @@ func checkMedusaStandaloneServiceExists(t *testing.T, ctx context.Context, dcKey
 		return err == nil
 	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone service doesn't exist")
 }
+
+func createMedusaConfiguration(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	medusaConfig := &medusa.MedusaConfiguration{}
+	medusaConfigKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "config1"}}
+	err := f.Get(ctx, medusaConfigKey, medusaConfig)
+	require.NoError(err, "Error getting the MedusaConfiguration")
+
+	require.Eventually(func() bool {
+		updated := &medusa.MedusaConfiguration{}
+		err := f.Get(ctx, medusaConfigKey, updated)
+		if err != nil {
+			t.Logf("failed to get medusa configuration: %v", err)
+			return false
+		}
+		for _, condition := range updated.Status.Conditions {
+			if condition.Type == string(medusa.ControlStatusReady) {
+				return condition.Status == metav1.ConditionTrue
+			}
+		}
+		return false
+	}, polling.medusaConfigurationReady.timeout, polling.medusaConfigurationReady.interval)
+}

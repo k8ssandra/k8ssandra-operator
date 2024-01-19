@@ -103,6 +103,7 @@ jobs:
           - PerNodeConfig/UserDefined
           - RemoveLocalDcFromCluster
           - AddDcToClusterSameDataplane
+          - CreateMedusaConfiguration
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

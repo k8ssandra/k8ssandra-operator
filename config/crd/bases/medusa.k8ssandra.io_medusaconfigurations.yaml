@@ -1,0 +1,220 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.12.0
+  name: medusaconfigurations.medusa.k8ssandra.io
+spec:
+  group: medusa.k8ssandra.io
+  names:
+    kind: MedusaConfiguration
+    listKind: MedusaConfigurationList
+    plural: medusaconfigurations
+    singular: medusaconfiguration
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: MedusaConfiguration is the Schema for the medusaconfigurations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MedusaConfigurationSpec defines the desired state of MedusaConfiguration
+            properties:
+              storageProperties:
+                description: StorageProperties defines the storage backend settings
+                  to use for the backups.
+                properties:
+                  apiProfile:
+                    description: AWS Profile to use for authentication.
+                    type: string
+                  backupGracePeriodInDays:
+                    description: Age after which orphan sstables can be deleted from
+                      the storage backend. Protects from race conditions between purge
+                      and ongoing backups. Defaults to 10 days.
+                    type: integer
+                  bucketName:
+                    description: The name of the bucket to use for the backups.
+                    type: string
+                  concurrentTransfers:
+                    default: 1
+                    description: Number of concurrent uploads. Helps maximizing the
+                      speed of uploads but puts more pressure on the network. Defaults
+                      to 1.
+                    type: integer
+                  host:
+                    description: Host to connect to for the storage backend.
+                    type: string
+                  maxBackupAge:
+                    default: 0
+                    description: Maximum backup age that the purge process should
+                      observe.
+                    type: integer
+                  maxBackupCount:
+                    default: 0
+                    description: Maximum number of backups to keep (used by the purge
+                      process). Default is unlimited.
+                    type: integer
+                  multiPartUploadThreshold:
+                    default: 104857600
+                    description: File size over which cloud specific cli tools are
+                      used for transfer. Defaults to 100 MB.
+                    type: integer
+                  podStorage:
+                    description: Pod storage settings for the local storage provider
+                    properties:
+                      accessModes:
+                        description: Pod local storage access modes
+                        items:
+                          type: string
+                        type: array
+                      size:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        default: 10Gi
+                        description: Size of the pod's storage in bytes. Defaults
+                          to 10 GB.
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      storageClassName:
+                        description: Storage class name to use for the pod's storage.
+                        type: string
+                    type: object
+                  port:
+                    description: Port to connect to for the storage backend.
+                    type: integer
+                  prefix:
+                    description: Name of the top level folder in the backup bucket.
+                      If empty, the cluster name will be used.
+                    type: string
+                  region:
+                    description: Region of the storage bucket. Defaults to "default".
+                    type: string
+                  secure:
+                    description: Whether to use SSL for the storage backend.
+                    type: boolean
+                  sslVerify:
+                    description: When using SSL, whether to also verify the certificate.
+                    type: boolean
+                  storageProvider:
+                    description: The storage backend to use for the backups.
+                    enum:
+                    - google_storage
+                    - azure_blobs
+                    - s3
+                    - s3_compatible
+                    - s3_rgw
+                    - ibm_storage
+                    type: string
+                  storageSecretRef:
+                    description: Kubernetes Secret that stores the key file for the
+                      storage provider's API. If using 'local' storage, this value
+                      is ignored.
+                    properties:
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  transferMaxBandwidth:
+                    default: 50MB/s
+                    description: Max upload bandwidth in MB/s. Defaults to 50 MB/s.
+                    type: string
+                type: object
+            type: object
+          status:
+            description: MedusaConfigurationStatus defines the observed state of MedusaConfiguration
+            properties:
+              conditions:
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
