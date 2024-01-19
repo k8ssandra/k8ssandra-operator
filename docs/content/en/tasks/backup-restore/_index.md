@@ -108,6 +108,29 @@ The file should always specify `credentials` as shown in the example above; in t
 
 A successful deployment should inject a new init container named `medusa-restore` and a new container named `medusa` in the Cassandra StatefulSet pods.  
 
+## Using shared medusa configuration properties
+
+Medusa configuration properties can be shared across multiple K8ssandraClusters by creating a `MedusaConfiguration` custom resource in the Control Plane K8ssandra cluster.
+Example:
+
+```yaml
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaConfiguration
+metadata:
+  name: medusaconfiguration-s3
+spec:
+  storageProperties:
+    storageProvider: s3
+    region: us-west-2
+    bucketName: k8ssandra-medusa
+    storageSecretRef:
+      name: medusa-bucket-key
+```
+
+This allows creating bucket configurations that are easy to share across multiple clusters, without repeating their storage properties in each `K8ssandraCluster` definition.
+
+The referenced secret must exist in the same namespace as the `MedusaConfiguration` object, and must contain the credentials file for the storage backend, as described in the previous section.
+
 ## Creating a Backup
 
 To perform a backup of a Cassandra datacenter, create the following custom resource in the same namespace and Kubernetes cluster as the CassandraDatacenter resource, `cassandradatacenter/dc1` in this case :
