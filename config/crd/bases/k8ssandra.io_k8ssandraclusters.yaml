@@ -28484,8 +28484,17 @@ spec:
                           used instead of JMX for management connectivity between
                           Cassandra and Reaper. In future, this will be true by default
                         type: boolean
-                    required:
-                    - enabled
+                      keystores:
+                        description: LocalObjectReference contains enough information
+                          to let you locate the referenced object inside the same
+                          namespace.
+                        properties:
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
                     type: object
                   initContainerImage:
                     default:

@@ -152,11 +152,22 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
 		})
 	}
-	if reaper.Spec.HttpManagement.Enabled != nil && *reaper.Spec.HttpManagement.Enabled {
+	if reaper.Spec.HttpManagement.Enabled {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		})
+
+		if reaper.Spec.HttpManagement.Keystores != nil {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
+				Value: "/etc/encryption/keystore.jks",
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
+				Value: "/etc/encryption/truststore.jks",
+			})
+		}
 	}
 
 	volumeMounts := []corev1.VolumeMount{}
@@ -183,6 +194,22 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
+		})
+	}
+
+	if reaper.Spec.HttpManagement.Enabled && reaper.Spec.HttpManagement.Keystores != nil {
+		volumes = append(volumes, corev1.Volume{
+			Name: "management-api-keystore",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: reaper.Spec.HttpManagement.Keystores.Name,
+				},
+			},
+		})
+
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "management-api-keystore",
+			MountPath: "/etc/encryption",
 		})
 	}
 
