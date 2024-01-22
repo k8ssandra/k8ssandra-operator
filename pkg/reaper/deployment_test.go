@@ -266,16 +266,16 @@ func TestHttpManagementConfiguration(t *testing.T) {
 	container := deployment.Spec.Template.Spec.Containers[0]
 	assert.Contains(container.Env, corev1.EnvVar{
 		Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
-		Value: "/etc/encryption/keystore.jks",
+		Value: "/etc/encryption/mgmt/keystore.jks",
 	})
 	assert.Contains(container.Env, corev1.EnvVar{
 		Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
-		Value: "/etc/encryption/truststore.jks",
+		Value: "/etc/encryption/mgmt/truststore.jks",
 	})
 
 	assert.Contains(container.VolumeMounts, corev1.VolumeMount{
 		Name:      "management-api-keystore",
-		MountPath: "/etc/encryption",
+		MountPath: "/etc/encryption/mgmt",
 	})
 
 	assert.Contains(deployment.Spec.Template.Spec.Volumes, corev1.Volume{

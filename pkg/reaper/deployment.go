@@ -161,11 +161,11 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		if reaper.Spec.HttpManagement.Keystores != nil {
 			envVars = append(envVars, corev1.EnvVar{
 				Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
-				Value: "/etc/encryption/keystore.jks",
+				Value: "/etc/encryption/mgmt/keystore.jks",
 			})
 			envVars = append(envVars, corev1.EnvVar{
 				Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
-				Value: "/etc/encryption/truststore.jks",
+				Value: "/etc/encryption/mgmt/truststore.jks",
 			})
 		}
 	}
@@ -209,7 +209,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "management-api-keystore",
-			MountPath: "/etc/encryption",
+			MountPath: "/etc/encryption/mgmt",
 		})
 	}
 
