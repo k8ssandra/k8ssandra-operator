@@ -1,0 +1,27 @@
+# permissions for end users to view medusaconfigurations.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: medusaconfiguration-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: k8ssandra-operator
+    app.kubernetes.io/part-of: k8ssandra-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: medusaconfiguration-viewer-role
+rules:
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusaconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - medusa.k8ssandra.io
+  resources:
+  - medusaconfigurations/status
+  verbs:
+  - get

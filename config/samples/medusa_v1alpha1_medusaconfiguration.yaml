@@ -1,0 +1,20 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaConfiguration
+metadata:
+  labels:
+    app.kubernetes.io/name: medusaconfiguration
+    app.kubernetes.io/instance: medusaconfiguration-sample
+    app.kubernetes.io/part-of: k8ssandra-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: k8ssandra-operator
+  name: medusaconfiguration-sample
+spec:
+  storageProperties:
+    storageProvider: s3_compatible
+    bucketName: k8ssandra-medusa
+    prefix: test
+    storageSecretRef:
+      name: medusa-bucket-key
+    host: minio-service.minio.svc.cluster.local
+    port: 9000
+    secure: false
