@@ -129,6 +129,12 @@ type PodStorageSettings struct {
 }
 
 type MedusaClusterTemplate struct {
+	// MedusaConfigurationRef points to an existing MedusaConfiguration object.
+	// The purpose is to allow shared default settings across several clusters.
+	// StorageProperties override the settings from MedusaConfiguration object to allow customization.
+	// +optional
+	MedusaConfigurationRef corev1.ObjectReference `json:"medusaConfigurationRef,omitempty"`
+
 	// MedusaContainerImage is the image characteristics to use for Medusa containers. Leave nil
 	// to use a default image.
 	// +optional
