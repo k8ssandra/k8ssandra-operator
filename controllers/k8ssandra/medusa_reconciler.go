@@ -3,6 +3,9 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"github.com/adutra/goalesce"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -21,16 +24,22 @@ import (
 // Create all things Medusa related in the cassdc podTemplateSpec
 func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	ctx context.Context,
-	kc *api.K8ssandraCluster,
+	desiredKc *api.K8ssandraCluster,
 	dcConfig *cassandra.DatacenterConfig,
 	remoteClient client.Client,
 	logger logr.Logger,
 ) result.ReconcileResult {
+	kc := desiredKc.DeepCopy()
 	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + namespace)
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec != nil {
 		logger.Info("Medusa is enabled")
+
+		mergeResult := mergeStorageProperties(ctx, remoteClient, namespace, medusaSpec, logger, kc)
+		if mergeResult.IsError() {
+			return result.Error(mergeResult.GetError())
+		}
 
 		// Check that certificates are provided if client encryption is enabled
 		if cassandra.ClientEncryptionEnabled(dcConfig) {
@@ -201,5 +210,40 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		}
 	}
 	logger.Info("Medusa ConfigMap successfully reconciled")
+	return result.Continue()
+}
+
+func mergeStorageProperties(
+	ctx context.Context,
+	remoteClient client.Client,
+	namespace string,
+	medusaSpec *medusaapi.MedusaClusterTemplate,
+	logger logr.Logger,
+	desiredKc *api.K8ssandraCluster,
+) result.ReconcileResult {
+	// check if the StorageProperties are defined in the K8ssandraCluster
+	if medusaSpec.MedusaConfigurationRef.Name == "" {
+		return result.Continue()
+	}
+	storageProperties := &medusaapi.MedusaConfiguration{}
+	configKey := types.NamespacedName{Namespace: namespace, Name: medusaSpec.MedusaConfigurationRef.Name}
+	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
+		logger.Error(err, fmt.Sprintf("failed to get MedusaConfiguration %s", configKey))
+		return result.Error(err)
+	}
+	// check if the StorageProperties from the cluster have the prefix field set
+	// it is required to be present because that's the single thing that differentiates backups of two different clusters
+	if desiredKc.Spec.Medusa.StorageProperties.Prefix == "" {
+		return result.Error(fmt.Errorf("StorageProperties.Prefix is not set in K8ssandraCluster %s", utils.GetKey(desiredKc)))
+	}
+	// try to merge the storage properties. goalesce gives priority to the 2nd argument,
+	// so stuff in the cluster overrides stuff in the config object
+	mergedProperties, err := goalesce.DeepMerge(storageProperties.Spec.StorageProperties, desiredKc.Spec.Medusa.StorageProperties)
+	if err != nil {
+		logger.Error(err, "failed to merge MedusaConfiguration StorageProperties")
+		return result.Error(err)
+	}
+	// copy the merged properties back into the cluster
+	mergedProperties.DeepCopyInto(&desiredKc.Spec.Medusa.StorageProperties)
 	return result.Continue()
 }

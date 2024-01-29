@@ -580,6 +580,21 @@ func (f *Framework) DatacenterExists(ctx context.Context, key ClusterKey) func()
 	})
 }
 
+func (f *Framework) MedusaConfigExists(ctx context.Context, k8sContext string, medusaConfigKey ClusterKey) func() bool {
+	remoteClient, found := f.remoteClients[k8sContext]
+	if !found {
+		f.logger.Error(f.k8sContextNotFound(k8sContext), "cannot lookup CassandraDatacenter", "context", k8sContext)
+		return func() bool { return false }
+	}
+	medusaConfig := &medusaapi.MedusaConfiguration{}
+	if err := remoteClient.Get(ctx, medusaConfigKey.NamespacedName, medusaConfig); err != nil {
+		f.logger.Error(err, "failed to get MedusaConfiguration", "key", medusaConfigKey)
+		return func() bool { return false }
+	} else {
+		return func() bool { return true }
+	}
+}
+
 // NewWithCassTask is a function generator for withCassandraTask that is bound to ctx, and key.
 func (f *Framework) NewWithCassTask(ctx context.Context, key ClusterKey) func(func(*casstaskapi.CassandraTask) bool) func() bool {
 	return func(condition func(dc *casstaskapi.CassandraTask) bool) func() bool {

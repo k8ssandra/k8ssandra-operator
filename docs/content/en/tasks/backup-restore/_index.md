@@ -131,6 +131,28 @@ This allows creating bucket configurations that are easy to share across multipl
 
 The referenced secret must exist in the same namespace as the `MedusaConfiguration` object, and must contain the credentials file for the storage backend, as described in the previous section.
 
+The storage properties from the `K8ssandraCluster` definition will override the ones from the `MedusaConfiguration` object. 
+
+The storage properties in the `K8ssandraCluster` definition must specify the storage prefix. With the other settings shared, the prefix is what allows multiple clusters place backups in the same bucket without interfering with each other.
+
+When creating the cluster, the reference to the config can look like this example:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    ...
+  medusa:
+    medusaConfigurationRef:
+      name: medusaconfiguration-s3
+    storageProperties:
+      prefix: demo
+    ...
+```
+
 ## Creating a Backup
 
 To perform a backup of a Cassandra datacenter, create the following custom resource in the same namespace and Kubernetes cluster as the CassandraDatacenter resource, `cassandradatacenter/dc1` in this case :

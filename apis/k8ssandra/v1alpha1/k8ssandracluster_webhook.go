@@ -35,6 +35,7 @@ var (
 	ErrNoStorageConfig = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
 	ErrNoResourcesSet  = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
 	ErrClusterName     = fmt.Errorf("cluster name can not be changed")
+	ErrNoStoragePrefix = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
 )
 
 // log is for logging in this package.
@@ -84,6 +85,16 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 		if dc.DatacenterOptions.SoftPodAntiAffinity != nil && *dc.DatacenterOptions.SoftPodAntiAffinity {
 			if dc.DatacenterOptions.Resources == nil {
 				return ErrNoResourcesSet
+			}
+		}
+	}
+
+	// Verify the Medusa storage prefix is explicitly set
+	// only relevant if Medusa is enabled and the MedusaConfiguration object is referenced
+	if r.Spec.Medusa != nil {
+		if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
+			if r.Spec.Medusa.StorageProperties.Prefix == "" {
+				return ErrNoStoragePrefix
 			}
 		}
 	}

@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: cassandra-config
+  namespace: k8ssandra-operator
 data:
   cassandra.yaml: |
     concurrent_reads: 32
@@ -12,8 +13,10 @@ apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: test
+  namespace: k8ssandra-operator
 spec:
   medusa:
+
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa

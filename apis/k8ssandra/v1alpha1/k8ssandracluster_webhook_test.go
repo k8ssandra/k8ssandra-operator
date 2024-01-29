@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 )
 
@@ -145,6 +146,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("NumTokensValidation", testNumTokens)
 	t.Run("NumTokensValidationInUpdate", testNumTokensInUpdate)
 	t.Run("StsNameTooLong", testStsNameTooLong)
+	t.Run("MedusaPrefixMissing", testMedusaPrefixMissing)
 }
 
 func testContextValidation(t *testing.T) {
@@ -406,4 +408,46 @@ func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
 			},
 		},
 	}
+}
+
+func testMedusaPrefixMissing(t *testing.T) {
+	required := require.New(t)
+	createNamespace(required, "short-namespace")
+
+	clusterWithoutMedusa := createMinimalClusterObj("without-medusa", "short-namespace")
+	err := k8sClient.Create(ctx, clusterWithoutMedusa)
+	required.NoError(err)
+
+	clusterWithMedusa := createMinimalClusterObj("with-medusa", "short-namespace")
+	clusterWithMedusa.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			Prefix: "",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithMedusa)
+	required.NoError(err)
+
+	clusterWithoutPrefix := createMinimalClusterObj("without-prefix", "short-namespace")
+	clusterWithoutPrefix.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Name: "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithoutPrefix)
+	required.Error(err)
+
+	clusterWithPrefix := createMinimalClusterObj("with-prefix", "short-namespace")
+	clusterWithPrefix.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Name: "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "some-prefix",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithPrefix)
+	required.NoError(err)
 }
