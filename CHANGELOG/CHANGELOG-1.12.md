@@ -28,3 +28,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#1161](https://github.com/k8ssandra/k8ssandra-operator/issues/1161) Update cass-operator Helm chart to 0.46.1. Adds containerPort for cass-operator metrics and changes cass-config-builder base from UBI7 to UBI8
 * [ENHANCEMENT] [#1154](https://github.com/k8ssandra/k8ssandra-operator/issues/1154) Schedule purges on clusters that have Medusa configured
 * [BUGFIX] [#1002](https://github.com/k8ssandra/k8ssandra-operator/issues/1002) Fix reaper secret name sanitization with cluster overrides
+* [BUGFIX] [#1188](https://github.com/k8ssandra/k8ssandra-operator/issues/1188) Fix wrong keyspace replication factor alteration by the operator when multiple dcs with the same name exist

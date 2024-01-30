@@ -134,7 +134,7 @@ func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 
 func (r *defaultManagementApiFacade) fetchDatacenterPods() ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: r.dc.DatacenterName()}
+	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: r.dc.DatacenterName(), cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(r.dc.Spec.ClusterName)}
 	if err := r.k8sClient.List(r.ctx, podList, labels); err != nil {
 		return nil, err
 	} else {
@@ -304,7 +304,7 @@ func (r *defaultManagementApiFacade) EnsureKeyspaceReplication(keyspaceName stri
 			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication", keyspaceName))
 			return nil
 		} else {
-			r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v but has wrong replication, altering it", keyspaceName, r.dc.Spec.ClusterName))
+			r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v but has wrong replication, altering it. Expected: %v / Got: %v", keyspaceName, r.dc.Spec.ClusterName, replication, actualReplication))
 			if err := r.AlterKeyspace(keyspaceName, replication); err != nil {
 				return err
 			} else {
