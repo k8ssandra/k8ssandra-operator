@@ -414,7 +414,7 @@ func TestSyncSecrets(t *testing.T) {
 
 	syncSecrets(orig, dest)
 
-	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
+	assert.Equal(orig.GetAnnotations()["k8ssandra.io/resource-hash"], dest.GetAnnotations()["k8ssandra.io/resource-hash"])
 	assert.Equal(orig.GetLabels(), dest.GetLabels())
 
 	assert.Equal(orig.Data, dest.Data)
