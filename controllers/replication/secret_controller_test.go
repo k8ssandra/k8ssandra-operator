@@ -3,6 +3,9 @@ package replication
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -10,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
-	"time"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -94,6 +95,13 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
+	}, timeout, interval)
+
+	t.Log("check that replicated secret has an annotation describing where it came from")
+	require.Eventually(func() bool {
+		secret := &corev1.Secret{}
+		require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: namespace}, secret))
+		return secret.Annotations[api.ReplicatedSecretSourceLabelKey] == api.ReplicatedSecretSourceLabelValue
 	}, timeout, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")

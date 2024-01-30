@@ -3,9 +3,10 @@ package replication
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -232,6 +233,10 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret := sec.DeepCopy()
 					copiedSecret.Namespace = namespace
 					copiedSecret.ResourceVersion = ""
+					if copiedSecret.Annotations == nil {
+						copiedSecret.Annotations = make(map[string]string)
+					}
+					copiedSecret.Annotations[api.ReplicatedSecretSourceLabelKey] = api.ReplicatedSecretSourceLabelValue
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
@@ -321,6 +326,7 @@ func syncSecrets(src, dest *corev1.Secret) {
 	if dest.GetAnnotations() == nil {
 		dest.Annotations = make(map[string]string)
 	}
+	dest.Annotations[api.ReplicatedSecretSourceLabelKey] = api.ReplicatedSecretSourceLabelValue
 
 	for k, v := range src.Annotations {
 		if !filterValue(k) {
