@@ -20,6 +20,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#1165](https://github.com/k8ssandra/k8ssandra-operator/issues/1165) Upgrade to Medusa v0.17.1
 * [FEATURE] [#1157](https://github.com/k8ssandra/k8ssandra-operator/issues/1157) Add the MedusaConfiguration API
 * [FEATURE] [#1165](https://github.com/k8ssandra/k8ssandra-operator/issues/1165) Expose Medusa ssl_verify option to allow disabling cert verification for some on prem S3 compatible systems
+* [FEATURE] [#1161](https://github.com/k8ssandra/k8ssandra-operator/issues/1161) Add truststore and keystore properties to the http management api configuration for Reaper
 * [ENHANCEMENT] [#1094](https://github.com/k8ssandra/k8ssandra-operator/issues/1094) Expose AdditionalAnnotations field for cassDC.
 * [ENHANCEMENT] [#1160](https://github.com/k8ssandra/k8ssandra-operator/issues/1160) Allow disabling Reaper front-end auth.
 * [ENHANCEMENT] [#1115](https://github.com/k8ssandra/k8ssandra-operator/issues/1115) Add a validation check for the projected pod names length

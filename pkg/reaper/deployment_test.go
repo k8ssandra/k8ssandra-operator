@@ -28,7 +28,7 @@ func TestNewDeployment(t *testing.T) {
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
-	reaper.Spec.HttpManagement.Enabled = pointer.Bool(true)
+	reaper.Spec.HttpManagement.Enabled = true
 	reaper.Spec.ClientEncryptionStores = &encryption.Stores{
 		KeystoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "keystore-secret",
@@ -251,6 +251,41 @@ func TestNewDeployment(t *testing.T) {
 	}
 	assert.Equal(t, probe, container.LivenessProbe)
 	assert.Equal(t, probe, container.ReadinessProbe)
+}
+
+func TestHttpManagementConfiguration(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.HttpManagement.Enabled = true
+	reaper.Spec.HttpManagement.Keystores = &corev1.LocalObjectReference{Name: "test-dc1-c-mgmt-ks"}
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+
+	assert := assert.New(t)
+	assert.Len(deployment.Spec.Template.Spec.Containers, 1)
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.Contains(container.Env, corev1.EnvVar{
+		Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
+		Value: "/etc/encryption/mgmt/keystore.jks",
+	})
+	assert.Contains(container.Env, corev1.EnvVar{
+		Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
+		Value: "/etc/encryption/mgmt/truststore.jks",
+	})
+
+	assert.Contains(container.VolumeMounts, corev1.VolumeMount{
+		Name:      "management-api-keystore",
+		MountPath: "/etc/encryption/mgmt",
+	})
+
+	assert.Contains(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+		Name: "management-api-keystore",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: reaper.Spec.HttpManagement.Keystores.Name,
+			},
+		},
+	})
 }
 
 func TestReadinessProbe(t *testing.T) {
