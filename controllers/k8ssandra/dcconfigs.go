@@ -100,6 +100,12 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		cassandra.HandleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
 		cassandra.EnableSmartTokenAllocation(dcConfig)
 
+		if kc.Spec.Reaper != nil {
+			if kc.Spec.Cassandra.ServerType == api.ServerDistributionDse {
+				cassandra.DisableNodeSync(dcConfig)
+			}
+		}
+
 		if err := cassandra.ValidateDatacenterConfig(dcConfig); err != nil {
 			return nil, err
 		}

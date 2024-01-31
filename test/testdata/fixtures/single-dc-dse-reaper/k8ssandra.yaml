@@ -1,0 +1,53 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  auth: true
+  stargate:
+    size: 1
+    heapSize: 384Mi
+  reaper:
+    httpManagement:
+      enabled: true
+    heapSize: 256Mi
+    autoScheduling:
+      enabled: false
+    telemetry:
+      vector:
+        enabled: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 100m
+            memory: 512Mi
+  cassandra:
+    serverVersion: 6.8.26
+    serverType: dse
+    dseWorkloads:
+      graphEnabled: false
+      searchEnabled: false
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 1
+        networking:
+          hostNetwork: true
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          dseYaml:
+            server_id: server-id
+          jvmOptions:
+            heap_initial_size: 512Mi
+            heap_max_size: 512Mi
+    mgmtAPIHeap: 64Mi

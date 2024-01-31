@@ -15,6 +15,7 @@ import (
 const (
 	SystemReplicationFactorStrategy = "-Dcassandra.system_distributed_replication"
 	allowAlterRf                    = "-Dcassandra.allow_alter_rf_during_range_movement=true"
+	disableNodeSyncOption           = "-Ddse.nodesync.disable_on_new_tables=true"
 )
 
 // createJsonConfig parses a CassandraConfig into raw JSON bytes as required by the
@@ -46,6 +47,10 @@ func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version,
 	out.PutAll(jvmOptionsOut)
 
 	return json.Marshal(out)
+}
+
+func DisableNodeSync(dcConfig *DatacenterConfig) {
+	addOptionIfMissing(dcConfig, disableNodeSyncOption)
 }
 
 // AddNumTokens adds the num_tokens option to cassandra.yaml if it is not already present, because

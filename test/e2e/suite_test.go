@@ -180,6 +180,7 @@ func TestOperator(t *testing.T) {
 		testFunc: createSingleDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc", controlPlane),
 	}))
+	// run this
 	t.Run("CreateSingleDseDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
@@ -296,6 +297,13 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
+	}))
+	t.Run("CreateSingleDseReaper", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleDseReaper,
+		fixture:                      framework.NewTestFixture("single-dc-dse-reaper", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 		installMinio:                 true,
@@ -1937,6 +1945,57 @@ func checkKeyspaceReplication(
 			}
 		}
 		return true
+	}, 1*time.Minute, 3*time.Second)
+}
+
+func checkNodeSyncNotPresent(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace, table string,
+) {
+	assert.Eventually(t, func() bool {
+		query := fmt.Sprintf("DESCRIBE TABLE %s.%s;", keyspace, table)
+		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, query)
+		if err != nil {
+			t.Logf("failed to describe table #{keyspace}.#{table}: #{err}")
+			return false
+		}
+		if strings.Contains(desc, "nodesync={'enabled': 'false'}") {
+			return false
+		}
+		return true
+	}, 1*time.Minute, 3*time.Second)
+}
+
+func checkNodeSync(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod string,
+	nodeSyncEnabled string,
+) {
+	assert.Eventually(t, func() bool {
+		query := "CREATE KEYSPACE nodesynctestkeyspace WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};"
+		_, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, query)
+		if err != nil {
+			t.Logf("failed to create nodesynctestkeyspace kespace")
+		}
+		query = "CREATE TABLE nodesynctest.nodesynctesttable (k int PRIMARY KEY, v int);"
+		_, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, query)
+		if err != nil {
+			t.Logf("failed to create nodesynctestkeyspace.nodesynctesttable table")
+		}
+		query = "DESCRIBE TABLE nodesynctestkeyspace.nodesynctesttable;"
+		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, query)
+		if err != nil {
+			t.Logf("failed to describe nodesynctestkeyspace.nodesynctesttable table ")
+			return false
+		}
+		if strings.Contains(desc, fmt.Sprintf("nodesync={'enabled': '%s'}", nodeSyncEnabled)) {
+			return true
+		}
+		return false
 	}, 1*time.Minute, 3*time.Second)
 }
 

@@ -73,6 +73,8 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	checkNodeSync(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "true")
 }
 
 // createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled

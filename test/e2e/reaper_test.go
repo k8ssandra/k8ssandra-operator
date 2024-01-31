@@ -68,6 +68,10 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	t.Log("check Reaper keyspace created")
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
 
+	t.Log("check a reaper tables has no NodeSync on it")
+	checkNodeSyncNotPresent(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db", "repair_run")
+	//checkNodeSync(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db", "repair_run", false)
+
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
 
@@ -83,6 +87,30 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 		username, password := retrieveCredentials(t, f, ctx, reaperUiSecretKey)
 		testReaperApi(t, ctx, f.DataPlaneContexts[0], DcClusterName(t, f, dcKey), "reaper_db", username, password)
 	})
+}
+
+func createSingleDseReaper(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kc := &api.K8ssandraCluster{}
+	require.NoError(f.Client.Get(ctx, kcKey, kc), "Failed to get K8ssandraCluster")
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+
+	checkDatacenterReady(t, ctx, dcKey, f)
+	dcPrefix := DcPrefix(t, f, dcKey)
+	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-reaper"}}
+	checkReaperReady(t, f, ctx, reaperKey)
+	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+
+	t.Log("deploying Reaper ingress routes in context", f.DataPlaneContexts[0])
+	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-reaper-service", reaperRestHostAndPort)
+	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
+
+	checkNodeSync(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "false")
 }
 
 func createSingleReaperWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
