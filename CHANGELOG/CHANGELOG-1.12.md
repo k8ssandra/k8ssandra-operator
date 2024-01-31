@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Upgrade to Medusa v0.17.2
 * [CHANGE] [#1158](https://github.com/k8ssandra/k8ssandra-operator/issues/1158) Use the MedusaConfiguration API when creating Medusa configuration
 * [CHANGE] [#1050](https://github.com/k8ssandra/k8ssandra-operator/issues/1050) Remove unnecessary requeues in the Medusa controllers
 * [CHANGE] [#1165](https://github.com/k8ssandra/k8ssandra-operator/issues/1165) Upgrade to Medusa v0.17.1
