@@ -50,7 +50,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			}
 		}
 		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
-			return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
+			medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
+			if medusaSpec.StorageProperties.CredentialsType == "role-based" && medusaSpec.StorageProperties.StorageProvider == "s3" {
+				// It's okay for the secret ref to be unset
+				medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
+			} else {
+				return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
+			}
 		}
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
 			return res

@@ -27399,6 +27399,13 @@ spec:
                           the speed of uploads but puts more pressure on the network.
                           Defaults to 1.
                         type: integer
+                      credentialsType:
+                        description: Type of credentials to use for authentication.
+                          Can be "role-based", "credential-based" or empty.
+                        enum:
+                        - role-based
+                        - credential-based
+                        type: string
                       host:
                         description: Host to connect to for the storage backend.
                         type: string

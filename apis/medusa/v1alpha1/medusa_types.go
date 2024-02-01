@@ -31,6 +31,12 @@ type Storage struct {
 	// +kubebuilder:validation:Required
 	StorageProvider string `json:"storageProvider,omitempty"`
 
+	// Type of credentials to use for authentication.
+	// Can be "role-based", "credential-based" or empty.
+	// +kubebuilder:validation:Enum=role-based;credential-based;
+	// +optional
+	CredentialsType string `json:"credentialsType,omitempty"`
+
 	// Kubernetes Secret that stores the key file for the storage provider's API.
 	// If using 'local' storage, this value is ignored.
 	// +optional
