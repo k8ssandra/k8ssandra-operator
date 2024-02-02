@@ -3,6 +3,7 @@ package medusa
 import (
 	"bytes"
 	"fmt"
+	"os"
 	reflect "reflect"
 	"text/template"
 
@@ -41,8 +42,9 @@ const (
 	MainContainerMemLimit   = "8Gi"
 	MainContainerCpuRequest = "100m"
 
-	MedusaBackupsVolumeName = "medusa-backups"
-	MedusaBackupsMountPath  = "/mnt/backups"
+	MedusaBackupsVolumeName  = "medusa-backups"
+	MedusaBackupsMountPath   = "/mnt/backups"
+	serviceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
 )
 
 var (
@@ -550,7 +552,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace s
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							RestartPolicy:      corev1.RestartPolicyOnFailure,
-							ServiceAccountName: "k8ssandra-operator",
+							ServiceAccountName: getServiceAccountName(),
 							Containers: []corev1.Container{
 								{
 									Name:                     "k8ssandra-purge-backups",
@@ -621,4 +623,12 @@ func createPurgeTaskStr(dcName string, namespace string) string {
 		"\" "+
 		"| sed \"s/timestamp/$(date +%%Y%%m%%d%%H%%M%%S)/g\" "+
 		"| kubectl apply -f -", namespace, dcName)
+}
+
+func getServiceAccountName() string {
+	val, found := os.LookupEnv(serviceAccountNameEnvVar)
+	if !found {
+		return "default"
+	}
+	return val
 }

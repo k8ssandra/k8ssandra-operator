@@ -43,6 +43,10 @@ spec:
         {{- end }}
         - name: K8SSANDRA_CONTROL_PLANE
           value: {{ .Values.controlPlane | quote }}
+        - name: SERVICE_ACCOUNT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
         image: {{ include "k8ssandra-common.flattenedImage" .Values.image }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:

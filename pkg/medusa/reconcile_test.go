@@ -533,6 +533,7 @@ func TestPurgeCronJob(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s-%s-medusa-purge", "testcluster", "testdc"), actualCronJob.ObjectMeta.Name)
 	assert.Equal(t, 3, len(actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command))
 	assert.Contains(t, actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command[2], "\\nspec:\\n  cassandraDatacenter: testdc")
+	assert.Equal(t, "default", actualCronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName)
 }
 
 func TestPurgeCronJobNameTooLong(t *testing.T) {
