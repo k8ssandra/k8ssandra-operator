@@ -31,6 +31,7 @@ const (
 	cassandraUserSecret    = "medusa-secret"
 	k8ssandraClusterName   = "test"
 	medusaConfigName       = "medusa-config"
+	medusaBucketSecretName = "medusa-bucket-secret"
 	prefixFromMedusaConfig = "prefix-from-medusa-config"
 	prefixFromClusterSpec  = "prefix-from-cluster-spec"
 )
@@ -53,10 +54,10 @@ func dcTemplate(dcName string, dataPlaneContext string) api.CassandraDatacenterT
 	}
 }
 
-func MedusaConfig(namespace string) *medusaapi.MedusaConfiguration {
+func MedusaConfig(name, namespace string) *medusaapi.MedusaConfiguration {
 	return &medusaapi.MedusaConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      medusaConfigName,
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: medusaapi.MedusaConfigurationSpec{
@@ -71,21 +72,22 @@ func medusaTemplateWithoutConfigRef() *medusaapi.MedusaClusterTemplate {
 	return medusaTemplate(nil)
 }
 
-func medusaTemplateWithConfigRef(configRefName string) *medusaapi.MedusaClusterTemplate {
+func medusaTemplateWithConfigRef(configRefName, namespace string) *medusaapi.MedusaClusterTemplate {
 	configRef := &corev1.ObjectReference{
-		Name: configRefName,
+		Name:      configRefName,
+		Namespace: namespace,
 	}
 	return medusaTemplate(configRef)
 }
 
-func medusaTemplateWithConfigRefWithoutPrefix(configRefName string) *medusaapi.MedusaClusterTemplate {
-	template := medusaTemplateWithConfigRef(configRefName)
+func medusaTemplateWithConfigRefWithoutPrefix(configRefName, namespace string) *medusaapi.MedusaClusterTemplate {
+	template := medusaTemplateWithConfigRef(configRefName, namespace)
 	template.StorageProperties.Prefix = ""
 	return template
 }
 
-func medusaTemplateWithConfigRefWithPrefix(configRefName string, prefix string) *medusaapi.MedusaClusterTemplate {
-	template := medusaTemplateWithConfigRef(configRefName)
+func medusaTemplateWithConfigRefWithPrefix(configRefName, namespace, prefix string) *medusaapi.MedusaClusterTemplate {
+	template := medusaTemplateWithConfigRef(configRefName, namespace)
 	template.StorageProperties.Prefix = prefix
 	return template
 }
@@ -440,11 +442,28 @@ func reconcileMedusaStandaloneDeployment(ctx context.Context, t *testing.T, f *f
 func createSingleDcClusterWithMedusaConfigRef(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
+	t.Log("Creating Medusa Bucket secret")
+	medusaSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      medusaBucketSecretName,
+			Namespace: namespace,
+		},
+		StringData: map[string]string{
+			"credentials": "some-credentials",
+		},
+	}
+	// create the secret in the control plane
+	err := f.Create(ctx, controlPlaneContextKey(f, medusaSecret, f.ControlPlaneContext), medusaSecret)
+	require.NoError(err, fmt.Sprintf("failed to create secret in control plane %s", f.ControlPlaneContext))
+
 	t.Log("Creating Medusa Configuration object")
-	medusaConfigKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusaConfigName}, K8sContext: f.DataPlaneContexts[0]}
-	err := f.Create(ctx, medusaConfigKey, MedusaConfig(namespace))
+	medusaConfig := MedusaConfig(medusaConfigName, namespace)
+	medusaConfig.Spec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: medusaBucketSecretName}
+	medusaConfigKey := controlPlaneContextKey(f, medusaConfig, f.ControlPlaneContext)
+	err = f.Create(ctx, medusaConfigKey, medusaConfig)
+
 	require.NoError(err, "failed to create Medusa Configuration")
-	require.Eventually(f.MedusaConfigExists(ctx, f.DataPlaneContexts[0], medusaConfigKey), timeout, interval)
+	require.Eventually(f.MedusaConfigExists(ctx, f.ControlPlaneContext, medusaConfigKey), timeout, interval)
 
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -457,7 +476,7 @@ func createSingleDcClusterWithMedusaConfigRef(t *testing.T, ctx context.Context,
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 				},
 			},
-			Medusa: medusaTemplateWithConfigRefWithPrefix(medusaConfigName, prefixFromClusterSpec),
+			Medusa: medusaTemplateWithConfigRefWithPrefix(medusaConfigName, namespace, prefixFromClusterSpec),
 		},
 	}
 	require.NotNil(kc.Spec.Medusa.MedusaConfigurationRef)
@@ -500,7 +519,7 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 				},
 			},
-			Medusa: medusaTemplateWithConfigRefWithoutPrefix(medusaConfigName),
+			Medusa: medusaTemplateWithConfigRefWithoutPrefix(medusaConfigName, namespace),
 		},
 	}
 	require.NotNil(kcFirstAttempt.Spec.Medusa.MedusaConfigurationRef)
@@ -520,7 +539,7 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 	// create the MedusaConfiguration object
 	t.Log("Creating Medusa Configuration object")
 	medusaConfigKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusaConfigName}, K8sContext: f.DataPlaneContexts[0]}
-	err = f.Create(ctx, medusaConfigKey, MedusaConfig(namespace))
+	err = f.Create(ctx, medusaConfigKey, MedusaConfig(medusaConfigName, namespace))
 	require.NoError(err, "failed to create Medusa Configuration")
 	require.Eventually(f.MedusaConfigExists(ctx, f.DataPlaneContexts[0], medusaConfigKey), timeout, interval)
 
@@ -537,4 +556,128 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 
 	// verify the cluster still doesn't get created
 	require.Never(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+}
+
+func controlPlaneContextKey(f *framework.Framework, object metav1.Object, contextName string) framework.ClusterKey {
+	return framework.ClusterKey{NamespacedName: utils.GetKey(object), K8sContext: contextName}
+}
+
+func dataPlaneContextKey(f *framework.Framework, object metav1.Object, dataPlaneContextIndex int) framework.ClusterKey {
+	return framework.ClusterKey{NamespacedName: utils.GetKey(object), K8sContext: f.DataPlaneContexts[dataPlaneContextIndex]}
+}
+
+func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	clusterName := "test-cluster"
+	originalConfigName := "test-config"
+	originalSecretName := fmt.Sprintf("%s-bucket-key", originalConfigName)
+	clusterSecretName := fmt.Sprintf("%s-%s", clusterName, originalSecretName)
+
+	// create a storage secret, then a MedusaConfiguration that points to it
+	// the ReplicatedSecrets controller is not loaded in env tests, so we "mock" it by replicating the secrets manually
+	medusaSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      originalSecretName,
+			Namespace: namespace,
+		},
+		StringData: map[string]string{
+			"credentials": "some-credentials",
+		},
+	}
+	// create the secret in the control plane
+	cpMedusaSecret := medusaSecret.DeepCopy()
+	err := f.Create(ctx, controlPlaneContextKey(f, cpMedusaSecret, f.ControlPlaneContext), cpMedusaSecret)
+	require.NoError(err, fmt.Sprintf("failed to create secret in control plane %s", f.ControlPlaneContext))
+	//create the secret in the data planes
+	for i, n := range f.DataPlaneContexts {
+		dpMedusaSecret := medusaSecret.DeepCopy()
+		dpMedusaSecret.Name = clusterSecretName
+		err := f.Create(ctx, dataPlaneContextKey(f, dpMedusaSecret, i), dpMedusaSecret)
+		require.NoError(err, fmt.Sprintf("failed to create secret in context %d (%s)", i, n))
+	}
+
+	// create medusa config in the control plane only
+	medusaConfig := MedusaConfig(originalConfigName, namespace)
+	medusaConfig.Spec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{
+		Name: originalSecretName,
+	}
+	cpMedusaConfig := medusaConfig.DeepCopy()
+	err = f.Create(ctx, controlPlaneContextKey(f, cpMedusaConfig, f.ControlPlaneContext), cpMedusaConfig)
+	require.NoError(err, fmt.Sprintf("failed to create MedusaConfiguration in control plane %s", f.ControlPlaneContext))
+
+	// create a 2-dc K8ssandraCluster with Medusa featuring the reference to the above MedusaConfiguration
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterName,
+			Namespace: namespace,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					dcTemplate("dc1", f.DataPlaneContexts[1]),
+					dcTemplate("dc2", f.DataPlaneContexts[2]),
+				},
+			},
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				MedusaConfigurationRef: corev1.ObjectReference{
+					Namespace: namespace,
+					Name:      originalConfigName,
+				},
+				StorageProperties: medusaapi.Storage{
+					Prefix: "some-prefix",
+				},
+			},
+		},
+	}
+	err = f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[1])
+
+	// crate the first DC
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	// mark the first DC as ready
+	t.Log("update dc1 status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
+	require.NoError(err, "failed to update dc1 status to ready")
+
+	// create the second DC
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc2", f.DataPlaneContexts[2])
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[2]}
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
+
+	// verify the copied secret is mounted in the pods
+	verifyBucketSecretMounted(ctx, t, f, dc1Key, clusterSecretName)
+	verifyBucketSecretMounted(ctx, t, f, dc2Key, clusterSecretName)
+
+	// verify the cluster's spec still contains the correct value
+	// which is empty because we used MedusaConfigRef
+	// merged it at runtime but never persisted to the k8ssandraCluster object
+	kc = &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: clusterName}, kc)
+	require.NoError(err, "failed to get K8ssandraCluster")
+	require.Equal("", kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name)
+}
+
+func verifyBucketSecretMounted(ctx context.Context, t *testing.T, f *framework.Framework, dcKey framework.ClusterKey, clusterSecretName string) {
+	require := require.New(t)
+
+	// fetch the DC spec
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	require.NoError(err, fmt.Sprintf("failed to get %s", dcKey.Name))
+
+	// fetch medusa container
+	containerIndex, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "medusa")
+	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc.Name))
+	medusaContainer := dc.Spec.PodTemplateSpec.Spec.Containers[containerIndex]
+
+	// check its mount
+	assert.True(t, f.ContainerHasVolumeMount(medusaContainer, clusterSecretName, "/etc/medusa-secrets"), "Missing Volume Mount for Medusa bucket key")
 }

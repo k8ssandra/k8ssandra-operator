@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/adutra/goalesce"
-	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -18,6 +16,8 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,11 +32,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	kc := desiredKc.DeepCopy()
 	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + namespace)
-	medusaSpec := kc.Spec.Medusa
-	if medusaSpec != nil {
+	if kc.Spec.Medusa != nil {
 		logger.Info("Medusa is enabled")
 
-		mergeResult := mergeStorageProperties(ctx, remoteClient, namespace, medusaSpec, logger, kc)
+		mergeResult := r.mergeStorageProperties(ctx, r.Client, namespace, kc.Spec.Medusa, logger, kc)
+		medusaSpec := kc.Spec.Medusa
 		if mergeResult.IsError() {
 			return result.Error(mergeResult.GetError())
 		}
@@ -49,6 +49,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
 			}
 		}
+
 		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
 			medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
 			if medusaSpec.StorageProperties.CredentialsType == "role-based" && medusaSpec.StorageProperties.StorageProvider == "s3" {
@@ -187,6 +188,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			logger.Error(err, "Failed to reconcile Medusa CQL user secret")
 			return result.Error(err)
 		}
+
+		if err := r.reconcileBucketSecrets(ctx, r.ClientCache.GetLocalClient(), kc, logger); err != nil {
+			logger.Error(err, "Failed to reconcile Medusa bucket secrets")
+			return result.Error(err)
+		}
 	}
 
 	logger.Info("Medusa user secrets successfully reconciled")
@@ -219,7 +225,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	return result.Continue()
 }
 
-func mergeStorageProperties(
+func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 	ctx context.Context,
 	remoteClient client.Client,
 	namespace string,
@@ -232,7 +238,8 @@ func mergeStorageProperties(
 		return result.Continue()
 	}
 	storageProperties := &medusaapi.MedusaConfiguration{}
-	configKey := types.NamespacedName{Namespace: namespace, Name: medusaSpec.MedusaConfigurationRef.Name}
+	configNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, namespace)
+	configKey := types.NamespacedName{Namespace: configNamespace, Name: medusaSpec.MedusaConfigurationRef.Name}
 	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to get MedusaConfiguration %s", configKey))
 		return result.Error(err)
@@ -249,7 +256,65 @@ func mergeStorageProperties(
 		logger.Error(err, "failed to merge MedusaConfiguration StorageProperties")
 		return result.Error(err)
 	}
+	// medusaapi.MedusaConfiguration comes with a storage corev1.Secret containing the credentials to access the storage
+	// we make a copy of that secret for each cluster/dc, and then point to it with a corev1.LocalObjectReference
+	// when we do the copy, we name the secret as <cluster-name>-<original-secret-name>
+	// here we need to update the reference to point to that copied secret
+	mergedProperties.StorageSecretRef.Name = fmt.Sprintf("%s-%s", desiredKc.Name, mergedProperties.StorageSecretRef.Name)
+
 	// copy the merged properties back into the cluster
 	mergedProperties.DeepCopyInto(&desiredKc.Spec.Medusa.StorageProperties)
 	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) reconcileBucketSecrets(
+	ctx context.Context,
+	c client.Client,
+	kc *api.K8ssandraCluster,
+	logger logr.Logger,
+) error {
+
+	logger.Info("Reconciling Medusa bucket secrets")
+	medusaSpec := kc.Spec.Medusa
+
+	// there is nothing to reconcile if we're not using Medusa configuration reference
+	if medusaSpec == nil || medusaSpec.MedusaConfigurationRef.Name == "" {
+		logger.Info("MedusaConfigurationRef is not set, skipping bucket secret reconciliation")
+		return nil
+	}
+
+	// fetch the referenced configuration
+	medusaConfigName := medusaSpec.MedusaConfigurationRef.Name
+	medusaConfigNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, kc.Namespace)
+	medusaConfigKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: medusaConfigName}
+	medusaConfig := &medusaapi.MedusaConfiguration{}
+	if err := c.Get(ctx, medusaConfigKey, medusaConfig); err != nil {
+		logger.Error(err, fmt.Sprintf("could not get MedusaConfiguration %s/%s", medusaConfigNamespace, medusaConfigName))
+		return err
+	}
+
+	// fetch the referenced medusa configuration's bucket secret
+	bucketSecretName := medusaConfig.Spec.StorageProperties.StorageSecretRef.Name
+	bucketSecret := &corev1.Secret{}
+	bucketSecretKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: bucketSecretName}
+	if err := c.Get(ctx, bucketSecretKey, bucketSecret); err != nil {
+		logger.Error(err, "could not get bucket Secret")
+		return err
+	}
+
+	// write the secret into the namespace of the K8ssandraCluster
+	clusterBucketSecret := bucketSecret.DeepCopy()
+	clusterBucketSecret.ResourceVersion = ""
+	clusterBucketSecret.Name = fmt.Sprintf("%s-%s", kc.Name, bucketSecret.Name)
+	clusterBucketSecret.Namespace = kc.Namespace
+	labels.SetReplicatedBy(clusterBucketSecret, utils.GetKey(kc))
+	if err := c.Create(ctx, clusterBucketSecret); err != nil {
+		if !errors.IsAlreadyExists(err) {
+			logger.Error(err, fmt.Sprintf("failed to create cluster bucket secret %s", clusterBucketSecret))
+			return err
+		}
+		// we already have the bucket secret, so continue to updating the cluster (it might have failed before)
+	}
+
+	return nil
 }

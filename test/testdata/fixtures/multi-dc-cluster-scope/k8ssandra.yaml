@@ -4,6 +4,12 @@ metadata:
   name: test
   namespace: test-0
 spec:
+  medusa:
+    medusaConfigurationRef:
+      name: global-medusa-config
+      namespace: test-0
+    storageProperties:
+      prefix: test
   cassandra:
     serverVersion: "3.11.14"
     storageConfig:

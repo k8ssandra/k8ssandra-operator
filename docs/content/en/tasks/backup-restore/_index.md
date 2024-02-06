@@ -88,7 +88,7 @@ spec:
       #   size: 100Mi
 ```
 
-The definition above requires a secret named `medusa-bucket-key` to be created in the target namespace before the `K8ssandraCluster` object gets created. Use the following format for this secret: 
+The definition above requires a secret named `medusa-bucket-key` to be present in the target namespace before the `K8ssandraCluster` object gets created. Use the following format for this secret: 
 
 ```yaml
 apiVersion: v1
@@ -106,9 +106,11 @@ stringData:
 
 The file should always specify `credentials` as shown in the example above; in that section, provide the expected format and credential values that are expected by Medusa for the chosen storage backend. For more, refer to the [Medusa documentation](https://github.com/thelastpickle/cassandra-medusa/blob/master/docs/Installation.md) to know which file format should used for each supported storage backend.
 
-A successful deployment should inject a new init container named `medusa-restore` and a new container named `medusa` in the Cassandra StatefulSet pods.  
+If using a shared Medusa configuration (see below), this secret can be created in the same namespace as the `MedusaConfiguration` object. The K8ssandra operator will then make sure the secret is replicated to the namespaces hosting the Cassandra clusters.
 
-## Using shared medusa configuration properties
+A successful deployment should inject a new init container named `medusa-restore` and a new container named `medusa` in the Cassandra StatefulSet pods.
+
+## Using shared Medusa configuration properties
 
 Medusa configuration properties can be shared across multiple K8ssandraClusters by creating a `MedusaConfiguration` custom resource in the Control Plane K8ssandra cluster.
 Example:

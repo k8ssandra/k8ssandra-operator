@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## v1.12.0 - 2024-02-02
 
+* [ENHANCEMENT] [#1159](https://github.com/k8ssandra/k8ssandra-operator/issues/1159) Replicate bucket key secrets to namespaces hosting clusters
 * [CHANGE] Upgrade to Medusa v0.17.2
 * [CHANGE] [#1158](https://github.com/k8ssandra/k8ssandra-operator/issues/1158) Use the MedusaConfiguration API when creating Medusa configuration
 * [CHANGE] [#1050](https://github.com/k8ssandra/k8ssandra-operator/issues/1050) Remove unnecessary requeues in the Medusa controllers
