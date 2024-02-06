@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	ReplicatedSecretSourceLabelKey   = "k8ssandra.io/secret-source"
-	ReplicatedSecretSourceLabelValue = "replicated-secret"
+	ReplicatedSecretSourceAnnotationKey   = "k8ssandra.io/secret-source"
+	ReplicatedSecretSourceAnnotationValue = "replicated-secret"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

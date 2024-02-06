@@ -101,7 +101,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
 		require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: namespace}, secret))
-		return secret.Annotations[api.ReplicatedSecretSourceLabelKey] == api.ReplicatedSecretSourceLabelValue
+		return secret.Annotations[api.ReplicatedSecretSourceAnnotationKey] == api.ReplicatedSecretSourceAnnotationValue
 	}, timeout, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")
