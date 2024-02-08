@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,18 @@ var _ Clock = &FakeClock{}
 
 func TestScheduler(t *testing.T) {
 	require := require.New(t)
+	require.NoError(medusav1alpha1.AddToScheme(scheme.Scheme))
+	require.NoError(cassdcapi.AddToScheme(scheme.Scheme))
+
+	fClock := &FakeClock{}
+
+	dc := cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dc1",
+			Namespace: "test-ns",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{},
+	}
 
 	// To manipulate time and requeue, we use fakeclient here instead of envtest
 	backupSchedule := &medusav1alpha1.MedusaBackupSchedule{
@@ -41,25 +54,21 @@ func TestScheduler(t *testing.T) {
 			},
 		},
 	}
-	err := medusav1alpha1.AddToScheme(scheme.Scheme)
-	require.NoError(err)
 
 	fakeClient := fake.NewClientBuilder().
-		WithRuntimeObjects(backupSchedule).
+		WithRuntimeObjects(backupSchedule, &dc).
 		WithScheme(scheme.Scheme).
 		Build()
 
-	fClock := &FakeClock{}
+	nsName := types.NamespacedName{
+		Name:      backupSchedule.Name,
+		Namespace: backupSchedule.Namespace,
+	}
 
 	r := &MedusaBackupScheduleReconciler{
 		Client: fakeClient,
 		Scheme: scheme.Scheme,
 		Clock:  fClock,
-	}
-
-	nsName := types.NamespacedName{
-		Name:      backupSchedule.Name,
-		Namespace: backupSchedule.Namespace,
 	}
 
 	res, err := r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
@@ -98,10 +107,34 @@ func TestScheduler(t *testing.T) {
 	require.NoError(err)
 	require.True(res.RequeueAfter > 0)
 
+	// We should not have more than 1, since we never set the previous one as finished
+	backupRequests = medusav1alpha1.MedusaBackupJobList{}
+	err = fakeClient.List(context.TODO(), &backupRequests)
+	require.NoError(err)
+	require.Equal(1, len(backupRequests.Items))
+
+	// Mark the first one as finished and try again
+	backup.Status.FinishTime = metav1.NewTime(fClock.currentTime)
+	require.NoError(fakeClient.Update(context.TODO(), &backup))
+
+	backupRequests = medusav1alpha1.MedusaBackupJobList{}
+	err = fakeClient.List(context.TODO(), &backupRequests)
+	require.NoError(err)
+	require.Equal(1, len(backupRequests.Items))
+
+	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
+	require.NoError(err)
+	require.True(res.RequeueAfter > 0)
+
 	backupRequests = medusav1alpha1.MedusaBackupJobList{}
 	err = fakeClient.List(context.TODO(), &backupRequests)
 	require.NoError(err)
 	require.Equal(2, len(backupRequests.Items))
+
+	for _, backup := range backupRequests.Items {
+		backup.Status.FinishTime = metav1.NewTime(fClock.currentTime)
+		require.NoError(fakeClient.Update(context.TODO(), &backup))
+	}
 
 	// Verify that invocating again without reaching the next time does not generate another backup
 	// or modify the Status

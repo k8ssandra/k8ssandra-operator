@@ -70,6 +70,13 @@ spec:
                 required:
                 - cassandraDatacenter
                 type: object
+              concurrencyPolicy:
+                description: 'Specifics if this backup task can be run concurrently
+                  with other active backup tasks. Valid values are: - "Allow": allows
+                  multiple Tasks to run concurrently on Cassandra cluster - "Forbid"
+                  (default): only a single task is executed at once The "Allow" property
+                  is only valid if all the other active Tasks have "Allow" as well.'
+                type: string
               cronSchedule:
                 description: CronSchedule is a cronjob format schedule for backups.
                   Overrides any easier methods of defining the schedule
