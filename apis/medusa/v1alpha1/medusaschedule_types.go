@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,6 +32,13 @@ type MedusaBackupScheduleSpec struct {
 
 	// BackupSpec defines the MedusaBackup to be created for this job
 	BackupSpec MedusaBackupJobSpec `json:"backupSpec"`
+
+	// Specifics if this backup task can be run concurrently with other active backup tasks. Valid values are:
+	// - "Allow": allows multiple Tasks to run concurrently on Cassandra cluster
+	// - "Forbid" (default): only a single task is executed at once
+	// The "Allow" property is only valid if all the other active Tasks have "Allow" as well.
+	// +optional
+	ConcurrencyPolicy batchv1.ConcurrencyPolicy `json:"concurrencyPolicy,omitempty"`
 }
 
 // MedusaBackupScheduleStatus defines the observed state of MedusaBackupSchedule

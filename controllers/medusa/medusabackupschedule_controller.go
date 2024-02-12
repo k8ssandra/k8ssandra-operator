@@ -21,14 +21,17 @@ import (
 	"fmt"
 	"time"
 
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cron "github.com/robfig/cron/v3"
 )
@@ -70,6 +73,15 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
+	dcKey := types.NamespacedName{Namespace: backupSchedule.Namespace, Name: backupSchedule.Spec.BackupSpec.CassandraDatacenter}
+	dc := &cassdcapi.CassandraDatacenter{}
+	if err := r.Get(ctx, dcKey, dc); err != nil {
+		logger.Error(err, "failed to get cassandradatacenter", "CassandraDatacenter", dcKey)
+		return ctrl.Result{}, err
+	}
+
+	defaults(backupSchedule)
+
 	previousExecution, err := getPreviousExecutionTime(ctx, backupSchedule)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -83,6 +95,16 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	createBackup := false
 
 	if nextExecution.Before(now) {
+		if backupSchedule.Spec.ConcurrencyPolicy == batchv1.ForbidConcurrent {
+			if activeTasks, err := r.activeTasks(backupSchedule, dc); err != nil {
+				return ctrl.Result{}, err
+			} else {
+				if len(activeTasks) > 0 {
+					logger.V(1).Info("Postponing backup schedule due to existing active backups", "MedusaBackupSchedule", req.NamespacedName)
+					return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
+				}
+			}
+		}
 		nextExecution = sched.Next(now)
 		previousExecution = now
 		createBackup = true && !backupSchedule.Spec.Disabled
@@ -100,14 +122,13 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	if createBackup {
-		// TODO Verify here no previous jobs is still executing?
 		logger.V(1).Info("Scheduled time has been reached, creating a backup job", "MedusaBackupSchedule", req.NamespacedName)
 		generatedName := fmt.Sprintf("%s-%d", backupSchedule.Name, now.Unix())
 		backupJob := &medusav1alpha1.MedusaBackupJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      generatedName,
 				Namespace: backupSchedule.Namespace,
-				// TODO Labels?
+				Labels:    dc.GetDatacenterLabels(),
 			},
 			Spec: backupSchedule.Spec.BackupSpec,
 		}
@@ -132,6 +153,27 @@ func getPreviousExecutionTime(ctx context.Context, backupSchedule *medusav1alpha
 	}
 
 	return previousExecution.Time.UTC(), nil
+}
+
+func defaults(backupSchedule *medusav1alpha1.MedusaBackupSchedule) {
+	if backupSchedule.Spec.ConcurrencyPolicy == "" {
+		backupSchedule.Spec.ConcurrencyPolicy = batchv1.ForbidConcurrent
+	}
+}
+
+func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alpha1.MedusaBackupSchedule, dc *cassdcapi.CassandraDatacenter) ([]medusav1alpha1.MedusaBackupJob, error) {
+	backupJobs := &medusav1alpha1.MedusaBackupJobList{}
+	if err := r.Client.List(context.Background(), backupJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+		return nil, err
+	}
+	activeJobs := make([]medusav1alpha1.MedusaBackupJob, 0)
+	for _, job := range backupJobs.Items {
+		if job.Status.FinishTime.IsZero() {
+			activeJobs = append(activeJobs, job)
+		}
+	}
+
+	return activeJobs, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
