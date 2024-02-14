@@ -31,6 +31,10 @@ spec:
                 fieldPath: metadata.namespace
           - name: K8SSANDRA_CONTROL_PLANE
             value: "true"
+          - name: SERVICE_ACCOUNT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

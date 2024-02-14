@@ -142,6 +142,7 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 	cronJob := &batchv1.CronJob{}
 	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
 	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DataceneterName: %s", kc.SanitizedName(), dc1.SanitizedName())
+	require.Equal("k8ssandra-operator", cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName, "Service account name is not correct")
 	// create a Job from the cronjob spec
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
