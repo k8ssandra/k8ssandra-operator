@@ -99,3 +99,6 @@ client:
     tag: latest
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
+# -- Allows disabling the check for the presence of cert-manager.
+cass-operator:
+  disableCertManagerCheck: false
