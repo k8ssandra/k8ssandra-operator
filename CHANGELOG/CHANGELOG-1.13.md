@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] [#1203](https://github.com/k8ssandra/k8ssandra-operator/issues/1203) Add new setting ConcurrencyPolicy to MedusaBackupSchedules
+* [ENHANCEMENT] [#1209](https://github.com/k8ssandra/k8ssandra-operator/issues/1209) Expose the option to disable the cert-manager presence check in the Helm charts
