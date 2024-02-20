@@ -99,6 +99,8 @@ client:
     tag: latest
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
+  # -- HTTPS proxy address to use for communication to helm.k8ssandra.io
+  #proxy:
 # -- Allows disabling the check for the presence of cert-manager.
 cass-operator:
   disableCertManagerCheck: false
