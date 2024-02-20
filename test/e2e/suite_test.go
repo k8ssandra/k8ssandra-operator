@@ -277,6 +277,7 @@ func TestOperator(t *testing.T) {
 			clusterScoped:        true,
 			sutNamespace:         "test-0",
 			additionalNamespaces: []string{"test-1", "test-2"},
+			installMinio:         true,
 		}))
 	})
 	t.Run("CreateSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{

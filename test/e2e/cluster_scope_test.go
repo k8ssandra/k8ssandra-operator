@@ -23,6 +23,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
+	checkBucketKeyPresent(t, f, ctx, dc1Namespace, dc1Key.K8sContext, k8ssandra)
 
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
@@ -41,6 +42,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: dc2Namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
+	checkBucketKeyPresent(t, f, ctx, dc2Namespace, dc2Key.K8sContext, k8ssandra)
 
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
@@ -64,6 +66,10 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 		}
 		return cassandraDatacenterReady(cassandraStatus)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+
+	t.Log("check replicated secret mounted")
+	checkReplicatedSecretMounted(t, ctx, f, dc1Key, dc1Namespace, k8ssandra)
+	checkReplicatedSecretMounted(t, ctx, f, dc2Key, dc2Namespace, k8ssandra)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())

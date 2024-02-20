@@ -21,15 +21,10 @@ metadata:
   name: test
 spec:
   medusa:
+    medusaConfigurationRef:
+      name: global-medusa-config
     storageProperties:
-      storageProvider: s3_compatible
-      bucketName: k8ssandra-medusa
       prefix: test
-      storageSecretRef:
-        name: medusa-bucket-key
-      host: minio-service.minio.svc.cluster.local
-      port: 9000
-      secure: false 
     certificatesSecretRef:
       name: client-certificates
   cassandra:

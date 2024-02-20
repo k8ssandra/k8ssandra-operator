@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -22,8 +23,9 @@ import (
 )
 
 const (
-	backupName  = "backup1"
-	clusterName = "test"
+	backupName             = "backup1"
+	clusterName            = "test"
+	globalBucketSecretName = "global-bucket-key"
 )
 
 func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -69,6 +71,11 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	dc1Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-1", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
+	// Check that Medusa's bucket key has been replicated to the current namespace
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		checkBucketKeyPresent(t, f, ctx, namespace, dcKey.K8sContext, kc)
+	}
+
 	// Check that both DCs are ready and have Medusa containers
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
@@ -76,6 +83,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 		checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 		checkMedusaStandaloneDeploymentExists(t, ctx, dcKey, f, kc)
 		checkMedusaStandaloneServiceExists(t, ctx, dcKey, f, kc)
+		checkReplicatedSecretMounted(t, ctx, f, dcKey, dcKey.Namespace, kc)
 	}
 
 	// Create a backup in each DC and verify their completion
@@ -110,6 +118,34 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+}
+
+func checkBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string, k8sContext string, kc *k8ssandraapi.K8ssandraCluster) {
+	require := require.New(t)
+
+	// work out the name of the replicated bucket key. should be "clusterName-<original-bucket-key-name>"
+	localBucketKeyName := fmt.Sprintf("%s-%s", kc.Name, globalBucketSecretName)
+
+	// Check that the bucket key has been replicated to the current namespace
+	bucketKey := &corev1.Secret{}
+	require.Eventually(func() bool {
+		err := f.Get(ctx, framework.NewClusterKey(k8sContext, namespace, localBucketKeyName), bucketKey)
+		return err == nil
+	}, polling.medusaConfigurationReady.timeout, polling.medusaConfigurationReady.interval,
+		fmt.Sprintf("Error getting the Medusa bucket key secret. Context: %s, ClusterName: %s, Namespace: %s", k8sContext, kc.SanitizedName(), namespace),
+	)
+}
+
+func checkReplicatedSecretMounted(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, namespace string, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	require.NoError(err, fmt.Sprintf("Error getting the CassandraDatacenter %s", dcKey.Name))
+	index, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "medusa")
+	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc.Name))
+	medusaContainer := dc.Spec.PodTemplateSpec.Spec.Containers[index]
+	hasMount := f.ContainerHasVolumeMount(medusaContainer, fmt.Sprintf("%s-%s", clusterName, globalBucketSecretName), "/etc/medusa-secrets")
+	assert.True(t, hasMount, "Missing Volume Mount for Medusa bucket key")
 }
 
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
