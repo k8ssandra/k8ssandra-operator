@@ -106,7 +106,7 @@ stringData:
 
 The file should always specify `credentials` as shown in the example above; in that section, provide the expected format and credential values that are expected by Medusa for the chosen storage backend. For more, refer to the [Medusa documentation](https://github.com/thelastpickle/cassandra-medusa/blob/master/docs/Installation.md) to know which file format should used for each supported storage backend.
 
-If using a shared Medusa configuration (see below), this secret can be created in the same namespace as the `MedusaConfiguration` object. The K8ssandra operator will then make sure the secret is replicated to the namespaces hosting the Cassandra clusters.
+If using a shared Medusa configuration (see below), this secret has to be created in the same namespace as the `MedusaConfiguration` object. k8ssandra-operator will then make sure the secret is replicated to the namespaces hosting the Cassandra clusters.
 
 A successful deployment should inject a new init container named `medusa-restore` and a new container named `medusa` in the Cassandra StatefulSet pods.
 
