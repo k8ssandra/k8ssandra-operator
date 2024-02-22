@@ -20,3 +20,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#1209](https://github.com/k8ssandra/k8ssandra-operator/issues/1209) Expose the option to disable the cert-manager presence check in the Helm charts
 * [ENHANCEMENT] [#1206](https://github.com/k8ssandra/k8ssandra-operator/issues/1206) Allow setting https proxy for CRD upgrader job in Helm charts
 * [CHANGE] Upgrade Reaper to v3.5.0
+* [CHANGE] Update cass-operator to v1.19.0
