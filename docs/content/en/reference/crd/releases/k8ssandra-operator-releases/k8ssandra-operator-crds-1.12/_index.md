@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.12"
+linkTitle: "K8ssandra-operator CRDs v1.12"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.12.  
 ---
 
 Packages:
@@ -71832,13 +71832,6 @@ MedusaBackupScheduleSpec defines the desired state of MedusaBackupSchedule
           CronSchedule is a cronjob format schedule for backups. Overrides any easier methods of defining the schedule<br/>
         </td>
         <td>true</td>
-      </tr><tr>
-        <td><b>concurrencyPolicy</b></td>
-        <td>string</td>
-        <td>
-          Specifics if this backup task can be run concurrently with other active backup tasks. Valid values are: - "Allow": allows multiple Tasks to run concurrently on Cassandra cluster - "Forbid" (default): only a single task is executed at once The "Allow" property is only valid if all the other active Tasks have "Allow" as well.<br/>
-        </td>
-        <td>false</td>
       </tr><tr>
         <td><b>disabled</b></td>
         <td>boolean</td>
