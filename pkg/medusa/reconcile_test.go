@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -160,6 +161,13 @@ func testMedusaIniSecured(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
+						Manual: &cassdcapi.ManagementApiAuthManualConfig{
+							ClientSecretName: "test-client-secret",
+						},
+					},
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -200,22 +208,26 @@ func testMedusaIniSecured(t *testing.T) {
 		},
 	}
 
+	assert := assert.New(t)
 	medusaIni := CreateMedusaIni(kc)
-	assert.Contains(t, medusaIni, "storage_provider = s3")
-	assert.Contains(t, medusaIni, "bucket_name = bucket")
-	assert.Contains(t, medusaIni, "prefix = demo")
-	assert.Contains(t, medusaIni, "max_backup_age = 10")
-	assert.Contains(t, medusaIni, "max_backup_count = 20")
-	assert.Contains(t, medusaIni, "api_profile = default")
-	assert.Contains(t, medusaIni, "transfer_max_bandwidth = 100MB/s")
-	assert.Contains(t, medusaIni, "concurrent_transfers = 2")
-	assert.Contains(t, medusaIni, "multi_part_upload_threshold = 204857600")
-	assert.Contains(t, medusaIni, "host = 192.168.0.1")
-	assert.Contains(t, medusaIni, "region = us-east-1")
-	assert.Contains(t, medusaIni, "port = 9001")
-	assert.Contains(t, medusaIni, "secure = True")
-	assert.Contains(t, medusaIni, "ssl_verify = True")
-	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
+	assert.Contains(medusaIni, "storage_provider = s3")
+	assert.Contains(medusaIni, "bucket_name = bucket")
+	assert.Contains(medusaIni, "prefix = demo")
+	assert.Contains(medusaIni, "max_backup_age = 10")
+	assert.Contains(medusaIni, "max_backup_count = 20")
+	assert.Contains(medusaIni, "api_profile = default")
+	assert.Contains(medusaIni, "transfer_max_bandwidth = 100MB/s")
+	assert.Contains(medusaIni, "concurrent_transfers = 2")
+	assert.Contains(medusaIni, "multi_part_upload_threshold = 204857600")
+	assert.Contains(medusaIni, "host = 192.168.0.1")
+	assert.Contains(medusaIni, "region = us-east-1")
+	assert.Contains(medusaIni, "port = 9001")
+	assert.Contains(medusaIni, "secure = True")
+	assert.Contains(medusaIni, "ssl_verify = True")
+	assert.Contains(medusaIni, "backup_grace_period_in_days = 7")
+	assert.Contains(medusaIni, "ca_cert = /etc/encryption/mgmt/ca.crt")
+	assert.Contains(medusaIni, "tls_cert = /etc/encryption/mgmt/tls.crt")
+	assert.Contains(medusaIni, "tls_key = /etc/encryption/mgmt/tls.key")
 }
 
 func testMedusaIniUnsecured(t *testing.T) {

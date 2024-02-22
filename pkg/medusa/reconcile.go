@@ -27,7 +27,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.17.2"
+	DefaultMedusaVersion         = "0.19.0"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
@@ -122,6 +122,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots
     use_mgmt_api = 1
     enabled = 1
+	{{- if and .Spec.Cassandra.DatacenterOptions.ManagementApiAuth .Spec.Cassandra.DatacenterOptions.ManagementApiAuth.Manual }}
+	ca_cert = /etc/encryption/mgmt/ca.crt
+	tls_cert = /etc/encryption/mgmt/tls.crt
+	tls_key = /etc/encryption/mgmt/tls.key
+	{{- end }}
 
     [logging]
     level = DEBUG`
@@ -171,7 +176,7 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	setImage(medusaSpec.ContainerImage, restoreContainer)
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
-	restoreContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
+	restoreContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
 
 	if !found {
@@ -231,7 +236,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 	medusaContainer.ReadinessProbe = readinessProbe
 	medusaContainer.LivenessProbe = livenessProbe
-	medusaContainer.VolumeMounts = medusaVolumeMounts(medusaSpec, k8cName)
+	medusaContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 	return medusaContainer, nil
 }
@@ -265,7 +270,7 @@ func setImage(containerImage *images.Image, container *corev1.Container) {
 	container.ImagePullPolicy = image.PullPolicy
 }
 
-func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {
+func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, k8cName string) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{ // Cassandra config volume
 			Name:      "server-config",
@@ -298,6 +303,14 @@ func medusaVolumeMounts(medusaSpec *api.MedusaClusterTemplate, k8cName string) [
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
+		})
+	}
+
+	// Management-api encryption client certificates
+	if dcConfig.ManagementApiAuth != nil && dcConfig.ManagementApiAuth.Manual != nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "mgmt-encryption",
+			MountPath: "/etc/encryption/mgmt",
 		})
 	}
 
@@ -445,6 +458,26 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 			Exists:      found,
 		})
 	}
+
+	// Management-api client certificates
+	if dcConfig.ManagementApiAuth != nil && dcConfig.ManagementApiAuth.Manual != nil {
+		managementApiVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "mgmt-encryption")
+		managementApiVolume := &corev1.Volume{
+			Name: "mgmt-encryption",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: dcConfig.ManagementApiAuth.Manual.ClientSecretName,
+				},
+			},
+		}
+
+		newVolumes = append(newVolumes, medusaVolume{
+			Volume:      managementApiVolume,
+			VolumeIndex: managementApiVolumeIndex,
+			Exists:      found,
+		})
+	}
+
 	return newVolumes
 }
 

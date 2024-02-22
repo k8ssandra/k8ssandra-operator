@@ -681,3 +681,52 @@ func verifyBucketSecretMounted(ctx context.Context, t *testing.T, f *framework.F
 	// check its mount
 	assert.True(t, f.ContainerHasVolumeMount(medusaContainer, clusterSecretName, "/etc/medusa-secrets"), "Missing Volume Mount for Medusa bucket key")
 }
+
+func createSingleDcClusterWithManagementApiSecured(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      k8ssandraClusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
+						Manual: &cassdcapi.ManagementApiAuthManualConfig{
+							ClientSecretName: "test-client-secret",
+						},
+					},
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					dcTemplate("dc1", f.DataPlaneContexts[0]),
+				},
+			},
+			Medusa: medusaTemplateWithoutConfigRef(),
+		},
+	}
+
+	require.NoError(f.Client.Create(ctx, kc))
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc1", f.DataPlaneContexts[0])
+
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
+
+	dc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dc1Key, dc))
+
+	checkMedusaObjectsCompliance(t, f, dc, kc)
+
+	containerIndex, found := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "medusa")
+	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc.Name))
+	mainContainer := dc.Spec.PodTemplateSpec.Spec.Containers[containerIndex]
+
+	require.True(f.ContainerHasVolumeMount(mainContainer, "mgmt-encryption", "/etc/encryption/mgmt"))
+
+	volumeIndex, foundMgmtEncryptionClient := cassandra.FindVolume(dc.Spec.PodTemplateSpec, "mgmt-encryption")
+	require.True(foundMgmtEncryptionClient)
+	vol := dc.Spec.PodTemplateSpec.Spec.Volumes[volumeIndex]
+	require.Equal(kc.Spec.Cassandra.DatacenterOptions.ManagementApiAuth.Manual.ClientSecretName, vol.Secret.SecretName)
+}
