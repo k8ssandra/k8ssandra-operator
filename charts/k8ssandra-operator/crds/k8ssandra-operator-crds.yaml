@@ -28519,9 +28519,9 @@ spec:
                     default:
                       name: cassandra-reaper
                       repository: thelastpickle
-                      tag: 3.4.0
+                      tag: 3.5.0
                     description: 'The image to use for the Reaper pod main container.
-                      The default is "thelastpickle/cassandra-reaper:3.4.0". TODO:
+                      The default is "thelastpickle/cassandra-reaper:3.5.0". TODO:
                       update with real release version.'
                     properties:
                       name:
@@ -28602,9 +28602,9 @@ spec:
                     default:
                       name: cassandra-reaper
                       repository: thelastpickle
-                      tag: 3.4.0
+                      tag: 3.5.0
                     description: 'The image to use for the Reaper pod init container
-                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0".
+                      (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0".
                       TODO: update with real release version.'
                     properties:
                       name:
@@ -34164,9 +34164,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.4.0
+                  tag: 3.5.0
                 description: 'The image to use for the Reaper pod main container.
-                  The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update
+                  The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update
                   with real release version.'
                 properties:
                   name:
@@ -34272,9 +34272,9 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.4.0
+                  tag: 3.5.0
                 description: 'The image to use for the Reaper pod init container (that
-                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0".
+                  performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0".
                   TODO: update with real release version.'
                 properties:
                   name:
