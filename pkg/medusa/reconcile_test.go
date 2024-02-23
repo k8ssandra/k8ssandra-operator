@@ -21,6 +21,7 @@ func TestMedusaIni(t *testing.T) {
 	t.Run("Secured", testMedusaIniSecured)
 	t.Run("Unsecured", testMedusaIniUnsecured)
 	t.Run("MissingOptional", testMedusaIniMissingOptionalSettings)
+	t.Run("SecuredDcLevelSetting", testMedusaIniSecuredDcLevelSetting)
 }
 
 func testMedusaIniFull(t *testing.T) {
