@@ -236,6 +236,8 @@ func testMedusaIniSecured(t *testing.T) {
 	assert.Contains(medusaIni, "tls_cert = /etc/encryption/mgmt/tls.crt")
 	assert.Contains(medusaIni, "tls_key = /etc/encryption/mgmt/tls.key")
 	assert.Contains(medusaIni, "cassandra_url = https://127.0.0.1:8080/api/v0/ops/node/snapshots")
+
+	assert.NotContains(medusaIni, "\t")
 }
 
 func testMedusaIniSecuredDcLevelSetting(t *testing.T) {
