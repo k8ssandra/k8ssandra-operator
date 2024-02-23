@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+
 	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -59,7 +60,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
 			}
 		}
-		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, logger, namespace); res.Completed() {
+		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, dcConfig, logger, namespace); res.Completed() {
 			return res
 		}
 
@@ -204,12 +205,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 	ctx context.Context,
 	remoteClient client.Client,
 	kc *api.K8ssandraCluster,
+	dcConfig *cassandra.DatacenterConfig,
 	logger logr.Logger,
 	namespace string,
 ) result.ReconcileResult {
 	logger.Info("Reconciling Medusa configMap on namespace : " + namespace)
 	if kc.Spec.Medusa != nil {
-		medusaIni := medusa.CreateMedusaIni(kc)
+		medusaIni := medusa.CreateMedusaIni(kc, dcConfig)
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
 		kcKey := utils.GetKey(kc)
 		desiredConfigMap.SetLabels(labels.CleanedUpByLabels(kcKey))
