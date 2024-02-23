@@ -122,7 +122,6 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     level = DEBUG
 
     [kubernetes]
-    cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots
     use_mgmt_api = 1
     enabled = 1`
 
@@ -141,9 +140,13 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 	// Create Kubernetes config here and append it
 	if dcConfig.ManagementApiAuth != nil && dcConfig.ManagementApiAuth.Manual != nil {
 		medusaConfiig += `
+	cassandra_url = https://127.0.0.1:8080/api/v0/ops/node/snapshots
 	ca_cert = /etc/encryption/mgmt/ca.crt
 	tls_cert = /etc/encryption/mgmt/tls.crt
 	tls_key = /etc/encryption/mgmt/tls.key`
+	} else {
+		medusaConfiig += `
+	cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots`
 	}
 
 	return medusaConfiig

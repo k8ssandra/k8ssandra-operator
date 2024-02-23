@@ -155,6 +155,7 @@ func testMedusaIniNoPrefix(t *testing.T) {
 	assert.Contains(t, medusaIni, "port = 9001")
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
+	assert.Contains(t, medusaIni, "cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots")
 }
 
 func testMedusaIniSecured(t *testing.T) {
@@ -234,6 +235,7 @@ func testMedusaIniSecured(t *testing.T) {
 	assert.Contains(medusaIni, "ca_cert = /etc/encryption/mgmt/ca.crt")
 	assert.Contains(medusaIni, "tls_cert = /etc/encryption/mgmt/tls.crt")
 	assert.Contains(medusaIni, "tls_key = /etc/encryption/mgmt/tls.key")
+	assert.Contains(medusaIni, "cassandra_url = https://127.0.0.1:8080/api/v0/ops/node/snapshots")
 }
 
 func testMedusaIniSecuredDcLevelSetting(t *testing.T) {
@@ -296,6 +298,7 @@ func testMedusaIniSecuredDcLevelSetting(t *testing.T) {
 	assert.Contains(medusaIni, "ca_cert = /etc/encryption/mgmt/ca.crt")
 	assert.Contains(medusaIni, "tls_cert = /etc/encryption/mgmt/tls.crt")
 	assert.Contains(medusaIni, "tls_key = /etc/encryption/mgmt/tls.key")
+	assert.Contains(medusaIni, "cassandra_url = https://127.0.0.1:8080/api/v0/ops/node/snapshots")
 }
 
 func testMedusaIniUnsecured(t *testing.T) {
