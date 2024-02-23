@@ -56,7 +56,7 @@ var (
 	}
 )
 
-func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
+func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
 	medusaIniTemplate := `
     [cassandra]
     use_sudo = false
@@ -118,18 +118,13 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
     [grpc]
     enabled = 1
 
+    [logging]
+    level = DEBUG
+
     [kubernetes]
     cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots
     use_mgmt_api = 1
-    enabled = 1
-	{{- if and .Spec.Cassandra.DatacenterOptions.ManagementApiAuth .Spec.Cassandra.DatacenterOptions.ManagementApiAuth.Manual }}
-	ca_cert = /etc/encryption/mgmt/ca.crt
-	tls_cert = /etc/encryption/mgmt/tls.crt
-	tls_key = /etc/encryption/mgmt/tls.key
-	{{- end }}
-
-    [logging]
-    level = DEBUG`
+    enabled = 1`
 
 	t, err := template.New("ini").Parse(medusaIniTemplate)
 	if err != nil {
@@ -141,7 +136,17 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster) string {
 		panic(err)
 	}
 
-	return medusaIni.String()
+	medusaConfiig := medusaIni.String()
+
+	// Create Kubernetes config here and append it
+	if dcConfig.ManagementApiAuth != nil && dcConfig.ManagementApiAuth.Manual != nil {
+		medusaConfiig += `
+	ca_cert = /etc/encryption/mgmt/ca.crt
+	tls_cert = /etc/encryption/mgmt/tls.crt
+	tls_key = /etc/encryption/mgmt/tls.key`
+	}
+
+	return medusaConfiig
 }
 
 func CreateMedusaConfigMap(namespace, k8cName, medusaIni string) *corev1.ConfigMap {
