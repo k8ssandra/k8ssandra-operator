@@ -45377,9 +45377,9 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         <td><b><a href="#k8ssandraclusterspecreapercontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.4.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.5.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -45414,9 +45414,9 @@ Reaper defines the desired deployment characteristics for Reaper in this K8ssand
         <td><b><a href="#k8ssandraclusterspecreaperinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.4.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.5.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46960,7 +46960,7 @@ Defines the username and password that Reaper will use to authenticate CQL conne
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.
 
 <table>
     <thead>
@@ -47118,7 +47118,7 @@ LocalObjectReference contains enough information to let you locate the reference
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.
 
 <table>
     <thead>
@@ -73514,9 +73514,9 @@ ReaperSpec defines the desired state of Reaper
         <td><b><a href="#reaperspeccontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.4.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.5.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -73551,9 +73551,9 @@ ReaperSpec defines the desired state of Reaper
         <td><b><a href="#reaperspecinitcontainerimage">initContainerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.<br/>
+          The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.4.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.5.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -75324,7 +75324,7 @@ ref to the secret that contains the truststore password if password stored in di
 
 
 
-The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.
+The image to use for the Reaper pod main container. The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.
 
 <table>
     <thead>
@@ -75482,7 +75482,7 @@ LocalObjectReference contains enough information to let you locate the reference
 
 
 
-The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.4.0". TODO: update with real release version.
+The image to use for the Reaper pod init container (that performs schema migrations). The default is "thelastpickle/cassandra-reaper:3.5.0". TODO: update with real release version.
 
 <table>
     <thead>
