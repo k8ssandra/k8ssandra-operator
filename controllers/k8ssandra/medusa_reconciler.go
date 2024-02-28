@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
@@ -130,7 +131,12 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.RequeueSoon(r.DefaultDelay)
 		}
 		// Create a cron job to purge Medusa backups
-		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), namespace, logger)
+		operatorNamespace, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		if err != nil {
+			logger.Info("Failed to get Operator namespace", "error", err)
+			return result.Error(err)
+		}
+		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), string(operatorNamespace), logger)
 		if err != nil {
 			logger.Info("Failed to create Medusa purge backups cronjob", "error", err)
 			return result.Error(err)
