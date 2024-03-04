@@ -23,6 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	operatorNamespaceEnvVar = "OPERATOR_NAMESPACE"
+)
+
 // Create all things Medusa related in the cassdc podTemplateSpec
 func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	ctx context.Context,
@@ -131,12 +135,12 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.RequeueSoon(r.DefaultDelay)
 		}
 		// Create a cron job to purge Medusa backups
-		operatorNamespace, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		operatorNamespace, err := r.getOperatorNamespace()
 		if err != nil {
 			logger.Info("Failed to get Operator namespace", "error", err)
 			return result.Error(err)
 		}
-		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), string(operatorNamespace), logger)
+		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), operatorNamespace, logger)
 		if err != nil {
 			logger.Info("Failed to create Medusa purge backups cronjob", "error", err)
 			return result.Error(err)
@@ -325,4 +329,12 @@ func (r *K8ssandraClusterReconciler) reconcileBucketSecrets(
 	}
 
 	return nil
+}
+
+func (r *K8ssandraClusterReconciler) getOperatorNamespace() (string, error) {
+	operatorNamespace, found := os.LookupEnv(operatorNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("environment variable %s not set", operatorNamespaceEnvVar)
+	}
+	return string(operatorNamespace), nil
 }
