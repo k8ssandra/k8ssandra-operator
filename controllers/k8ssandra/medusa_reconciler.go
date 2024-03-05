@@ -330,7 +330,7 @@ func (r *K8ssandraClusterReconciler) reconcileBucketSecrets(
 func (r *K8ssandraClusterReconciler) getOperatorNamespace(logger logr.Logger) string {
 	operatorNamespace, found := os.LookupEnv(operatorNamespaceEnvVar)
 	if !found {
-		logger.Info("Environment variable not found", operatorNamespaceEnvVar)
+		logger.Info(fmt.Sprintf("Environment variable not found: %s", operatorNamespaceEnvVar))
 		return "default"
 	}
 	return operatorNamespace
