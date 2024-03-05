@@ -135,7 +135,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.RequeueSoon(r.DefaultDelay)
 		}
 		// Create a cron job to purge Medusa backups
-		operatorNamespace := r.getOperatorNamespace()
+		operatorNamespace := r.getOperatorNamespace(logger)
 		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), operatorNamespace, logger)
 		if err != nil {
 			logger.Info("Failed to create Medusa purge backups cronjob", "error", err)
@@ -327,9 +327,10 @@ func (r *K8ssandraClusterReconciler) reconcileBucketSecrets(
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
+func (r *K8ssandraClusterReconciler) getOperatorNamespace(logger logr.Logger) string {
 	operatorNamespace, found := os.LookupEnv(operatorNamespaceEnvVar)
 	if !found {
+		logger.Info("Environment variable not found", operatorNamespaceEnvVar)
 		return "default"
 	}
 	return operatorNamespace
