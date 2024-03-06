@@ -49,7 +49,7 @@ jobs:
             exit 1
           fi
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v3
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
