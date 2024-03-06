@@ -48,7 +48,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache
           outputs: type=docker,dest=/tmp/k8ssandra-k8ssandra-operator.tar
       - name: Upload k8ssandra-operator image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-k8ssandra-operator.tar

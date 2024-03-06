@@ -52,7 +52,7 @@ jobs:
         id: parse_image_tag
         run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v5
