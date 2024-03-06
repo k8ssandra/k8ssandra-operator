@@ -23,7 +23,7 @@ jobs:
     name: Add issue to GH project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/orgs/k8ssandra/projects/8
           github-token: ${{ secrets.GH_PROJECTS_TOKEN }}
