@@ -25,33 +25,10 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 	// to turn on authentication later on, since kc.Spec.Cassandra.SuperuserSecretRef is immutable.
 	// Finally, creating the superuser secret when auth is disabled does not do any harm: no credentials will be
 	// required to connect to Cassandra nodes by CQL nor JMX.
-	// if kc.Spec.Cassandra.SuperuserSecretRef.Name == "" {
-	// 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	// 	kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.SanitizedName())
-	// 	if err := r.Patch(ctx, kc, patch); err != nil {
-	// 		if errors.IsConflict(err) {
-	// 			return result.RequeueSoon(1 * time.Second)
-	// 		}
-	// 		return result.Error(fmt.Errorf("failed to set default superuser secret name: %v", err))
-	// 	}
-
-	// 	kc.Spec.Cassandra.SuperuserSecretRef.Name = secret.DefaultSuperuserSecretName(kc.SanitizedName())
-	// 	logger.Info("Setting default superuser secret", "SuperuserSecretName", kc.Spec.Cassandra.SuperuserSecretRef.Name)
-	// }
-
 	if err := secret.ReconcileSecret(ctx, r.Client, SuperuserSecretName(kc), utils.GetKey(kc)); err != nil {
 		logger.Error(err, "Failed to verify existence of superuserSecret")
 		return result.Error(err)
 	}
-
-	/*
-		// TODO Why do we mount superuserSecret to cassandar container?
-		err := secret.AddInjectionAnnotationCassandraContainers(&kc.Spec.Cassandra.Meta.Pods, kc.Spec.Cassandra.SuperuserSecretRef.Name)
-		if err != nil {
-			logger.Error(err, "Failed to add superuser injection annotation")
-			return result.Error(err)
-		}
-	*/
 
 	return result.Continue()
 }

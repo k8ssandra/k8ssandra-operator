@@ -2095,21 +2095,6 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 	assert.Eventually(t, systemReplicationAnnotationIsSet(t, f, ctx, kc), timeout, interval, "Failed to verify that the system replication annotation was set correctly")
 }
 
-// func verifySecretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, secretName string) {
-// 	t.Logf("check that the superuser secret annotation is added")
-// 	assert.Eventually(t, secretAnnotationAdded(t, f, ctx, dcKey, getCassDcAnnotations, secretName), timeout, interval, " failed to verify cassdc secret annotation added")
-// }
-
-// func getCassDcAnnotations(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string {
-// 	dc := &cassdcapi.CassandraDatacenter{}
-// 	err := f.Get(ctx, key, dc)
-// 	if err != nil {
-// 		t.Logf("failed to get CassandraDatacenter: %v", err)
-// 	}
-
-// 	return dc.Spec.PodTemplateSpec.Annotations
-// }
-
 func secretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey,
 	annFn func(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string, secretName string) func() bool {
 	return func() bool {
