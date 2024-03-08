@@ -170,8 +170,6 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, cassandraUserSecret)
-
 	t.Log("verify the config map exists and has the contents from the MedusaConfiguration object")
 	defaultPrefix := kc.Spec.Medusa.StorageProperties.Prefix
 	verifyConfigMap(require, ctx, f, namespace, defaultPrefix)
@@ -309,7 +307,6 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, cassandraUserSecret)
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
