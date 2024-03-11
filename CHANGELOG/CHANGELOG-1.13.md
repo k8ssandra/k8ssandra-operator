@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+
+* [BUGFIX] [#1235](https://github.com/k8ssandra/k8ssandra-operator/issues/1235) Prevent operator from modifying the spec when superUserRef is not set. Also, remove the injection to mount secrets to cassandra container.
+
 ## v1.13.0 - 2024-02-24
 
 * [ENHANCEMENT] [#1159](https://github.com/k8ssandra/k8ssandra-operator/issues/1159) Replicate bucket key secrets to namespaces hosting clusters

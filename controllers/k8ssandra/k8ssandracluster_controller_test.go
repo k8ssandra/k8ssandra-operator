@@ -186,7 +186,6 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	require.True(dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser != nil && *dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser == 999, "pod security context was not properly set")
 	require.True(dc.Spec.ManagementApiAuth.Insecure != nil, "management api auth was not properly set")
 
-	verifySecretAnnotationAdded(t, f, ctx, dcKey, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 	lastTransitionTime := metav1.Now()
 
 	t.Log("update datacenter status to scaling up")
@@ -421,7 +420,6 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, superUserSecretName)
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
@@ -441,7 +439,6 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, superUserSecretName)
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -573,7 +570,6 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("verify configuration of dc1")
 	dc1 := &cassdcapi.CassandraDatacenter{}
@@ -602,7 +598,6 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	dc2 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc2)
 	require.NoError(err, "failed to get dc2")
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
@@ -736,7 +731,6 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
@@ -757,8 +751,6 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
-
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -831,8 +823,6 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
-
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.SetCondition(cassdcapi.DatacenterCondition{
@@ -889,8 +879,6 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	t.Log("update dc2 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to set dc2 status ready")
-
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("check that dc2 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
@@ -1123,7 +1111,6 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
 	jvmOpts := dcConfig["cassandra-env-sh"].(map[string]interface{})["additional-jvm-opts"].([]interface{})
 	require.Contains(jvmOpts, "-Dcassandra.allow_alter_rf_during_range_movement=true")
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	err = f.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
@@ -1233,7 +1220,6 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("update datacenter status to scaling up")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
@@ -1310,7 +1296,6 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	t.Log("update dc2 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(err, "failed to update dc2 status to ready")
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("check that dc2 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
@@ -1602,7 +1587,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("verify configuration of dc1")
 	dc1 := &cassdcapi.CassandraDatacenter{}
@@ -2111,21 +2095,6 @@ func verifySystemReplicationAnnotationSet(ctx context.Context, t *testing.T, f *
 	assert.Eventually(t, systemReplicationAnnotationIsSet(t, f, ctx, kc), timeout, interval, "Failed to verify that the system replication annotation was set correctly")
 }
 
-func verifySecretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, secretName string) {
-	t.Logf("check that the superuser secret annotation is added")
-	assert.Eventually(t, secretAnnotationAdded(t, f, ctx, dcKey, getCassDcAnnotations, secretName), timeout, interval, " failed to verify cassdc secret annotation added")
-}
-
-func getCassDcAnnotations(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string {
-	dc := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, key, dc)
-	if err != nil {
-		t.Logf("failed to get CassandraDatacenter: %v", err)
-	}
-
-	return dc.Spec.PodTemplateSpec.Annotations
-}
-
 func secretAnnotationAdded(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey,
 	annFn func(t *testing.T, f *framework.Framework, ctx context.Context, key framework.ClusterKey) map[string]string, secretName string) func() bool {
 	return func() bool {
@@ -2302,7 +2271,6 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dcKey, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	lastTransitionTime := metav1.Now()
 
@@ -2418,7 +2386,6 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	t.Log("check that dc1 was never created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	k8c := &api.K8ssandraCluster{}
 	err = f.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterName}, k8c)
@@ -2525,7 +2492,6 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	t.Log("check that dc1 was never created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	dc := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc1Key, dc)
@@ -2625,7 +2591,6 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 	t.Log("check that dc2 was created")
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc2Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("check that dc1 has not been created yet")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
@@ -2639,7 +2604,6 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 
 	t.Log("check that dc1 was created")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-	verifySecretAnnotationAdded(t, f, ctx, dc1Key, secret.DefaultSuperuserSecretName(kc.SanitizedName()))
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)

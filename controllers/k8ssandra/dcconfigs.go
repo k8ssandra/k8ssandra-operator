@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
@@ -32,6 +31,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 
 		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		dcConfig.ExternalSecrets = kc.Spec.UseExternalSecrets()
+		dcConfig.SuperuserSecretRef.Name = SuperuserSecretName(kc)
 
 		dcKey := types.NamespacedName{Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace), Name: dcConfig.Meta.Name}
 		dcLogger := logger.WithValues("CassandraDatacenter", dcKey, "K8SContext", dcConfig.K8sContext)
@@ -84,7 +84,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// The new metrics endpoint is available since 3.11.13 and 4.0.4.
 		// If MCAC is disabled and the new metrics endpoint is not available then we should return an error.
 		mergedTelemetrySpec := MergeTelemetrySpecs(kc, dcTemplate)
-		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == k8ssandraapi.ServerDistributionCassandra {
+		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
 			return dcConfigs, errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled")
 		} else {
 			logger.Info("new metrics endpoint is available, so MCAC can be disabled", "serverVersion", kc.Spec.Cassandra.ServerVersion)

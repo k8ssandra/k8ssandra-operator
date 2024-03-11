@@ -19,10 +19,6 @@ type SecretInjection struct {
 	Containers []string `json:"containers,omitempty"`
 }
 
-func AddInjectionAnnotationCassandraContainers(t *meta.Tags, secretName string) error {
-	return AddInjectionAnnotation(t, secretName, []string{"cassandra"})
-}
-
 func AddInjectionAnnotationMedusaContainers(t *meta.Tags, secretName string) error {
 	return AddInjectionAnnotation(t, secretName, []string{"medusa", "medusa-restore"})
 }
