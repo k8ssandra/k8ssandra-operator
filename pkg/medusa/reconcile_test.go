@@ -558,9 +558,9 @@ func TestStandaloneMedusaDeploymentImageSettings(t *testing.T) {
 
 	desiredMedusaStandalone := StandaloneMedusaDeployment(*medusaContainer, "dc1", dcConfig.SanitizedName(), "test", logger, medusaSpec.ContainerImage)
 
-	assert.Equal(t, "main-secret", *&desiredMedusaStandalone.Spec.Template.Spec.ImagePullSecrets[0].Name, "expected standalone container image pull secret to be set")
-	assert.Equal(t, "reg1/repo1/img1:tag1", *&desiredMedusaStandalone.Spec.Template.Spec.Containers[0].Image, "expected standalone container image to be set to reg1/repo1/img1:tag1")
-	assert.Equal(t, corev1.PullAlways, *&desiredMedusaStandalone.Spec.Template.Spec.Containers[0].ImagePullPolicy, "expected standalone pull policy to be set to Always")
+	assert.Equal(t, "main-secret", desiredMedusaStandalone.Spec.Template.Spec.ImagePullSecrets[0].Name, "expected standalone container image pull secret to be set")
+	assert.Equal(t, "reg1/repo1/img1:tag1", desiredMedusaStandalone.Spec.Template.Spec.Containers[0].Image, "expected standalone container image to be set to reg1/repo1/img1:tag1")
+	assert.Equal(t, corev1.PullAlways, desiredMedusaStandalone.Spec.Template.Spec.Containers[0].ImagePullPolicy, "expected standalone pull policy to be set to Always")
 }
 
 func TestExternalSecretsFlag(t *testing.T) {
