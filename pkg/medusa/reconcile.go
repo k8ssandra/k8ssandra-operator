@@ -526,7 +526,7 @@ func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, d
 					Containers: []corev1.Container{
 						medusaContainer,
 					},
-					ImagePullSecrets: images.CollectPullSecrets(medusaImage.ApplyDefaults(*medusaImage)),
+					ImagePullSecrets: images.CollectPullSecrets(medusaImage.ApplyDefaults(defaultMedusaImage)),
 					Volumes:          []corev1.Volume{},
 					Hostname:         MedusaStandaloneDeploymentName(clusterName, dcName),
 				},
