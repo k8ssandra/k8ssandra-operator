@@ -83,7 +83,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create the Medusa standalone pod
-		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), namespace, logger)
+		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), namespace, logger, kc.Spec.Medusa.ContainerImage)
 
 		// Add the volumes previously computed to the Medusa standalone pod
 		for _, volume := range volumes {
