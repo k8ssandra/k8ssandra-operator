@@ -35,6 +35,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	remoteClient client.Client,
 	logger logr.Logger,
 ) result.ReconcileResult {
+
 	kc := desiredKc.DeepCopy()
 	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
 	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + namespace)
@@ -268,6 +269,8 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 	// we make a copy of that secret for each cluster/dc, and then point to it with a corev1.LocalObjectReference
 	// when we do the copy, we name the secret as <cluster-name>-<original-secret-name>
 	// here we need to update the reference to point to that copied secret
+
+	// TODO: swap me for the replicatedSecret's name
 	mergedProperties.StorageSecretRef.Name = fmt.Sprintf("%s-%s", desiredKc.Name, mergedProperties.StorageSecretRef.Name)
 
 	// copy the merged properties back into the cluster
@@ -311,6 +314,9 @@ func (r *K8ssandraClusterReconciler) reconcileBucketSecrets(
 	}
 
 	// write the secret into the namespace of the K8ssandraCluster
+	// TODO: Swap this copying process for a ReplicatedSecret, the replicatedSecret should be named after the MedusaConfiguration's name.
+	// The replicatedSecret should have targets added according to the K8ssandraClusters referencing it.
+	// Finalizer logic will be required to ensure that the ReplicatedSecret entry is deleted on deletion of the K8ssandraCluster
 	clusterBucketSecret := bucketSecret.DeepCopy()
 	clusterBucketSecret.ResourceVersion = ""
 	clusterBucketSecret.Name = fmt.Sprintf("%s-%s", kc.Name, bucketSecret.Name)
