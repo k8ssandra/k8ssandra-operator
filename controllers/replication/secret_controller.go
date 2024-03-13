@@ -3,9 +3,10 @@ package replication
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -224,8 +225,13 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			} else {
 				namespace = target.Namespace
 			}
+			if remoteClient == localClient && target.Namespace == sec.Namespace {
+				//TODO: @Michael does this allow us to remove the UID check in requiresUpdate or any other logic?
+				// If if origin and source context-namespace are the same we want to bail immediately.
+				continue TargetSecrets
+			}
 			fetchedSecret := &corev1.Secret{}
-			if err = remoteClient.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: namespace}, fetchedSecret); err != nil {
+			if err = remoteClient.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s%s", target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
 				if errors.IsNotFound(err) {
 					logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
 					// Create it
@@ -233,6 +239,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret.Namespace = namespace
 					copiedSecret.ResourceVersion = ""
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
+					copiedSecret.Name = fmt.Sprintf("%s%s", target.TargetPrefix, sec.Name)
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 						break TargetSecrets
@@ -252,7 +259,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			if requiresUpdate(sec, fetchedSecret) {
 				logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
 				syncSecrets(sec, fetchedSecret)
-				if err = remoteClient.Update(ctx, fetchedSecret); err != nil {
+				copiedSecret := fetchedSecret.DeepCopy()
+				copiedSecret.Name = fmt.Sprintf("%s%s", target.TargetPrefix, sec.Name)
+				if err = remoteClient.Update(ctx, copiedSecret); err != nil {
 					logger.Error(err, "Failed to sync target secret for matching payloads", "Secret", fetchedSecret.Name, "TargetContext", target)
 					break TargetSecrets
 				}
@@ -286,6 +295,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func requiresUpdate(source, dest client.Object) bool {
+	// TODO: we need to revisit this logic since I think that the change of name (due to adding a prefix) might cause a new UID
+	// to be generated even in the case where the origin and destination cluster-namespace is the same.
+
 	// In case we target the same cluster
 	if source.GetUID() == dest.GetUID() {
 		return false
@@ -312,6 +324,9 @@ func requiresUpdate(source, dest client.Object) bool {
 }
 
 func syncSecrets(src, dest *corev1.Secret) {
+	// TODO: @Michael what does this do, and do I need to worry about differences in the names between the source and destination?
+	// syncSecrets is not a very descriptive name, it seems that this just removes DC specific annotations and labels? In
+	// which case I don't need to worry about names at all here?
 	origMeta := dest.ObjectMeta
 	src.DeepCopyInto(dest)
 	dest.ObjectMeta = origMeta

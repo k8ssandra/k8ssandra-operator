@@ -51,6 +51,11 @@ type ReplicationTarget struct {
 	// Selector defines which clusters are targeted.
 	// +optional
 	// Selector *metav1.LabelSelector `json:"selector,omitempty"`
+
+	// TargetPrefix is the prefix to be used for the replicated secret in the target cluster. If left empty, the same name is used
+	// as the original secret.
+	// +optional
+	TargetPrefix string `json:"targetPrefix,omitempty"`
 }
 
 // ReplicatedSecretStatus defines the observed state of ReplicatedSecret
