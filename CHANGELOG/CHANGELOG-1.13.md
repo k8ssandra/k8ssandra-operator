@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#1235](https://github.com/k8ssandra/k8ssandra-operator/issues/1235) Prevent operator from modifying the spec when superUserRef is not set. Also, remove the injection to mount secrets to cassandra container.
+* [BUGFIX] [#1239](https://github.com/k8ssandra/k8ssandra-operator/issues/1239) Use `concurrent_transfers` setting from MedusaConfiguration object if it is actually set.
 
 ## v1.13.0 - 2024-02-24
 
