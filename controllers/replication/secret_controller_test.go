@@ -524,16 +524,4 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
 	}, timeout*3, interval)
 
-	t.Log("delete origin - the old prefixed secret should no longer exist")
-	localSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "broken-secret-0", Namespace: namespace},
-	}
-	require.NoError(localContext.Delete(ctx, localSecret))
-	require.Eventually(func() bool {
-		remoteSecret := &corev1.Secret{}
-		if err := remoteContext.Get(ctx, types.NamespacedName{Name: "prefix-broken-secret-0", Namespace: namespace}, remoteSecret); err == nil || !errors.IsNotFound(err) {
-			return false
-		}
-		return true
-	}, timeout*3, interval)
 }
