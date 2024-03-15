@@ -135,11 +135,15 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: c.DcNamespace,
-			Name:      c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
+			Name:      c.configMapName(),
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): string(yamlData)},
 	}
 	return &cm, nil
+}
+
+func (c Configurator) configMapName() string {
+	return cassdcapi.CleanupForKubernetes(c.Kluster.CassClusterName() + "-" + c.DcName + "-metrics-agent-config")
 }
 
 func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatacenter) result.ReconcileResult {
@@ -182,7 +186,7 @@ func (c Configurator) AddVolumeSource(dc *cassdcapi.CassandraDatacenter) error {
 					},
 				},
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: c.Kluster.Name + "-" + c.DcName + "-metrics-agent-config",
+					Name: c.configMapName(),
 				},
 			},
 		},

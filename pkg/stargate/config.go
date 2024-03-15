@@ -42,7 +42,7 @@ func FilterConfig(config map[string]interface{}, retainedSettings []string) map[
 func CreateStargateConfigMap(namespace, cassandraYaml, stargateCqlYaml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GeneratedConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
+			Name:      GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
 			Namespace: namespace,
 			Labels: utils.MergeMap(
 				map[string]string{

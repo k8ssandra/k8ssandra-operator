@@ -26,6 +26,6 @@ func TestBuildVectorAgentConfigMap(t *testing.T) {
 	vectorToml := "Test"
 	vectorConfigMap := reaperpkg.CreateVectorConfigMap("k8ssandra-operator", vectorToml, test.NewCassandraDatacenter("testDc", "k8ssandra-operator"))
 	assert.Equal(t, vectorToml, vectorConfigMap.Data["vector.toml"])
-	assert.Equal(t, "test-cluster-testDc-reaper-vector", vectorConfigMap.Name)
+	assert.Equal(t, "test-cluster-testdc-reaper-vector", vectorConfigMap.Name)
 	assert.Equal(t, "k8ssandra-operator", vectorConfigMap.Namespace)
 }

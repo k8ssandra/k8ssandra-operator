@@ -351,7 +351,7 @@ func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatac
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: GeneratedConfigMapName(dc.Spec.ClusterName, dc.DatacenterName()),
+					Name: GeneratedConfigMapName(dc.Spec.ClusterName, dc.Name),
 				},
 			},
 		},
@@ -513,5 +513,5 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 }
 
 func GeneratedConfigMapName(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
+	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), cassdcapi.CleanupForKubernetes(dcName), cassandraConfigMap)
 }
