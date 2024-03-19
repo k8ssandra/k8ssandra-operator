@@ -147,6 +147,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("NumTokensValidationInUpdate", testNumTokensInUpdate)
 	t.Run("StsNameTooLong", testStsNameTooLong)
 	t.Run("MedusaPrefixMissing", testMedusaPrefixMissing)
+	t.Run("InvalidDcName", testInvalidDcName)
 }
 
 func testContextValidation(t *testing.T) {
@@ -219,6 +220,7 @@ func testStorageConfigValidation(t *testing.T) {
 	required.NoError(err)
 
 	cluster.Spec.Cassandra.Datacenters = append(cluster.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		Meta:       EmbeddedObjectMeta{Name: "dc2"},
 		K8sContext: "envtest",
 		Size:       1,
 	})
@@ -376,6 +378,7 @@ func createClusterObjWithCassandraConfig(name, namespace string) *K8ssandraClust
 
 				Datacenters: []CassandraDatacenterTemplate{
 					{
+						Meta:       EmbeddedObjectMeta{Name: "dc1"},
 						K8sContext: "envtest",
 						Size:       1,
 					},
@@ -450,4 +453,15 @@ func testMedusaPrefixMissing(t *testing.T) {
 	}
 	err = k8sClient.Create(ctx, clusterWithPrefix)
 	required.NoError(err)
+}
+
+func testInvalidDcName(t *testing.T) {
+	required := require.New(t)
+	createNamespace(required, "ns")
+
+	clusterWithBadDcName := createMinimalClusterObj("bad-dc-name", "ns")
+	clusterWithBadDcName.Spec.Cassandra.Datacenters[0].Meta.Name = "DC1"
+	err := k8sClient.Create(ctx, clusterWithBadDcName)
+	required.Error(err)
+	required.Contains(err.Error(), "invalid DC name")
 }

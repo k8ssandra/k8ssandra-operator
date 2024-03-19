@@ -27,7 +27,7 @@ const (
 // VectorAgentConfigMapName generates a ConfigMap name based on
 // the K8s sanitized cluster name and datacenter name.
 func VectorAgentConfigMapName(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, vectorConfigMap)
+	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), cassdcapi.CleanupForKubernetes(dcName), vectorConfigMap)
 }
 
 func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraDatacenter) *corev1.ConfigMap {

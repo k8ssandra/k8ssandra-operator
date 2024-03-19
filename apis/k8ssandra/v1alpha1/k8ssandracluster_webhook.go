@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -69,8 +71,15 @@ func (r *K8ssandraCluster) ValidateCreate() error {
 
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 	hasClusterStorageConfig := r.Spec.Cassandra.DatacenterOptions.StorageConfig != nil
-	// Verify given k8s-contexts are correct
 	for _, dc := range r.Spec.Cassandra.Datacenters {
+		dns1035Errs := validation.IsDNS1035Label(dc.Meta.Name)
+		if len(dns1035Errs) > 0 {
+			return fmt.Errorf(
+				"invalid DC name (you might want to use datacenterName to override the name used in Cassandra): %s",
+				strings.Join(dns1035Errs, ", "))
+		}
+
+		// Verify given k8s-context is correct
 		_, err := clientCache.GetRemoteClient(dc.K8sContext)
 		if err != nil {
 			// No client found for this context name, reject

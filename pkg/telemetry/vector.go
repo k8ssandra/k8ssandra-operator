@@ -330,5 +330,5 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 }
 
 func VectorAgentConfigMapName(k8cName, dcName string) string {
-	return fmt.Sprintf("%s-%s-cass-vector", k8cName, dcName)
+	return cassdcapi.CleanupForKubernetes(fmt.Sprintf("%s-%s-cass-vector", k8cName, dcName))
 }
