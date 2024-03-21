@@ -26,14 +26,16 @@ import (
 )
 
 const (
-	medusaImageRepo        = "test"
-	storageSecret          = "storage-secret"
-	cassandraUserSecret    = "medusa-secret"
-	k8ssandraClusterName   = "test"
-	medusaConfigName       = "medusa-config"
-	medusaBucketSecretName = "medusa-bucket-secret"
-	prefixFromMedusaConfig = "prefix-from-medusa-config"
-	prefixFromClusterSpec  = "prefix-from-cluster-spec"
+	medusaImageRepo                     = "test"
+	storageSecret                       = "storage-secret"
+	cassandraUserSecret                 = "medusa-secret"
+	k8ssandraClusterName                = "test"
+	medusaConfigName                    = "medusa-config"
+	medusaBucketSecretName              = "medusa-bucket-secret"
+	prefixFromMedusaConfig              = "prefix-from-medusa-config"
+	prefixFromClusterSpec               = "prefix-from-cluster-spec"
+	defaultConcurrentTransfers          = 1
+	concurrentTransfersFromMedusaConfig = 2
 )
 
 func dcTemplate(dcName string, dataPlaneContext string) api.CassandraDatacenterTemplate {
@@ -62,7 +64,8 @@ func MedusaConfig(name, namespace string) *medusaapi.MedusaConfiguration {
 		},
 		Spec: medusaapi.MedusaConfigurationSpec{
 			StorageProperties: medusaapi.Storage{
-				Prefix: prefixFromMedusaConfig,
+				Prefix:              prefixFromMedusaConfig,
+				ConcurrentTransfers: concurrentTransfersFromMedusaConfig,
 			},
 		},
 	}
@@ -172,7 +175,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 
 	t.Log("verify the config map exists and has the contents from the MedusaConfiguration object")
 	defaultPrefix := kc.Spec.Medusa.StorageProperties.Prefix
-	verifyConfigMap(require, ctx, f, namespace, defaultPrefix)
+	verifyConfigMap(require, ctx, f, namespace, defaultPrefix, defaultConcurrentTransfers)
 
 	t.Log("check that the standalone Medusa deployment was created in dc1")
 	medusaDeploymentKey1 := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaStandaloneDeploymentName(k8ssandraClusterName, "dc1")}, K8sContext: f.DataPlaneContexts[0]}
@@ -485,10 +488,10 @@ func createSingleDcClusterWithMedusaConfigRef(t *testing.T, ctx context.Context,
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	t.Log("verify the config map exists and has the contents from the MedusaConfiguration object")
-	verifyConfigMap(require, ctx, f, namespace, prefixFromClusterSpec)
+	verifyConfigMap(require, ctx, f, namespace, prefixFromClusterSpec, concurrentTransfersFromMedusaConfig)
 }
 
-func verifyConfigMap(r *require.Assertions, ctx context.Context, f *framework.Framework, namespace string, expectedPrefix string) {
+func verifyConfigMap(r *require.Assertions, ctx context.Context, f *framework.Framework, namespace string, expectedPrefix string, expectedConcurrentTransfers int) {
 	configMapName := fmt.Sprintf("%s-medusa", k8ssandraClusterName)
 	configMapKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: configMapName}, K8sContext: f.DataPlaneContexts[0]}
 	configMap := &corev1.ConfigMap{}
@@ -497,7 +500,9 @@ func verifyConfigMap(r *require.Assertions, ctx context.Context, f *framework.Fr
 			r.NoError(err, "failed to get Medusa ConfigMap")
 			return false
 		}
-		return strings.Contains(configMap.Data["medusa.ini"], fmt.Sprintf("prefix = %s", expectedPrefix))
+		prefixCorrect := strings.Contains(configMap.Data["medusa.ini"], fmt.Sprintf("prefix = %s", expectedPrefix))
+		concurrentTransfersCorrect := strings.Contains(configMap.Data["medusa.ini"], fmt.Sprintf("concurrent_transfers = %d", expectedConcurrentTransfers))
+		return prefixCorrect && concurrentTransfersCorrect
 	}, timeout, interval, "Medusa ConfigMap doesn't have the right content")
 }
 

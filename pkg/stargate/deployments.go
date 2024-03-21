@@ -513,5 +513,5 @@ func createPodMeta(stargate *api.Stargate, deploymentName string) meta.Tags {
 }
 
 func GeneratedConfigMapName(clusterName, dcName string) string {
-	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), dcName, cassandraConfigMap)
+	return fmt.Sprintf("%s-%s-%s", cassdcapi.CleanupForKubernetes(clusterName), cassdcapi.CleanupForKubernetes(dcName), cassandraConfigMap)
 }

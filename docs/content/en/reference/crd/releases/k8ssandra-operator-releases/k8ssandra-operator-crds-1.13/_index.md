@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.13"
+linkTitle: "K8ssandra-operator CRDs v1.13"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.13.  
 ---
 
 Packages:
@@ -45138,9 +45138,9 @@ Provides all storage backend related properties for backups.
         <td><b>concurrentTransfers</b></td>
         <td>integer</td>
         <td>
-          Number of concurrent uploads. Helps maximizing the speed of uploads but puts more pressure on the network. Defaults to 0.<br/>
+          Number of concurrent uploads. Helps maximizing the speed of uploads but puts more pressure on the network. Defaults to 1.<br/>
           <br/>
-            <i>Default</i>: 0<br/>
+            <i>Default</i>: 1<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -72046,9 +72046,9 @@ StorageProperties defines the storage backend settings to use for the backups.
         <td><b>concurrentTransfers</b></td>
         <td>integer</td>
         <td>
-          Number of concurrent uploads. Helps maximizing the speed of uploads but puts more pressure on the network. Defaults to 0.<br/>
+          Number of concurrent uploads. Helps maximizing the speed of uploads but puts more pressure on the network. Defaults to 1.<br/>
           <br/>
-            <i>Default</i>: 0<br/>
+            <i>Default</i>: 1<br/>
         </td>
         <td>false</td>
       </tr><tr>

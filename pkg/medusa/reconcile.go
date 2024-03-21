@@ -125,31 +125,35 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     use_mgmt_api = 1
     enabled = 1`
 
+	kcWithProperlyConcurrentMedusa := kc.DeepCopy()
+	if kc.Spec.Medusa.StorageProperties.ConcurrentTransfers == 0 {
+		kcWithProperlyConcurrentMedusa.Spec.Medusa.StorageProperties.ConcurrentTransfers = 1
+	}
 	t, err := template.New("ini").Parse(medusaIniTemplate)
 	if err != nil {
 		panic(err)
 	}
 	medusaIni := new(bytes.Buffer)
-	err = t.Execute(medusaIni, kc)
+	err = t.Execute(medusaIni, kcWithProperlyConcurrentMedusa)
 	if err != nil {
 		panic(err)
 	}
 
-	medusaConfiig := medusaIni.String()
+	medusaConfig := medusaIni.String()
 
 	// Create Kubernetes config here and append it
 	if dcConfig.ManagementApiAuth != nil && dcConfig.ManagementApiAuth.Manual != nil {
-		medusaConfiig += `
+		medusaConfig += `
     cassandra_url = https://127.0.0.1:8080/api/v0/ops/node/snapshots
     ca_cert = /etc/encryption/mgmt/ca.crt
     tls_cert = /etc/encryption/mgmt/tls.crt
     tls_key = /etc/encryption/mgmt/tls.key`
 	} else {
-		medusaConfiig += `
+		medusaConfig += `
     cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots`
 	}
 
-	return medusaConfiig
+	return medusaConfig
 }
 
 func CreateMedusaConfigMap(namespace, k8cName, medusaIni string) *corev1.ConfigMap {
