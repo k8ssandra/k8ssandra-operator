@@ -47,9 +47,11 @@ type SecretSyncController struct {
 	*config.ReconcilerConfig
 	ClientCache *clientcache.ClientCache
 	// TODO We need a better structure for empty selectors (match whole kind)
-	WatchNamespaces []string
-	selectorMutex   sync.RWMutex
-	selectors       map[types.NamespacedName]labels.Selector
+	WatchNamespaces    []string
+	labelSelectorMutex sync.RWMutex
+	labelSelectors     map[types.NamespacedName]labels.Selector
+	nameSelectorMutex  sync.RWMutex
+	nameSelectors      map[types.NamespacedName]corev1.LocalObjectReference
 }
 
 func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -82,7 +84,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					return reconcile.Result{}, err
 				}
 
-				secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Spec.NameSelector, rsec.Namespace)
 				if err != nil {
 					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
@@ -90,13 +92,14 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				secretsToDelete := make([]*corev1.Secret, 0, len(secrets))
 
-				s.selectorMutex.RLock()
+				s.labelSelectorMutex.RLock()
+				s.nameSelectorMutex.RLock()
 
 			SecretsToCheck:
 				for _, sec := range secrets {
 					key := client.ObjectKey{Namespace: sec.Namespace, Name: sec.Name}
 					logger.Info("Checking secret", "key", key)
-					for k, v := range s.selectors {
+					for k, v := range s.labelSelectors {
 						if k.Namespace != sec.Namespace {
 							logger.Info("Skipping secret", "key", key, "namespace", k.Namespace)
 							continue
@@ -117,11 +120,32 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 							continue SecretsToCheck
 						}
 					}
+					for k, v := range s.nameSelectors {
+						if k.Namespace != sec.Namespace {
+							logger.Info("Skipping secret", "key", key, "namespace", k.Namespace)
+							continue
+						}
+						if k == req.NamespacedName {
+							// This is the ReplicatedSecret that will be deleted, we don't want its rules to match
+							continue
+						}
+
+						if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
+							// Managed cluster has orphan set to the secret, do not delete it from target clusters
+							continue SecretsToCheck
+						}
+
+						if v.Name == sec.Name {
+							// Another Replication rule is matching this secret, do not delete it
+							logger.Info("Another replication rule matches secret", "key", key)
+							continue SecretsToCheck
+						}
+					}
 					logger.Info("Preparing to delete secret", "key", key)
 					secretsToDelete = append(secretsToDelete, &sec)
 				}
 
-				s.selectorMutex.RUnlock()
+				s.labelSelectorMutex.RUnlock()
 
 				for _, target := range rsec.Spec.ReplicationTargets {
 					logger.Info("Deleting secrets for ReplicationTarget", "Target", target)
@@ -143,9 +167,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					}
 				}
 			}
-			s.selectorMutex.Lock()
-			delete(s.selectors, req.NamespacedName)
-			s.selectorMutex.Unlock()
+			s.labelSelectorMutex.Lock()
+			delete(s.labelSelectors, req.NamespacedName)
+			s.labelSelectorMutex.Unlock()
 			controllerutil.RemoveFinalizer(rsec, replicatedResourceFinalizer)
 			err := localClient.Update(ctx, rsec)
 			if err != nil {
@@ -172,12 +196,18 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Update the selector in cache always (comparing is pointless)
-	s.selectorMutex.Lock()
-	s.selectors[req.NamespacedName] = selector
-	s.selectorMutex.Unlock()
+	if rsec.Spec.NameSelector == nil {
+		s.labelSelectorMutex.Lock()
+		s.labelSelectors[req.NamespacedName] = selector
+		s.labelSelectorMutex.Unlock()
+	} else {
+		s.nameSelectorMutex.Lock()
+		s.nameSelectors[req.NamespacedName] = *rsec.Spec.NameSelector
+		s.labelSelectorMutex.Unlock()
+	}
 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
-	secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Spec.NameSelector, rsec.Namespace)
 	if err != nil {
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
 		return reconcile.Result{Requeue: true}, err
@@ -361,17 +391,27 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	return nil
 }
 
-func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector) ([]corev1.Secret, error) {
+func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector, nameSelector *corev1.LocalObjectReference, namespace string) ([]corev1.Secret, error) {
 	secrets := &corev1.SecretList{}
-	listOption := client.ListOptions{
-		LabelSelector: selector,
-	}
-	err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
-	if err != nil {
-		return nil, err
-	}
+	if nameSelector != nil {
+		secret := &corev1.Secret{}
+		err := s.ClientCache.GetLocalClient().Get(ctx, types.NamespacedName{Name: nameSelector.Name, Namespace: namespace}, secret)
+		if err != nil {
+			return nil, err
+		}
+		secrets.Items = append(secrets.Items, *secret)
+		return secrets.Items, nil
+	} else {
+		listOption := client.ListOptions{
+			LabelSelector: selector,
+		}
+		err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
+		if err != nil {
+			return nil, err
+		}
 
-	return secrets.Items, nil
+		return secrets.Items, nil
+	}
 }
 
 func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
@@ -383,13 +423,20 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	// We should only reconcile objects that match the rules
 	toMatchingReplicates := func(secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
-		s.selectorMutex.RLock()
-		for k, v := range s.selectors {
+		s.labelSelectorMutex.RLock()
+		for k, v := range s.labelSelectors {
 			if v.Matches(labels.Set(secret.GetLabels())) {
 				requests = append(requests, reconcile.Request{NamespacedName: k})
 			}
 		}
-		s.selectorMutex.RUnlock()
+		s.labelSelectorMutex.RUnlock()
+		s.nameSelectorMutex.RLock()
+		for k, v := range s.nameSelectors {
+			if v.Name == secret.GetName() {
+				requests = append(requests, reconcile.Request{NamespacedName: k})
+			}
+		}
+		s.nameSelectorMutex.RUnlock()
 		return requests
 	}
 
@@ -407,7 +454,8 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 }
 
 func (s *SecretSyncController) initializeCache() error {
-	s.selectors = make(map[types.NamespacedName]labels.Selector)
+	s.labelSelectors = make(map[types.NamespacedName]labels.Selector)
+	s.nameSelectors = make(map[types.NamespacedName]corev1.LocalObjectReference)
 	localClient := s.ClientCache.GetLocalNonCacheClient()
 
 	for _, namespace := range s.WatchNamespaces {
@@ -430,9 +478,15 @@ func (s *SecretSyncController) initializeCache() error {
 				return err
 			}
 
-			s.selectorMutex.Lock()
-			s.selectors[namespacedName] = selector
-			s.selectorMutex.Unlock()
+			s.labelSelectorMutex.Lock()
+			s.labelSelectors[namespacedName] = selector
+			s.labelSelectorMutex.Unlock()
+
+			if rsec.Spec.NameSelector != nil {
+				s.nameSelectorMutex.Lock()
+				s.nameSelectors[namespacedName] = *rsec.Spec.NameSelector
+				s.nameSelectorMutex.Unlock()
+			}
 		}
 	}
 	return nil

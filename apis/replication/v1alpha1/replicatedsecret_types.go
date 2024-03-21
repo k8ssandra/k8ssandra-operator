@@ -29,9 +29,14 @@ type ReplicatedSecretSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Selector defines which secrets are replicated. If left empty, all the secrets are replicated
+	// Selector defines which secrets are replicated. If left empty and NameSelect is also unset, all the secrets are replicated
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
+
+	// NameSelector defines which secrets are replicated by name. If both it and Selector are unset, all secrets are replicated.
+	// +optional
+	NameSelector *corev1.LocalObjectReference `json:"nameSelector,omitempty"`
+
 	// TargetContexts indicates the target clusters to which the secrets are replicated to. If empty, no clusters are targeted
 	// +optional
 	ReplicationTargets []ReplicationTarget `json:"replicationTargets,omitempty"`
