@@ -35641,6 +35641,11 @@ spec:
                         the data to in the target cluster. If left empty, current
                         namespace is used.
                       type: string
+                    targetPrefix:
+                      description: TargetPrefix is the prefix to be used for the replicated
+                        secret in the target cluster. If left empty, the same name
+                        is used as the original secret.
+                      type: string
                   type: object
                 type: array
               selector:

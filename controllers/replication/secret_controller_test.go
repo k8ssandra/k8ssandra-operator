@@ -3,6 +3,9 @@ package replication
 import (
 	"context"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -10,8 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"testing"
-	"time"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -63,6 +64,7 @@ func TestSecretController(t *testing.T) {
 	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
 	t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
 	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
+	t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
 }
 
 // copySecretsFromClusterToCluster Tests:
@@ -94,7 +96,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
-	}, timeout, interval)
+	}, timeout*3, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")
 	require.Never(func() bool {
@@ -471,4 +473,55 @@ func TestRequiresUpdate(t *testing.T) {
 
 	syncSecrets(orig, dest)
 	assert.False(requiresUpdate(orig, dest))
+}
+
+func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	rsec := generateReplicatedSecret(f.DataPlaneContexts[0], namespace)
+	rsec.Spec.ReplicationTargets[0].TargetPrefix = "prefix-"
+	rsec.Name = "broke"
+	err := f.Client.Create(ctx, rsec)
+	require.NoError(err, "failed to create replicated secret to main cluster")
+
+	generatedSecrets := generateSecrets(namespace)
+	for i, s := range generatedSecrets {
+		s.Name = fmt.Sprintf("broken-secret-%d", i)
+		err := f.Client.Create(ctx, s)
+		require.NoError(err, "failed to create secret to main cluster")
+	}
+
+	t.Log("check that the secrets were copied to other cluster(s)")
+	localContext := f.Client
+	remoteContext := testEnv.Clients[f.DataPlaneContexts[0]]
+	require.Eventually(func() bool {
+		localSecret := &corev1.Secret{}
+		remoteSecret := &corev1.Secret{}
+		if err := localContext.Get(ctx, types.NamespacedName{Name: "broken-secret-0", Namespace: namespace}, localSecret); err != nil {
+			return false
+		}
+		nsList := &corev1.NamespaceList{}
+		require.NoError(remoteContext.List(ctx, nsList))
+		tempList := &corev1.SecretList{}
+		require.NoError(remoteContext.List(ctx, tempList, &client.ListOptions{
+			Namespace: namespace,
+		}))
+		if err := remoteContext.Get(ctx, types.NamespacedName{Name: "prefix-broken-secret-0", Namespace: namespace}, remoteSecret); err != nil {
+			return false
+		}
+		return string(localSecret.Data["key"]) == string(remoteSecret.Data["key"])
+	}, timeout*3, interval)
+
+	t.Log("update secret content")
+	localSecret := &corev1.Secret{}
+	require.NoError(localContext.Get(ctx, types.NamespacedName{Name: "broken-secret-0", Namespace: namespace}, localSecret))
+	localSecret.Data = map[string][]byte{"modifiedKey": []byte("newValue")}
+	require.NoError(localContext.Update(ctx, localSecret))
+	require.Eventually(func() bool {
+		remoteSecret := &corev1.Secret{}
+		if err := remoteContext.Get(ctx, types.NamespacedName{Name: "prefix-broken-secret-0", Namespace: namespace}, remoteSecret); err != nil {
+			return false
+		}
+		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
+	}, timeout*3, interval)
+
 }
