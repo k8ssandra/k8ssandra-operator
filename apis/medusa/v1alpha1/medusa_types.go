@@ -74,8 +74,8 @@ type Storage struct {
 
 	// Number of concurrent uploads.
 	// Helps maximizing the speed of uploads but puts more pressure on the network.
-	// Defaults to 1.
-	// +kubebuilder:default=1
+	// Defaults to 0.
+	// +kubebuilder:default=0
 	// +optional
 	ConcurrentTransfers int `json:"concurrentTransfers,omitempty"`
 

@@ -13,6 +13,7 @@ spec:
       host: minio-service.minio.svc.cluster.local
       port: 9000
       secure: false
+      concurrentTransfers: 8
   cassandra:
     serverVersion: 6.8.26
     serverType: dse

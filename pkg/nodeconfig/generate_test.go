@@ -69,7 +69,10 @@ func TestNewDefaultPerNodeConfigMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDefaultPerNodeConfigMap(tt.kcKey, tt.dc)
+			kc := &api.K8ssandraCluster{
+				ObjectMeta: metav1.ObjectMeta{Name: tt.kcKey.Name, Namespace: tt.kcKey.Namespace},
+			}
+			got := NewDefaultPerNodeConfigMap(tt.kcKey, kc, tt.dc)
 			assert.Equal(t, tt.want, got)
 		})
 	}

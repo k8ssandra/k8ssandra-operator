@@ -51,10 +51,10 @@ spec:
                     description: The name of the bucket to use for the backups.
                     type: string
                   concurrentTransfers:
-                    default: 1
+                    default: 0
                     description: Number of concurrent uploads. Helps maximizing the
                       speed of uploads but puts more pressure on the network. Defaults
-                      to 1.
+                      to 0.
                     type: integer
                   credentialsType:
                     description: Type of credentials to use for authentication. Can
