@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: medusaconfigurations.medusa.k8ssandra.io
 spec:
   group: medusa.k8ssandra.io
@@ -21,14 +21,19 @@ spec:
           API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -43,22 +48,25 @@ spec:
                     description: AWS Profile to use for authentication.
                     type: string
                   backupGracePeriodInDays:
-                    description: Age after which orphan sstables can be deleted from
-                      the storage backend. Protects from race conditions between purge
-                      and ongoing backups. Defaults to 10 days.
+                    description: |-
+                      Age after which orphan sstables can be deleted from the storage backend.
+                      Protects from race conditions between purge and ongoing backups.
+                      Defaults to 10 days.
                     type: integer
                   bucketName:
                     description: The name of the bucket to use for the backups.
                     type: string
                   concurrentTransfers:
                     default: 0
-                    description: Number of concurrent uploads. Helps maximizing the
-                      speed of uploads but puts more pressure on the network. Defaults
-                      to 0.
+                    description: |-
+                      Number of concurrent uploads.
+                      Helps maximizing the speed of uploads but puts more pressure on the network.
+                      Defaults to 0.
                     type: integer
                   credentialsType:
-                    description: Type of credentials to use for authentication. Can
-                      be "role-based", "credential-based" or empty.
+                    description: |-
+                      Type of credentials to use for authentication.
+                      Can be "role-based", "credential-based" or empty.
                     enum:
                     - role-based
                     - credential-based
@@ -73,13 +81,15 @@ spec:
                     type: integer
                   maxBackupCount:
                     default: 0
-                    description: Maximum number of backups to keep (used by the purge
-                      process). Default is unlimited.
+                    description: |-
+                      Maximum number of backups to keep (used by the purge process).
+                      Default is unlimited.
                     type: integer
                   multiPartUploadThreshold:
                     default: 104857600
-                    description: File size over which cloud specific cli tools are
-                      used for transfer. Defaults to 100 MB.
+                    description: |-
+                      File size over which cloud specific cli tools are used for transfer.
+                      Defaults to 100 MB.
                     type: integer
                   podStorage:
                     description: Pod storage settings for the local storage provider
@@ -94,8 +104,9 @@ spec:
                         - type: integer
                         - type: string
                         default: 10Gi
-                        description: Size of the pod's storage in bytes. Defaults
-                          to 10 GB.
+                        description: |-
+                          Size of the pod's storage in bytes.
+                          Defaults to 10 GB.
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       storageClassName:
@@ -106,11 +117,14 @@ spec:
                     description: Port to connect to for the storage backend.
                     type: integer
                   prefix:
-                    description: Name of the top level folder in the backup bucket.
+                    description: |-
+                      Name of the top level folder in the backup bucket.
                       If empty, the cluster name will be used.
                     type: string
                   region:
-                    description: Region of the storage bucket. Defaults to "default".
+                    description: |-
+                      Region of the storage bucket.
+                      Defaults to "default".
                     type: string
                   secure:
                     description: Whether to use SSL for the storage backend.
@@ -129,19 +143,23 @@ spec:
                     - ibm_storage
                     type: string
                   storageSecretRef:
-                    description: Kubernetes Secret that stores the key file for the
-                      storage provider's API. If using 'local' storage, this value
-                      is ignored.
+                    description: |-
+                      Kubernetes Secret that stores the key file for the storage provider's API.
+                      If using 'local' storage, this value is ignored.
                     properties:
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
                   transferMaxBandwidth:
                     default: 50MB/s
-                    description: Max upload bandwidth in MB/s. Defaults to 50 MB/s.
+                    description: |-
+                      Max upload bandwidth in MB/s.
+                      Defaults to 50 MB/s.
                     type: string
                 type: object
             type: object
@@ -151,42 +169,42 @@ spec:
               conditions:
                 items:
                   description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
                   properties:
                     lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
                         This field may not be empty.
                       maxLength: 1024
                       minLength: 1
@@ -200,11 +218,12 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string

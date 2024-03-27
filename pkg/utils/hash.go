@@ -3,8 +3,14 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"github.com/davecgh/go-spew/spew"
 	"hash"
+
+	"github.com/davecgh/go-spew/spew"
+)
+
+const (
+	// The system wide length of the hash to use for object identification.
+	hashLength = 8
 )
 
 func DeepHashString(obj interface{}) string {
@@ -27,4 +33,9 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 		SpewKeys:       true,
 	}
 	printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
+func HashNameNamespace(name, namespace string) string {
+	bytes := []byte(namespace + name)
+	return string(sha256.New().Sum(bytes)[:hashLength])
 }
