@@ -78082,6 +78082,13 @@ ReplicatedSecretSpec defines the desired state of ReplicatedSecret
           TODO Implement at some point Namespace to replicate the data to in the target cluster. If left empty, current namespace is used.<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>targetPrefix</b></td>
+        <td>string</td>
+        <td>
+          TargetPrefix is the prefix to be used for the replicated secret in the target cluster. If left empty, the same name is used as the original secret.<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
