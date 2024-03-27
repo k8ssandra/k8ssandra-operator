@@ -18,8 +18,11 @@ package medusa
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +34,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+)
+
+const (
+	MedusaStorageSecretIdentifierLabel = "k8ssandra.io/medusa-storage-secret"
 )
 
 // MedusaConfigurationReconciler reconciles a MedusaConfiguration object
@@ -74,7 +81,7 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// Check if the referenced secret exists
 	if configuration.Spec.StorageProperties.StorageSecretRef.Name != "" {
-		err = r.CheckSecretPresence(ctx, r.Client, req, configuration.Spec.StorageProperties.StorageSecretRef.Name)
+		secret, err := r.GetSecret(ctx, r.Client, req, configuration.Spec.StorageProperties.StorageSecretRef.Name)
 		if err != nil {
 			logger.Error(err, "Failed to get MedusaConfiguration referenced secret")
 			configuration.Status.SetCondition(medusav1alpha1.ControlStatusSecretAvailable, metav1.ConditionFalse)
@@ -83,6 +90,17 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, err
 		} else {
 			configuration.Status.SetCondition(medusav1alpha1.ControlStatusSecretAvailable, metav1.ConditionTrue)
+			if secret.Labels == nil {
+				secret.Labels = make(map[string]string)
+			}
+			secret.Labels[MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
+			recRes := reconciliation.ReconcileObject(ctx, r.Client, r.DefaultDelay, secret)
+			switch {
+			case recRes.IsError():
+				return ctrl.Result{}, err
+			case recRes.IsRequeue():
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			}
 		}
 	}
 
@@ -101,16 +119,16 @@ func (r *MedusaConfigurationReconciler) patchStatus(ctx context.Context, configu
 	}
 }
 
-func (r *MedusaConfigurationReconciler) CheckSecretPresence(ctx context.Context, client client.Client, req ctrl.Request, secretName string) error {
+func (r *MedusaConfigurationReconciler) GetSecret(ctx context.Context, client client.Client, req ctrl.Request, secretName string) (corev1.Secret, error) {
 	// Get the referenced secret to check if it exists
 	secret := &corev1.Secret{}
 	secretNamespacedName := types.NamespacedName{Namespace: req.Namespace, Name: secretName}
 	err := client.Get(ctx, secretNamespacedName, secret)
 	if err != nil {
-		return err
+		return corev1.Secret{}, err
 	}
 
-	return nil
+	return *secret, err
 }
 
 // SetupWithManager sets up the controller with the Manager.
