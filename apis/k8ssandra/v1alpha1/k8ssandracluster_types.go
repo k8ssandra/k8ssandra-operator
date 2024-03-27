@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"crypto/sha256"
+
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
@@ -536,4 +538,13 @@ func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) floa
 		return float64(256)
 	}
 	return float64(16)
+}
+
+// GetClusterIdHash should be used to derive short form unique identifiers for the cluster,
+// this is to be used to name resources that are cluster specific in preference of concatenations
+// of the namespaced name, as the latter are becoming too long and causing issues due to DNS name length
+// constraints within k8s
+func (kc *K8ssandraCluster) GetClusterIdHash(nchars int) string {
+	bytes := []byte(kc.Namespace + kc.Name)
+	return string(sha256.New().Sum(bytes)[:nchars])
 }

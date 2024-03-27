@@ -111,6 +111,8 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 		if r.deleteCronJobs(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
+		// TODO: We need logic here to remove the Medusa replicatedSecret entry, if a MedusaConfig is referenced in the K8ssandraCluster.
+
 	}
 
 	if hasErrors {
