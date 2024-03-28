@@ -427,7 +427,7 @@ spec:
           serviceAccountName: medusa-backup
           containers:
           - name: medusa-backup-cronjob
-            image: bitnami/kubectl:1.17.3
+            image: bitnami/kubectl:1.29.3
             imagePullPolicy: IfNotPresent
             command:
              - 'bin/bash'

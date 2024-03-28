@@ -601,7 +601,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace s
 							Containers: []corev1.Container{
 								{
 									Name:                     "k8ssandra-purge-backups",
-									Image:                    "bitnami/kubectl:1.17.3",
+									Image:                    "bitnami/kubectl:1.29.3",
 									ImagePullPolicy:          corev1.PullIfNotPresent,
 									TerminationMessagePath:   "/dev/termination-log",
 									TerminationMessagePolicy: "File",
