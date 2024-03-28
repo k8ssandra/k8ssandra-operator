@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1226](https://github.com/k8ssandra/k8ssandra-operator/issues/1226) Medusa purge cronjob should be created in the operator namespace
 * [BUGFIX] [#1141](https://github.com/k8ssandra/k8ssandra-operator/issues/1141) Use DC name override when naming secondary resources
 * [BUGFIX] [#1138](https://github.com/k8ssandra/k8ssandra-operator/issues/1138) Use cluster name override for metrics agent ConfigMap 
+* [BUGFIX] [#1252](https://github.com/k8ssandra/k8ssandra-operator/issues/1252) Sanitize DC name in pods selector
