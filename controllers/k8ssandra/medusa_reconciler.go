@@ -246,8 +246,11 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 		return result.Continue()
 	}
 	storageProperties := &medusaapi.MedusaConfiguration{}
+	// Deprecated: This code path can be removed at version 1.17, as MedusaConfigs should now always be namespace-local to the K8ssandraCluster referencing them.
 	configNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, namespace)
 	configKey := types.NamespacedName{Namespace: configNamespace, Name: medusaSpec.MedusaConfigurationRef.Name}
+	// End of block to be deprecated.
+
 	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to get MedusaConfiguration %s", configKey))
 		return result.Error(err)
