@@ -18,8 +18,9 @@ package v1alpha1
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -98,14 +99,8 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 		}
 	}
 
-	// Verify the Medusa storage prefix is explicitly set
-	// only relevant if Medusa is enabled and the MedusaConfiguration object is referenced
-	if r.Spec.Medusa != nil {
-		if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
-			if r.Spec.Medusa.StorageProperties.Prefix == "" {
-				return ErrNoStoragePrefix
-			}
-		}
+	if err := r.ValidateMedusa(); err != nil {
+		return err
 	}
 
 	if err := r.validateStatefulsetNameSize(); err != nil {
@@ -199,5 +194,32 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *K8ssandraCluster) ValidateDelete() error {
 	webhookLog.Info("validate K8ssandraCluster delete", "name", r.Name)
+	return nil
+}
+
+func (r *K8ssandraCluster) ValidateMedusa() error {
+	if r.Spec.Medusa == nil {
+		return nil
+	}
+
+	// Verify the Medusa storage prefix is explicitly set
+	// only relevant if Medusa is enabled and the MedusaConfiguration object is referenced
+	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
+		if r.Spec.Medusa.StorageProperties.Prefix == "" {
+			return ErrNoStoragePrefix
+		}
+		// Verify that any referenced MedusaConfig is NS-local
+		if r.Spec.Medusa.MedusaConfigurationRef.Namespace != "" {
+			return errors.New("Medusa config must be namespace local")
+		}
+		if r.Spec.Medusa.MedusaConfigurationRef.APIVersion != "" ||
+			r.Spec.Medusa.MedusaConfigurationRef.Kind != "" ||
+			r.Spec.Medusa.MedusaConfigurationRef.FieldPath != "" ||
+			r.Spec.Medusa.MedusaConfigurationRef.ResourceVersion != "" ||
+			r.Spec.Medusa.MedusaConfigurationRef.UID != "" {
+			return errors.New("Medusa config invalid, invalid field used")
+		}
+	}
+
 	return nil
 }
