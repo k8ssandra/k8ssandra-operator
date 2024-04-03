@@ -66,6 +66,8 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
 		}
+		updatedSecret := &corev1.Secret{}
+		err = f.Client.Get(ctx, types.NamespacedName{Name: "medusa-bucket-key", Namespace: namespace}, updatedSecret)
 		//Ensure that the unique label has been added to the secret.
 		if bucketKeySecret.Labels[MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(bucketKeySecret.Name, bucketKeySecret.Namespace) {
 			return false
