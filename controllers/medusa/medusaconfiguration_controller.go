@@ -94,9 +94,11 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 		if secret.Labels == nil {
 			secret.Labels = make(map[string]string)
 		}
-		secret.Labels[MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
-		if err = r.Client.Patch(ctx, secret, patch); err != nil {
-			logger.Error(err, "Failed to patch Medusa Bucket Secret with required label")
+		if secret.Labels[MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(secret.Name, secret.Namespace) {
+			secret.Labels[MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
+			if err = r.Client.Patch(ctx, secret, patch); err != nil {
+				logger.Error(err, "Failed to patch Medusa Bucket Secret with required label")
+			}
 		}
 	}
 

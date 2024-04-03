@@ -15,7 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 * [BUGFIX] [#1253](https://github.com/k8ssandra/k8ssandra-operator/issues/1253) Medusa storage secrets are now labelled with a unique label.
-* [FEATURE] [#1260](https://github.com/k8ssandra/k8ssandra-operator/issues/1260) Update controller-gen to version 0.12.0.
+* [FEATURE] [#1260](https://github.com/k8ssandra/k8ssandra-operator/issues/1260) Update controller-gen to version 0.14.0.
 * [FEATURE] [#1242](https://github.com/k8ssandra/k8ssandra-operator/issues/1242) Allow for creation of replicated secrets with a prefix, so that we can distinguish between multiple secrets with the same origin but targeting different clusters.
 * [BUGFIX] [#1226](https://github.com/k8ssandra/k8ssandra-operator/issues/1226) Medusa purge cronjob should be created in the operator namespace
 * [BUGFIX] [#1141](https://github.com/k8ssandra/k8ssandra-operator/issues/1141) Use DC name override when naming secondary resources

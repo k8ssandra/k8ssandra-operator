@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +64,10 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config", Namespace: namespace}, updated)
 		if err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
+			return false
+		}
+		//Ensure that the unique label has been added to the secret.
+		if bucketKeySecret.Labels[MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(bucketKeySecret.Name, bucketKeySecret.Namespace) {
 			return false
 		}
 		for _, condition := range updated.Status.Conditions {
