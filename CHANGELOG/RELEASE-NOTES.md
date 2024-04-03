@@ -1,5 +1,16 @@
 # k8ssandra-operator - Release Notes
 
+## v1.14.0
+
+### Deprecation of non-namespace-local MedusaConfigRef
+
+The previous version introduced functionality whereby a K8ssandraCluster could reference a MedusaConfiguration (via MedusaConfigRef) in a remote namespace within the same k8s cluster. This functionality is deprecated. Existing clusters will continue to reconcile, but new clusters (or updates to existing clusters) will be rejected at the webhook.
+
+To update an existing cluster, or create a new one, ensure that the `namespace` field is left unset in the `medusaConfigRef`, and ensure that the MedusaConfiguration you are referencing exists within the K8ssandraCluster's local namespace. 
+
+If this functionality is critical to your use case, please raise an issue on Github and describe why it is important to you.
+
+
 ## v1.12.0
 
 It is now possible to disable Reaper front end authentication by adding either `spec.reaper.uiUserSecretRef: {}` or `spec.reaper.uiUserSecretRef: ""`. 
