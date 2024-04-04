@@ -98,7 +98,7 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 			secret.Labels[MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
 			if err = r.Client.Patch(ctx, secret, patch); err != nil {
 				logger.Error(err, "Failed to patch Medusa Bucket Secret with required label")
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+				return ctrl.Result{}, err
 			}
 		}
 	}
