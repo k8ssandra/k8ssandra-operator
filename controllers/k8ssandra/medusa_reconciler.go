@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	replication "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -18,9 +19,10 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -196,9 +198,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			return result.Error(err)
 		}
 
-		if err := r.reconcileRemoteBucketSecretsDeprecated(ctx, r.ClientCache.GetLocalClient(), kc, logger); err != nil {
-			logger.Error(err, "Failed to reconcile Medusa bucket secrets")
-			return result.Error(err)
+		res := r.reconcileRemoteBucketSecretsDeprecated(ctx, r.ClientCache.GetLocalClient(), kc, logger)
+		switch {
+		case res.IsError():
+			logger.Error(res.GetError(), "Failed to reconcile Medusa bucket secrets")
+			return res
+		case res.IsRequeue():
+			return res
 		}
 	}
 
@@ -292,14 +298,14 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 	c client.Client,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger,
-) error {
+) result.ReconcileResult {
 	logger.Info("Reconciling Medusa bucket secrets")
 	medusaSpec := kc.Spec.Medusa
 
 	// there is nothing to reconcile if we're not using Medusa configuration reference
 	if medusaSpec == nil || medusaSpec.MedusaConfigurationRef.Name == "" {
 		logger.Info("MedusaConfigurationRef is not set, skipping bucket secret reconciliation")
-		return nil
+		return result.Continue()
 	}
 
 	if kc.Spec.Medusa.MedusaConfigurationRef.Namespace != kc.Namespace {
@@ -311,35 +317,35 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 		medusaConfig := &medusaapi.MedusaConfiguration{}
 		if err := c.Get(ctx, medusaConfigKey, medusaConfig); err != nil {
 			logger.Error(err, fmt.Sprintf("could not get MedusaConfiguration %s/%s", medusaConfigNamespace, medusaConfigName))
-			return err
+			return result.Error(err)
 		}
 
-		// fetch the referenced medusa configuration's bucket secret
-		bucketSecretName := medusaConfig.Spec.StorageProperties.StorageSecretRef.Name
-		bucketSecret := &corev1.Secret{}
-		bucketSecretKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: bucketSecretName}
-		if err := c.Get(ctx, bucketSecretKey, bucketSecret); err != nil {
-			logger.Error(err, "could not get bucket Secret")
-			return err
+		//fmt.Sprintf("%s-%s", kc.Name, bucketSecret.Name)
+		repSecret := replication.ReplicatedSecret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
+				Namespace: medusaConfigNamespace,
+			},
+			Spec: replication.ReplicatedSecretSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(medusaConfig.Spec.StorageProperties.StorageSecretRef.Name, medusaConfigNamespace),
+					},
+					//TODO: we need to add a prefix to this secret so that it doesn't end up in conflict if referenced from multiple clusters.
+				},
+			},
 		}
+		if err := controllerutil.SetControllerReference(kc, &repSecret, r.Scheme); err != nil {
+			return result.Error(err)
+		}
+		// TODO: this should also have finalizer logic included in the k8ssandraCluster finalizer to remove the replicated secret if it is no longer being used.
+		// TODO: this should probably have a finalizer on it too so that the replicatedSecret cannot be deleted.
 
-		// write the secret into the namespace of the K8ssandraCluster
-		clusterBucketSecret := bucketSecret.DeepCopy()
-		clusterBucketSecret.ResourceVersion = ""
-		clusterBucketSecret.Name = fmt.Sprintf("%s-%s", kc.Name, bucketSecret.Name)
-		clusterBucketSecret.Namespace = kc.Namespace
-		labels.SetReplicatedBy(clusterBucketSecret, utils.GetKey(kc))
-		if err := c.Create(ctx, clusterBucketSecret); err != nil {
-			if !errors.IsAlreadyExists(err) {
-				logger.Error(err, fmt.Sprintf("failed to create cluster bucket secret %s", clusterBucketSecret))
-				return err
-			}
-			// we already have the bucket secret, so continue to updating the cluster (it might have failed before)
-		}
-		return nil
+		return reconciliation.ReconcileObject(ctx, c, r.DefaultDelay, repSecret)
+
 	} else {
 		// no-op, the bucket secret exists in the same namespace and doesn't need copying via a replicated secret.
-		return nil
+		return result.Continue()
 	}
 }
 
