@@ -470,7 +470,15 @@ func testInvalidDcName(t *testing.T) {
 func testMedusaNonLocalNamespace(t *testing.T) {
 	required := require.New(t)
 	badCluster := createMinimalClusterObj("medusaconfig-nonlocal", "ns")
-	badCluster.Spec.Medusa.MedusaConfigurationRef.Namespace = "nonlocal-ns"
+	badCluster.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Namespace: "nonlocal-ns",
+			Name:      "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "some-prefix",
+		},
+	}
 	err := badCluster.validateK8ssandraCluster()
 	required.Error(err)
 	required.Contains(err.Error(), "Medusa config must be namespace local")
