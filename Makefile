@@ -151,7 +151,7 @@ lint: golangci-lint ## Run golangci-lint against code.
 	$(GOLANGCI_LINT) run ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet lint envtest ## Run tests.
+test: manifests generate fmt vet lint envtest kustomize ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -covermode=atomic -coverprofile coverage.out
@@ -162,7 +162,7 @@ endif
 E2E_TEST_TIMEOUT ?= 3600s
 
 PHONY: e2e-test
-e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
+e2e-test: kustomize ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
 	go test -v -timeout $(E2E_TEST_TIMEOUT) ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
