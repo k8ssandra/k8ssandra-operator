@@ -1,5 +1,13 @@
 # k8ssandra-operator - Release Notes
 
+## v1.12.0
+
+It is now possible to disable Reaper front end authentication by adding either `spec.reaper.uiUserSecretRef: {}` or `spec.reaper.uiUserSecretRef: ""`. 
+
+This brings this API into line with our standard convention; which is that an absent/nil field will use the default behaviour of the operator (which is secure by default; i.e. with auth turned on) but that explicitly setting a zero value allows you to turn features off.
+
+However, users with existing deployments which use auth should note that this new capability will result in their authentication being turned off, if - for some reason - they have set `spec.reaper.uiUserSecretRef` to the empty value. If you are in this situatin and want to keep auth turned on, you can simply remove the field `spec.reaper.uiUserSecretRef` entirely which will leave you with the default behaviour (auth enabled).
+
 ## v1.6.0
 
 ### Removal of the CassandraBackup and CassandraRestore APIs
