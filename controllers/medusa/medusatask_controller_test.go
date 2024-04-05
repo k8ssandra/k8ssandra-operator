@@ -107,6 +107,17 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: metav1.Now(),
 			})
+			dc.Status.NodeStatuses = cassdcapi.CassandraStatusMap{
+				"node1": cassdcapi.CassandraNodeStatus{
+					HostID: "host1",
+				},
+				"node2": cassdcapi.CassandraNodeStatus{
+					HostID: "host2",
+				},
+				"node3": cassdcapi.CassandraNodeStatus{
+					HostID: "host3",
+				},
+			}
 		})
 		require.NoError(err, "failed to patch datacenter status")
 

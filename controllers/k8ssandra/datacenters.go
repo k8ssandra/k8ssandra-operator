@@ -186,6 +186,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return result.Done(), actualDcs
 				}
 			} else {
+				if len(actualDc.Status.NodeStatuses) != int(actualDc.Spec.Size) {
+					dcLogger.Info("Waiting for datacenter to have all nodes started")
+					return result.Done(), actualDcs
+				}
 				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 					return recResult, actualDcs
 				}
