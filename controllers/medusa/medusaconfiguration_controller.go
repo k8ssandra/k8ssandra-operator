@@ -49,6 +49,7 @@ type MedusaConfigurationReconciler struct {
 //+kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusaconfigurations,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusaconfigurations/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusaconfigurations/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=secrets,verbs=patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
