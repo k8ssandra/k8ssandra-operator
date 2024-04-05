@@ -35,10 +35,6 @@ import (
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 )
 
-const (
-	MedusaStorageSecretIdentifierLabel = "k8ssandra.io/medusa-storage-secret"
-)
-
 // MedusaConfigurationReconciler reconciles a MedusaConfiguration object
 type MedusaConfigurationReconciler struct {
 	*config.ReconcilerConfig
@@ -95,8 +91,8 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 		if secret.Labels == nil {
 			secret.Labels = make(map[string]string)
 		}
-		if secret.Labels[MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(secret.Name, secret.Namespace) {
-			secret.Labels[MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
+		if secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(secret.Name, secret.Namespace) {
+			secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
 			if err = r.Client.Patch(ctx, secret, patch); err != nil {
 				logger.Error(err, "Failed to patch Medusa Bucket Secret with required label")
 				return ctrl.Result{}, err

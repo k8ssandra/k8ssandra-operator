@@ -293,17 +293,17 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 	kc *api.K8ssandraCluster,
 	logger logr.Logger,
 ) error {
+	logger.Info("Reconciling Medusa bucket secrets")
+	medusaSpec := kc.Spec.Medusa
+
+	// there is nothing to reconcile if we're not using Medusa configuration reference
+	if medusaSpec == nil || medusaSpec.MedusaConfigurationRef.Name == "" {
+		logger.Info("MedusaConfigurationRef is not set, skipping bucket secret reconciliation")
+		return nil
+	}
+
 	if kc.Spec.Medusa.MedusaConfigurationRef.Namespace != kc.Namespace {
 		// This is the deprecated code path. Moving forward we will use a replicated secret with a prefix, but we will remove this code path after v1.17.
-		logger.Info("Reconciling Medusa bucket secrets")
-		medusaSpec := kc.Spec.Medusa
-
-		// there is nothing to reconcile if we're not using Medusa configuration reference
-		if medusaSpec == nil || medusaSpec.MedusaConfigurationRef.Name == "" {
-			logger.Info("MedusaConfigurationRef is not set, skipping bucket secret reconciliation")
-			return nil
-		}
-
 		// fetch the referenced configuration
 		medusaConfigName := medusaSpec.MedusaConfigurationRef.Name
 		medusaConfigNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, kc.Namespace)
