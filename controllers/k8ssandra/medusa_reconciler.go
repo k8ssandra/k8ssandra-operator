@@ -8,6 +8,7 @@ import (
 	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replication "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -325,6 +326,10 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
 				Namespace: medusaConfigNamespace,
+				Labels: map[string]string{
+					k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
+					k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
+				},
 			},
 			Spec: replication.ReplicatedSecretSpec{
 				Selector: &metav1.LabelSelector{
