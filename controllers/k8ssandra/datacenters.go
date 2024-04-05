@@ -186,6 +186,9 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return result.Done(), actualDcs
 				}
 			} else {
+				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
+					return recResult, actualDcs
+				}
 				if !cassandra.DatacenterReady(actualDc) {
 					dcLogger.Info("Waiting for datacenter to satisfy Ready condition")
 					return result.Done(), actualDcs
@@ -203,11 +206,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			actualDcs = append(actualDcs, actualDc)
 
 			if !actualDc.Spec.Stopped {
-
-				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
-					return recResult, actualDcs
-				}
-
 				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
 					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 						return recResult, actualDcs
