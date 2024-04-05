@@ -282,10 +282,7 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 		// Deprecated: when we remove the ability to reference a non-namespace-local MedusaConfig in v 1.17,
 		// this if statement should be eliminated.
 		mergedProperties.StorageSecretRef.Name = fmt.Sprintf("%s-%s", desiredKc.Name, mergedProperties.StorageSecretRef.Name)
-	} else {
-		// this will be the only code branch after the deprecation ends.
-		mergedProperties.StorageSecretRef.Name = mergedProperties.StorageSecretRef.Name // Yes, I know this is assigned to itself.
-	}
+	} // imagine an else here which just contains `mergedProperties.StorageSecretRef.Name = mergedProperties.StorageSecretRef.Name`, since this is a no-op.
 
 	// copy the merged properties back into the cluster
 	mergedProperties.DeepCopyInto(&desiredKc.Spec.Medusa.StorageProperties)
