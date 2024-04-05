@@ -3,6 +3,7 @@ package kustomize
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 )
 
@@ -13,7 +14,16 @@ func LogOutput(enabled bool) {
 }
 
 func BuildDir(dir string) (*bytes.Buffer, error) {
-	cmd := exec.Command("kustomize", "build")
+	binDir := os.Getenv("LOCALBIN")
+	kustomizeLocation := ""
+	if binDir == "" {
+		fmt.Println("warning: LOCALBIN environment variable not set, attempting to use system kustomize")
+		kustomizeLocation = "kustomize"
+	} else {
+		fmt.Println("LOCALBIN: " + binDir)
+		kustomizeLocation = binDir + "/kustomize"
+	}
+	cmd := exec.Command(kustomizeLocation, "build")
 	cmd.Dir = dir
 
 	fmt.Println(cmd)

@@ -206,7 +206,7 @@ kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
 single-create: cleanup create-kind-cluster cert-manager nginx-kind
 
-single-prepare: build manifests docker-build kind-load-image
+single-prepare: build manifests docker-build kind-load-image kustomize
 
 single-up: single-create single-prepare kustomize
 	kubectl config use-context kind-k8ssandra-0
@@ -328,7 +328,7 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
 
 ## Tool Versions
 CERT_MANAGER_VERSION ?= v1.12.2
-KUSTOMIZE_VERSION ?= v5.0.3
+KUSTOMIZE_VERSION ?= v4.5.1
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 GOLINT_VERSION ?= 1.55.0
 
