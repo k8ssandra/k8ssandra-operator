@@ -64,6 +64,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+## Location to install dependencies to
+export LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
 KIND_CLUSTER ?= k8ssandra-0
 GO_FLAGS=
 
@@ -314,11 +319,6 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 	$(KUSTOMIZE) build config/deployments/control-plane$(DEPLOY_TARGET) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Tools / Dependencies
-
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
