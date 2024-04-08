@@ -318,7 +318,6 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 			return result.Error(err)
 		}
 
-		//fmt.Sprintf("%s-%s", kc.Name, bucketSecret.Name)
 		repSecret := replication.ReplicatedSecret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
@@ -334,9 +333,16 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 			Spec: replication.ReplicatedSecretSpec{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(medusaConfig.Spec.StorageProperties.StorageSecretRef.Name, medusaConfigNamespace),
+						medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(
+							medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
+							medusaConfigNamespace),
 					},
-					//TODO: we need to add a prefix to this secret so that it doesn't end up in conflict if referenced from multiple clusters.
+				},
+				ReplicationTargets: []replication.ReplicationTarget{
+					{
+						Namespace:    kc.Namespace,
+						TargetPrefix: kc.Name + "-",
+					},
 				},
 			},
 		}
