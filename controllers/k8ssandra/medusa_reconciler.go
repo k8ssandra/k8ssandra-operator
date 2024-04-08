@@ -348,6 +348,7 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 						AddLabels: map[string]string{
 							k8ssandraapi.K8ssandraClusterNameLabel:      kc.GetLabels()[k8ssandraapi.K8ssandraClusterNameLabel],
 							k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.GetLabels()[k8ssandraapi.K8ssandraClusterNamespaceLabel],
+							k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
 						},
 					},
 				},
