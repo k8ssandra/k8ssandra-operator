@@ -327,6 +327,9 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 					k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
 					k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
 				},
+				Annotations: map[string]string{
+					k8ssandraapi.PurposeAnnotation: "This replicated secret is designed for the old codepath in the Medusa reconciler within the k8ssandra cluster controller. In this deprecated path, a MedusaConfig could reside in a different namespace to the K8ssandraCluster. This ReplicatedSecret ensures that the bucket secret is copied into the K8ssandraCluster's namespace. This codepath will be removed in v1.17.",
+				},
 			},
 			Spec: replication.ReplicatedSecretSpec{
 				Selector: &metav1.LabelSelector{
