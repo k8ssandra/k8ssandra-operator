@@ -125,7 +125,7 @@ func checkBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.
 	require := require.New(t)
 
 	// work out the name of the replicated bucket key. should be "clusterName-<original-bucket-key-name>"
-	localBucketKeyName := fmt.Sprintf("%s-%s", kc.Name, globalBucketSecretName)
+	localBucketKeyName := fmt.Sprintf(globalBucketSecretName)
 
 	// Check that the bucket key has been replicated to the current namespace
 	bucketKey := &corev1.Secret{}
