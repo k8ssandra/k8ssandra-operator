@@ -246,19 +246,8 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
 
 	t.Log("update dc1 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to update dc1 status to ready")
-
-	require.Eventually(func() bool {
-		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
-	}, timeout, interval, "failed to update dc1 generation")
 
 	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "dc2", f.DataPlaneContexts[1])
 	t.Log("check that dc2 was created")
@@ -290,19 +279,10 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	require.NoError(err, "failed to get dc2")
 
 	t.Log("update dc2 status to ready")
-	err = f.PatchDatacenterStatus(ctx, dc2Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
+	if err = f.SetDatacenterStatusReady(ctx, dc2Key); err != nil {
+		assert.Fail(t, "error setting status ready", err)
+	}
 	require.NoError(err, "failed to update dc2 status to ready")
-
-	require.Eventually(func() bool {
-		return f.UpdateDatacenterGeneration(ctx, t, dc2Key)
-	}, timeout, interval, "failed to update dc2 generation")
 
 	t.Log("check that dc2 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)

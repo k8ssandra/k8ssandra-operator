@@ -298,6 +298,13 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 			LastTransitionTime: now,
 		})
 		dc.Status.ObservedGeneration = dc.Generation
+		dc.Status.NodeStatuses = cassdcapi.CassandraStatusMap{}
+		for i := 0; i < int(dc.Spec.Size); i++ {
+			dc.Status.NodeStatuses[fmt.Sprintf("node%d", i)] = cassdcapi.CassandraNodeStatus{
+				HostID: fmt.Sprintf("host%d", i),
+			}
+
+		}
 	})
 }
 
