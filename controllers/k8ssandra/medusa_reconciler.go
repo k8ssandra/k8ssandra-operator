@@ -345,6 +345,10 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 						DropLabels: []string{
 							medusaapi.MedusaStorageSecretIdentifierLabel,
 						},
+						AddLabels: map[string]string{
+							k8ssandraapi.K8ssandraClusterNameLabel:      kc.GetLabels()[k8ssandraapi.K8ssandraClusterNameLabel],
+							k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.GetLabels()[k8ssandraapi.K8ssandraClusterNamespaceLabel],
+						},
 					},
 				},
 			},

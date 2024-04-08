@@ -236,6 +236,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
 					stripDroppedLabels(copiedSecret, target.DropLabels)
+					addAdditionalLabels(copiedSecret, target.AddLabels)
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 						break TargetSecrets
@@ -344,6 +345,7 @@ func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget) {
 		}
 	}
 	stripDroppedLabels(dest, target.DropLabels)
+	addAdditionalLabels(dest, target.AddLabels)
 }
 
 // filterValue verifies the annotation is not something datacenter specific
@@ -460,4 +462,10 @@ func contains(s string, arr []string) bool {
 		}
 	}
 	return false
+}
+
+func addAdditionalLabels(secret *corev1.Secret, addLabels map[string]string) {
+	for k, v := range addLabels {
+		secret.Labels[k] = v
+	}
 }

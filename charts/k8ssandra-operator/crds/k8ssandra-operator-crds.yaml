@@ -33387,6 +33387,11 @@ spec:
                   the secrets are replicated to. If empty, no clusters are targeted
                 items:
                   properties:
+                    addLabels:
+                      additionalProperties:
+                        type: string
+                      description: AddLabels adds labels to the target secret.
+                      type: object
                     dropLabels:
                       description: DropLabels defines the labels to be dropped from
                         the secret before replication, this is sometimes neccessary

@@ -468,6 +468,7 @@ func TestRequiresUpdate(t *testing.T) {
 
 	target := api.ReplicationTarget{
 		DropLabels: []string{"dropMe"},
+		AddLabels:  map[string]string{"added": "true"},
 	}
 
 	syncSecrets(orig, dest, target)
@@ -477,6 +478,7 @@ func TestRequiresUpdate(t *testing.T) {
 	// Modify target data without fixing the hash annotation, this should cause update requirement
 	dest.Data["secondKey"] = []byte("thisValWillBeGone")
 	assert.True(requiresUpdate(orig, dest))
+	assert.Equal("true", dest.GetLabels()["added"])
 
 	syncSecrets(orig, dest, target)
 	assert.False(requiresUpdate(orig, dest))
