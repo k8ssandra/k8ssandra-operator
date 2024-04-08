@@ -3,9 +3,10 @@ package replication
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"strings"
 	"sync"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -225,7 +226,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 				namespace = target.Namespace
 			}
 			fetchedSecret := &corev1.Secret{}
-			if err = remoteClient.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: namespace}, fetchedSecret); err != nil {
+			if err = remoteClient.Get(ctx, types.NamespacedName{Name: getPrefixedSecretName(target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
 				if errors.IsNotFound(err) {
 					logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
 					// Create it
@@ -233,6 +234,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret.Namespace = namespace
 					copiedSecret.ResourceVersion = ""
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
+					copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 						break TargetSecrets
@@ -252,7 +254,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			if requiresUpdate(sec, fetchedSecret) {
 				logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
 				syncSecrets(sec, fetchedSecret)
-				if err = remoteClient.Update(ctx, fetchedSecret); err != nil {
+				copiedSecret := fetchedSecret.DeepCopy()
+				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
+				if err = remoteClient.Update(ctx, copiedSecret); err != nil {
 					logger.Error(err, "Failed to sync target secret for matching payloads", "Secret", fetchedSecret.Name, "TargetContext", target)
 					break TargetSecrets
 				}
@@ -432,4 +436,8 @@ func (s *SecretSyncController) initializeCache() error {
 		}
 	}
 	return nil
+}
+
+func getPrefixedSecretName(prefix string, secretName string) string {
+	return fmt.Sprintf("%s%s", prefix, secretName)
 }

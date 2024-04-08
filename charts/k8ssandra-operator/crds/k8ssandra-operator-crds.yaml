@@ -27449,10 +27449,10 @@ spec:
                         description: The name of the bucket to use for the backups.
                         type: string
                       concurrentTransfers:
-                        default: 1
+                        default: 0
                         description: Number of concurrent uploads. Helps maximizing
                           the speed of uploads but puts more pressure on the network.
-                          Defaults to 1.
+                          Defaults to 0.
                         type: integer
                       credentialsType:
                         description: Type of credentials to use for authentication.
@@ -32717,10 +32717,10 @@ spec:
                     description: The name of the bucket to use for the backups.
                     type: string
                   concurrentTransfers:
-                    default: 1
+                    default: 0
                     description: Number of concurrent uploads. Helps maximizing the
                       speed of uploads but puts more pressure on the network. Defaults
-                      to 1.
+                      to 0.
                     type: integer
                   credentialsType:
                     description: Type of credentials to use for authentication. Can
@@ -35640,6 +35640,11 @@ spec:
                       description: TODO Implement at some point Namespace to replicate
                         the data to in the target cluster. If left empty, current
                         namespace is used.
+                      type: string
+                    targetPrefix:
+                      description: TargetPrefix is the prefix to be used for the replicated
+                        secret in the target cluster. If left empty, the same name
+                        is used as the original secret.
                       type: string
                   type: object
                 type: array

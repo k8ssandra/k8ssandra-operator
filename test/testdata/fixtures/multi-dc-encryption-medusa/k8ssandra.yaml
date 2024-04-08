@@ -25,6 +25,7 @@ spec:
       name: global-medusa-config
     storageProperties:
       prefix: test
+      concurrentTransfers: 4
     certificatesSecretRef:
       name: client-certificates
   cassandra:

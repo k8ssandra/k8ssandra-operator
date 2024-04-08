@@ -44,10 +44,10 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 
 	kcKey := utils.GetKey(kc)
 
-	perNodeConfigKey := nodeconfig.NewDefaultPerNodeConfigMapKey(kcKey, dcConfig)
+	perNodeConfigKey := nodeconfig.NewDefaultPerNodeConfigMapKey(kc, dcConfig)
 	dcLogger = dcLogger.WithValues("PerNodeConfigMap", perNodeConfigKey)
 
-	desiredPerNodeConfig := nodeconfig.NewDefaultPerNodeConfigMap(kcKey, dcConfig)
+	desiredPerNodeConfig := nodeconfig.NewDefaultPerNodeConfigMap(kcKey, kc, dcConfig)
 	if desiredPerNodeConfig != nil {
 		annotations.AddHashAnnotation(desiredPerNodeConfig)
 	}

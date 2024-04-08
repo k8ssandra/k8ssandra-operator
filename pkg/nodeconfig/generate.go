@@ -2,6 +2,7 @@ package nodeconfig
 
 import (
 	"fmt"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"strings"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
@@ -16,9 +17,9 @@ import (
 
 // NewDefaultPerNodeConfigMap generates a ConfigMap that contains default per-node configuration
 // files for this DC. It returns nil if this DC does not require any per-node configuration.
-func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, dcConfig *cassandra.DatacenterConfig) *corev1.ConfigMap {
+func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, kc *k8ssandraapi.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) *corev1.ConfigMap {
 
-	configKey := NewDefaultPerNodeConfigMapKey(kcKey, dcConfig)
+	configKey := NewDefaultPerNodeConfigMapKey(kc, dcConfig)
 	perNodeConfig := newPerNodeConfigMap(kcKey, configKey)
 
 	// append all the default per-node configuration to the ConfigMap;
@@ -36,10 +37,10 @@ func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, dcConfig *cassandra.
 	return nil
 }
 
-func NewDefaultPerNodeConfigMapKey(kcKey types.NamespacedName, dcConfig *cassandra.DatacenterConfig) types.NamespacedName {
+func NewDefaultPerNodeConfigMapKey(kc *k8ssandraapi.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) types.NamespacedName {
 	return types.NamespacedName{
-		Name:      fmt.Sprintf("%s-%s-per-node-config", kcKey.Name, dcConfig.CassDcName()),
-		Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kcKey.Namespace),
+		Name:      cassdcapi.CleanupForKubernetes(kc.CassClusterName() + "-" + dcConfig.CassDcName() + "-per-node-config"),
+		Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace),
 	}
 }
 
