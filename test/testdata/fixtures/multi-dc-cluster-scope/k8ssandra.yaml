@@ -7,7 +7,6 @@ spec:
   medusa:
     medusaConfigurationRef:
       name: global-medusa-config
-      namespace: test-0
     storageProperties:
       prefix: test
   cassandra:
