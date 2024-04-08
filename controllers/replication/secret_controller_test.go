@@ -396,6 +396,7 @@ func TestSyncSecrets(t *testing.T) {
 			Namespace: "b",
 			Labels: map[string]string{
 				"label1": "value1",
+				"dropMe": "true",
 			},
 			Annotations: map[string]string{
 				coreapi.ResourceHashAnnotation: "12345678",
@@ -406,10 +407,15 @@ func TestSyncSecrets(t *testing.T) {
 		},
 	}
 
-	syncSecrets(orig, dest)
+	target := api.ReplicationTarget{
+		DropLabels: []string{"dropMe"},
+	}
+
+	syncSecrets(orig, dest, target)
 
 	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
-	assert.Equal(orig.GetLabels(), dest.GetLabels())
+	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels())
+	assert.Equal(orig.GetLabels()["dropMe"], "")
 
 	assert.Equal(orig.Data, dest.Data)
 
@@ -417,7 +423,7 @@ func TestSyncSecrets(t *testing.T) {
 
 	dest.GetAnnotations()[coreapi.ResourceHashAnnotation] = "9876555"
 
-	syncSecrets(orig, dest)
+	syncSecrets(orig, dest, target)
 
 	// Verify additional orphan annotation was not removed
 	assert.Contains(dest.GetLabels(), secret.OrphanResourceAnnotation)
@@ -463,7 +469,11 @@ func TestRequiresUpdate(t *testing.T) {
 	// Secrets don't match
 	assert.True(requiresUpdate(orig, dest))
 
-	syncSecrets(orig, dest)
+	target := api.ReplicationTarget{
+		DropLabels: []string{"dropMe"},
+	}
+
+	syncSecrets(orig, dest, target)
 
 	assert.False(requiresUpdate(orig, dest))
 
@@ -471,7 +481,7 @@ func TestRequiresUpdate(t *testing.T) {
 	dest.Data["secondKey"] = []byte("thisValWillBeGone")
 	assert.True(requiresUpdate(orig, dest))
 
-	syncSecrets(orig, dest)
+	syncSecrets(orig, dest, target)
 	assert.False(requiresUpdate(orig, dest))
 }
 

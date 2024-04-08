@@ -235,6 +235,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret.ResourceVersion = ""
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
+					stripDroppedLabels(copiedSecret, target.DropLabels)
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 						break TargetSecrets
@@ -253,7 +254,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			if requiresUpdate(sec, fetchedSecret) {
 				logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
-				syncSecrets(sec, fetchedSecret)
+				syncSecrets(sec, fetchedSecret, target)
 				copiedSecret := fetchedSecret.DeepCopy()
 				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
 				if err = remoteClient.Update(ctx, copiedSecret); err != nil {
@@ -315,7 +316,7 @@ func requiresUpdate(source, dest client.Object) bool {
 	return false
 }
 
-func syncSecrets(src, dest *corev1.Secret) {
+func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget) {
 	origMeta := dest.ObjectMeta
 	src.DeepCopyInto(dest)
 	dest.ObjectMeta = origMeta
@@ -342,6 +343,7 @@ func syncSecrets(src, dest *corev1.Secret) {
 			dest.Labels[k] = v
 		}
 	}
+	stripDroppedLabels(dest, target.DropLabels)
 }
 
 // filterValue verifies the annotation is not something datacenter specific
@@ -440,4 +442,22 @@ func (s *SecretSyncController) initializeCache() error {
 
 func getPrefixedSecretName(prefix string, secretName string) string {
 	return fmt.Sprintf("%s%s", prefix, secretName)
+}
+
+// stripDroppedLabels removes the labels from the secret that are defined in the dropLabels field.
+func stripDroppedLabels(secret *corev1.Secret, dropLabels []string) {
+	for key, _ := range secret.Labels {
+		if contains(key, dropLabels) {
+			delete(secret.Labels, key)
+		}
+	}
+}
+
+func contains(s string, arr []string) bool {
+	for _, i := range arr {
+		if i == s {
+			return true
+		}
+	}
+	return false
 }

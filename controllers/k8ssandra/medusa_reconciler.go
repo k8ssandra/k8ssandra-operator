@@ -342,6 +342,9 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 					{
 						Namespace:    kc.Namespace,
 						TargetPrefix: kc.Name + "-",
+						DropLabels: []string{
+							medusaapi.MedusaStorageSecretIdentifierLabel,
+						},
 					},
 				},
 			},
