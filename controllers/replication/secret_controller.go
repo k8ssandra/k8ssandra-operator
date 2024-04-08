@@ -446,7 +446,7 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 
 // stripDroppedLabels removes the labels from the secret that are defined in the dropLabels field.
 func stripDroppedLabels(secret *corev1.Secret, dropLabels []string) {
-	for key, _ := range secret.Labels {
+	for key := range secret.Labels {
 		if contains(key, dropLabels) {
 			delete(secret.Labels, key)
 		}

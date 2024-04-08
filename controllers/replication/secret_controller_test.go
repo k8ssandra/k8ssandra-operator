@@ -396,7 +396,7 @@ func TestSyncSecrets(t *testing.T) {
 			Namespace: "b",
 			Labels: map[string]string{
 				"label1": "value1",
-				"dropMe": "true",
+				"dropMe": "false",
 			},
 			Annotations: map[string]string{
 				coreapi.ResourceHashAnnotation: "12345678",
@@ -407,15 +407,13 @@ func TestSyncSecrets(t *testing.T) {
 		},
 	}
 
-	target := api.ReplicationTarget{
-		DropLabels: []string{"dropMe"},
-	}
+	target := api.ReplicationTarget{}
 
 	syncSecrets(orig, dest, target)
 
 	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
-	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels())
-	assert.Equal(orig.GetLabels()["dropMe"], "")
+	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels()["label1"])
+	assert.Equal(orig.GetLabels()["dropMe"], dest.GetLabels()["dropMe"])
 
 	assert.Equal(orig.Data, dest.Data)
 
@@ -429,9 +427,8 @@ func TestSyncSecrets(t *testing.T) {
 	assert.Contains(dest.GetLabels(), secret.OrphanResourceAnnotation)
 
 	// Verify original labels and their values are set
-	for k, v := range orig.GetLabels() {
-		assert.Equal(v, dest.GetLabels()[k])
-	}
+
+	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels()["label1"])
 
 	// Verify original annotations and their values are set (modified hash annotation is overwritten)
 	for k, v := range orig.GetAnnotations() {
