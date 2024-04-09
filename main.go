@@ -68,9 +68,9 @@ import (
 )
 
 var (
-	version        = "dev"
-	commit         = "n/a"
-	date           = "n/a"
+	version        string
+	commit         string
+	date           string
 	versionMessage = "#######################" +
 		fmt.Sprintf("#### version %s commit %s date %s ####", version, commit, date) +
 		"#######################"

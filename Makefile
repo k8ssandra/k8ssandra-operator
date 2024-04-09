@@ -177,6 +177,7 @@ DATE  ?= $(shell date)
 COMMIT ?= $(shell git rev-parse --short HEAD)
 
 build: generate fmt vet ## Build manager binary.
+	echo "\"main.version=${VERSION}\" -X \"main.date=$(DATE)\" -X \"main.commit=$(COMMIT)\"" 
 	go build --ldflags "-X \"main.version=${VERSION}\" -X \"main.date=$(DATE)\" -X \"main.commit=$(COMMIT)\"" -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
