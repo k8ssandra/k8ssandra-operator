@@ -259,7 +259,7 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 	// End of block to be deprecated.
 
 	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
-		logger.Error(err, "failed to get MedusaConfiguration", "MedusaConfigKey", configKey, "K8ssandraCluster", desiredKc)
+		logger.Error(err, "failed to get MedusaConfiguration", "MedusaConfigKey", configKey, "K8ssandraCluster", desiredKc, "called with Namespace", namespace)
 		return result.Error(err)
 	}
 	// check if the StorageProperties from the cluster have the prefix field set
