@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -411,6 +412,40 @@ func (f *E2eFramework) CreateMedusaSecret(namespace string) error {
 		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (f *E2eFramework) CreateExternalDc(namespace string, seedIp string) error {
+	path := filepath.Join("..", "testdata", "fixtures", "add-external-dc", "k8ssandra2.yaml")
+
+	// Read the file to get the content
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	// Replace the SEED value
+	updatedContent := strings.ReplaceAll(string(content), "SEED", seedIp)
+
+	// Write it back to a temporary file
+	tempFile, err := os.CreateTemp("", "k8ssandra2.yaml")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tempFile.Name())
+
+	_, err = tempFile.Write([]byte(updatedContent))
+	if err != nil {
+		return err
+	}
+
+	// Apply it
+	options := kubectl.Options{Namespace: namespace, Context: f.DataPlaneContexts[0]}
+	f.logger.Info("Create k8c with external DC", "Namespace", namespace, "Context", f.DataPlaneContexts[0])
+	if err := kubectl.Apply(options, tempFile.Name()); err != nil {
+		return err
 	}
 
 	return nil
