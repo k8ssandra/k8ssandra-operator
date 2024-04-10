@@ -39,12 +39,12 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	logger logr.Logger,
 ) result.ReconcileResult {
 	kc := desiredKc.DeepCopy()
-	namespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
-	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + namespace)
+	dcNamespace := utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace)
+	logger.Info("Medusa reconcile for " + dcConfig.CassDcName() + " on namespace " + dcNamespace)
 	if kc.Spec.Medusa != nil {
 		logger.Info("Medusa is enabled")
 
-		mergeResult := r.mergeStorageProperties(ctx, r.Client, namespace, kc.Spec.Medusa, logger, kc)
+		mergeResult := r.mergeStorageProperties(ctx, r.Client, kc.Spec.Medusa, logger, kc)
 		medusaSpec := kc.Spec.Medusa
 		if mergeResult.IsError() {
 			return result.Error(mergeResult.GetError())
@@ -68,7 +68,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
 			}
 		}
-		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, dcConfig, logger, namespace); res.Completed() {
+		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, dcConfig, logger, dcNamespace); res.Completed() {
 			return res
 		}
 
@@ -86,7 +86,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create the Medusa standalone pod
-		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), namespace, logger, kc.Spec.Medusa.ContainerImage)
+		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), dcNamespace, logger, kc.Spec.Medusa.ContainerImage)
 
 		// Add the volumes previously computed to the Medusa standalone pod
 		for _, volume := range volumes {
@@ -117,7 +117,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 		}
 
 		// Create and reconcile the Medusa service for the standalone deployment
-		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.SanitizedName(), namespace, logger)
+		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.SanitizedName(), dcNamespace, logger)
 		medusaService.SetLabels(labels.CleanedUpByLabels(kcKey))
 		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService)
 		switch {
@@ -243,7 +243,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 	ctx context.Context,
 	remoteClient client.Client,
-	namespace string,
 	medusaSpec *medusaapi.MedusaClusterTemplate,
 	logger logr.Logger,
 	desiredKc *api.K8ssandraCluster,
@@ -254,12 +253,12 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 	}
 	storageProperties := &medusaapi.MedusaConfiguration{}
 	// Deprecated: This code path can be removed at version 1.17, as MedusaConfigs should now always be namespace-local to the K8ssandraCluster referencing them.
-	configNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, namespace)
+	configNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, desiredKc.Namespace)
 	configKey := types.NamespacedName{Namespace: configNamespace, Name: medusaSpec.MedusaConfigurationRef.Name}
 	// End of block to be deprecated.
 
 	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
-		logger.Error(err, "failed to get MedusaConfiguration", "MedusaConfigKey", configKey, "K8ssandraCluster", desiredKc, "called with Namespace", namespace)
+		logger.Error(err, "failed to get MedusaConfiguration", "MedusaConfigKey", configKey, "K8ssandraCluster", desiredKc)
 		return result.Error(err)
 	}
 	// check if the StorageProperties from the cluster have the prefix field set
