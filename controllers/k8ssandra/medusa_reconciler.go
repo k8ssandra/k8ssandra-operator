@@ -305,69 +305,64 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 		return result.Continue()
 	}
 
-	if kc.Spec.Medusa.MedusaConfigurationRef.Namespace != kc.Namespace {
-		// This is the deprecated code path. Moving forward we will use a replicated secret with a prefix, but we will remove this code path after v1.17.
-		// fetch the referenced configuration
-		medusaConfigName := medusaSpec.MedusaConfigurationRef.Name
-		medusaConfigNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, kc.Namespace)
-		medusaConfigKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: medusaConfigName}
-		medusaConfig := &medusaapi.MedusaConfiguration{}
-		if err := c.Get(ctx, medusaConfigKey, medusaConfig); err != nil {
-			logger.Error(err, fmt.Sprintf("could not get MedusaConfiguration %s/%s", medusaConfigNamespace, medusaConfigName))
-			return result.Error(err)
-		}
-
-		repSecret := replication.ReplicatedSecret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
-				Namespace: medusaConfigNamespace,
-				Labels: map[string]string{
-					k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
-					k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
-				},
-				Annotations: map[string]string{
-					k8ssandraapi.PurposeAnnotation: "This replicated secret is designed for the old codepath in the Medusa reconciler within the k8ssandra cluster controller. In this deprecated path, a MedusaConfig could reside in a different namespace to the K8ssandraCluster. This ReplicatedSecret ensures that the bucket secret is copied into the K8ssandraCluster's namespace. This codepath will be removed in v1.17.",
-				},
-			},
-			Spec: replication.ReplicatedSecretSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(
-							medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
-							medusaConfigNamespace),
-					},
-				},
-				ReplicationTargets: []replication.ReplicationTarget{
-					{
-						Namespace:    kc.Namespace,
-						TargetPrefix: kc.Name + "-",
-						DropLabels: []string{
-							medusaapi.MedusaStorageSecretIdentifierLabel,
-						},
-						AddLabels: map[string]string{
-							k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
-							k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
-							k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
-						},
-					},
-				},
-			},
-		}
-		if err := controllerutil.SetControllerReference(kc, &repSecret, r.Scheme); err != nil {
-			return result.Error(err)
-		}
-		if err := controllerutil.SetOwnerReference(kc, &repSecret, r.Scheme); err != nil {
-			return result.Error(err)
-		}
-		// TODO: this should also have finalizer logic included in the k8ssandraCluster finalizer to remove the replicated secret if it is no longer being used.
-		// TODO: this should probably have a finalizer on it too so that the replicatedSecret cannot be deleted.
-
-		return reconciliation.ReconcileObject(ctx, c, r.DefaultDelay, repSecret)
-
-	} else {
-		// no-op, the bucket secret exists in the same namespace and doesn't need copying via a replicated secret.
-		return result.Continue()
+	// This is the deprecated code path. Moving forward we will use a replicated secret with a prefix, but we will remove this code path after v1.17.
+	// fetch the referenced configuration
+	medusaConfigName := medusaSpec.MedusaConfigurationRef.Name
+	medusaConfigNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, kc.Namespace)
+	medusaConfigKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: medusaConfigName}
+	medusaConfig := &medusaapi.MedusaConfiguration{}
+	if err := c.Get(ctx, medusaConfigKey, medusaConfig); err != nil {
+		logger.Error(err, fmt.Sprintf("could not get MedusaConfiguration %s/%s", medusaConfigNamespace, medusaConfigName))
+		return result.Error(err)
 	}
+
+	repSecret := replication.ReplicatedSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
+			Namespace: medusaConfigNamespace,
+			Labels: map[string]string{
+				k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
+				k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
+			},
+			Annotations: map[string]string{
+				k8ssandraapi.PurposeAnnotation: "This replicated secret is designed for the old codepath in the Medusa reconciler within the k8ssandra cluster controller. In this deprecated path, a MedusaConfig could reside in a different namespace to the K8ssandraCluster. This ReplicatedSecret ensures that the bucket secret is copied into the K8ssandraCluster's namespace. This codepath will be removed in v1.17.",
+			},
+		},
+		Spec: replication.ReplicatedSecretSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(
+						medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
+						medusaConfigNamespace),
+				},
+			},
+			ReplicationTargets: []replication.ReplicationTarget{
+				{
+					Namespace:    kc.Namespace,
+					TargetPrefix: kc.Name + "-",
+					DropLabels: []string{
+						medusaapi.MedusaStorageSecretIdentifierLabel,
+					},
+					AddLabels: map[string]string{
+						k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
+						k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
+						k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
+					},
+				},
+			},
+		},
+	}
+	if err := controllerutil.SetControllerReference(kc, &repSecret, r.Scheme); err != nil {
+		return result.Error(err)
+	}
+	if err := controllerutil.SetOwnerReference(kc, &repSecret, r.Scheme); err != nil {
+		return result.Error(err)
+	}
+	// TODO: this should also have finalizer logic included in the k8ssandraCluster finalizer to remove the replicated secret if it is no longer being used.
+	// TODO: this should probably have a finalizer on it too so that the replicatedSecret cannot be deleted.
+
+	return reconciliation.ReconcileObject(ctx, c, r.DefaultDelay, repSecret)
+
 }
 
 func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
