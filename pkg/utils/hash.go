@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"fmt"
 	"hash"
 
 	"github.com/davecgh/go-spew/spew"
@@ -38,5 +39,5 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 func HashNameNamespace(name, namespace string) string {
 	h := sha256.New()
 	h.Write([]byte(namespace + name))
-	return string(h.Sum(nil))[:hashLength]
+	return fmt.Sprintf("%x", h.Sum(nil))[:hashLength]
 }
