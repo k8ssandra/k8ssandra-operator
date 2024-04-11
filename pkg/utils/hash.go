@@ -36,6 +36,7 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 }
 
 func HashNameNamespace(name, namespace string) string {
-	bytes := []byte(namespace + name)
-	return string(sha256.New().Sum(bytes)[:hashLength])
+	h := sha256.New()
+	h.Write([]byte(namespace + name))
+	return string(h.Sum(nil))[:hashLength]
 }
