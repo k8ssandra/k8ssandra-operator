@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -421,7 +420,7 @@ func (f *E2eFramework) CreateExternalDc(namespace string, seedIp string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "add-external-dc", "k8ssandra2.yaml")
 
 	// Read the file to get the content
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

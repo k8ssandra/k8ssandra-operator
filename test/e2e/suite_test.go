@@ -1386,13 +1386,8 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 
 func addExternalDcToCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
-	assert := assert.New(t)
 
-	t.Log("check that the K8ssandraCluster was created")
-	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
-	kc := &api.K8ssandraCluster{}
-	err := f.Client.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	t.Log("check that dc1 is ready")
 
 	dc1Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[0],
@@ -1403,52 +1398,27 @@ func addExternalDcToCluster(t *testing.T, ctx context.Context, namespace string,
 	}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
-	sg1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc1Key) + "-stargate",
-		},
-	}
-	checkStargateReady(t, f, ctx, sg1Key)
-
-	reaper1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc1Key) + "-reaper",
-		},
-	}
-	checkReaperReady(t, f, ctx, reaper1Key)
-
-	dcSize := 2
-	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
-	require.NoError(err, "failed to create keyspace")
-
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
-	require.NoError(err, "failed to create keyspace")
-
 	t.Log("add dc2 to cluster")
 	// Get the IP address of the first Cassandra pod
 	pods, err := f.GetCassandraDatacenterPods(t, ctx, dc1Key, dc1Key.NamespacedName.Name)
+	require.NoError(err, "failed to get Cassandra pods")
 
-	kc2Key := client.ObjectKey{Namespace: namespace, Name: "test2"}
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
 	err = f.CreateExternalDc(namespace, pods[0].Status.PodIP)
 	require.NoError(err, "failed to create external DC")
 
-	require.Eventually(func() bool {
-		kc2 := &api.K8ssandraCluster{}
-		err = f.Client.Get(ctx, kc2Key, kc2)
-		if err != nil {
-			t.Logf("failed to add DC: failed to get K8ssandraCluster: %v", err)
-			return false
-		}
+	kc := &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster %s in namespace %s", kcKey.Name, namespace)
 
-		return kc2.Status.Datacenters["dc2"].Cassandra.CassandraOperatorProgress == "Ready"
-	}, 5*time.Minute, 10*time.Second, "timed out waiting to add external DC to K8ssandraCluster")
+	dc2Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc2",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc2Key, f)
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
