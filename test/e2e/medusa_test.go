@@ -286,7 +286,7 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 		}
 
 		return !restore.Status.FinishTime.IsZero()
-	}, polling.medusaRestoreDone.timeout*2, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
+	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
 
 	require.Eventually(func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
