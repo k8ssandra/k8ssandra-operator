@@ -356,6 +356,9 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 		if err := controllerutil.SetControllerReference(kc, &repSecret, r.Scheme); err != nil {
 			return result.Error(err)
 		}
+		if err := controllerutil.SetOwnerReference(kc, &repSecret, r.Scheme); err != nil {
+			return result.Error(err)
+		}
 		// TODO: this should also have finalizer logic included in the k8ssandraCluster finalizer to remove the replicated secret if it is no longer being used.
 		// TODO: this should probably have a finalizer on it too so that the replicatedSecret cannot be deleted.
 
