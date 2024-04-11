@@ -297,6 +297,11 @@ func (f *Framework) SetDatacenterStatusReady(ctx context.Context, key ClusterKey
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})
+		dc.Status.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterHealthy,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
 		dc.Status.ObservedGeneration = dc.Generation
 		dc.Status.NodeStatuses = cassdcapi.CassandraStatusMap{}
 		for i := 0; i < int(dc.Spec.Size); i++ {
@@ -370,6 +375,11 @@ func (f *Framework) SetDatacenterStatusStopped(ctx context.Context, key ClusterK
 		})
 		dc.Status.SetCondition(cassdcapi.DatacenterCondition{
 			Type:               cassdcapi.DatacenterInitialized,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: now,
+		})
+		dc.Status.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterHealthy,
 			Status:             corev1.ConditionTrue,
 			LastTransitionTime: now,
 		})

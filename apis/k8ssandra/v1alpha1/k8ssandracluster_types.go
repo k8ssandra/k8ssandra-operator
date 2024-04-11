@@ -201,6 +201,18 @@ func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTem
 	return datacenters
 }
 
+func (in *K8ssandraCluster) GetHealthyDatacenters() []CassandraDatacenterTemplate {
+	datacenters := make([]CassandraDatacenterTemplate, 0)
+	if in != nil && in.Spec.Cassandra != nil {
+		for _, dc := range in.Spec.Cassandra.Datacenters {
+			if status, found := in.Status.Datacenters[dc.Meta.Name]; found && status.Cassandra.GetConditionStatus(cassdcapi.DatacenterHealthy) == corev1.ConditionTrue {
+				datacenters = append(datacenters, dc)
+			}
+		}
+	}
+	return datacenters
+}
+
 // SanitizedName returns a sanitized version of the name returned by CassClusterName()
 func (in *K8ssandraCluster) SanitizedName() string {
 	return cassdcapi.CleanupForKubernetes(in.CassClusterName())
