@@ -26,9 +26,8 @@ image:
   pullPolicy: IfNotPresent
   # -- Tag of the k8ssandra-operator image to pull from image.repository
   tag: latest
-  # -- Docker registry containing all cass-operator related images. Setting this
-  # allows for usage of an internal registry without specifying serverImage,
-  # configBuilderImage, and busyboxImage on all CassandraDatacenter objects.
+  # -- Docker registry containing all k8ssandra-operator related images, such as reaper/medusa/stargate. 
+  # Setting this allows for usage of an internal registry without specifying image on all K8ssandraCluster objects.
   registryOverride:
 # -- References to secrets to use when pulling images. See:
 # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/

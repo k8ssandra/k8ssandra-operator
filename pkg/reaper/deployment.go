@@ -37,7 +37,6 @@ const (
 )
 
 var defaultImage = images.Image{
-	Registry:   images.DefaultRegistry,
 	Repository: DefaultImageRepository,
 	Name:       DefaultImageName,
 	Tag:        DefaultVersion,

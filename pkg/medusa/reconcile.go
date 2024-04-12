@@ -49,7 +49,6 @@ const (
 
 var (
 	defaultMedusaImage = images.Image{
-		Registry:   images.DefaultRegistry,
 		Repository: DefaultMedusaImageRepository,
 		Name:       DefaultMedusaImageName,
 		Tag:        DefaultMedusaVersion,

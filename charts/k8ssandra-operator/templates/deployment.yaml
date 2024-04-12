@@ -51,6 +51,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- if .Values.image.registryOverride }}
+        - name: DEFAULT_REGISTRY
+          value: {{ .Values.image.registryOverride | quote }}
+        {{- end }}
+        {{- if .Values.imagePullSecrets}}
+        - name: IMAGE_PULL_SECRETS
+          value: {{ join "," .Values.imagePullSecrets | quote }}
+        {{- end }}
         image: {{ include "k8ssandra-common.flattenedImage" .Values.image }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:

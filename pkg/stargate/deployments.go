@@ -50,19 +50,16 @@ const (
 
 var (
 	defaultImage3 = images.Image{
-		Registry:   images.DefaultRegistry,
 		Repository: DefaultImageRepository,
 		Name:       DefaultImageName3,
 		Tag:        "v" + DefaultVersion,
 	}
 	defaultImage4 = images.Image{
-		Registry:   images.DefaultRegistry,
 		Repository: DefaultImageRepository,
 		Name:       DefaultImageName4,
 		Tag:        "v" + DefaultVersion,
 	}
 	defaultImage68 = images.Image{
-		Registry:   images.DefaultRegistry,
 		Repository: DefaultImageRepository,
 		Name:       DefaultImageNameDse68,
 		Tag:        "v" + DefaultVersion,

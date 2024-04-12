@@ -1,9 +1,10 @@
 package images
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 var (
@@ -64,10 +65,10 @@ func TestImageString(t *testing.T) {
 		image    Image
 		expected string
 	}{
-		{"default", defaultImage, "/default-repo/default-name:default-tag"},
+		{"default", defaultImage, "default-repo/default-name:default-tag"},
 		{"latest", latestImage, "latest.registry.io/latest-repo/latest-name:latest"},
-		{"custom", customImage, "//custom-name:"},
-		{"empty", emptyImage, "//:"},
+		{"custom", customImage, "/custom-name:"},
+		{"empty", emptyImage, "/:"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,6 +89,31 @@ func TestImageApplyDefaults(t *testing.T) {
 		{"empty", &emptyImage, defaultImage, &coalescedImage1},
 		{"non-empty", &customImage, defaultImage, &coalescedImage2},
 		{"latest", &latestImage, defaultImage, &coalescedImage3},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.image.ApplyDefaults(tt.defaults)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+
+	// With overrides
+	DefaultRegistry = "localhost:5001"
+	overrideImage1 := coalescedImage1
+	overrideImage1.Registry = DefaultRegistry
+	overrideImage2 := coalescedImage2
+	overrideImage2.Registry = DefaultRegistry
+	overrideImage3 := coalescedImage3
+	tests = []struct {
+		name     string
+		image    *Image
+		defaults Image
+		expected *Image
+	}{
+		{"nil", nil, defaultImage, &overrideImage1},
+		{"empty", &emptyImage, defaultImage, &overrideImage1},
+		{"non-empty", &customImage, defaultImage, &overrideImage2},
+		{"latest", &latestImage, defaultImage, &overrideImage3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,6 +149,44 @@ func TestCollectPullSecrets(t *testing.T) {
 			&latestImage,
 			&latestImage,
 			[]corev1.LocalObjectReference{{Name: "latest-pull-secret"}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := CollectPullSecrets(tt.image1, tt.image2)
+			assert.Equal(t, tt.expected, actual)
+		})
+	}
+
+	// With overrides
+	defaultOverrideRef := corev1.LocalObjectReference{Name: "secret-registry-secret"}
+	DefaultPullSecretOverride = append(DefaultPullSecretOverride, defaultOverrideRef)
+
+	tests = []struct {
+		name     string
+		image1   *Image
+		image2   *Image
+		expected []corev1.LocalObjectReference
+	}{
+		{"nil", nil, nil, []corev1.LocalObjectReference{defaultOverrideRef}},
+		{"no secrets", &defaultImage, &defaultImage, []corev1.LocalObjectReference{defaultOverrideRef}},
+		{
+			"some secrets",
+			&latestImage,
+			&defaultImage,
+			[]corev1.LocalObjectReference{defaultOverrideRef, {Name: "latest-pull-secret"}},
+		},
+		{
+			"all secrets",
+			&latestImage,
+			&customImage,
+			[]corev1.LocalObjectReference{defaultOverrideRef, {Name: "latest-pull-secret"}, {Name: "custom-pull-secret"}},
+		},
+		{
+			"duplicated secrets",
+			&latestImage,
+			&latestImage,
+			[]corev1.LocalObjectReference{defaultOverrideRef, {Name: "latest-pull-secret"}},
 		},
 	}
 	for _, tt := range tests {
