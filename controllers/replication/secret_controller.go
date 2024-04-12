@@ -235,8 +235,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					copiedSecret.ResourceVersion = ""
 					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
 					copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
-					stripDroppedLabels(copiedSecret, target.DropLabels)
-					addAdditionalLabels(copiedSecret, target.AddLabels)
+					copiedSecret.Labels = calculateTargetLabels(copiedSecret.Labels, target)
 					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 						break TargetSecrets
@@ -344,11 +343,14 @@ func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget) {
 			dest.Labels[k] = v
 		}
 	}
-	stripDroppedLabels(dest, target.DropLabels)
-	addAdditionalLabels(dest, target.AddLabels)
+	// TODO: it would be nice at some point in future to remove the DC specific hardcoded stuff and
+	// filter DC specific stuff by setting dropLabels in the replicatedsecret resource.
+	dest.Labels = calculateTargetLabels(dest.Labels, target)
 }
 
 // filterValue verifies the annotation is not something datacenter specific
+// TODO: it would be nice at some point in future to remove the DC specific hardcoded stuff and
+// filter DC specific stuff by setting dropLabels in the replicatedsecret resource.
 func filterValue(key string) bool {
 	return strings.HasPrefix(key, "cassandra.datastax.com/")
 }
@@ -446,15 +448,6 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 	return fmt.Sprintf("%s%s", prefix, secretName)
 }
 
-// stripDroppedLabels removes the labels from the secret that are defined in the dropLabels field.
-func stripDroppedLabels(secret *corev1.Secret, dropLabels []string) {
-	for key := range secret.Labels {
-		if contains(key, dropLabels) {
-			delete(secret.Labels, key)
-		}
-	}
-}
-
 func contains(s string, arr []string) bool {
 	for _, i := range arr {
 		if i == s {
@@ -464,8 +457,14 @@ func contains(s string, arr []string) bool {
 	return false
 }
 
-func addAdditionalLabels(secret *corev1.Secret, addLabels map[string]string) {
-	for k, v := range addLabels {
-		secret.Labels[k] = v
+func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
+	for k, v := range target.AddLabels {
+		originalLabels[k] = v
 	}
+	for key := range originalLabels {
+		if contains(key, target.DropLabels) {
+			delete(originalLabels, key)
+		}
+	}
+	return originalLabels
 }
