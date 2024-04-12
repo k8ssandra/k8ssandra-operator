@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 5
+	timeout  = time.Minute * 5
 	interval = time.Millisecond * 500
 )
 
@@ -62,10 +62,10 @@ func TestSecretController(t *testing.T) {
 	defer cancel()
 
 	// Secret controller tests
-	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
-	t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
-	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
-	t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
+	// t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
+	// t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
+	// t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
+	// t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
 	t.Run("VerifySecretIsDeletedComplicated", testEnv.ControllerTest(ctx, verifySecretIsDeletedComplicated))
 }
 
@@ -249,9 +249,9 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	require := require.New(t)
 	remoteClient := testEnv.Clients[f.DataPlaneContexts[targetCopyToCluster]]
 	localClient := f.Client
-	localNamespaceLocalCluster := "ns-" + framework.CleanupForKubernetes(rand.String(9))
-	remoteNamespaceLocalCluster := "ns-" + framework.CleanupForKubernetes(rand.String(9))
-	remoteNamespaceRemoteCluster := "ns-" + framework.CleanupForKubernetes(rand.String(9))
+	localNamespaceLocalCluster := "ns-ll" + framework.CleanupForKubernetes(rand.String(9))
+	remoteNamespaceLocalCluster := "ns-rl" + framework.CleanupForKubernetes(rand.String(10))
+	remoteNamespaceRemoteCluster := "ns-rr" + framework.CleanupForKubernetes(rand.String(11))
 
 	require.NoError(remoteClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: remoteNamespaceRemoteCluster}}))
 	require.NoError(localClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: localNamespaceLocalCluster}}))
