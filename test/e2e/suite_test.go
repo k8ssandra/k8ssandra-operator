@@ -712,7 +712,7 @@ func applyPollingDefaults() {
 	polling.medusaBackupDone.timeout = 10 * time.Minute
 	polling.medusaBackupDone.interval = 15 * time.Second
 
-	polling.medusaRestoreDone.timeout = 25 * time.Minute
+	polling.medusaRestoreDone.timeout = 10 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
 	polling.datacenterUpdating.timeout = 1 * time.Minute
