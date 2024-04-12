@@ -543,6 +543,6 @@ func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) floa
 // this is to be used to name resources that are cluster specific in preference of concatenations
 // of the namespaced name, as the latter are becoming too long and causing issues due to DNS name length
 // constraints within k8s
-func (kc *K8ssandraCluster) GetClusterIdHash(nchars int) string {
+func (kc *K8ssandraCluster) GetClusterIdHash() string {
 	return utils.HashNameNamespace(kc.Name, kc.Namespace)
 }

@@ -318,7 +318,7 @@ func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
 
 	repSecret := replication.ReplicatedSecret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kc.GetClusterIdHash(8) + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
+			Name:      kc.GetClusterIdHash() + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
 			Namespace: medusaConfigNamespace,
 			Labels: map[string]string{
 				k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
