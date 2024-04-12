@@ -13,6 +13,12 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+* [BUGFIX] [#1253](https://github.com/k8ssandra/k8ssandra-operator/issues/1253) Medusa storage secrets are now labelled with a unique label.
+* [FEATURE] [#1260](https://github.com/k8ssandra/k8ssandra-operator/issues/1260) Update controller-gen to version 0.14.0.
+* [BUGFIX] [#1240](https://github.com/k8ssandra/k8ssandra-operator/issues/1240) The PullSecretRef for medusa is ignored in the standalone deployment of medusa
+
+
 
 ## v1.14.0 - 2024-04-02
 
@@ -24,4 +30,3 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Update Medusa to v0.20.1
 * [BUGFIX] [#1235](https://github.com/k8ssandra/k8ssandra-operator/issues/1235) Prevent operator from modifying the spec when superUserRef is not set. Also, remove the injection to mount secrets to cassandra container.
 * [BUGFIX] [#1239](https://github.com/k8ssandra/k8ssandra-operator/issues/1239) Use `concurrent_transfers` setting from MedusaConfiguration object if it is actually set.
-* [BUGFIX] [#1240](https://github.com/k8ssandra/k8ssandra-operator/issues/1240) The PullSecretRef for medusa is ignored in the standalone deployment of medusa

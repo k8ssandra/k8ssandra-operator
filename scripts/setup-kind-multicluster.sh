@@ -42,7 +42,7 @@ EOF
 }
 
 registry_name='kind-registry'
-registry_port='5000'
+registry_port='5001'
 num_clusters=1
 cluster_prefix="k8ssandra-"
 kind_node_version="$default_kind_node_version"

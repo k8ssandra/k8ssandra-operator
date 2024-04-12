@@ -64,6 +64,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+## Location to install dependencies to
+export LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
 KIND_CLUSTER ?= k8ssandra-0
 GO_FLAGS=
 
@@ -146,7 +151,7 @@ lint: golangci-lint ## Run golangci-lint against code.
 	$(GOLANGCI_LINT) run ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet lint envtest ## Run tests.
+test: manifests generate fmt vet lint envtest kustomize ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -covermode=atomic -coverprofile coverage.out
@@ -157,7 +162,7 @@ endif
 E2E_TEST_TIMEOUT ?= 3600s
 
 PHONY: e2e-test
-e2e-test: ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
+e2e-test: kustomize ## Run e2e tests. Set E2E_TEST to run a specific test. Set TEST_ARGS to pass args to the test. You need to prepare the cluster(s) first by invoking single-prepare or multi-prepare.
 ifdef E2E_TEST
 	@echo Running e2e test $(E2E_TEST)
 	go test -v -timeout $(E2E_TEST_TIMEOUT) ./test/e2e/... -run="$(E2E_TEST)" -args $(TEST_ARGS)
@@ -206,7 +211,7 @@ kind-multi-e2e-test: multi-create multi-prepare e2e-test
 
 single-create: cleanup create-kind-cluster cert-manager nginx-kind
 
-single-prepare: build manifests docker-build kind-load-image
+single-prepare: build manifests docker-build kind-load-image kustomize
 
 single-up: single-create single-prepare kustomize
 	kubectl config use-context kind-k8ssandra-0
@@ -315,11 +320,6 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 
 ##@ Tools / Dependencies
 
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
@@ -328,8 +328,8 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
 
 ## Tool Versions
 CERT_MANAGER_VERSION ?= v1.12.2
-KUSTOMIZE_VERSION ?= v5.0.3
-CONTROLLER_TOOLS_VERSION ?= v0.12.0
+KUSTOMIZE_VERSION ?= v4.5.7
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
 GOLINT_VERSION ?= 1.55.0
 
 cert-manager: ## Install cert-manager to the cluster
