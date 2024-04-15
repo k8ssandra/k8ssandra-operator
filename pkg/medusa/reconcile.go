@@ -505,7 +505,7 @@ func MedusaPurgeCronJobName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-purge", clusterName, dcName)
 }
 
-func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, dcName, namespace string, logger logr.Logger) *appsv1.Deployment {
+func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, dcName, namespace string, logger logr.Logger, medusaImage *images.Image) *appsv1.Deployment {
 	// The standalone medusa pod won't be able to resolve its own IP address using DNS entries
 	medusaContainer.Env = append(medusaContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
 	medusaDeployment := &appsv1.Deployment{
@@ -530,8 +530,9 @@ func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, d
 					Containers: []corev1.Container{
 						medusaContainer,
 					},
-					Volumes:  []corev1.Volume{},
-					Hostname: MedusaStandaloneDeploymentName(clusterName, dcName),
+					ImagePullSecrets: images.CollectPullSecrets(medusaImage.ApplyDefaults(defaultMedusaImage)),
+					Volumes:          []corev1.Volume{},
+					Hostname:         MedusaStandaloneDeploymentName(clusterName, dcName),
 				},
 			},
 		},

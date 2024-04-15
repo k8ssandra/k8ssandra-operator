@@ -9,6 +9,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -593,6 +594,41 @@ func TestInitContainerCustomResources(t *testing.T) {
 	assert.Equal(t, resource.MustParse("40Gi"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
 	assert.Equal(t, resource.MustParse("40"), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Cpu(), "expected main container cpu limit to be set")
 
+}
+
+func TestStandaloneMedusaDeploymentImageSettings(t *testing.T) {
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "secret",
+			},
+			BucketName: "bucket",
+		},
+		ContainerImage: &images.Image{
+			Registry:      "reg1",
+			Name:          "img1",
+			Repository:    "repo1",
+			Tag:           "tag1",
+			PullPolicy:    "Always",
+			PullSecretRef: &corev1.LocalObjectReference{Name: "main-secret"},
+		},
+	}
+
+	dcConfig := cassandra.DatacenterConfig{}
+
+	logger := logr.New(logr.Discard().GetSink())
+
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	assert.NoError(t, err)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
+
+	desiredMedusaStandalone := StandaloneMedusaDeployment(*medusaContainer, "dc1", dcConfig.SanitizedName(), "test", logger, medusaSpec.ContainerImage)
+
+	assert.Equal(t, "main-secret", desiredMedusaStandalone.Spec.Template.Spec.ImagePullSecrets[0].Name, "expected standalone container image pull secret to be set")
+	assert.Equal(t, "reg1/repo1/img1:tag1", desiredMedusaStandalone.Spec.Template.Spec.Containers[0].Image, "expected standalone container image to be set to reg1/repo1/img1:tag1")
+	assert.Equal(t, corev1.PullAlways, desiredMedusaStandalone.Spec.Template.Spec.Containers[0].ImagePullPolicy, "expected standalone pull policy to be set to Always")
 }
 
 func TestExternalSecretsFlag(t *testing.T) {
