@@ -132,7 +132,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 						return ctrl.Result{}, err
 					}
 					for _, origSecret := range sourceSecretsToMapToTargets {
-						deleteObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: getPrefixedSecretName(target.TargetPrefix, origSecret.Name), Namespace: target.Namespace}}
+						targetNamespace := utils.FirstNonEmptyString(target.Namespace, origSecret.Namespace)
+						deleteObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: getPrefixedSecretName(target.TargetPrefix, origSecret.Name), Namespace: targetNamespace}}
 						if origSecret.Namespace == target.Namespace && origSecret.Name == deleteObject.Name {
 							// Target is the same secret as the original - bail.
 							// TODO: Note that this will cause secrets to not be cleaned up if they are in a remote cluster.
