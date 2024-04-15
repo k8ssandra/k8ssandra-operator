@@ -81,8 +81,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					logger.Error(err, "Failed to delete the replicated secret, defined labels are invalid", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
 				}
-				// These are the secrets which are currently being replicated by THIS ReplicatedSecret in the local namespace.
-				secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+
+				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Namespace)
 				if err != nil {
 					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
@@ -183,7 +183,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	s.selectorMutex.Unlock()
 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
-	secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 	if err != nil {
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
 		return reconcile.Result{Requeue: true}, err
@@ -373,10 +373,11 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	return nil
 }
 
-func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector) ([]corev1.Secret, error) {
+func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector, namespace string) ([]corev1.Secret, error) {
 	secrets := &corev1.SecretList{}
 	listOption := client.ListOptions{
 		LabelSelector: selector,
+		Namespace:     namespace,
 	}
 	err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
 	if err != nil {
