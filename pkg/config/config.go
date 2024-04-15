@@ -3,7 +3,11 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type ReconcilerConfig struct {
@@ -14,6 +18,9 @@ type ReconcilerConfig struct {
 const (
 	RequeueDefaultDelayEnvVar = "REQUEUE_DEFAULT_DELAY"
 	RequeueLongDelayEnvVar    = "REQUEUE_LONG_DELAY"
+
+	DefaultRegistryEnvVar   = "DEFAULT_REGISTRY"
+	DefaultPullSecretEnvVar = "IMAGE_PULL_SECRETS"
 )
 
 // InitConfig is primarily a hook for integration tests. It provides a way to use shorter
@@ -45,6 +52,21 @@ func InitConfig() *ReconcilerConfig {
 		}
 	} else {
 		longDelay = 1 * time.Minute
+	}
+
+	if val, found := os.LookupEnv(DefaultRegistryEnvVar); found {
+		images.DefaultRegistry = val
+	}
+
+	if val, found := os.LookupEnv(DefaultPullSecretEnvVar); found {
+		if strings.Contains(val, ",") {
+			secrets := strings.Split(val, ",")
+			for _, s := range secrets {
+				images.DefaultPullSecretOverride = append(images.DefaultPullSecretOverride, corev1.LocalObjectReference{Name: s})
+			}
+		} else {
+			images.DefaultPullSecretOverride = append(images.DefaultPullSecretOverride, corev1.LocalObjectReference{Name: val})
+		}
 	}
 
 	return &ReconcilerConfig{

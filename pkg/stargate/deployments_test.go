@@ -744,7 +744,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -757,7 +757,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/stargateio/stargate-4_0:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -771,7 +771,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage3.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -787,7 +787,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage4.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/stargateio/stargate-4_0:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 	})
@@ -840,7 +840,7 @@ func testImages(t *testing.T) {
 		deployments := NewDeployments(stargate, dc, logger)
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
-		assert.Equal(t, defaultImage68.String(), deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/stargateio/stargate-dse-68:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
 		assert.Equal(t, "1", utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "DSE").Value)

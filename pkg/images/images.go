@@ -2,15 +2,20 @@ package images
 
 import (
 	"fmt"
+
 	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
-const (
-	DefaultRegistry          = "docker.io"
-	DockerOfficialRepository = "library"
+var (
+	DefaultRegistry           = "docker.io"
+	DefaultPullSecretOverride []corev1.LocalObjectReference
 )
+
+func init() {
+	DefaultPullSecretOverride = make([]corev1.LocalObjectReference, 0)
+}
 
 // Image uniquely describes a container image and also specifies how to pull it from its remote repository.
 // More info: https://kubernetes.io/docs/concepts/containers/images.
@@ -18,7 +23,6 @@ const (
 type Image struct {
 
 	// The Docker registry to use. Defaults to "docker.io", the official Docker Hub.
-	// +kubebuilder:default="docker.io"
 	// +optional
 	Registry string `json:"registry,omitempty"`
 
@@ -50,6 +54,9 @@ type Image struct {
 
 // String returns this image's Docker name. It does not validate that the returned name is a valid Docker name.
 func (in Image) String() string {
+	if in.Registry == "" {
+		return fmt.Sprintf("%v/%v:%v", in.Repository, in.Name, in.Tag)
+	}
 	return fmt.Sprintf("%v/%v/%v:%v", in.Registry, in.Repository, in.Name, in.Tag)
 }
 
@@ -85,6 +92,8 @@ func (in *Image) ApplyDefaults(defaults Image) *Image {
 // empty if none of the images requires a secret to be successfully pulled.
 func CollectPullSecrets(images ...*Image) []corev1.LocalObjectReference {
 	var secrets []corev1.LocalObjectReference
+	secrets = append(secrets, DefaultPullSecretOverride...)
+
 	var secretNames []string
 	for _, image := range images {
 		if image != nil && image.PullSecretRef != nil && !utils.SliceContains(secretNames, image.PullSecretRef.Name) {
