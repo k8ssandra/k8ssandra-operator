@@ -297,7 +297,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 					//Local cluster remote namespace
 					Namespace:    remoteNamespaceLocalCluster,
 					TargetPrefix: "targetprefix-",
-					DropLabels:   []string{"dropme"},
+					DropLabels:   []string{"dropme", "pickme"},
 					AddLabels: map[string]string{
 						"addMe": "true",
 					},
@@ -405,7 +405,7 @@ func wrongClusterIgnoreCopy(t *testing.T, ctx context.Context, f *framework.Fram
 	for _, s := range generatedSecrets {
 		require.Never(func() bool {
 			return verifySecretCopied(t, ctx, f.DataPlaneContexts[targetCopyToCluster], s, nil)
-		}, timeout, interval)
+		}, 3, interval)
 	}
 }
 
