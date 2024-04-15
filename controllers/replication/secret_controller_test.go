@@ -250,8 +250,8 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	remoteClient := testEnv.Clients[f.DataPlaneContexts[targetCopyToCluster]]
 	localClient := f.Client
 	localNamespaceLocalCluster := "ns-ll" + framework.CleanupForKubernetes(rand.String(9))
-	remoteNamespaceLocalCluster := "ns-rl" + framework.CleanupForKubernetes(rand.String(10))
-	remoteNamespaceRemoteCluster := "ns-rr" + framework.CleanupForKubernetes(rand.String(11))
+	remoteNamespaceLocalCluster := "ns-rl" + framework.CleanupForKubernetes(rand.String(9))
+	remoteNamespaceRemoteCluster := "ns-rr" + framework.CleanupForKubernetes(rand.String(9))
 
 	require.NoError(remoteClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: remoteNamespaceRemoteCluster}}))
 	require.NoError(localClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: localNamespaceLocalCluster}}))
@@ -333,7 +333,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 		if err := localClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceLocalCluster}, secret); err != nil {
 			return false
 		}
-		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == ""
+		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == "true"
 	}, timeout, interval)
 
 	t.Log("check that the secret was copied to remote namespace remote cluster")
@@ -342,7 +342,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 		if err := remoteClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceRemoteCluster}, secret); err != nil {
 			return false
 		}
-		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == ""
+		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == "true"
 	}, timeout, interval)
 
 	t.Log("delete the replicated secret")
