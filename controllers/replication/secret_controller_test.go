@@ -62,10 +62,10 @@ func TestSecretController(t *testing.T) {
 	defer cancel()
 
 	// Secret controller tests
-	// t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
-	// t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
-	// t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
-	// t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
+	t.Run("SingleClusterDoNothingToSecretsTest", testEnv.ControllerTest(ctx, wrongClusterIgnoreCopy))
+	t.Run("MultiClusterSyncSecretsTest", testEnv.ControllerTest(ctx, copySecretsFromClusterToCluster))
+	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
+	t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
 	t.Run("VerifySecretIsDeletedComplicated", testEnv.ControllerTest(ctx, verifySecretIsDeletedComplicated))
 }
 
