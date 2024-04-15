@@ -9007,7 +9007,6 @@ spec:
                               type: object
                               x-kubernetes-map-type: atomic
                             registry:
-                              default: docker.io
                               description: The Docker registry to use. Defaults to
                                 "docker.io", the official Docker Hub.
                               type: string
@@ -11158,7 +11157,6 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                                 registry:
-                                  default: docker.io
                                   description: The Docker registry to use. Defaults
                                     to "docker.io", the official Docker Hub.
                                   type: string
@@ -12293,7 +12291,6 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       registry:
-                                        default: docker.io
                                         description: The Docker registry to use. Defaults
                                           to "docker.io", the official Docker Hub.
                                         type: string
@@ -20845,7 +20842,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       registry:
-                        default: docker.io
                         description: The Docker registry to use. Defaults to "docker.io",
                           the official Docker Hub.
                         type: string
@@ -24606,7 +24602,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       registry:
-                        default: docker.io
                         description: The Docker registry to use. Defaults to "docker.io",
                           the official Docker Hub.
                         type: string
@@ -26274,7 +26269,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       registry:
-                        default: docker.io
                         description: The Docker registry to use. Defaults to "docker.io",
                           the official Docker Hub.
                         type: string
@@ -26362,7 +26356,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       registry:
-                        default: docker.io
                         description: The Docker registry to use. Defaults to "docker.io",
                           the official Docker Hub.
                         type: string
@@ -28562,7 +28555,6 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       registry:
-                        default: docker.io
                         description: The Docker registry to use. Defaults to "docker.io",
                           the official Docker Hub.
                         type: string
@@ -31878,7 +31870,6 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                   registry:
-                    default: docker.io
                     description: The Docker registry to use. Defaults to "docker.io",
                       the official Docker Hub.
                     type: string
@@ -31990,7 +31981,6 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                   registry:
-                    default: docker.io
                     description: The Docker registry to use. Defaults to "docker.io",
                       the official Docker Hub.
                     type: string
@@ -34576,7 +34566,6 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                   registry:
-                    default: docker.io
                     description: The Docker registry to use. Defaults to "docker.io",
                       the official Docker Hub.
                     type: string
@@ -35683,7 +35672,6 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                         registry:
-                          default: docker.io
                           description: The Docker registry to use. Defaults to "docker.io",
                             the official Docker Hub.
                           type: string

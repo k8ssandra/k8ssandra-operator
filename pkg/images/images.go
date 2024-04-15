@@ -23,7 +23,6 @@ func init() {
 type Image struct {
 
 	// The Docker registry to use. Defaults to "docker.io", the official Docker Hub.
-	// +kubebuilder:default="docker.io"
 	// +optional
 	Registry string `json:"registry,omitempty"`
 
