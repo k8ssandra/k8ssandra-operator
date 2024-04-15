@@ -82,7 +82,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					return reconcile.Result{}, err
 				}
 				// These are the secrets which are currently being replicated by THIS ReplicatedSecret in the local namespace.
-				secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 				if err != nil {
 					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
@@ -117,7 +117,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 							continue SecretsToCheck
 						}
 					}
-					logger.Info("Preparing to delete secret", "key", key)
+					logger.Info("Preparing to delete secrets downstream from", "key", key)
 					sourceSecretsToMapToTargets = append(sourceSecretsToMapToTargets, &sec)
 				}
 
@@ -137,7 +137,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 							"Cluster", target.K8sContextName)
 						err = remoteClient.Delete(ctx, deleteObject)
 						if err != nil && !errors.IsNotFound(err) {
-							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
+							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
 							return ctrl.Result{}, err
 						}
 					}
@@ -177,7 +177,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	s.selectorMutex.Unlock()
 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
-	secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
+	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 	if err != nil {
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
 		return reconcile.Result{Requeue: true}, err
@@ -367,10 +367,11 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	return nil
 }
 
-func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector) ([]corev1.Secret, error) {
+func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector, namespace string) ([]corev1.Secret, error) {
 	secrets := &corev1.SecretList{}
 	listOption := client.ListOptions{
 		LabelSelector: selector,
+		Namespace:     namespace,
 	}
 	err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
 	if err != nil {
