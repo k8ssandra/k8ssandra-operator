@@ -81,14 +81,14 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 					logger.Error(err, "Failed to delete the replicated secret, defined labels are invalid", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
 				}
-
+				// These are the secrets which are currently being replicated by THIS ReplicatedSecret in the local namespace.
 				secrets, err := s.fetchAllMatchingSecrets(ctx, selector)
 				if err != nil {
 					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
 					return reconcile.Result{}, err
 				}
 
-				secretsToDelete := make([]*corev1.Secret, 0, len(secrets))
+				sourceSecretsToMapToTargets := make([]*corev1.Secret, 0, len(secrets))
 
 				s.selectorMutex.RLock()
 
@@ -118,24 +118,24 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 						}
 					}
 					logger.Info("Preparing to delete secret", "key", key)
-					secretsToDelete = append(secretsToDelete, &sec)
+					sourceSecretsToMapToTargets = append(sourceSecretsToMapToTargets, &sec)
 				}
 
 				s.selectorMutex.RUnlock()
 
 				for _, target := range rsec.Spec.ReplicationTargets {
 					logger.Info("Deleting secrets for ReplicationTarget", "Target", target)
-
 					// Only replicate to clusters that are in the ReplicatedSecret's context
 					remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
 					if err != nil {
 						logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
 						return ctrl.Result{}, err
 					}
-					for _, deleteKey := range secretsToDelete {
-						logger.Info("Deleting secret", "key", client.ObjectKey{Namespace: deleteKey.Namespace, Name: deleteKey.Name},
+					for _, origSecret := range sourceSecretsToMapToTargets {
+						deleteObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: getPrefixedSecretName(target.TargetPrefix, origSecret.Name), Namespace: target.Namespace}}
+						logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
 							"Cluster", target.K8sContextName)
-						err = remoteClient.Delete(ctx, deleteKey)
+						err = remoteClient.Delete(ctx, deleteObject)
 						if err != nil && !errors.IsNotFound(err) {
 							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
 							return ctrl.Result{}, err
