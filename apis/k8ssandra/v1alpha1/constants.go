@@ -61,6 +61,9 @@ const (
 	DatacenterLabel = "k8ssandra.io/datacenter"
 	// Forces refresh of secrets which relate to roles and authn in Cassandra.
 	RefreshAnnotation = "k8ssandra.io/refresh"
+
+	// Annotation to indicate the purpose of a given resource.
+	PurposeAnnotation = "k8ssandra.io/purpose"
 )
 
 var (

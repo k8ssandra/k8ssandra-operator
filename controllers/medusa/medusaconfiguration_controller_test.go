@@ -69,7 +69,7 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 		updatedSecret := &corev1.Secret{}
 		require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: "medusa-bucket-key", Namespace: namespace}, updatedSecret))
 		//Ensure that the unique label has been added to the secret.
-		if updatedSecret.Labels[MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(updatedSecret.Name, updatedSecret.Namespace) {
+		if updatedSecret.Labels[api.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(updatedSecret.Name, updatedSecret.Namespace) {
 			return false
 		}
 		for _, condition := range updated.Status.Conditions {

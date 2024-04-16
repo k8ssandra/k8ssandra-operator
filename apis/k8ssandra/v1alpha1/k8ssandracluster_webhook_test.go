@@ -148,6 +148,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("StsNameTooLong", testStsNameTooLong)
 	t.Run("MedusaPrefixMissing", testMedusaPrefixMissing)
 	t.Run("InvalidDcName", testInvalidDcName)
+	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
 }
 
 func testContextValidation(t *testing.T) {
@@ -464,4 +465,21 @@ func testInvalidDcName(t *testing.T) {
 	err := k8sClient.Create(ctx, clusterWithBadDcName)
 	required.Error(err)
 	required.Contains(err.Error(), "invalid DC name")
+}
+
+func testMedusaNonLocalNamespace(t *testing.T) {
+	required := require.New(t)
+	badCluster := createMinimalClusterObj("medusaconfig-nonlocal", "ns")
+	badCluster.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Namespace: "nonlocal-ns",
+			Name:      "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "some-prefix",
+		},
+	}
+	err := badCluster.validateK8ssandraCluster()
+	required.Error(err)
+	required.Contains(err.Error(), "Medusa config must be namespace local")
 }

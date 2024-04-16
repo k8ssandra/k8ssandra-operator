@@ -20,6 +20,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	MedusaStorageSecretIdentifierLabel = "k8ssandra.io/medusa-storage-secret"
+)
+
 // MedusaConfigurationSpec defines the desired state of MedusaConfiguration
 type MedusaConfigurationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster

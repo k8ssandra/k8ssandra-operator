@@ -77,8 +77,7 @@ func medusaTemplateWithoutConfigRef() *medusaapi.MedusaClusterTemplate {
 
 func medusaTemplateWithConfigRef(configRefName, namespace string) *medusaapi.MedusaClusterTemplate {
 	configRef := &corev1.ObjectReference{
-		Name:      configRefName,
-		Namespace: namespace,
+		Name: configRefName,
 	}
 	return medusaTemplate(configRef)
 }
@@ -623,8 +622,7 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				MedusaConfigurationRef: corev1.ObjectReference{
-					Namespace: namespace,
-					Name:      originalConfigName,
+					Name: originalConfigName,
 				},
 				StorageProperties: medusaapi.Storage{
 					Prefix: "some-prefix",

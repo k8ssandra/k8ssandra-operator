@@ -56,6 +56,12 @@ type ReplicationTarget struct {
 	// as the original secret.
 	// +optional
 	TargetPrefix string `json:"targetPrefix,omitempty"`
+
+	// DropLabels defines the labels to be dropped from the secret before replication, this is sometimes neccessary to avoid infinite replication.
+	DropLabels []string `json:"dropLabels,omitempty"`
+
+	// AddLabels adds labels to the target secret.
+	AddLabels map[string]string `json:"addLabels,omitempty"`
 }
 
 // ReplicatedSecretStatus defines the observed state of ReplicatedSecret

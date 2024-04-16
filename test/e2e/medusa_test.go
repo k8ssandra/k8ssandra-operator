@@ -125,7 +125,7 @@ func checkBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.
 	require := require.New(t)
 
 	// work out the name of the replicated bucket key. should be "clusterName-<original-bucket-key-name>"
-	localBucketKeyName := fmt.Sprintf("%s-%s", kc.Name, globalBucketSecretName)
+	localBucketKeyName := "test-" + globalBucketSecretName
 
 	// Check that the bucket key has been replicated to the current namespace
 	bucketKey := &corev1.Secret{}
@@ -286,7 +286,7 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 		}
 
 		return !restore.Status.FinishTime.IsZero()
-	}, polling.medusaRestoreDone.timeout*2, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
+	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "restore didn't finish within timeout")
 
 	require.Eventually(func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
