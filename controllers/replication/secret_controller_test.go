@@ -333,7 +333,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 		if err := localClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceLocalCluster}, secret); err != nil {
 			return false
 		}
-		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == "true"
+		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == ""
 	}, timeout, interval)
 
 	t.Log("check that the secret was copied to remote namespace remote cluster")
