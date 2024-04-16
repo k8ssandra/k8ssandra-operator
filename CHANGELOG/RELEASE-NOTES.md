@@ -1,6 +1,6 @@
 # k8ssandra-operator - Release Notes
 
-## v1.14.0
+## v1.15.0
 
 ### Deprecation of non-namespace-local MedusaConfigRef
 
