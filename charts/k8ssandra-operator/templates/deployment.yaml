@@ -55,9 +55,15 @@ spec:
         - name: DEFAULT_REGISTRY
           value: {{ .Values.image.registryOverride | quote }}
         {{- end }}
-        {{- if .Values.imagePullSecrets}}
+        {{- with .Values.imagePullSecrets }}
         - name: IMAGE_PULL_SECRETS
-          value: {{ join "," .Values.imagePullSecrets | quote }}
+{{- $list := list -}}
+{{- range $k, $v := . -}}
+{{- range $kk, $vv := $v }}
+{{- $list = append $list $vv -}}
+{{- end -}}
+{{- end }}
+          value: {{ join "," $list }}
         {{- end }}
         image: {{ include "k8ssandra-common.flattenedImage" .Values.image }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
