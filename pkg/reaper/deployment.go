@@ -212,7 +212,6 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
-	initImage := reaper.Spec.InitContainerImage.ApplyDefaults(defaultImage)
 	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
 
 	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
@@ -236,7 +235,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 				},
 				Spec: corev1.PodSpec{
 					Affinity:       reaper.Spec.Affinity,
-					InitContainers: computeInitContainers(reaper, initImage, envVars, volumeMounts, initContainerResources),
+					InitContainers: computeInitContainers(reaper, mainImage, envVars, volumeMounts, initContainerResources),
 					Containers: []corev1.Container{
 						{
 							Name:            "reaper",
@@ -265,7 +264,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 					ServiceAccountName: reaper.Spec.ServiceAccountName,
 					Tolerations:        reaper.Spec.Tolerations,
 					SecurityContext:    reaper.Spec.PodSecurityContext,
-					ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage, initImage),
+					ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage),
 					Volumes:            volumes,
 				},
 			},
@@ -311,7 +310,7 @@ func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirem
 
 func computeInitContainers(
 	reaper *api.Reaper,
-	initImage *images.Image,
+	mainImage *images.Image,
 	envVars []corev1.EnvVar,
 	volumeMounts []corev1.VolumeMount,
 	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
@@ -320,8 +319,8 @@ func computeInitContainers(
 		initContainers = append(initContainers,
 			corev1.Container{
 				Name:            "reaper-schema-init",
-				Image:           initImage.String(),
-				ImagePullPolicy: initImage.PullPolicy,
+				Image:           mainImage.String(),
+				ImagePullPolicy: mainImage.PullPolicy,
 				SecurityContext: reaper.Spec.InitContainerSecurityContext,
 				Env:             envVars,
 				Args:            []string{"schema-migration"},
@@ -332,12 +331,8 @@ func computeInitContainers(
 	return initContainers
 }
 
-func computeImagePullSecrets(reaper *api.Reaper, mainImage, initImage *images.Image) []corev1.LocalObjectReference {
-	if reaper.Spec.SkipSchemaMigration {
-		return images.CollectPullSecrets(mainImage)
-	} else {
-		return images.CollectPullSecrets(mainImage, initImage)
-	}
+func computeImagePullSecrets(reaper *api.Reaper, mainImage *images.Image) []corev1.LocalObjectReference {
+	return images.CollectPullSecrets(mainImage)
 }
 
 func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {

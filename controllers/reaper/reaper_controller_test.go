@@ -194,10 +194,9 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	assert.Len(t, deployment.OwnerReferences, 1, "deployment owner reference not set")
 	assert.Equal(t, rpr.UID, deployment.OwnerReferences[0].UID, "deployment owner reference has wrong uid")
 
-	// init container should be a default image and thus should not contain the latest tag; pull policy should be the
-	// default one (IfNotPresent)
-	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:"+reaper.DefaultVersion, deployment.Spec.Template.Spec.InitContainers[0].Image)
-	assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
+	// init container should use the same image and tag as the main container.
+	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].Image, deployment.Spec.Template.Spec.InitContainers[0].Image)
+	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 
 	// main container is a custom image where the tag isn't specified, so it should default to latest, and pull policy
 	// to Always.
