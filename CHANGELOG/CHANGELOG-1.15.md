@@ -19,3 +19,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1253](https://github.com/k8ssandra/k8ssandra-operator/issues/1253) Medusa storage secrets are now labelled with a unique label.
 * [FEATURE] [#1260](https://github.com/k8ssandra/k8ssandra-operator/issues/1260) Update controller-gen to version 0.14.0.
 * [BUGFIX] [1287](https://github.com/k8ssandra/k8ssandra-operator/pull/1287) Use the same image for Reaper init and main containers
+* [ENHANCEMENT] [1288](https://github.com/k8ssandra/k8ssandra-operator/issues/1288) Allow disabling the CRD upgrader

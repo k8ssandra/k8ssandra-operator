@@ -100,6 +100,8 @@ client:
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io
   #proxy:
+# -- Allows managing CRD upgrades externally and fully disable the CRD upgrader job hook
+disableCrdUpgraderJob: false
 # -- Allows disabling the check for the presence of cert-manager.
 cass-operator:
   disableCertManagerCheck: false
