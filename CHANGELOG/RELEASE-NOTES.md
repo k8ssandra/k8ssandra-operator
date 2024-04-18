@@ -10,8 +10,6 @@ To update an existing cluster, or create a new one, ensure that the `namespace` 
 
 If this functionality is critical to your use case, please raise an issue on Github and describe why it is important to you.
 
-## v1.15.0
-
 ### Correction to ReplicatedSecrets namespacing behaviour
 
 Replicated secrets no longer look in all namespaces to Replicate secrets whose labels match the MatchLabels selector in the ReplicatedSecret.
