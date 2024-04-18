@@ -21,10 +21,8 @@ import (
 
 func TestNewDeployment(t *testing.T) {
 	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "latest", PullPolicy: corev1.PullAlways}
-	initImage := &images.Image{Repository: "test", Name: "reaper-init", Tag: "1.2.3", PullPolicy: corev1.PullNever}
 	reaper := newTestReaper()
 	reaper.Spec.ContainerImage = mainImage
-	reaper.Spec.InitContainerImage = initImage
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
 	reaper.Spec.ServiceAccountName = "reaper"
 	reaper.Spec.DatacenterAvailability = DatacenterAvailabilityAll
@@ -126,8 +124,8 @@ func TestNewDeployment(t *testing.T) {
 	assert.Len(t, podSpec.InitContainers, 1)
 
 	initContainer := podSpec.InitContainers[0]
-	assert.Equal(t, "docker.io/test/reaper-init:1.2.3", initContainer.Image)
-	assert.Equal(t, corev1.PullNever, initContainer.ImagePullPolicy)
+	assert.Equal(t, "docker.io/test/reaper:latest", initContainer.Image)
+	assert.Equal(t, corev1.PullAlways, initContainer.ImagePullPolicy)
 	assert.ElementsMatch(t, initContainer.Env, []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
@@ -342,7 +340,6 @@ func TestImages(t *testing.T) {
 	// Note: nil images are normally not possible due to the kubebuilder markers on the CRD spec
 	t.Run("nil images", func(t *testing.T) {
 		reaper := newTestReaper()
-		reaper.Spec.InitContainerImage = nil
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
@@ -354,11 +351,6 @@ func TestImages(t *testing.T) {
 	})
 	t.Run("default images", func(t *testing.T) {
 		reaper := newTestReaper()
-		reaper.Spec.InitContainerImage = &images.Image{
-			Repository: "thelastpickle",
-			Name:       "cassandra-reaper",
-			Tag:        DefaultVersion,
-		}
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
@@ -376,7 +368,6 @@ func TestImages(t *testing.T) {
 			Tag:           "latest",
 			PullSecretRef: &corev1.LocalObjectReference{Name: "my-secret"},
 		}
-		reaper.Spec.InitContainerImage = image
 		reaper.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)

@@ -26325,6 +26325,7 @@ spec:
                       repository: thelastpickle
                       tag: 3.5.0
                     description: |-
+                      Deprecated: The main container image will be used for the init container as well.
                       The image to use for the Reaper pod init container (that performs schema migrations).
                       The default is "thelastpickle/cassandra-reaper:3.5.0".
                       TODO: update with real release version.
@@ -31950,6 +31951,7 @@ spec:
                   repository: thelastpickle
                   tag: 3.5.0
                 description: |-
+                  Deprecated: The main container image will be used for the init container as well.
                   The image to use for the Reaper pod init container (that performs schema migrations).
                   The default is "thelastpickle/cassandra-reaper:3.5.0".
                   TODO: update with real release version.

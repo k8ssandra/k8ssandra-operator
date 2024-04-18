@@ -73,6 +73,7 @@ type ReaperTemplate struct {
 	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"3.5.0"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
+	// Deprecated: The main container image will be used for the init container as well.
 	// The image to use for the Reaper pod init container (that performs schema migrations).
 	// The default is "thelastpickle/cassandra-reaper:3.5.0".
 	// +optional
