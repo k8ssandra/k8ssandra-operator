@@ -986,10 +986,10 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.5.0
+                  tag: 3.6.0
                 description: |-
                   The image to use for the Reaper pod main container.
-                  The default is "thelastpickle/cassandra-reaper:3.5.0".
+                  The default is "thelastpickle/cassandra-reaper:3.6.0".
                   TODO: update with real release version.
                 properties:
                   name:
@@ -1094,14 +1094,8 @@ spec:
                     x-kubernetes-map-type: atomic
                 type: object
               initContainerImage:
-                default:
-                  name: cassandra-reaper
-                  repository: thelastpickle
-                  tag: 3.5.0
-                description: |-
-                  The image to use for the Reaper pod init container (that performs schema migrations).
-                  The default is "thelastpickle/cassandra-reaper:3.5.0".
-                  TODO: update with real release version.
+                description: 'Deprecated: The main container image will be used for
+                  the init container as well.'
                 properties:
                   name:
                     description: The image name to use.
