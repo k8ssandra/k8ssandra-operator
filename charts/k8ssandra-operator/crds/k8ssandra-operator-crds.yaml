@@ -26109,6 +26109,12 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  purgeBackups:
+                    default: true
+                    description: |-
+                      PurgeBackups toggles if the medusa backups should be purged nightly or not
+                      Defaults to true.
+                    type: boolean
                   readinessProbe:
                     description: Define the readiness probe settings to use for the
                       Medusa containers.
