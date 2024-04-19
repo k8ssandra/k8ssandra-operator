@@ -155,6 +155,42 @@ spec:
     ...
 ```
 
+## Using IRSA (IAM Roles for Service Accounts) to Attribute Permissions to Medusa (AWS Only)
+
+Simply use `role-based` as the `credentialsType`.
+
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+spec:
+  cassandra:
+    ...
+  medusa:
+    medusaConfigurationRef:
+      name: medusaconfiguration-s3
+    storageProperties:
+      prefix: demo
+      credentialsType: role-based
+      storageSecretRef:
+        name: ""
+    ...
+```
+
+To make this work, you must ensure the following steps are completed:
+
+> While Medusa is running in standalone mode, it uses the default service account from the namespace. Make sure this service account has the necessary role annotation.
+> This means that the service account should have the necessary permissions to write to the backup bucket. Every pod using the default service account will inherit the same permissions.
+
+- Ensure that Medusa is running with a specific Kubernetes service account.
+- This Kubernetes service account should be annotated with the IAM Role ARN annotation for IRSA.
+- This IAM role should have the permissions to write to the backup bucket.
+- This role should have a trusted policy that allows it to assume a role with web identity, with a condition based on the namespace and Kubernetes service account name (refer to the AWS Documentation).
+- Your Kubernetes cluster should have a correctly configured IAM OIDC provider. More information can be found [here](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html).
+- This OIDC provider should be used in the trusted policy.
+
 ## Creating a Backup
 
 To perform a backup of a Cassandra datacenter, create the following custom resource in the same namespace and Kubernetes cluster as the CassandraDatacenter resource, `cassandradatacenter/dc1` in this case :
