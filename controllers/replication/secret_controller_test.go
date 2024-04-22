@@ -67,6 +67,7 @@ func TestSecretController(t *testing.T) {
 	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
 	t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
 	t.Run("VerifySecretIsDeletedComplicated", testEnv.ControllerTest(ctx, verifySecretIsDeletedComplicated))
+	t.Run("GuardInfiniteReplication", testEnv.ControllerTest(ctx, guardInfiniteReplication))
 }
 
 // copySecretsFromClusterToCluster Tests:
@@ -680,6 +681,34 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 			return false
 		}
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
+	}, timeout*3, interval)
+
+}
+
+func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	rsec := generateReplicatedSecret(f.DataPlaneContexts[0], namespace)
+	rsec.Spec.ReplicationTargets[0].TargetPrefix = "prefix-"
+	rsec.Spec.ReplicationTargets[0].K8sContextName = ""
+	rsec.Spec.ReplicationTargets[0].Namespace = ""
+	err := f.Client.Create(ctx, rsec)
+	require.NoError(err, "failed to create replicated secret to main cluster")
+
+	generatedSecrets := generateSecrets(namespace)
+	for _, s := range generatedSecrets {
+		err := f.Client.Create(ctx, s)
+		require.NoError(err, "failed to create secret to main cluster")
+	}
+
+	t.Log("check that the secret was not copied into same name-namespace")
+	require.Never(func() bool {
+		localSecret := &corev1.Secret{}
+		if err := f.Client.Get(ctx, types.NamespacedName{Name: "prefix-test-secret-first", Namespace: namespace}, localSecret); err != nil {
+			if errors.IsNotFound(err) {
+				return false
+			}
+		}
+		return true
 	}, timeout*3, interval)
 
 }

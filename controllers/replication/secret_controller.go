@@ -470,15 +470,16 @@ func contains(s string, arr []string) bool {
 }
 
 func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
+	out := originalLabels
 	for k, v := range target.AddLabels {
-		originalLabels[k] = v
+		out[k] = v
 	}
-	for key := range originalLabels {
+	for key := range out {
 		if contains(key, target.DropLabels) {
-			delete(originalLabels, key)
+			delete(out, key)
 		}
 	}
-	return originalLabels
+	return out
 }
 
 func wouldBeInfinite(origin corev1.Secret, rsec api.ReplicatedSecret, target api.ReplicationTarget) bool {
