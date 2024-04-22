@@ -461,7 +461,10 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 }
 
 func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
-	out := originalLabels
+	out := make(map[string]string)
+	for k, v := range originalLabels {
+		out[k] = v
+	}
 	for k, v := range target.AddLabels {
 		out[k] = v
 	}
