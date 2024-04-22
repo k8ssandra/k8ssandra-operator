@@ -100,6 +100,15 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		cassandra.HandleDeprecatedJvmOptions(&dcConfig.CassandraConfig.JvmOptions)
 		cassandra.EnableSmartTokenAllocation(dcConfig)
 
+		// If the user has specified external datacenters, we should skip user creation
+		// otherwise cass-operator will attempt to create users although the replication of system_auth
+		// hasn't been updated to include the new DC.
+		if len(kc.Spec.ExternalDatacenters) > 0 {
+			dcConfig.Meta.Annotations = map[string]string{
+				"cassandra.datastax.com/skip-user-creation": "true",
+			}
+		}
+
 		if err := cassandra.ValidateDatacenterConfig(dcConfig); err != nil {
 			return nil, err
 		}
