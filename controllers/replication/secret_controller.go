@@ -225,6 +225,11 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Iterate all the matching secrets
 		for i := range secrets {
 			sec := &secrets[i]
+			// If the secret would be created in the same target namespace with the same labels, skip and warn.
+			if wouldBeInfinite(*sec, *rsec, target) {
+				logger.Info("warning: secret would be infinite, bailing", "Secret", sec.Name, "TargetContext", target)
+				continue TargetSecrets
+			}
 			namespace := ""
 			if target.Namespace == "" {
 				namespace = sec.Namespace
@@ -474,4 +479,18 @@ func calculateTargetLabels(originalLabels map[string]string, target api.Replicat
 		}
 	}
 	return originalLabels
+}
+
+func wouldBeInfinite(origin corev1.Secret, rsec api.ReplicatedSecret, target api.ReplicationTarget) bool {
+	computedLabels := calculateTargetLabels(origin.Labels, target)
+	for k, v := range rsec.Spec.Selector.MatchLabels {
+		if computedLabels[k] != v {
+			return false
+		}
+	}
+	if (origin.Namespace == target.Namespace || target.Namespace == "") && target.K8sContextName == "" {
+		// This will still be infinite if the target has a non-empty k8scontext which points back to the origin cluster.
+		return true
+	}
+	return false
 }
