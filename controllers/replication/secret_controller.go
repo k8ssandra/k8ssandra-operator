@@ -460,24 +460,13 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 	return fmt.Sprintf("%s%s", prefix, secretName)
 }
 
-func contains(s string, arr []string) bool {
-	for _, i := range arr {
-		if i == s {
-			return true
-		}
-	}
-	return false
-}
-
 func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
 	out := originalLabels
 	for k, v := range target.AddLabels {
 		out[k] = v
 	}
-	for key := range out {
-		if contains(key, target.DropLabels) {
-			delete(out, key)
-		}
+	for _, key := range target.DropLabels {
+		delete(out, key)
 	}
 	return out
 }
