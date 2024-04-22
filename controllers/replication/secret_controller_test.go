@@ -709,6 +709,6 @@ func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Fr
 			}
 		}
 		return true
-	}, timeout*3, interval)
+	}, timeout/2, interval)
 
 }
