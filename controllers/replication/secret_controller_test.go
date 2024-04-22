@@ -339,9 +339,6 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 
 	t.Log("check that the secret was copied to remote cluster remote namespace")
 	require.Eventually(func() bool {
-		// debug
-		origSecret := &corev1.Secret{}
-		localClient.Get(ctx, types.NamespacedName{Name: "original-secret", Namespace: localNamespaceLocalCluster}, origSecret)
 		secret := &corev1.Secret{}
 		if err := remoteClient.Get(ctx, types.NamespacedName{Name: "remoteremote-original-secret", Namespace: remoteNamespaceRemoteCluster}, secret); err != nil {
 			return false
