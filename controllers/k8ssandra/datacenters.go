@@ -30,6 +30,10 @@ const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
 )
 
+func AllowUpdate(kc *api.K8ssandraCluster) bool {
+	return kc.GenerationChanged() || metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation)
+}
+
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
 	kcKey := utils.GetKey(kc)
 
@@ -143,7 +147,19 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc)
 
-			if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
+			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
+				// We're not allowed to update, but need to
+				patch := client.MergeFrom(kc.DeepCopy())
+				now := metav1.Now()
+				kc.Status.SetCondition(api.K8ssandraClusterCondition{
+					Type:               api.ClusterRequiresUpdate,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: &now, // Replace with ptr.To() once we have updated Kubernetes dependencies
+				})
+				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
+					return result.Error(fmt.Errorf("failed to set %s annotation: %v", api.AutomatedUpdateAnnotation, err)), actualDcs
+				}
+			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				dcLogger.Info("Updating datacenter")
 
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {

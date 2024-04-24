@@ -106,9 +106,16 @@ type K8ssandraClusterStatus struct {
 
 	// +kubebuilder:default=None
 	Error string `json:"error,omitempty"`
+
+	// ObservedGeneration is the last observed generation of the K8ssandraCluster.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 type K8ssandraClusterConditionType string
+
+const (
+	ClusterRequiresUpdate K8ssandraClusterConditionType = "RequiresUpdate"
+)
 
 type DecommissionProgress string
 
@@ -547,4 +554,8 @@ func (sd *ServerDistribution) IsDse() bool {
 // constraints within k8s
 func (kc *K8ssandraCluster) GetClusterIdHash() string {
 	return utils.HashNameNamespace(kc.Name, kc.Namespace)
+}
+
+func (k *K8ssandraCluster) GenerationChanged() bool {
+	return k.Status.ObservedGeneration < k.Generation
 }
