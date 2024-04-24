@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -224,7 +225,7 @@ func (r *MedusaRestoreJobReconciler) applyUpdatesAndRequeue(ctx context.Context,
 // with the restore container, have been pushed down to the StatefulSets. Return true if
 // the changes have been applied.
 func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.Context, req *medusa.RestoreRequest) (bool, error) {
-	if updated := cassandra.DatacenterUpdatedAfter(req.RestoreJob.Status.DatacenterStopped.Time, req.Datacenter); !updated {
+	if updated := cassandra.DatacenterUpdatedAfter(req.RestoreJob.Status.DatacenterStopped.Time.Add(-1*time.Second), req.Datacenter); !updated {
 		return false, nil
 	}
 

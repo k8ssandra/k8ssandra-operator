@@ -230,6 +230,10 @@ func TestOperator(t *testing.T) {
 		additionalNamespaces: []string{"dc2"},
 		sutNamespace:         "k8ssandra-operator",
 	}))
+	t.Run("AddExternalDcToCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: addExternalDcToCluster,
+		fixture:  framework.NewTestFixture("add-external-dc", controlPlane),
+	}))
 	t.Run("RemoveDcFromCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-dc", controlPlane),
@@ -1378,6 +1382,43 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 			return strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc1Key), dcSize)) && strings.Contains(output, fmt.Sprintf("'%s': '%d'", DcName(t, f, dc2Key), dcSize))
 		}, 5*time.Minute, 15*time.Second, "failed to verify replication updated for keyspace %s", ks)
 	}
+}
+
+func addExternalDcToCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that dc1 is ready")
+
+	dc1Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc1",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc1Key, f)
+
+	t.Log("add dc2 to cluster")
+	// Get the IP address of the first Cassandra pod
+	pods, err := f.GetCassandraDatacenterPods(t, ctx, dc1Key, dc1Key.NamespacedName.Name)
+	require.NoError(err, "failed to get Cassandra pods")
+
+	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+	err = f.CreateExternalDc(namespace, pods[0].Status.PodIP)
+	require.NoError(err, "failed to create external DC")
+
+	kc := &api.K8ssandraCluster{}
+	err = f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster %s in namespace %s", kcKey.Name, namespace)
+
+	dc2Key := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "dc2",
+		},
+	}
+	checkDatacenterReady(t, ctx, dc2Key, f)
 }
 
 func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
