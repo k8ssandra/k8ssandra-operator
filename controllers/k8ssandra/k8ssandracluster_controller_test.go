@@ -121,6 +121,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("PerNodeConfiguration", testEnv.ControllerTest(ctx, perNodeConfiguration))
 	t.Run("CreateSingleDcClusterWithVector", testEnv.ControllerTest(ctx, createSingleDcClusterWithVector))
 	t.Run("createSingleDcClusterWithMetricsAgent", testEnv.ControllerTest(ctx, createSingleDcClusterWithMetricsAgent))
+	t.Run("GenerationCheck", testEnv.ControllerTest(ctx, testGenerationCheck))
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
@@ -166,7 +167,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -393,7 +394,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -558,7 +559,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -708,7 +709,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8sandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -810,7 +811,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -1049,7 +1050,7 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
@@ -1208,7 +1209,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -1573,7 +1574,7 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -1798,7 +1799,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -1952,7 +1953,7 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 	t.Log("check that dc1 was created")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -2143,8 +2144,9 @@ func systemReplicationAnnotationIsSet(t *testing.T, f *framework.Framework, ctx 
 	}
 }
 
-func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, key client.ObjectKey) {
+func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	t.Log("check finalizer added to K8ssandraCluster")
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 
 	assert.Eventually(t, func() bool {
 		kc := &api.K8ssandraCluster{}
@@ -2154,6 +2156,20 @@ func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framew
 		}
 		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
 	}, timeout, interval, "failed to verify that finalizer was added")
+}
+
+func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	t.Log("check K8ssandraCluster reconciliation finished")
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+	}, timeout, interval, "cluster hasn't finished reconciliation")
 }
 
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
@@ -2257,7 +2273,7 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -2370,7 +2386,7 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -2487,7 +2503,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -2598,7 +2614,7 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 
@@ -2632,4 +2648,64 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
+func testGenerationCheck(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				ClusterName: "Not K8s_Compliant",
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[1],
+						Size:       1,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.14",
+							StorageConfig: &cassdcapi.StorageConfig{
+								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
+									StorageClassName: &defaultStorageClass,
+								},
+							},
+							PodSecurityContext: &corev1.PodSecurityContext{
+								RunAsUser: pointer.Int64(999),
+							},
+							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
+								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+
+	verifyFinalizerAdded(ctx, t, f, kc)
+
+	verifySuperuserSecretCreated(ctx, t, f, kc)
+
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
+
+	t.Log("check that the datacenter was created")
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[1]}
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("update datacenter status to ready")
+	err = f.SetDatacenterStatusReady(ctx, dcKey)
+	require.NoError(err, "failed to set datacenter status ready")
+
+	verifyClusterReconcileFinished(ctx, t, f, kc)
 }

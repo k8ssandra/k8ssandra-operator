@@ -33,6 +33,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -154,6 +155,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
+	if res := updateStatus(ctx, r.Client, kc); res.Completed() {
+		return res.Output()
+	}
+
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 
 	return result.Done().Output()
@@ -176,6 +181,24 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 			return recResult
 		}
 	}
+	return result.Continue()
+}
+
+func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster) result.ReconcileResult {
+	// Remove the annotation
+
+	if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
+		delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
+		if err := r.Update(ctx, kc); err != nil {
+			return result.Error(err)
+		}
+	}
+
+	kc.Status.ObservedGeneration = kc.Generation
+	if err := r.Status().Update(ctx, kc); err != nil {
+		return result.Error(err)
+	}
+
 	return result.Continue()
 }
 

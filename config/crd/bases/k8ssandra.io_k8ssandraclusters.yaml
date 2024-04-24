@@ -30963,6 +30963,11 @@ spec:
               error:
                 default: None
                 type: string
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation of
+                  the K8ssandraCluster.
+                format: int64
+                type: integer
             type: object
         type: object
     served: true

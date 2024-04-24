@@ -55,12 +55,11 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err := f.Client.Create(ctx, kc)
 	require.NoError(t, err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
-	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifySecretNotCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.SanitizedName()))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
@@ -165,12 +164,11 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err := f.Client.Create(ctx, kc)
 	require.NoError(t, err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
-	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifySecretCreated(ctx, t, f, kc.Namespace, reaper.DefaultUserSecretName(kc.Name))
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
@@ -285,12 +283,11 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	err := f.Client.Create(ctx, kc)
 	require.NoError(t, err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
-	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretNotCreated(ctx, t, f, kc)
 
 	// verify not created
@@ -416,10 +413,9 @@ func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: kc.Name}}
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 
-	verifyFinalizerAdded(ctx, t, f, kcKey.NamespacedName)
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
