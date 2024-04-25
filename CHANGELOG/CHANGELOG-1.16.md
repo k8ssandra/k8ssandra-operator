@@ -17,5 +17,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] Update cassandra-medusa to 0.21.0
 * [CHANGE] []() Update cass-operator to v1.20.0
+* [BUGFIX] [#1299](https://github.com/k8ssandra/k8ssandra-operator/issues/1299) CronJob for medusa purge not in the correct namespace
 * [BUGFIX] [#1272](https://github.com/k8ssandra/k8ssandra-operator/issues/1272) Prevent cass-operator from creating users when an external DC is referenced to allow migration through expansion
 * [ENHANCEMENT] [#1066](https://github.com/k8ssandra/k8ssandra-operator/issues/1066) Remove the medusa standalone pod as it is not needed anymore
