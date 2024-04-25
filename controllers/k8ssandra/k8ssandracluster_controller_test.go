@@ -2172,6 +2172,19 @@ func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framew
 	}, timeout, interval, "cluster hasn't finished reconciliation")
 }
 
+func waitForConditionStatus(ctx context.Context, t *testing.T, f *framework.Framework, conditionType api.K8ssandraClusterConditionType, status corev1.ConditionStatus, kc *api.K8ssandraCluster) {
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		kcCondition := kc.Status.GetConditionStatus(conditionType)
+		return kcCondition == status
+	}, timeout, interval, "cluster didn't reach the expected condition status")
+}
+
 func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	t.Log("check ReplicatedSecret reconciled")
 
@@ -2708,4 +2721,28 @@ func testGenerationCheck(t *testing.T, ctx context.Context, f *framework.Framewo
 	require.NoError(err, "failed to set datacenter status ready")
 
 	verifyClusterReconcileFinished(ctx, t, f, kc)
+
+	// Modify the CassandraDatacenter hash to be some gibberish
+	dc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dcKey, dc), "failed to get CassandraDatacenter dc1")
+	metav1.SetMetaDataAnnotation(&dc.ObjectMeta, api.ResourceHashAnnotation, "gibberish")
+	require.NoError(f.Update(ctx, dcKey, dc), "failed to update CassandraDatacenter dc1")
+
+	waitForConditionStatus(ctx, t, f, api.ClusterRequiresUpdate, corev1.ConditionTrue, kc)
+	verifyClusterReconcileFinished(ctx, t, f, kc)
+
+	require.NoError(f.Get(ctx, dcKey, dc), "failed to get CassandraDatacenter dc1")
+	require.Equal("gibberish", dc.Annotations[api.ResourceHashAnnotation])
+
+	t.Log("Modifying K8ssandraCluster to allow upgrade")
+	// Modify K8ssandraCluster to allow upgrade
+	kcKey := client.ObjectKey{Namespace: namespace, Name: kc.Name}
+	require.NoError(f.Client.Get(ctx, kcKey, kc), "failed to get K8ssandraCluster")
+	metav1.SetMetaDataAnnotation(&kc.ObjectMeta, api.AutomatedUpdateAnnotation, "once")
+	require.NoError(f.Client.Update(ctx, kc), "failed to update K8ssandraCluster")
+	// Wait for process to start..
+	waitForConditionStatus(ctx, t, f, api.ClusterRequiresUpdate, corev1.ConditionFalse, kc)
+
+	require.NoError(f.Get(ctx, dcKey, dc), "failed to get CassandraDatacenter dc1")
+	require.NotEqual("gibberish", dc.Annotations[api.ResourceHashAnnotation])
 }

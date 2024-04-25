@@ -19,6 +19,7 @@ package k8ssandra
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
@@ -95,7 +96,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if kc.GetDeletionTimestamp() == nil {
 		if err != nil {
 			kc.Status.Error = err.Error()
-			r.Recorder.Event(kc, v1.EventTypeWarning, "Reconcile Error", err.Error())
+			r.Recorder.Event(kc, corev1.EventTypeWarning, "Reconcile Error", err.Error())
 		} else {
 			kc.Status.Error = "None"
 		}
@@ -185,13 +186,16 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 }
 
 func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster) result.ReconcileResult {
-	// Remove the annotation
-
-	if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
-		delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
-		if err := r.Update(ctx, kc); err != nil {
-			return result.Error(err)
+	if AllowUpdate(kc) {
+		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
+			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
+				delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
+				if err := r.Update(ctx, kc); err != nil {
+					return result.Error(err)
+				}
+			}
 		}
+		kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
 	}
 
 	kc.Status.ObservedGeneration = kc.Generation
@@ -205,7 +209,9 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
+		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
+
+		// We need also annotation changes due to autoupdate-spec
 
 	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)

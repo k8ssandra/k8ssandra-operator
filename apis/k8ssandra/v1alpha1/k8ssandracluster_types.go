@@ -518,6 +518,15 @@ func (s *K8ssandraClusterStatus) GetConditionStatus(conditionType K8ssandraClust
 	return corev1.ConditionUnknown
 }
 
+func (s *K8ssandraClusterStatus) SetConditionStatus(conditionType K8ssandraClusterConditionType, status corev1.ConditionStatus) {
+	now := metav1.Now()
+	s.SetCondition(K8ssandraClusterCondition{
+		Type:               conditionType,
+		Status:             status,
+		LastTransitionTime: &now,
+	})
+}
+
 func (s *K8ssandraClusterStatus) SetCondition(condition K8ssandraClusterCondition) {
 	for i, c := range s.Conditions {
 		if c.Type == condition.Type {
