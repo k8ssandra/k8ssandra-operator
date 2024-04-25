@@ -44,6 +44,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 )
@@ -942,19 +943,37 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require := require.New(t)
 
 	t.Log("check that the K8ssandraCluster was created")
+	kcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	err := f.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey.NamespacedName, dcKey.Name)
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dcKey, cassdc))
+	dcHash := cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
 	dcPrefix := DcPrefix(t, f, dcKey)
 
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
 	require.NoError(err, "failed to upgrade to latest version")
+
+	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
+	require.NoError(f.Get(ctx, dcKey, cassdc))
+	newDcHash := cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
+
+	require.Equal(dcHash, newDcHash, "CassandraDatacenter resource hash changed after upgrade")
+	require.NoError(f.Get(ctx, kcKey, k8ssandra))
+
+	require.Equal(corev1.ConditionTrue, k8ssandra.Status.GetConditionStatus(api.ClusterRequiresUpdate))
+	metav1.SetMetaDataAnnotation(&k8ssandra.ObjectMeta, api.AutomatedUpdateAnnotation, "always")
+	require.NoError(f.Update(ctx, kcKey, k8ssandra))
+	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
+	require.NoError(f.Get(ctx, dcKey, cassdc))
+	newDcHash = cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
+	require.NotEqual(dcHash, newDcHash, "CassandraDatacenter resource hash hasn't changed after upgrade")
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -2250,4 +2269,18 @@ func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyDcLevel"] == "anAnnotationValueDCLevel")
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyClusterLevel"] == "anAnnotationValueClusterLevel")
 	return nil
+}
+
+func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	t.Log("check K8ssandraCluster reconciliation finished")
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+
+	assert.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "cluster hasn't finished reconciliation")
 }
