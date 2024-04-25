@@ -148,20 +148,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			r.setStatusForDatacenter(kc, actualDc)
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
+				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
 				// We're not allowed to update, but need to
 				patch := client.MergeFrom(kc.DeepCopy())
-				now := metav1.Now()
-				kc.Status.SetCondition(api.K8ssandraClusterCondition{
-					Type:               api.ClusterRequiresUpdate,
-					Status:             corev1.ConditionTrue,
-					LastTransitionTime: &now, // Replace with ptr.To() once we have updated Kubernetes dependencies
-				})
+				kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
 				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
 					return result.Error(fmt.Errorf("failed to set %s annotation: %v", api.AutomatedUpdateAnnotation, err)), actualDcs
 				}
 			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
-				dcLogger.Info("Updating datacenter")
-
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
 					// If actualDc is created with SuperuserSecretName, it can't be changed anymore. We should reject all changes coming from K8ssandraCluster
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
@@ -254,12 +248,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	// distinguish whether we are deploying a CassandraDatacenter as part of a new cluster
 	// or as part of an existing cluster.
 	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionUnknown {
-		now := metav1.Now()
-		kc.Status.SetCondition(api.K8ssandraClusterCondition{
-			Type:               api.CassandraInitialized,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: &now,
-		})
+		kc.Status.SetConditionStatus(api.CassandraInitialized, corev1.ConditionTrue)
 	}
 
 	return result.Continue(), actualDcs
