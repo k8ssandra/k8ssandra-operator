@@ -486,7 +486,7 @@ func wouldBeInfinite(origin corev1.Secret, rsec api.ReplicatedSecret, target api
 		return true, err
 	}
 	if selector.Matches(computedLabels) {
-		if (origin.Namespace == target.Namespace || target.Namespace == "") && target.K8sContextName == "" {
+		if (origin.Namespace == target.Namespace || target.Namespace == "") && target.K8sContextName == "" && target.TargetPrefix != "" { // TargetPrefix is included here because the initial .Get in the main reconciliation body will return the original secret if no target prefix is specified, thereby bailing from the secret creation process.
 			// This will still be infinite if the target has a non-empty k8scontext which points back to the origin cluster.
 			return true, nil
 		}
