@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -54,6 +55,8 @@ import (
 
 const (
 	k8ssandraTaskFinalizer = "control.k8ssandra.io/finalizer"
+	InternalTaskAnnotation = "control.k8ssandra.io/internal-command"
+	internalRefreshCommand = "refresh"
 	defaultTTL             = time.Duration(86400) * time.Second
 )
 
@@ -148,6 +151,13 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !kcExists {
 		return r.reportInvalidSpec(ctx, kTask, "unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
+
+	if kTask.Spec.Template.Jobs[0].Command == "refresh" {
+		if !metav1.HasAnnotation(kc.ObjectMeta, InternalTaskAnnotation) {
+			return r.executeRefreshTask(ctx, kTask, kc)
+		}
+	}
+
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
 		return r.reportInvalidSpec(ctx, kTask, err.Error())
 	} else {
@@ -200,6 +210,92 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 }
 
+func (r *K8ssandraTaskReconciler) executeRefreshTask(ctx context.Context, kTask *api.K8ssandraTask, kc *k8capi.K8ssandraCluster) (ctrl.Result, error) {
+	if kTask.Status.StartTime == nil {
+		patch := client.MergeFrom(kTask.DeepCopy())
+		now := metav1.Now()
+		kTask.Status.StartTime = &now
+		kTask.Status.Active = 1
+		kTask.SetCondition(cassapi.JobRunning, metav1.ConditionTrue)
+		if err := r.Status().Patch(ctx, kTask, patch); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// First verify if K8ssandraCluster itself has "UpdateRequired" and process it until it no longer has it.
+	if kc.Status.GetConditionStatus(k8capi.ClusterRequiresUpdate) == corev1.ConditionTrue {
+		if metav1.HasAnnotation(kc.ObjectMeta, k8capi.AutomatedUpdateAnnotation) {
+			return ctrl.Result{Requeue: true}, nil
+		} else {
+			patch := client.MergeFrom(kc.DeepCopy())
+			metav1.SetMetaDataAnnotation(&kc.ObjectMeta, k8capi.AutomatedUpdateAnnotation, string(k8capi.AllowUpdateOnce))
+			if err := r.Patch(ctx, kc, patch); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	internalTask := &api.K8ssandraTask{}
+	err := r.Get(ctx, types.NamespacedName{Namespace: kTask.Namespace, Name: kTask.Name + "-refresh-internal"}, internalTask)
+	// If task wasn't found, create it and if task is still running, requeue
+	if k8serrors.IsNotFound(err) {
+		// Then verify that no CassandraDatacenter has "UpdateRequired" and if they do, create new tasks to execute them
+		dcs, err := r.datacenters(ctx, kc)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		dcsRequiringUpdate := make([]string, 0, len(dcs))
+		for _, dc := range dcs {
+			if dc.Status.GetConditionStatus("RequiresUpdate") == corev1.ConditionTrue { // TODO Update this to cassdcapi const when cass-operator is updatedß
+				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.DatacenterName()) // TODO Ís this the correct reference?
+			}
+		}
+
+		if len(dcsRequiringUpdate) > 0 {
+			// Delegate work to the task controller for Datacenter operations
+			task := &api.K8ssandraTask{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kTask.Namespace,
+					Name:      kTask.Name + "-refresh-internal",
+					Annotations: map[string]string{
+						InternalTaskAnnotation: internalRefreshCommand,
+					},
+				},
+				Spec: api.K8ssandraTaskSpec{
+					Datacenters: make([]string, len(dcsRequiringUpdate)),
+					Template:    kTask.Spec.Template,
+				},
+			}
+
+			if err := r.Create(ctx, task); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else if err != nil {
+		return ctrl.Result{}, err
+	} else {
+		// Verify if the job is completed
+		if internalTask.Status.CompletionTime.IsZero() {
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	patch := client.MergeFrom(kTask.DeepCopy())
+	now := metav1.Now()
+	kTask.Status.CompletionTime = &now
+	kTask.Status.Succeeded = 1
+	kTask.Status.Active = 0
+	kTask.SetCondition(cassapi.JobComplete, metav1.ConditionTrue)
+	kTask.SetCondition(cassapi.JobRunning, metav1.ConditionFalse)
+	if err := r.Status().Patch(ctx, kTask, patch); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
 func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.ObjectKey) (*k8capi.K8ssandraCluster, bool, error) {
 	kc := &k8capi.K8ssandraCluster{}
 	if err := r.Get(ctx, kcKey, kc); k8serrors.IsNotFound(err) {
@@ -208,6 +304,19 @@ func (r *K8ssandraTaskReconciler) getCluster(ctx context.Context, kcKey client.O
 		return nil, false, err
 	}
 	return kc, true, nil
+}
+
+func (r *K8ssandraTaskReconciler) datacenters(ctx context.Context, kc *k8capi.K8ssandraCluster) ([]cassdcapi.CassandraDatacenter, error) {
+	dcs := make([]cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		dcKey := client.ObjectKey{Namespace: utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace), Name: dcTemplate.Meta.Name}
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := r.Get(ctx, dcKey, dc); err != nil {
+			return nil, err
+		}
+		dcs = append(dcs, *dc)
+	}
+	return dcs, nil
 }
 
 func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
