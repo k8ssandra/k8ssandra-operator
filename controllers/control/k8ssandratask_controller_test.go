@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	cassapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	k8capi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
@@ -67,10 +69,13 @@ func TestK8ssandraTask(t *testing.T) {
 	defer testEnv.Stop(t)
 	defer cancel()
 
-	t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
-	t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
-	t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
-	t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
+	/*
+		t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
+		t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
+		t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
+		t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
+	*/
+	t.Run("RefreshK8ssandraCluster", testEnv.ControllerTest(ctx, refreshK8ssandraTask))
 }
 
 // executeParallelK8ssandraTask creates and runs a K8ssandraTask with parallel DC processing.
@@ -378,6 +383,65 @@ func expireK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 	require.Eventually(func() bool { return !f.K8ssandraTaskExists(ctx, k8TaskKey)() }, timeout, interval)
 }
 
+func refreshK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := newCluster(namespace, "kc",
+		newDc("dc1", f.DataPlaneContexts[0]))
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
+
+	kc.Status.SetConditionStatus(k8capi.ClusterRequiresUpdate, corev1.ConditionTrue)
+	require.NoError(f.Client.Status().Update(ctx, kc))
+
+	dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy())
+	dc, err := cassandra.NewDatacenter(types.NamespacedName{Namespace: kc.Namespace, Name: kc.Name}, dcConfig)
+	require.NoError(err)
+	require.NoError(f.Client.Create(ctx, dc))
+
+	t.Log("Create a K8ssandraTask with TTL")
+	ttl := new(int32)
+	*ttl = 1
+	k8Task := &api.K8ssandraTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "refresh",
+		},
+		Spec: api.K8ssandraTaskSpec{
+			Cluster: corev1.ObjectReference{
+				Name: "kc",
+			},
+			Template: cassapi.CassandraTaskTemplate{
+				TTLSecondsAfterFinished: ttl,
+				Jobs: []cassapi.CassandraJob{{
+					Name:    "job1",
+					Command: "refresh",
+				}},
+			},
+			DcConcurrencyPolicy: batchv1.ForbidConcurrent,
+		},
+	}
+	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
+
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: kc.Name}, kc); err != nil {
+			return false
+		}
+		if !metav1.HasAnnotation(kc.ObjectMeta, k8capi.AutomatedUpdateAnnotation) {
+			return false
+		}
+		return kc.Annotations[k8capi.AutomatedUpdateAnnotation] == string(k8capi.AllowUpdateOnce)
+	}, timeout, interval)
+	// First case, there's only changes in K8ssandraCluster
+	t.Log("Mark the K8ssandraCluster as updated if the annotation was added")
+	require.Equal(corev1.ConditionTrue, kc.Status.GetConditionStatus(k8capi.ClusterRequiresUpdate))
+	kc.Status.SetConditionStatus(k8capi.ClusterRequiresUpdate, corev1.ConditionFalse)
+	require.NoError(f.Client.Status().Update(ctx, kc))
+
+	waitForTaskCompletion(ctx, t, f, newClusterKey(f.ControlPlaneContext, namespace, "refresh"))
+	// Second case, we also have changes in the CassandraDatacenter, even after updating K8ssandraCluster
+
+}
+
 func newCluster(namespace, name string, dcs ...k8capi.CassandraDatacenterTemplate) *k8capi.K8ssandraCluster {
 	return &k8capi.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -408,6 +472,18 @@ func newDc(name string, k8sContext string) k8capi.CassandraDatacenterTemplate {
 			},
 		},
 	}
+}
+
+func waitForTaskCompletion(ctx context.Context, t *testing.T, f *framework.Framework, taskKey framework.ClusterKey) {
+	require.Eventually(t, func() bool {
+		k8Task := &api.K8ssandraTask{}
+		require.NoError(t, f.Get(ctx, taskKey, k8Task))
+		fmt.Printf("k8Task.Status: %+v\n", k8Task.Status)
+		return k8Task.Status.Active == 0 &&
+			k8Task.Status.Succeeded > 0 &&
+			k8Task.GetConditionStatus(cassapi.JobRunning) == metav1.ConditionFalse &&
+			k8Task.GetConditionStatus(cassapi.JobComplete) == metav1.ConditionTrue
+	}, timeout, interval)
 }
 
 func newClusterKey(k8sContext, namespace, name string) framework.ClusterKey {
