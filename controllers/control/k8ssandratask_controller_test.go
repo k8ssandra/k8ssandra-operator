@@ -69,12 +69,10 @@ func TestK8ssandraTask(t *testing.T) {
 	defer testEnv.Stop(t)
 	defer cancel()
 
-	/*
-		t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
-		t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
-		t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
-		t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
-	*/
+	t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
+	t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
+	t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
+	t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
 	t.Run("RefreshK8ssandraCluster", testEnv.ControllerTest(ctx, refreshK8ssandraTask))
 }
 
