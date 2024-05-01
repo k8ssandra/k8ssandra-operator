@@ -225,6 +225,16 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Iterate all the matching secrets
 		for i := range secrets {
 			sec := &secrets[i]
+			// If the secret would be created in the same target namespace with the same labels, skip and warn.
+			isInf, err := wouldBeInfinite(*sec, *rsec, target)
+			if err != nil {
+				logger.Error(err, "failed to check infinite replication", "Secret", "TargetContext", target)
+				break TargetSecrets
+			}
+			if isInf {
+				logger.Info("warning: secret would be infinite, bailing", "Secret", sec.Name, "TargetContext", target)
+				continue TargetSecrets
+			}
 			namespace := ""
 			if target.Namespace == "" {
 				namespace = sec.Namespace
@@ -455,23 +465,31 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 	return fmt.Sprintf("%s%s", prefix, secretName)
 }
 
-func contains(s string, arr []string) bool {
-	for _, i := range arr {
-		if i == s {
-			return true
-		}
+func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
+	out := make(map[string]string)
+	for k, v := range originalLabels {
+		out[k] = v
 	}
-	return false
+	for k, v := range target.AddLabels {
+		out[k] = v
+	}
+	for _, key := range target.DropLabels {
+		delete(out, key)
+	}
+	return out
 }
 
-func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
-	for k, v := range target.AddLabels {
-		originalLabels[k] = v
+func wouldBeInfinite(origin corev1.Secret, rsec api.ReplicatedSecret, target api.ReplicationTarget) (bool, error) {
+	computedLabels := labels.Set(calculateTargetLabels(origin.Labels, target))
+	selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+	if err != nil {
+		return true, err
 	}
-	for key := range originalLabels {
-		if contains(key, target.DropLabels) {
-			delete(originalLabels, key)
+	if selector.Matches(computedLabels) {
+		if (origin.Namespace == target.Namespace || target.Namespace == "") && target.K8sContextName == "" && target.TargetPrefix != "" { // TargetPrefix is included here because the initial .Get in the main reconciliation body will return the original secret if no target prefix is specified, thereby bailing from the secret creation process.
+			// This will still be infinite if the target has a non-empty k8scontext which points back to the origin cluster.
+			return true, nil
 		}
 	}
-	return originalLabels
+	return false, nil
 }

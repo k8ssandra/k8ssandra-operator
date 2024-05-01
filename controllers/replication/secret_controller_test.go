@@ -67,6 +67,7 @@ func TestSecretController(t *testing.T) {
 	t.Run("VerifyFinalizerInMultiCluster", testEnv.ControllerTest(ctx, verifySecretIsDeleted))
 	t.Run("TargetSecretsPrefixTest", testEnv.ControllerTest(ctx, prefixedSecret))
 	t.Run("VerifySecretIsDeletedComplicated", testEnv.ControllerTest(ctx, verifySecretIsDeletedComplicated))
+	t.Run("GuardInfiniteReplication", testEnv.ControllerTest(ctx, guardInfiniteReplication))
 }
 
 // copySecretsFromClusterToCluster Tests:
@@ -286,7 +287,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 			ReplicationTargets: []api.ReplicationTarget{
 				{
 					//Local cluster local namespace
-					TargetPrefix: "targetprefix-",
+					TargetPrefix: "locallocal-",
 					Namespace:    localNamespaceLocalCluster,
 					DropLabels:   []string{"dropme", "pickme"},
 					AddLabels: map[string]string{
@@ -296,7 +297,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 				{
 					//Local cluster remote namespace
 					Namespace:    remoteNamespaceLocalCluster,
-					TargetPrefix: "targetprefix-",
+					TargetPrefix: "localremote-",
 					DropLabels:   []string{"dropme", "pickme"},
 					AddLabels: map[string]string{
 						"addMe": "true",
@@ -305,7 +306,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 				{ //remote cluster remote namespace
 					K8sContextName: f.DataPlaneContexts[1],
 					Namespace:      remoteNamespaceRemoteCluster,
-					TargetPrefix:   "targetprefix-",
+					TargetPrefix:   "remoteremote-",
 					DropLabels:     []string{"dropme"},
 					AddLabels: map[string]string{
 						"addMe": "true",
@@ -318,28 +319,28 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	require.NoError(localClient.Create(ctx, &sec), "failed to create original secret to main cluster")
 	require.NoError(localClient.Create(ctx, &repSecret), "failed to create replicatedsecret to main cluster")
 
-	t.Log("check that the secret was copied to local namespace local cluster")
+	t.Log("check that the secret was copied to local cluster local namespace")
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		if err := localClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: localNamespaceLocalCluster}, secret); err != nil {
+		if err := localClient.Get(ctx, types.NamespacedName{Name: "locallocal-original-secret", Namespace: localNamespaceLocalCluster}, secret); err != nil {
 			return false
 		}
 		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == ""
 	}, timeout, interval)
 
-	t.Log("check that the secret was copied to remote namespace local cluster")
+	t.Log("check that the secret was copied to local cluster remote namespace")
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		if err := localClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceLocalCluster}, secret); err != nil {
+		if err := localClient.Get(ctx, types.NamespacedName{Name: "localremote-original-secret", Namespace: remoteNamespaceLocalCluster}, secret); err != nil {
 			return false
 		}
 		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == ""
 	}, timeout, interval)
 
-	t.Log("check that the secret was copied to remote namespace remote cluster")
+	t.Log("check that the secret was copied to remote cluster remote namespace")
 	require.Eventually(func() bool {
 		secret := &corev1.Secret{}
-		if err := remoteClient.Get(ctx, types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceRemoteCluster}, secret); err != nil {
+		if err := remoteClient.Get(ctx, types.NamespacedName{Name: "remoteremote-original-secret", Namespace: remoteNamespaceRemoteCluster}, secret); err != nil {
 			return false
 		}
 		return secret.Labels["alwayshere"] == "true" && secret.Labels["dropme"] == "" && secret.Labels["addMe"] == "true" && secret.Labels["pickme"] == "true"
@@ -352,7 +353,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	t.Log("verify the replicated secrets are gone from the local cluster local namespace")
 	require.Eventually(func() bool {
 		remoteSecret := &corev1.Secret{}
-		if err := localClient.Get(context.TODO(), types.NamespacedName{Name: "targetprefix-original-secret", Namespace: localNamespaceLocalCluster}, remoteSecret); err != nil {
+		if err := localClient.Get(context.TODO(), types.NamespacedName{Name: "locallocal-original-secret", Namespace: localNamespaceLocalCluster}, remoteSecret); err != nil {
 			return errors.IsNotFound(err)
 		}
 		return false
@@ -361,7 +362,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	t.Log("verify the replicated secrets are gone from the local cluster remote namespace")
 	require.Eventually(func() bool {
 		remoteSecret := &corev1.Secret{}
-		if err := localClient.Get(context.TODO(), types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceLocalCluster}, remoteSecret); err != nil {
+		if err := localClient.Get(context.TODO(), types.NamespacedName{Name: "localremote-original-secret", Namespace: remoteNamespaceLocalCluster}, remoteSecret); err != nil {
 			return errors.IsNotFound(err)
 		}
 		return false
@@ -371,7 +372,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 	require.Eventually(func() bool {
 		remoteSecret := &corev1.Secret{}
 
-		if err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: "targetprefix-original-secret", Namespace: remoteNamespaceRemoteCluster}, remoteSecret); err != nil {
+		if err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: "remoteremote-original-secret", Namespace: remoteNamespaceRemoteCluster}, remoteSecret); err != nil {
 			return errors.IsNotFound(err)
 		}
 		return false
@@ -681,5 +682,33 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 		}
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
 	}, timeout*3, interval)
+
+}
+
+func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	rsec := generateReplicatedSecret(f.DataPlaneContexts[0], namespace)
+	rsec.Spec.ReplicationTargets[0].TargetPrefix = "prefix-"
+	rsec.Spec.ReplicationTargets[0].K8sContextName = ""
+	rsec.Spec.ReplicationTargets[0].Namespace = ""
+	err := f.Client.Create(ctx, rsec)
+	require.NoError(err, "failed to create replicated secret to main cluster")
+
+	generatedSecrets := generateSecrets(namespace)
+	for _, s := range generatedSecrets {
+		err := f.Client.Create(ctx, s)
+		require.NoError(err, "failed to create secret to main cluster")
+	}
+
+	t.Log("check that the secret was not copied into same name-namespace")
+	require.Never(func() bool {
+		localSecret := &corev1.Secret{}
+		if err := f.Client.Get(ctx, types.NamespacedName{Name: "prefix-test-secret-first", Namespace: namespace}, localSecret); err != nil {
+			if errors.IsNotFound(err) {
+				return false
+			}
+		}
+		return true
+	}, timeout/2, interval)
 
 }
