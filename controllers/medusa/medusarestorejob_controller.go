@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"net"
 	"time"
 
@@ -262,26 +263,36 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 }
 
 // prepareRestore prepares the MedusaRestoreMapping for the restore operation.
-// It uses the Medusa client to get the host map for the restore operation, using the Medusa standalone service to get the backup topology.
+// It uses the Medusa client to get the host map for the restore operation, using the first pod answering on the backup sidecar port.
 func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest) (*medusav1alpha1.MedusaRestoreMapping, error) {
-	medusaClient, err := r.ClientFactory.NewClient(ctx, medusaServiceUrl(
-		cassdcapi.CleanupForKubernetes(request.Datacenter.Spec.ClusterName),
-		request.Datacenter.SanitizedName(),
-		request.Datacenter.Namespace))
+	pods, err := medusa.GetCassandraDatacenterPods(ctx, request.Datacenter, r, request.Log)
 	if err != nil {
-		return nil, err
-	}
-	restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
-	if err != nil {
+		request.Log.Error(err, "Failed to get datacenter pods")
 		return nil, err
 	}
 
-	medusaRestoreMapping, err := restoreHostMap.ToMedusaRestoreMapping()
-	if err != nil {
-		return nil, err
-	}
+	for _, pod := range pods {
+		addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+		if medusaClient, err := r.ClientFactory.NewClient(ctx, addr); err != nil {
+			request.Log.Error(err, "Failed to create Medusa client", "address", addr)
+		} else {
+			if err != nil {
+				return nil, err
+			}
+			restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
+			if err != nil {
+				return nil, err
+			}
 
-	return &medusaRestoreMapping, nil
+			medusaRestoreMapping, err := restoreHostMap.ToMedusaRestoreMapping()
+			if err != nil {
+				return nil, err
+			}
+
+			return &medusaRestoreMapping, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to get host map from backup")
 }
 
 func validateBackupForRestore(backup *medusav1alpha1.MedusaBackup, cassdc *cassdcapi.CassandraDatacenter) error {
@@ -464,8 +475,4 @@ func getRestoreInitContainerIndex(dc *cassdcapi.CassandraDatacenter) (int, error
 	}
 
 	return 0, fmt.Errorf("restore initContainer (%s) not found", restoreContainerName)
-}
-
-func medusaServiceUrl(clusterName, dcName, dcNamespace string) string {
-	return net.JoinHostPort(fmt.Sprintf("%s.%s.svc", medusa.MedusaServiceName(clusterName, dcName), dcNamespace), fmt.Sprintf("%d", medusa.DefaultMedusaPort))
 }

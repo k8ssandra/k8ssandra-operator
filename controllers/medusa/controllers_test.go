@@ -162,7 +162,15 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{Scheme: scheme.Scheme})
+			dataPlaneMgr, err := ctrl.NewManager(
+				env.Config,
+				ctrl.Options{
+					Scheme:  scheme.Scheme,
+					Host:    env.WebhookInstallOptions.LocalServingHost,
+					Port:    env.WebhookInstallOptions.LocalServingPort,
+					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				},
+			)
 			if err != nil {
 				return err
 			}
@@ -173,6 +181,7 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 				Scheme:           scheme.Scheme,
 				ClientFactory:    medusaRestoreClientFactory,
 			}).SetupWithManager(dataPlaneMgr)
+			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
 			if err != nil {
 				return err
 			}
