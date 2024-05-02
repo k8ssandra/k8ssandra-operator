@@ -62,11 +62,15 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 
 	readinessProbe := computeProbe(reaper.Spec.ReadinessProbe)
 	livenessProbe := computeProbe(reaper.Spec.LivenessProbe)
+	storageType := "cassandra"
+	if reaper.Spec.ControlPlaneMode {
+		storageType = "memory"
+	}
 
 	envVars := []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
-			Value: "cassandra",
+			Value: storageType,
 		},
 		{
 			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",

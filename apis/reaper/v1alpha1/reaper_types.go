@@ -243,8 +243,8 @@ type ReaperSpec struct {
 	// DatacenterRef is the reference of a CassandraDatacenter resource that this Reaper instance should manage. It will
 	// also be used as the backend for persisting Reaper's state. Reaper must be able to access the JMX port (7199 by
 	// default) and the CQL port (9042 by default) on this DC.
-	// +kubebuilder:validation:Required
-	DatacenterRef CassandraDatacenterRef `json:"datacenterRef"`
+	// +optional
+	DatacenterRef CassandraDatacenterRef `json:"datacenterRef,omitempty"`
 
 	// DatacenterAvailability indicates to Reaper its deployment in relation to the target datacenter's network.
 	// For single-DC clusters, the default (ALL) is fine. For multi-DC clusters, it is recommended to use EACH,
@@ -267,6 +267,11 @@ type ReaperSpec struct {
 	// +optional
 	// +kubebuilder:default=false
 	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
+
+	// Whether this Reaper instance should register Cassandra clusters for repair. If this is set to false or omitted,
+	// this Reaper instance will only repair the CassandraDatacener referenced by DatacenterRef.
+	// +optional
+	ControlPlaneMode bool `json:"controlPlaneMode,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

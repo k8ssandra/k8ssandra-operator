@@ -91,24 +91,31 @@ func (r *ReaperReconciler) reconcile(ctx context.Context, actualReaper *reaperap
 	actualReaper.Status.Progress = reaperapi.ReaperProgressPending
 	actualReaper.Status.SetNotReady()
 
-	actualDc, result, err := r.reconcileDatacenter(ctx, actualReaper, logger)
-	if !result.IsZero() || err != nil {
-		return result, err
+	var actualDc *cassdcapi.CassandraDatacenter
+	// skip DC reconcile if Reaper is in Control Plane
+	if actualReaper.Spec.ControlPlaneMode {
+		logger.Info("Skipping Reaper DC reconcile, Reaper is in Control Plane mode")
+	} else {
+		dc, result, err := r.reconcileDatacenter(ctx, actualReaper, logger)
+		if !result.IsZero() || err != nil {
+			return result, err
+		}
+		actualDc = dc
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressDeploying
 
-	if result, err = r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
-	if result, err = r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressConfiguring
 
-	if result, err = r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+	if result, err := r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 

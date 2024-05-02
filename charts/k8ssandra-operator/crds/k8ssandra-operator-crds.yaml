@@ -31875,6 +31875,11 @@ spec:
                     description: The image tag to use. Defaults to "latest".
                     type: string
                 type: object
+              controlPlaneMode:
+                description: |-
+                  Whether this Reaper instance should register Cassandra clusters for repair. If this is set to false or omitted,
+                  this Reaper instance will only repair the CassandraDatacener referenced by DatacenterRef.
+                type: boolean
               datacenterAvailability:
                 default: ALL
                 description: |-
@@ -33292,8 +33297,6 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-            required:
-            - datacenterRef
             type: object
           status:
             description: ReaperStatus defines the observed state of Reaper
