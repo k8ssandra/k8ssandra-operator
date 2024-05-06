@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"net"
 	"time"
@@ -122,7 +123,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Prepare the restore by placing a mapping file in the Cassandra data volume.
 	if !request.RestoreJob.Status.RestorePrepared {
 		restorePrepared := false
-		if restoreMapping, err := r.prepareRestore(ctx, request); err != nil {
+		if restoreMapping, err := r.prepareRestore(ctx, request, logger); err != nil {
 			logger.Error(err, "Failed to prepare restore")
 			return ctrl.Result{}, err
 		} else {
@@ -264,21 +265,18 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 
 // prepareRestore prepares the MedusaRestoreMapping for the restore operation.
 // It uses the Medusa client to get the host map for the restore operation, using the first pod answering on the backup sidecar port.
-func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest) (*medusav1alpha1.MedusaRestoreMapping, error) {
+func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request *medusa.RestoreRequest, logger logr.Logger) (*medusav1alpha1.MedusaRestoreMapping, error) {
 	pods, err := medusa.GetCassandraDatacenterPods(ctx, request.Datacenter, r, request.Log)
 	if err != nil {
-		request.Log.Error(err, "Failed to get datacenter pods")
+		logger.Error(err, "Failed to get datacenter pods")
 		return nil, err
 	}
 
 	for _, pod := range pods {
 		addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 		if medusaClient, err := r.ClientFactory.NewClient(ctx, addr); err != nil {
-			request.Log.Error(err, "Failed to create Medusa client", "address", addr)
+			logger.Error(err, "Failed to create Medusa client", "address", addr)
 		} else {
-			if err != nil {
-				return nil, err
-			}
 			restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
 			if err != nil {
 				return nil, err
