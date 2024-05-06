@@ -96,7 +96,6 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	reconcileReplicatedSecret(ctx, t, f, kc)
 
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		reconcileMedusaStandaloneDeployment(ctx, t, f, kc, dcKey.Name, f.DataPlaneContexts[0])
 		t.Logf("check that %s was created", dcKey.Name)
 		require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
 

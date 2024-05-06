@@ -12,7 +12,6 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -21,7 +20,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -492,88 +490,8 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 	return newVolumes
 }
 
-func MedusaServiceName(clusterName string, dcName string) string {
-	return fmt.Sprintf("%s-%s-medusa-service", clusterName, dcName)
-}
-
-func MedusaStandaloneDeploymentName(clusterName string, dcName string) string {
-	return fmt.Sprintf("%s-%s-medusa-standalone", clusterName, dcName)
-}
-
 func MedusaPurgeCronJobName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-purge", clusterName, dcName)
-}
-
-func StandaloneMedusaDeployment(medusaContainer corev1.Container, clusterName, dcName, namespace string, logger logr.Logger, medusaImage *images.Image) *appsv1.Deployment {
-	// The standalone medusa pod won't be able to resolve its own IP address using DNS entries
-	medusaContainer.Env = append(medusaContainer.Env, corev1.EnvVar{Name: "MEDUSA_RESOLVE_IP_ADDRESSES", Value: "False"})
-	medusaDeployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaStandaloneDeploymentName(clusterName, dcName),
-			Namespace: namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": MedusaStandaloneDeploymentName(clusterName, dcName),
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": MedusaStandaloneDeploymentName(clusterName, dcName),
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						medusaContainer,
-					},
-					ImagePullSecrets: images.CollectPullSecrets(medusaImage.ApplyDefaults(defaultMedusaImage)),
-					Volumes:          []corev1.Volume{},
-					Hostname:         MedusaStandaloneDeploymentName(clusterName, dcName),
-				},
-			},
-		},
-	}
-
-	logger.Info("Creating standalone medusa deployment on namespace", "namespace", medusaDeployment.Namespace)
-	// Create dummy additional volumes
-	// These volumes won't be used by the Medusa standalone pod, but the mounts will be necessary for Medusa to startup properly
-	// TODO: Investigate if we can adapt Medusa to remove these volumes
-	for _, extraVolume := range [](string){"server-config", "server-data", MedusaBackupsVolumeName} {
-		medusaDeployment.Spec.Template.Spec.Volumes = append(medusaDeployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: extraVolume,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-	}
-
-	return medusaDeployment
-}
-
-func StandaloneMedusaService(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, clusterName, namespace string, logger logr.Logger) *corev1.Service {
-	medusaService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      MedusaServiceName(clusterName, dcConfig.SanitizedName()),
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "grpc",
-					Port:       DefaultMedusaPort,
-					TargetPort: intstr.FromInt(DefaultMedusaPort),
-				},
-			},
-			Selector: map[string]string{
-				"app": MedusaStandaloneDeploymentName(clusterName, dcConfig.SanitizedName()),
-			},
-		},
-	}
-
-	return medusaService
 }
 
 func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace string, logger logr.Logger) (*batchv1.CronJob, error) {

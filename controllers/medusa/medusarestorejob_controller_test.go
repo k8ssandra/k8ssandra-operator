@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 	"testing"
 	"time"
@@ -77,7 +78,6 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
-	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "real-dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -118,9 +118,6 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, dc1)
-
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
@@ -131,6 +128,12 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		})
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
+
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err = f.Get(ctx, dc1Key, dc1)
+
+	err = createCassandraPods(t, f, ctx, dc1Key, dc1)
+	require.NoError(err)
 
 	t.Log("creating MedusaBackup")
 	backup := &api.MedusaBackup{
@@ -189,7 +192,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	t.Log("check that the datacenter is set to be stopped")
 	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
 		return dc.Spec.Stopped == true
-	}), timeout, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
+	}), timeout*5, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
 
 	t.Log("delete datacenter pods to simulate shutdown")
 	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "real-dc1"})
@@ -297,6 +300,42 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 
 }
 
+func createCassandraPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) error {
+	dcServiceKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, dc.GetAllPodsServiceName())
+	dcService := &corev1.Service{}
+	if err := f.Get(ctx, dcServiceKey, dcService); err != nil {
+		if errors.IsNotFound(err) {
+			dcService = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: dcServiceKey.Namespace,
+					Name:      dcServiceKey.Name,
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{
+						cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
+					},
+					Ports: []corev1.ServicePort{
+						{
+							Name: "cql",
+							Port: 9042,
+						},
+					},
+				},
+			}
+
+			err := f.Create(ctx, dcServiceKey, dcService)
+			if err != nil {
+				return err
+			}
+		} else {
+			t.Errorf("failed to get service %s: %v", dcServiceKey, err)
+			return err
+		}
+	}
+	createDatacenterPods(t, f, ctx, dcKey, dc)
+	return nil
+}
+
 func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 	require.NoError(f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace)))
@@ -349,7 +388,6 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	reconcileReplicatedSecret(ctx, t, f, kc)
-	reconcileMedusaStandaloneDeployment(ctx, t, f, kc, "real-dc1", f.DataPlaneContexts[0])
 	t.Log("check that dc1 was created")
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
@@ -480,11 +518,6 @@ func findContainer(containers []corev1.Container, name string) *corev1.Container
 	return nil
 }
 
-func TestMedusaServiceAddress(t *testing.T) {
-	serviceUrl := medusaServiceUrl("k8c-cluster", "real-dc1", "dc-namespace")
-	assert.Equal(t, "k8c-cluster-real-dc1-medusa-service.dc-namespace.svc:50051", serviceUrl)
-}
-
 func TestValidateBackupForRestore(t *testing.T) {
 	assert := assert.New(t)
 
@@ -563,10 +596,6 @@ func TestValidateBackupForRestore(t *testing.T) {
 type fakeMedusaRestoreClientFactory struct {
 	clientsMutex sync.Mutex
 	clients      map[string]*fakeMedusaRestoreClient
-}
-
-func NewMedusaRestoreClientFactory() *fakeMedusaRestoreClientFactory {
-	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
 }
 
 func NewMedusaClientRestoreFactory() *fakeMedusaRestoreClientFactory {

@@ -18,7 +18,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -85,14 +84,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			cassandra.AddOrUpdateVolume(dcConfig, volume.Volume, volume.VolumeIndex, volume.Exists)
 		}
 
-		// Create the Medusa standalone pod
-		desiredMedusaStandalone := medusa.StandaloneMedusaDeployment(*medusaContainer, kc.SanitizedName(), dcConfig.SanitizedName(), dcNamespace, logger, kc.Spec.Medusa.ContainerImage)
-
-		// Add the volumes previously computed to the Medusa standalone pod
-		for _, volume := range volumes {
-			cassandra.AddOrUpdateVolumeToSpec(&desiredMedusaStandalone.Spec.Template, volume.Volume, volume.VolumeIndex, volume.Exists)
-		}
-
 		if !kc.Spec.UseExternalSecrets() {
 			cassandraUserSecretName := medusa.CassandraUserSecretName(medusaSpec, kc.SanitizedName())
 			cassandra.AddCqlUser(medusaSpec.CassandraUserSecretRef, dcConfig, cassandraUserSecretName)
@@ -105,38 +96,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			}
 		}
 
-		// Reconcile the Medusa standalone deployment
 		kcKey := utils.GetKey(kc)
-		desiredMedusaStandalone.SetLabels(labels.CleanedUpByLabels(kcKey))
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredMedusaStandalone)
-		switch {
-		case recRes.IsError():
-			return recRes
-		case recRes.IsRequeue():
-			return recRes
-		}
-
-		// Create and reconcile the Medusa service for the standalone deployment
-		medusaService := medusa.StandaloneMedusaService(dcConfig, medusaSpec, kc.SanitizedName(), dcNamespace, logger)
-		medusaService.SetLabels(labels.CleanedUpByLabels(kcKey))
-		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaService)
-		switch {
-		case recRes.IsError():
-			return recRes
-		case recRes.IsRequeue():
-			return recRes
-		}
-
-		// Check if the Medusa Standalone deployment is ready, and requeue if not
-		ready, err := r.isMedusaStandaloneReady(ctx, remoteClient, desiredMedusaStandalone)
-		if err != nil {
-			logger.Info("Failed to check if Medusa standalone deployment is ready", "error", err)
-			return result.Error(err)
-		}
-		if !ready {
-			logger.Info("Medusa standalone deployment is not ready yet")
-			return result.RequeueSoon(r.DefaultDelay)
-		}
 		// Create a cron job to purge Medusa backups
 		operatorNamespace := r.getOperatorNamespace()
 		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), operatorNamespace, logger)
@@ -145,7 +105,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.Error(err)
 		}
 		purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
-		recRes = reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
+		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
 		switch {
 		case recRes.IsError():
 			return recRes
@@ -158,23 +118,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	}
 
 	return result.Continue()
-}
-
-// Check if the Medusa standalone deployment is ready
-func (r *K8ssandraClusterReconciler) isMedusaStandaloneReady(ctx context.Context, remoteClient client.Client, desiredMedusaStandalone *appsv1.Deployment) (bool, error) {
-	// Get the medusa standalone deployment and check the rollout status
-	deplKey := utils.GetKey(desiredMedusaStandalone)
-	medusaStandalone := &appsv1.Deployment{}
-	if err := remoteClient.Get(context.Background(), deplKey, medusaStandalone); err != nil {
-		return false, err
-	}
-	// Check the conditions to see if the deployment has successfully rolled out
-	for _, c := range medusaStandalone.Status.Conditions {
-		if c.Type == appsv1.DeploymentAvailable {
-			return c.Status == corev1.ConditionTrue, nil // deployment is available
-		}
-	}
-	return false, nil // deployment condition not found
 }
 
 // Generate a secret for Medusa or use the existing one if provided in the spec

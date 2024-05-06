@@ -15,7 +15,6 @@ import (
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
-	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,8 +81,6 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 		checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
-		checkMedusaStandaloneDeploymentExists(t, ctx, dcKey, f, kc)
-		checkMedusaStandaloneServiceExists(t, ctx, dcKey, f, kc)
 		checkReplicatedSecretMounted(t, ctx, f, dcKey, dcKey.Namespace, kc)
 	}
 
@@ -309,31 +306,6 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 		return exists
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "superuser secret wasn't updated with refresh annotation")
 
-}
-
-func checkMedusaStandaloneDeploymentExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	t.Log("Checking that the Medusa standalone pod has been created")
-	require := require.New(t)
-	// Get the medusa standalone pod and check that it is running
-	require.Eventually(func() bool {
-		deployment := &appsv1.Deployment{}
-		deploymentKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaStandaloneDeploymentName(kc.Name, DcName(t, f, dcKey))}}
-		err := f.Get(ctx, deploymentKey, deployment)
-		require.NoError(err, "Error getting the medusa standalone pod")
-		return deployment.Status.ReadyReplicas == 1
-	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone pod is not running")
-}
-
-func checkMedusaStandaloneServiceExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	t.Log("Checking that the Medusa standalone service has been created")
-	require := require.New(t)
-	// Get the medusa standalone pod and check that it is running
-	require.Eventually(func() bool {
-		service := &corev1.Service{}
-		serviceKey := framework.ClusterKey{K8sContext: dcKey.K8sContext, NamespacedName: types.NamespacedName{Namespace: dcKey.Namespace, Name: medusapkg.MedusaServiceName(kc.Name, DcName(t, f, dcKey))}}
-		err := f.Get(ctx, serviceKey, service)
-		return err == nil
-	}, polling.medusaReady.timeout, polling.medusaReady.interval, "Medusa standalone service doesn't exist")
 }
 
 func createMedusaConfiguration(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
