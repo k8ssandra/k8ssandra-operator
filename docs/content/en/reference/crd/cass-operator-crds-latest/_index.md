@@ -22813,6 +22813,20 @@ were last upserted to the management API<br/>
           <br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>ip</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>rack</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
