@@ -13,7 +13,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.16.0 - 2024-05-06
 
 * [CHANGE] Update cassandra-medusa to 0.21.0
 * [CHANGE] []() Update cass-operator to v1.20.0
