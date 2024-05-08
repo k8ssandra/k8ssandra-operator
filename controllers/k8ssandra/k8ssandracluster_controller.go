@@ -211,8 +211,6 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
-		// We need also annotation changes due to autoupdate-spec
-
 	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 

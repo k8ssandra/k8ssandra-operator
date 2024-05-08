@@ -6,19 +6,23 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	agent "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,6 +243,54 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			} else {
 				dcLogger.Error(err, "Failed to get datacenter")
 				return result.Error(err), actualDcs
+			}
+		}
+	}
+
+	if AllowUpdate(kc) {
+		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
+		for _, dc := range actualDcs {
+			if dc.Status.GetConditionStatus("RequiresUpdate") == corev1.ConditionTrue { // TODO Update this to cassdcapi const when cass-operator is updatedß
+				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.DatacenterName())
+			}
+		}
+
+		if len(dcsRequiringUpdate) > 0 {
+			generatedName := fmt.Sprintf("refresh-%d", time.Now().Unix())
+			internalTask := &ktaskapi.K8ssandraTask{}
+			err := r.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: generatedName}, internalTask)
+			// If task wasn't found, create it and if task is still running, requeue
+			if errors.IsNotFound(err) {
+				// Delegate work to the task controller for Datacenter operations
+				task := &ktaskapi.K8ssandraTask{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kc.Namespace,
+						Name:      generatedName,
+						Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
+					},
+					Spec: ktaskapi.K8ssandraTaskSpec{
+						Cluster: corev1.ObjectReference{
+							Name: kc.Name,
+						},
+						Datacenters: make([]string, len(dcsRequiringUpdate)),
+						Template: cassctlapi.CassandraTaskTemplate{
+							Jobs: []cassctlapi.CassandraJob{{
+								Name:    fmt.Sprintf("refresh-%s", kc.Name),
+								Command: "refresh",
+							}},
+						},
+						DcConcurrencyPolicy: batchv1.ForbidConcurrent,
+					},
+				}
+
+				if err := r.Create(ctx, task); err != nil {
+					return result.Error(err), actualDcs
+				}
+
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
+
+			} else if internalTask.Status.CompletionTime.IsZero() {
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
 		}
 	}
