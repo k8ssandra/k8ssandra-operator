@@ -151,7 +151,6 @@ func (r *ReaperReconciler) reconcileAsStatefulSet(ctx context.Context, actualRea
 	return ctrl.Result{}, nil
 }
 
-
 func (r *ReaperReconciler) reconcileDatacenter(
 	ctx context.Context,
 	actualReaper *reaperapi.Reaper,
@@ -288,7 +287,7 @@ func (r *ReaperReconciler) reconcileStatefulSet(
 
 	statefuleSetKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Name}
 	logger = logger.WithValues("StatefulSet", statefuleSetKey)
-	logger.Info("Reconciling Reaper StatefulSet, req was %#v", actualReaper)
+	logger.Info(fmt.Sprintf("Reconciling Reaper StatefulSet, req was %#v", actualReaper))
 
 	authVars, err := r.collectAuthVars(ctx, actualReaper, logger)
 	if err != nil {

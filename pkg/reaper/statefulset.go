@@ -4,45 +4,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-const (
-	DefaultImageRepository = "thelastpickle"
-	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.6.0"
-	// When changing the default version above, please also change the kubebuilder markers in
-	// apis/reaper/v1alpha1/reaper_types.go accordingly.
-
-	InitContainerMemRequest = "128Mi"
-	InitContainerMemLimit   = "512Mi"
-	InitContainerCpuRequest = "100m"
-	MainContainerMemRequest = "256Mi"
-	MainContainerMemLimit   = "3Gi"
-	MainContainerCpuRequest = "100m"
-)
-
-var defaultImage = images.Image{
-	Repository: DefaultImageRepository,
-	Name:       DefaultImageName,
-	Tag:        DefaultVersion,
-}
-
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewStatefulSet(reaper *api.Reaper, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
 	selector := metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			// Note: managed-by shouldn't be used here, but we're keeping it for backwards compatibility, since changing
@@ -66,27 +39,19 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	envVars := []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
-			Value: "cassandra",
+			Value: "memory",
+		},
+		{
+			Name:  "REAPER_MEMORY_STORAGE_DIRECTORY",
+			Value: "/var/lib/cassandra-reaper/storage",
 		},
 		{
 			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
 			Value: "false",
 		},
 		{
-			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
-		},
-		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
-			Value: reaper.Spec.DatacenterAvailability,
-		},
-		{
-			Name:  "REAPER_CASS_LOCAL_DC",
-			Value: dc.DatacenterName(),
-		},
-		{
-			Name:  "REAPER_CASS_KEYSPACE",
-			Value: reaper.Spec.Keyspace,
+			Value: "ALL",
 		},
 	}
 
@@ -95,7 +60,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Name:  "REAPER_AUTO_SCHEDULING_ENABLED",
 			Value: "true",
 		})
-		adaptive, incremental := getAdaptiveIncremental(reaper, dc)
+		adaptive, incremental := getAdaptiveIncremental(reaper, nil)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
 			Value: fmt.Sprintf("%v", adaptive),
@@ -171,6 +136,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 
 	volumeMounts := []corev1.VolumeMount{}
 	volumes := []corev1.Volume{}
+	// TODO add Reaper's memory storage volume
+
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
 	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
 		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
@@ -219,14 +186,14 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 
 	podMeta := getPodMeta(reaper)
 
-	deployment := &appsv1.Deployment{
+	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   reaper.Namespace,
 			Name:        reaper.Name,
 			Labels:      createServiceAndDeploymentLabels(reaper),
 			Annotations: map[string]string{},
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: appsv1.StatefulSetSpec{
 			Selector: &selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -270,152 +237,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			},
 		},
 	}
-	addAuthEnvVars(deployment, authVars)
-	configureVector(reaper, deployment, dc, logger)
-	annotations.AddHashAnnotation(deployment)
-	return deployment
-}
-
-func computeInitContainerResources(resourceRequirements *corev1.ResourceRequirements) *corev1.ResourceRequirements {
-	if resourceRequirements != nil {
-		return resourceRequirements
-	}
-
-	return &corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(InitContainerCpuRequest),
-			corev1.ResourceMemory: resource.MustParse(InitContainerMemRequest),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse(InitContainerMemLimit),
-		},
-	}
-}
-
-func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirements) *corev1.ResourceRequirements {
-	if resourceRequirements != nil {
-		return resourceRequirements
-	}
-
-	return &corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(MainContainerCpuRequest),
-			corev1.ResourceMemory: resource.MustParse(MainContainerMemRequest),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse(MainContainerMemLimit),
-		},
-	}
-}
-
-func computeInitContainers(
-	reaper *api.Reaper,
-	mainImage *images.Image,
-	envVars []corev1.EnvVar,
-	volumeMounts []corev1.VolumeMount,
-	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
-	var initContainers []corev1.Container
-	if !reaper.Spec.SkipSchemaMigration {
-		initContainers = append(initContainers,
-			corev1.Container{
-				Name:            "reaper-schema-init",
-				Image:           mainImage.String(),
-				ImagePullPolicy: mainImage.PullPolicy,
-				SecurityContext: reaper.Spec.InitContainerSecurityContext,
-				Env:             envVars,
-				Args:            []string{"schema-migration"},
-				VolumeMounts:    volumeMounts,
-				Resources:       *resourceRequirements,
-			})
-	}
-	return initContainers
-}
-
-func computeImagePullSecrets(reaper *api.Reaper, mainImage *images.Image) []corev1.LocalObjectReference {
-	return images.CollectPullSecrets(mainImage)
-}
-
-func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
-	var probe *corev1.Probe
-	if probeTemplate != nil {
-		probe = probeTemplate.DeepCopy()
-	} else {
-		probe = &corev1.Probe{
-			InitialDelaySeconds: 45,
-			PeriodSeconds:       15,
-		}
-	}
-	// The handler cannot be user-specified, so force it now
-	probe.ProbeHandler = corev1.ProbeHandler{
-		HTTPGet: &corev1.HTTPGetAction{
-			Path: "/healthcheck",
-			Port: intstr.FromInt(8081),
-		},
-	}
-	return probe
-}
-
-func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {
-	envVars := deployment.Spec.Template.Spec.Containers[0].Env
-	for _, v := range vars {
-		envVars = append(envVars, *v)
-	}
-	deployment.Spec.Template.Spec.Containers[0].Env = envVars
-	if len(deployment.Spec.Template.Spec.InitContainers) > 0 {
-		initEnvVars := deployment.Spec.Template.Spec.InitContainers[0].Env
-		for _, v := range vars {
-			initEnvVars = append(initEnvVars, *v)
-		}
-		deployment.Spec.Template.Spec.InitContainers[0].Env = initEnvVars
-	}
-}
-
-func addAuthEnvVarsToStatefulSet(statefulSet *appsv1.StatefulSet, vars []*corev1.EnvVar) {
-	envVars := statefulSet.Spec.Template.Spec.Containers[0].Env
-	for _, v := range vars {
-		envVars = append(envVars, *v)
-	}
-	statefulSet.Spec.Template.Spec.Containers[0].Env = envVars
-	if len(statefulSet.Spec.Template.Spec.InitContainers) > 0 {
-		initEnvVars := statefulSet.Spec.Template.Spec.InitContainers[0].Env
-		for _, v := range vars {
-			initEnvVars = append(initEnvVars, *v)
-		}
-		statefulSet.Spec.Template.Spec.InitContainers[0].Env = initEnvVars
-	}
-}
-
-func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (adaptive bool, incremental bool) {
-	switch reaper.Spec.AutoScheduling.RepairType {
-	case "ADAPTIVE":
-		adaptive = true
-	case "INCREMENTAL":
-		incremental = true
-	case "AUTO":
-		if dc != nil {
-			if semver.MustParse(dc.Spec.ServerVersion).Major() == 3 {
-				adaptive = true
-			} else {
-				incremental = true
-			}
-		} else {
-			adaptive = true
-		}
-	}
-	return
-}
-
-func getPodMeta(reaper *api.Reaper) meta.Tags {
-	labels := createPodLabels(reaper)
-
-	var podAnnotations map[string]string
-	if meta := reaper.Spec.ResourceMeta; meta != nil {
-		podAnnotations = meta.Pods.Annotations
-
-	}
-
-	return meta.Tags{
-		Labels:      labels,
-		Annotations: podAnnotations,
-	}
+	addAuthEnvVarsToStatefulSet(statefulSet, authVars)
+	configVectorForStatefulSet(reaper, statefulSet, logger)
+	annotations.AddHashAnnotation(statefulSet)
+	return statefulSet
 }
