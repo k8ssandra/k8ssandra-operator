@@ -89,3 +89,44 @@ func configureVector(reaper *api.Reaper, deployment *appsv1.Deployment, dc *cass
 		cassandra.AddVolumesToPodTemplateSpec(&deployment.Spec.Template, vectorAgentVolume)
 	}
 }
+
+func configVectorForStatefulSet(reaper *api.Reaper, statefulSet *appsv1.StatefulSet, logger logr.Logger) {
+	if reaper.Spec.Telemetry.IsVectorEnabled() {
+		logger.Info("Injecting Vector agent into Reaper statefulset")
+		vectorImage := vector.DefaultVectorImage
+		if reaper.Spec.Telemetry.Vector.Image != "" {
+			vectorImage = reaper.Spec.Telemetry.Vector.Image
+		}
+
+		// Create the definition of the Vector agent container
+		vectorAgentContainer := corev1.Container{
+			Name:            VectorContainerName,
+			Image:           vectorImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env: []corev1.EnvVar{
+				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
+				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
+				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{Name: "reaper-vector-config", MountPath: "/etc/vector"},
+			},
+			Resources: vector.VectorContainerResources(reaper.Spec.Telemetry),
+		}
+		// Create the definition of the Vector agent config map volume
+		logger.Info("Creating Reaper Vector Agent Volume")
+		vectorAgentVolume := corev1.Volume{
+			Name: "reaper-vector-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{Name: VectorAgentConfigMapName("fixme", "fixme")},
+				},
+			},
+		}
+		// Add the container and volume to the statefulset
+		cassandra.UpdateContainer(&statefulSet.Spec.Template, VectorContainerName, func(c *corev1.Container) {
+			*c = vectorAgentContainer
+		})
+		cassandra.AddVolumesToPodTemplateSpec(&statefulSet.Spec.Template, vectorAgentVolume)
+	}
+}
