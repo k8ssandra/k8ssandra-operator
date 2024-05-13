@@ -84,6 +84,7 @@ func TestMedusaWebhooks(t *testing.T) {
 		Port:    webhookInstallOptions.LocalServingPort,
 		Host:    webhookInstallOptions.LocalServingHost,
 		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 	})
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{

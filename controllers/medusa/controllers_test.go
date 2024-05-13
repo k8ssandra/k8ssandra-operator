@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"crypto/tls"
 	"testing"
 	"time"
 
@@ -95,6 +96,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 				Port:    env.WebhookInstallOptions.LocalServingPort,
 				Host:    env.WebhookInstallOptions.LocalServingHost,
 				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 			})
 
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
@@ -169,6 +171,7 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 				Port:    env.WebhookInstallOptions.LocalServingPort,
 				Host:    env.WebhookInstallOptions.LocalServingHost,
 				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 			})
 
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
@@ -242,6 +245,7 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 				Port:    env.WebhookInstallOptions.LocalServingPort,
 				Host:    env.WebhookInstallOptions.LocalServingHost,
 				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 			})
 
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
@@ -320,6 +324,7 @@ func setupMedusaConfigurationTestEnv(t *testing.T, ctx context.Context) *testuti
 				Port:    env.WebhookInstallOptions.LocalServingPort,
 				Host:    env.WebhookInstallOptions.LocalServingHost,
 				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 			})
 
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{

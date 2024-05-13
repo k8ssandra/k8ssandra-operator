@@ -83,6 +83,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		Port:    webhookInstallOptions.LocalServingPort,
 		Host:    webhookInstallOptions.LocalServingHost,
 		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 	})
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -238,6 +239,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		Port:    webhookInstallOptions.LocalServingPort,
 		Host:    webhookInstallOptions.LocalServingHost,
 		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 	})
 
 	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
