@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -19,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -691,7 +690,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 func testNewDeploymentsAuthentication(t *testing.T) {
 	t.Run("disabled", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = pointer.Bool(false)
+		sg.Spec.Auth = ptr.To(false)
 		logger := testlogr.NewTestLogger(t)
 		deployments := NewDeployments(sg, dc, logger)
 		require.Len(t, deployments, 1)
@@ -702,7 +701,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 	})
 	t.Run("table-based", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = pointer.Bool(true)
+		sg.Spec.Auth = ptr.To(true)
 		sg.Spec.AuthOptions = &api.AuthOptions{
 			ApiAuthMethod:   "Table",
 			TokenTtlSeconds: 123,
@@ -718,7 +717,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 	})
 	t.Run("JWT-based", func(t *testing.T) {
 		sg := stargate.DeepCopy()
-		sg.Spec.Auth = pointer.Bool(true)
+		sg.Spec.Auth = ptr.To(true)
 		sg.Spec.AuthOptions = &api.AuthOptions{
 			ApiAuthMethod:  "JWT",
 			JwtProviderUrl: "https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token",

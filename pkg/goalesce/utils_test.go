@@ -6,7 +6,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestMergeCRs(t *testing.T) {
@@ -31,20 +31,20 @@ func TestMergeCRs(t *testing.T) {
 		{
 			name:    "nil vs non-nil",
 			cluster: nil,
-			dc:      Foo{Enabled: pointer.Bool(true), Text: "foo", Number: pointer.Int(123)},
-			want:    Foo{Enabled: pointer.Bool(true), Text: "foo", Number: pointer.Int(123)},
+			dc:      Foo{Enabled: ptr.To(true), Text: "foo", Number: ptr.To[int](123)},
+			want:    Foo{Enabled: ptr.To(true), Text: "foo", Number: ptr.To[int](123)},
 		},
 		{
 			name:    "non-nil vs nil",
-			cluster: Foo{Enabled: pointer.Bool(true), Text: "foo", Number: pointer.Int(123)},
+			cluster: Foo{Enabled: ptr.To(true), Text: "foo", Number: ptr.To[int](123)},
 			dc:      nil,
-			want:    Foo{Enabled: pointer.Bool(true), Text: "foo", Number: pointer.Int(123)},
+			want:    Foo{Enabled: ptr.To(true), Text: "foo", Number: ptr.To[int](123)},
 		},
 		{
 			name:    "non-nil vs non-nil",
-			cluster: Foo{Enabled: pointer.Bool(true), Text: "foo", Number: pointer.Int(123)},
-			dc:      Foo{Enabled: pointer.Bool(false), Text: "bar", Number: pointer.Int(456)},
-			want:    Foo{Enabled: pointer.Bool(false), Text: "bar", Number: pointer.Int(456)},
+			cluster: Foo{Enabled: ptr.To(true), Text: "foo", Number: ptr.To[int](123)},
+			dc:      Foo{Enabled: ptr.To(false), Text: "bar", Number: ptr.To[int](456)},
+			want:    Foo{Enabled: ptr.To(false), Text: "bar", Number: ptr.To[int](456)},
 		},
 		// special cases
 		{

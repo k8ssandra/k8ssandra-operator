@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestNewDeployment(t *testing.T) {
@@ -50,7 +50,7 @@ func TestNewDeployment(t *testing.T) {
 	labels := createServiceAndDeploymentLabels(reaper)
 	podLabels := utils.MergeMap(labels, reaper.Spec.ResourceMeta.Pods.Labels)
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), pointer.String("keystore-password"), pointer.String("truststore-password"), logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), ptr.To("keystore-password"), ptr.To("truststore-password"), logger)
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)

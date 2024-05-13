@@ -14,7 +14,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -507,9 +507,9 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace s
 		},
 		Spec: batchv1.CronJobSpec{
 			Schedule:                   "0 0 * * *",
-			Suspend:                    pointer.Bool(false),
-			SuccessfulJobsHistoryLimit: pointer.Int32(3),
-			FailedJobsHistoryLimit:     pointer.Int32(1),
+			Suspend:                    ptr.To(false),
+			SuccessfulJobsHistoryLimit: ptr.To[int32](3),
+			FailedJobsHistoryLimit:     ptr.To[int32](1),
 			JobTemplate: batchv1.JobTemplateSpec{
 				Spec: batchv1.JobSpec{
 					Template: corev1.PodTemplateSpec{

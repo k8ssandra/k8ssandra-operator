@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,7 +33,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 				DatacenterOptions: api.DatacenterOptions{
 					Telemetry: &telemetryapi.TelemetrySpec{
 						Vector: &telemetryapi.VectorSpec{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
@@ -52,7 +52,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 								},
 							},
 							PodSecurityContext: &corev1.PodSecurityContext{
-								RunAsUser: pointer.Int64(999),
+								RunAsUser: ptr.To[int64](999),
 							},
 							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
@@ -139,7 +139,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		},
 	}
 	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {

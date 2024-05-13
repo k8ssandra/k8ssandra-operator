@@ -18,7 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,7 +31,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.Bool(false),
+			Auth: ptr.To(false),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -141,7 +141,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.Bool(true),
+			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -255,7 +255,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.Bool(true),
+			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
@@ -383,7 +383,7 @@ func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f
 			Name:      "cluster1",
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Auth: pointer.Bool(true),
+			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},

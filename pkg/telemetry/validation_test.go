@@ -5,7 +5,7 @@ import (
 
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestSpecIsValid(t *testing.T) {
@@ -35,13 +35,13 @@ func TestSpecIsValid(t *testing.T) {
 		},
 		{
 			"prom not enabled, prom not installed",
-			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			false,
 			true,
 		},
 		{
 			"prom enabled, prom not installed",
-			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			false,
 			false,
 		},
@@ -65,13 +65,13 @@ func TestSpecIsValid(t *testing.T) {
 		},
 		{
 			"prom not enabled, prom installed",
-			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			true,
 			true,
 		},
 		{
 			"prom enabled, prom installed",
-			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			&telemetryapi.TelemetrySpec{Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			true,
 			true,
 		},

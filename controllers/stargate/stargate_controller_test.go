@@ -6,14 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/utils/pointer"
-
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
@@ -126,7 +125,7 @@ func testCreateStargateSingleRack(t *testing.T, ctx context.Context, testClient 
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 					},
@@ -582,7 +581,7 @@ func testCreateStargateEncryption(t *testing.T, ctx context.Context, testClient 
 					StargateTemplate: api.StargateTemplate{
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 					},
@@ -863,7 +862,7 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 						SecretsProvider: "external",
 						Telemetry: &telemetryapi.TelemetrySpec{
 							Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-								Enabled: pointer.Bool(true),
+								Enabled: ptr.To(true),
 							},
 						},
 					},

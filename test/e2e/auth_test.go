@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -114,7 +114,7 @@ func toggleAuthentication(t *testing.T, f *framework.E2eFramework, ctx context.C
 	err := f.Client.Get(ctx, kcKey, &kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster %v", kcKey)
 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Auth = pointer.Bool(on)
+	kc.Spec.Auth = ptr.To(on)
 	err = f.Client.Patch(ctx, &kc, patch)
 	require.NoError(t, err, "failed to patch K8ssandraCluster %v", kcKey)
 }

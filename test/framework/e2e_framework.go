@@ -387,7 +387,7 @@ func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
 		// Wait for job to succeed
 		f.logger.Info("Waiting for setup-minio job to succeed")
 		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		err := wait.PollWithContext(context.Background(), 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
+		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
 			if err := kubectl.JobSuccess(ctx, opts, namespace, "setup-minio"); err != nil {
 				f.logger.Error(err, "Waiting for setup-minio job to succeed")
 				return false, nil
@@ -550,7 +550,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 	}
 
 	// Should this wait.Poll call be per cluster?
-	return wait.Poll(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
 		for _, remoteClient := range f.remoteClients {
 			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
 

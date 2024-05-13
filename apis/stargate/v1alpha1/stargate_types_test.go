@@ -1,13 +1,14 @@
 package v1alpha1
 
 import (
+	"testing"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-	"testing"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -228,7 +229,7 @@ func testStargateDatacenterTemplateMerge(t *testing.T) {
 						Repository: "repo2",
 						Name:       "img2",
 					},
-					ServiceAccount: pointer.String("sa2"),
+					ServiceAccount: ptr.To("sa2"),
 					HeapSize:       &quantity256Mi,
 					NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
 					Tolerations:    []corev1.Toleration{{Key: "k2", Value: "v2"}},
@@ -270,7 +271,7 @@ func testStargateDatacenterTemplateMerge(t *testing.T) {
 							Name:       "img1",
 						},
 						HeapSize:       &quantity512Mi,
-						ServiceAccount: pointer.String("sa2"),
+						ServiceAccount: ptr.To("sa2"),
 						// map will be merged
 						NodeSelector: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
 						// slice will not be merged, slice1 will be kept intact
@@ -384,7 +385,7 @@ func testStargateRackTemplateMerge(t *testing.T) {
 							Repository: "repo2",
 							Name:       "img2",
 						},
-						ServiceAccount: pointer.String("sa2"),
+						ServiceAccount: ptr.To("sa2"),
 						HeapSize:       &quantity256Mi,
 						NodeSelector:   map[string]string{"k2": "v2a", "k3": "v3"},
 						Tolerations:    []corev1.Toleration{{Key: "k2", Value: "v2"}},
@@ -424,7 +425,7 @@ func testStargateRackTemplateMerge(t *testing.T) {
 					Name:       "img1",
 				},
 				HeapSize:       &quantity512Mi,
-				ServiceAccount: pointer.String("sa2"),
+				ServiceAccount: ptr.To("sa2"),
 				// map will be merged
 				NodeSelector: map[string]string{"k1": "v1", "k2": "v2", "k3": "v3"},
 				// slice will not be merged, slice1 will be kept intact

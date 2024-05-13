@@ -1,10 +1,10 @@
 package v1alpha1
 
 import (
-	"k8s.io/utils/pointer"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/ptr"
 )
 
 func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
@@ -34,7 +34,7 @@ func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
 			name: "false",
 			in: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 				},
 			},
 			want: false,
@@ -43,7 +43,7 @@ func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
 			name: "true",
 			in: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 				},
 			},
 			want: true,
@@ -79,7 +79,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			name: "non empty cluster, nil dc",
 			cluster: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					CommonLabels: map[string]string{
 						"key1": "value1",
 					},
@@ -88,7 +88,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			dc: nil,
 			want: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					CommonLabels: map[string]string{
 						"key1": "value1",
 					},
@@ -100,7 +100,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			cluster: nil,
 			dc: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					CommonLabels: map[string]string{
 						"key1": "value1",
 					},
@@ -108,7 +108,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			},
 			want: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					CommonLabels: map[string]string{
 						"key1": "value1",
 					},
@@ -119,7 +119,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			name: "non empty cluster, non empty dc",
 			cluster: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					CommonLabels: map[string]string{
 						"key1": "cluster",
 						"key2": "cluster",
@@ -128,7 +128,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			},
 			dc: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 					CommonLabels: map[string]string{
 						"key1": "dc",
 						"key3": "dc",
@@ -137,7 +137,7 @@ func TestTelemetrySpec_MergeWith(t *testing.T) {
 			},
 			want: &TelemetrySpec{
 				Prometheus: &PrometheusTelemetrySpec{
-					Enabled: pointer.Bool(false),
+					Enabled: ptr.To(false),
 					CommonLabels: map[string]string{
 						"key1": "dc",
 						"key2": "cluster",
@@ -172,49 +172,49 @@ func TestTelemetrySpec_MergeEnabled(t *testing.T) {
 		{
 			name:   "receiver enabled nil, parent enabled false",
 			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: nil}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			want:   false,
 		},
 		{
 			name:   "receiver enabled nil, parent enabled true",
 			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: nil}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			want:   true,
 		},
 		{
 			name:   "receiver enabled false, parent enabled nil",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: nil}},
 			want:   false,
 		},
 		{
 			name:   "receiver enabled false, parent enabled false",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			want:   false,
 		},
 		{
 			name:   "receiver enabled false, parent enabled true",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			want:   false,
 		},
 		{
 			name:   "receiver enabled true, parent enabled nil",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: nil}},
 			want:   true,
 		},
 		{
 			name:   "receiver enabled true, parent enabled false",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(false)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(false)}},
 			want:   true,
 		},
 		{
 			name:   "receiver enabled true, parent enabled true",
-			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
-			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: pointer.Bool(true)}},
+			in:     &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
+			parent: &TelemetrySpec{Prometheus: &PrometheusTelemetrySpec{Enabled: ptr.To(true)}},
 			want:   true,
 		},
 	}

@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"k8s.io/utils/pointer"
 	"strings"
 	"testing"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Test_InjectCassandraTelemetryFilters tests that metrics filters from the CRD are correctly injected.
@@ -28,7 +28,7 @@ func Test_InjectCassandraTelemetryFilters(t *testing.T) {
 
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		},
 		Mcac: &telemetry.McacTelemetrySpec{
 			MetricFilters: &[]string{
@@ -61,7 +61,7 @@ func Test_InjectCassandraTelemetryFiltersDefaults(t *testing.T) {
 
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Prometheus: &telemetry.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		},
 	}
 

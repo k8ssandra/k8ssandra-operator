@@ -6,8 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"k8s.io/utils/pointer"
-
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -17,6 +15,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -37,7 +36,7 @@ func Test_reconcileStargateTelemetry_succeeds(t *testing.T) {
 	stargate := test.NewStargate("test-stargate", "test-stargate-namespace")
 	stargate.Spec.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled:      pointer.Bool(true),
+			Enabled:      ptr.To(true),
 			CommonLabels: map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name", "test-label": "test"},
 		},
 	}
