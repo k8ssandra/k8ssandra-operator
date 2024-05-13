@@ -494,7 +494,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("500Gi"),
 										},
@@ -527,7 +527,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("2Ti"),
 										},
@@ -635,7 +635,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &defaultStorageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: *parseQuantity("500Gi"),
 								},
@@ -676,7 +676,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("2Ti"),
 										},

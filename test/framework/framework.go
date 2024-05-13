@@ -463,7 +463,7 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 	if len(key.K8sContext) == 0 {
 		for k8sContext := range f.remoteClients {
 			opts := kubectl.Options{Namespace: key.Namespace, Context: k8sContext}
-			err := wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
+			err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
 				if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 					return false, err
 				}

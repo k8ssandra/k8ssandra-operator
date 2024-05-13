@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var (
@@ -64,10 +65,10 @@ func (r *K8ssandraCluster) Default() {
 var _ webhook.Validator = &K8ssandraCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateCreate() error {
+func (r *K8ssandraCluster) ValidateCreate() (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
 
-	return r.validateK8ssandraCluster()
+	return nil, r.validateK8ssandraCluster()
 }
 
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
@@ -128,16 +129,16 @@ func (r *K8ssandraCluster) validateStatefulsetNameSize() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
+func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
 
 	if err := r.validateK8ssandraCluster(); err != nil {
-		return err
+		return nil, err
 	}
 
 	oldCluster, ok := old.(*K8ssandraCluster)
 	if !ok {
-		return fmt.Errorf("previous object could not be casted to K8ssandraCluster")
+		return nil, fmt.Errorf("previous object could not be casted to K8ssandraCluster")
 	}
 
 	// Verify Reaper keyspace is not changed
@@ -145,7 +146,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	reaperSpec := r.Spec.Reaper
 	if reaperSpec != nil && oldReaperSpec != nil {
 		if reaperSpec.Keyspace != oldReaperSpec.Keyspace {
-			return ErrReaperKeyspace
+			return nil, ErrReaperKeyspace
 		}
 	}
 
@@ -158,22 +159,22 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 		if !oldNumTokensExists {
 			cassVersion, err := semver.NewVersion(oldCluster.Spec.Cassandra.ServerVersion)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
 			if newNumTokensExists && newNumTokens.(float64) != defaultNumTokens {
-				return ErrNumTokens
+				return nil, ErrNumTokens
 			}
 		} else {
 			if oldNumTokens != newNumTokens {
-				return ErrNumTokens
+				return nil, ErrNumTokens
 			}
 		}
 	}
 
 	// Verify that the cluster name override was not changed
 	if r.Spec.Cassandra.ClusterName != oldCluster.Spec.Cassandra.ClusterName {
-		return ErrClusterName
+		return nil, ErrClusterName
 	}
 
 	// Some of these could be extracted in the cass-operator to reusable methods, do not copy code here.
@@ -185,16 +186,16 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) error {
 	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
 
 	if err := r.validateStatefulsetNameSize(); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateDelete() error {
+func (r *K8ssandraCluster) ValidateDelete() (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster delete", "name", r.Name)
-	return nil
+	return nil, nil
 }
 
 func (r *K8ssandraCluster) ValidateMedusa() error {

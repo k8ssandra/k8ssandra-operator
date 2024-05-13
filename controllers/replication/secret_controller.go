@@ -404,7 +404,7 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingReplicates := func(secret client.Object) []reconcile.Request {
+	toMatchingReplicates := func(ctx context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		s.selectorMutex.RLock()
 		for k, v := range s.selectors {
@@ -418,11 +418,11 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 
 	for _, c := range clusters {
-		cb = cb.Watches(
-			source.NewKindWithCache(&corev1.Secret{}, c.GetCache()),
+		cb = cb.WatchesRawSource(
+			source.Kind(c.GetCache(), &corev1.Secret{}),
 			handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 	}
 

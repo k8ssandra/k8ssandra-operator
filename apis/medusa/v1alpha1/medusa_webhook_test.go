@@ -13,6 +13,8 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	//+kubebuilder:scaffold:imports
 
@@ -77,13 +79,20 @@ func TestMedusaWebhooks(t *testing.T) {
 
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
+
+	whServer := webhook.NewServer(webhook.Options{
+		Port:    webhookInstallOptions.LocalServingPort,
+		Host:    webhookInstallOptions.LocalServingHost,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
+	})
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:         scheme,
+		WebhookServer:  whServer,
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	require.NoError(err)
 

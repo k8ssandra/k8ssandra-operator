@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -94,7 +93,7 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingClientConfig := func(secret client.Object) []reconcile.Request {
+	toMatchingClientConfig := func(ctx context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		secretKey := types.NamespacedName{Name: secret.GetName(), Namespace: secret.GetNamespace()}
 		if clientConfigName, found := r.secretFilter[secretKey]; found {
@@ -105,7 +104,7 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
 
 	return cb.Complete(r)
 }
@@ -191,18 +190,14 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 
 	// Add cluster to the manager
 	var c cluster.Cluster
-	if len(namespaces) > 1 {
-		c, err = cluster.New(cfg, func(o *cluster.Options) {
-			o.Scheme = r.Scheme
-			o.Namespace = ""
-			o.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
-		})
-	} else {
-		c, err = cluster.New(cfg, func(o *cluster.Options) {
-			o.Scheme = r.Scheme
-			o.Namespace = namespaces[0]
-		})
-	}
+	nsConfig := make(map[string]cache.Config)
+	c, err = cluster.New(cfg, func(o *cluster.Options) {
+		o.Scheme = r.Scheme
+		for _, i := range namespaces {
+			nsConfig[i] = cache.Config{}
+		}
+		o.Cache.DefaultNamespaces = nsConfig
+	})
 	if err != nil {
 		return nil, err
 	}

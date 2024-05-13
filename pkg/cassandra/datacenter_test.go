@@ -167,7 +167,7 @@ func TestCoalesce(t *testing.T) {
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &storageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: resource.MustParse("2Ti"),
 								},
@@ -181,7 +181,7 @@ func TestCoalesce(t *testing.T) {
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &storageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: resource.MustParse("4Ti"),
 								},
@@ -194,7 +194,7 @@ func TestCoalesce(t *testing.T) {
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 						StorageClassName: &storageClass,
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse("4Ti"),
 							},
@@ -1482,7 +1482,7 @@ func GetDatacenterConfig() DatacenterConfig {
 		StorageConfig: &cassdcapi.StorageConfig{
 			CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClass,
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse("4Ti"),
 					},

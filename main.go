@@ -40,6 +40,7 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -49,6 +50,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	controlv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
@@ -124,26 +127,37 @@ func main() {
 	}
 
 	setupLog.Info(versionMessage)
+	whServer := webhook.NewServer(webhook.Options{
+		Port: 9443,
+	})
 
 	options := ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
+		WebhookServer:          whServer,
 		LeaderElection:         enableLeaderElection,
+		HealthProbeBindAddress: probeAddr,
 		LeaderElectionID:       "dcabfccc.k8ssandra.io",
-		Namespace:              watchNamespace,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
-	if strings.Contains(watchNamespace, ",") {
-		setupLog.Info("manager set up with multiple namespaces", "namespaces", watchNamespace)
-		// configure cluster-scoped with MultiNamespacedCacheBuilder
-		options.Namespace = ""
-		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-	} else {
-		setupLog.Info("watch namespace configured", "namespace", watchNamespace)
-		options.Namespace = watchNamespace
+	if watchNamespace != "" {
+		nsConfig := make(map[string]cache.Config)
+		if strings.Contains(watchNamespace, ",") {
+			for _, i := range strings.Split(watchNamespace, ",") {
+				nsConfig[i] = cache.Config{}
+			}
+
+		} else {
+			nsConfig[watchNamespace] = cache.Config{}
+			setupLog.Info("watch namespace configured", "namespace", watchNamespace)
+		}
+		options.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+			opts.DefaultNamespaces = nsConfig
+			return cache.New(config, opts)
+		}
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
