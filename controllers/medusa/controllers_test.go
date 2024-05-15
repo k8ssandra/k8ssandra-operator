@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
@@ -102,6 +103,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
 				Scheme:         scheme.Scheme,
 				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
 				LeaderElection: false,
 			})
 			if err != nil {
@@ -177,6 +179,7 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
 				Scheme:         scheme.Scheme,
 				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
 				LeaderElection: false,
 			})
 			if err != nil {
@@ -251,6 +254,7 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
 				Scheme:         scheme.Scheme,
 				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
 				LeaderElection: false,
 			})
 			if err != nil {
@@ -330,6 +334,7 @@ func setupMedusaConfigurationTestEnv(t *testing.T, ctx context.Context) *testuti
 			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
 				Scheme:         scheme.Scheme,
 				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
 				LeaderElection: false,
 			})
 			if err != nil {
