@@ -513,7 +513,7 @@ func (f *Framework) DeleteK8ssandraClusters(namespace string, interval, timeout 
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &api.K8ssandraClusterList{}
 		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
 		if err != nil {
