@@ -463,7 +463,7 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 	if len(key.K8sContext) == 0 {
 		for k8sContext := range f.remoteClients {
 			opts := kubectl.Options{Namespace: key.Namespace, Context: k8sContext}
-			err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, false, func(ctx context.Context) (bool, error) {
+			err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 				if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 					return false, err
 				}
@@ -479,7 +479,7 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 			return f.k8sContextNotFound(key.K8sContext)
 		}
 		opts := kubectl.Options{Namespace: key.Namespace, Context: key.K8sContext}
-		return wait.PollUntilContextTimeout(context.Background(), interval, timeout, false, func(ctx context.Context) (bool, error) {
+		return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 				return false, err
 			}
@@ -498,7 +498,7 @@ func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.Objec
 	if err != nil {
 		return err
 	}
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		err := f.Client.Get(ctx, key, kc)
 		return err != nil && errors.IsNotFound(err), nil
 	})
@@ -532,7 +532,7 @@ func (f *Framework) DeleteCassandraDatacenters(namespace string, interval, timeo
 		f.logger.Error(err, "Failed to delete CassandraDatacenters")
 	}
 
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &cassdcapi.CassandraDatacenterList{}
 		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
 		if err != nil {

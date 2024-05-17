@@ -360,7 +360,7 @@ func (f *E2eFramework) InstallMinio() error {
 
 		// Wait for the minio rollout to complete
 		opts := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
-		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio"); err != nil {
 				f.logger.Info("Waiting for minio rollout to complete: %s", err)
 				return false, err
@@ -387,7 +387,7 @@ func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
 		// Wait for job to succeed
 		f.logger.Info("Waiting for setup-minio job to succeed")
 		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
-		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 			if err := kubectl.JobSuccess(ctx, opts, namespace, "setup-minio"); err != nil {
 				f.logger.Error(err, "Waiting for setup-minio job to succeed")
 				return false, nil
@@ -550,7 +550,7 @@ func (f *E2eFramework) DeleteNamespace(name string, timeout, interval time.Durat
 	}
 
 	// Should this wait.Poll call be per cluster?
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		for _, remoteClient := range f.remoteClients {
 			err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: name}, namespace.DeepCopy())
 
@@ -730,7 +730,7 @@ func (f *E2eFramework) DeleteReplicatedSecrets(namespace string, timeout, interv
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &replicationapi.ReplicatedSecretList{}
 		if err := f.Client.List(context.Background(), list, client.InNamespace(namespace)); err != nil {
 			f.logger.Error(err, "failed to list ReplicatedSecrets")
@@ -764,7 +764,7 @@ func (f *E2eFramework) deleteAllResources(
 	}
 	// Check that all pods created by resources are terminated
 	// FIXME Should there be a separate wait.Poll call per cluster?
-	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, false, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		podListOptions = append(podListOptions, client.InNamespace(namespace))
 		for k8sContext, remoteClient := range f.remoteClients {
 			list := &corev1.PodList{}
