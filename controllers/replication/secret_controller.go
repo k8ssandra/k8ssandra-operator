@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -397,9 +398,10 @@ func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, sele
 	return secrets.Items, nil
 }
 
-func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster, logger logr.Logger) error {
 	err := s.initializeCache()
 	if err != nil {
+		logger.Info("Failed to initialize cache, error", err)
 		return err
 	}
 
