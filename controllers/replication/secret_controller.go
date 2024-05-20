@@ -85,7 +85,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Namespace)
 				if err != nil {
-					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
+					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName, "Namespace", rsec.Namespace)
 					return reconcile.Result{}, err
 				}
 
@@ -186,7 +186,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
 	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 	if err != nil {
-		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
+		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName, "namespace", req.Namespace)
 		return reconcile.Result{Requeue: true}, err
 	}
 	// Verify secrets have up-to-date hashes

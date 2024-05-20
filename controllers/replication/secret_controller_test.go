@@ -46,13 +46,15 @@ func TestSecretController(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{NumDataPlanes: 2}
-	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
+	logger, err := logr.FromContext(ctx)
+	require.NoError(t, err)
+	err = testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		scheme = mgr.GetScheme()
 		logger = mgr.GetLogger()
 		return (&SecretSyncController{
 			ReconcilerConfig: config.InitConfig(),
 			ClientCache:      clientCache,
-		}).SetupWithManager(mgr, clusters)
+		}).SetupWithManager(mgr, clusters, logger)
 	})
 	if err != nil {
 		t.Fatalf("failed to start test environment: %s", err)
