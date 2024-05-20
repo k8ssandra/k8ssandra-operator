@@ -508,14 +508,16 @@ func (f *Framework) DeleteK8ssandraClusters(namespace string, interval, timeout 
 	f.logger.Info("Deleting K8ssandraClusters", "Namespace", namespace)
 	k8ssandra := &api.K8ssandraCluster{}
 
+	ctx := context.Background()
+
 	if err := f.Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace)); err != nil {
 		f.logger.Error(err, "Failed to delete K8ssandraClusters")
 		return err
 	}
 
-	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &api.K8ssandraClusterList{}
-		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
+		err := f.Client.List(ctx, list, client.InNamespace(namespace))
 		if err != nil {
 			f.logger.Info("Waiting for k8ssandracluster deletion", "error", err)
 			return false, nil
@@ -528,13 +530,15 @@ func (f *Framework) DeleteCassandraDatacenters(namespace string, interval, timeo
 	f.logger.Info("Deleting CassandraDatacenters", "Namespace", namespace)
 	dc := &cassdcapi.CassandraDatacenter{}
 
-	if err := f.Client.DeleteAllOf(context.Background(), dc, client.InNamespace(namespace)); err != nil {
+	ctx := context.Background()
+
+	if err := f.Client.DeleteAllOf(ctx, dc, client.InNamespace(namespace)); err != nil {
 		f.logger.Error(err, "Failed to delete CassandraDatacenters")
 	}
 
-	return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &cassdcapi.CassandraDatacenterList{}
-		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
+		err := f.Client.List(ctx, list, client.InNamespace(namespace))
 		if err != nil {
 			f.logger.Info("Waiting for CassandraDatacenter deletion", "error", err)
 			return false, nil
