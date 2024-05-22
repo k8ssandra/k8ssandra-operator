@@ -701,7 +701,7 @@ func applyPollingDefaults() {
 	polling.datacenterReady.timeout = 20 * time.Minute
 	polling.datacenterReady.interval = 15 * time.Second
 
-	polling.nodetoolStatus.timeout = 2 * time.Minute
+	polling.nodetoolStatus.timeout = 15 * time.Minute
 	polling.nodetoolStatus.interval = 5 * time.Second
 
 	polling.k8ssandraClusterStatus.timeout = 1 * time.Minute
