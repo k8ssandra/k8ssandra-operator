@@ -43,9 +43,10 @@ type ClientConfigReconciler struct {
 
 func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+	nonCacheClient := r.ClientCache.GetLocalNonCacheClient()
 
 	clientConfig := configapi.ClientConfig{}
-	if err := r.ClientCache.GetLocalClient().Get(ctx, req.NamespacedName, &clientConfig); err != nil {
+	if err := nonCacheClient.Get(ctx, req.NamespacedName, &clientConfig); err != nil {
 		if errors.IsNotFound(err) {
 			// ClientConfig was deleted, shutdown to refresh correct list
 			logger.Info(fmt.Sprintf("ClientConfig %v was deleted, shutting down the operator", req))
@@ -63,7 +64,7 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	cCfgHash, secretHash, err := calculateHashes(ctx, r.ClientCache.GetLocalClient(), clientConfig)
+	cCfgHash, secretHash, err := calculateHashes(ctx, nonCacheClient, clientConfig)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// ClientConfig was deleted, shutdown to refresh correct list
