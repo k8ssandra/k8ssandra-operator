@@ -199,10 +199,7 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 
 func setupSecretsInjector(t *testing.T) *podSecretsInjector {
 	p := &podSecretsInjector{}
-	d, err := admission.NewDecoder(scheme.Scheme)
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := admission.NewDecoder(scheme.Scheme)
 	if err := p.InjectDecoder(d); err != nil {
 		t.Fatal(err)
 	}

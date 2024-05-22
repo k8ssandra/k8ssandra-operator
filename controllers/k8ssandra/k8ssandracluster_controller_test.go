@@ -17,7 +17,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -151,7 +151,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 								},
 							},
 							PodSecurityContext: &corev1.PodSecurityContext{
-								RunAsUser: pointer.Int64(999),
+								RunAsUser: ptr.To[int64](999),
 							},
 							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
@@ -276,7 +276,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	kcPatch := client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		},
 	}
 	if err := f.Patch(ctx, kc, kcPatch, kcKey); err != nil {
@@ -494,7 +494,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("500Gi"),
 										},
@@ -527,7 +527,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("2Ti"),
 										},
@@ -635,7 +635,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &defaultStorageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: *parseQuantity("500Gi"),
 								},
@@ -643,7 +643,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 						},
 					},
 					Networking: &api.NetworkingConfig{
-						HostNetwork: pointer.Bool(true),
+						HostNetwork: ptr.To(true),
 					},
 					CassandraConfig: &api.CassandraConfig{
 						CassandraYaml: unstructured.Unstructured{
@@ -676,7 +676,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 									StorageClassName: &defaultStorageClass,
-									Resources: corev1.ResourceRequirements{
+									Resources: corev1.VolumeResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceStorage: *parseQuantity("2Ti"),
 										},
@@ -684,7 +684,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 								},
 							},
 							Networking: &api.NetworkingConfig{
-								HostNetwork: pointer.Bool(false),
+								HostNetwork: ptr.To(false),
 							},
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: unstructured.Unstructured{
@@ -696,7 +696,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 								},
 							},
 							CDC: &cassdcapi.CDCConfiguration{
-								PulsarServiceUrl: pointer.String("pulsar://test-url"),
+								PulsarServiceUrl: ptr.To("pulsar://test-url"),
 							},
 						},
 					},

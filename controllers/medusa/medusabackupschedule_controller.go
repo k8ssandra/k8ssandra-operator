@@ -97,6 +97,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	if nextExecution.Before(now) {
 		if backupSchedule.Spec.ConcurrencyPolicy == batchv1.ForbidConcurrent {
 			if activeTasks, err := r.activeTasks(backupSchedule, dc); err != nil {
+				logger.V(1).Info("failed to get activeTasks", "error", err)
 				return ctrl.Result{}, err
 			} else {
 				if len(activeTasks) > 0 {

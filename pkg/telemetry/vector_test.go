@@ -13,11 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestInjectCassandraVectorAgentConfig(t *testing.T) {
-	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
+	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: ptr.To(true)}}
 	dcConfig := &cassandra.DatacenterConfig{
 		Meta: k8ssandra.EmbeddedObjectMeta{
 			Name: "dc1",
@@ -40,7 +40,7 @@ func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
-	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: pointer.Bool(true)}}
+	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: ptr.To(true)}}
 
 	toml, err := CreateCassandraVectorToml(telemetrySpec, true)
 	if err != nil {
@@ -52,9 +52,9 @@ func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 }
 
 func TestCreateCassandraVectorTomlMcacDisabled(t *testing.T) {
-	telemetrySpec := &telemetry.TelemetrySpec{Mcac: &telemetry.McacTelemetrySpec{Enabled: pointer.Bool(false)},
+	telemetrySpec := &telemetry.TelemetrySpec{Mcac: &telemetry.McacTelemetrySpec{Enabled: ptr.To(false)},
 		Vector: &telemetry.VectorSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Components: &telemetry.VectorComponentsSpec{
 				Sinks: []telemetry.VectorSinkSpec{
 					{
@@ -91,7 +91,7 @@ func TestBuildCustomVectorToml(t *testing.T) {
 			"Single sink",
 			&telemetry.TelemetrySpec{
 				Vector: &telemetry.VectorSpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					Components: &telemetry.VectorComponentsSpec{
 						Sinks: []telemetry.VectorSinkSpec{
 							{
@@ -116,7 +116,7 @@ inputs = ["test", "test2"]
 			"Source, sink and transform",
 			&telemetry.TelemetrySpec{
 				Vector: &telemetry.VectorSpec{
-					Enabled: pointer.Bool(true),
+					Enabled: ptr.To(true),
 					Components: &telemetry.VectorComponentsSpec{
 						Sources: []telemetry.VectorSourceSpec{
 							{
@@ -192,7 +192,7 @@ func TestBuildCustomConfigWithDefaults(t *testing.T) {
 	assert := assert.New(t)
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Vector: &telemetry.VectorSpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 			Components: &telemetry.VectorComponentsSpec{
 				Sinks: []telemetry.VectorSinkSpec{
 					{

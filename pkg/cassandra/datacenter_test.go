@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestCoalesce(t *testing.T) {
@@ -167,7 +167,7 @@ func TestCoalesce(t *testing.T) {
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &storageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: resource.MustParse("2Ti"),
 								},
@@ -181,7 +181,7 @@ func TestCoalesce(t *testing.T) {
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &storageClass,
-							Resources: corev1.ResourceRequirements{
+							Resources: corev1.VolumeResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceStorage: resource.MustParse("4Ti"),
 								},
@@ -194,7 +194,7 @@ func TestCoalesce(t *testing.T) {
 				StorageConfig: &cassdcapi.StorageConfig{
 					CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 						StorageClassName: &storageClass,
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: resource.MustParse("4Ti"),
 							},
@@ -214,14 +214,14 @@ func TestCoalesce(t *testing.T) {
 			clusterTemplate: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					Networking: &api.NetworkingConfig{
-						HostNetwork: pointer.Bool(false),
+						HostNetwork: ptr.To(false),
 					},
 				},
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					Networking: &api.NetworkingConfig{
-						HostNetwork: pointer.Bool(true),
+						HostNetwork: ptr.To(true),
 					},
 				},
 			},
@@ -348,7 +348,7 @@ func TestCoalesce(t *testing.T) {
 					MgmtAPIHeap: &mgmtAPIHeap,
 					Telemetry: &v1alpha1.TelemetrySpec{
 						Mcac: &v1alpha1.McacTelemetrySpec{
-							Enabled: pointer.Bool(false),
+							Enabled: ptr.To(false),
 						},
 					},
 				},
@@ -1340,7 +1340,7 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 
 func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {
 	template := GetDatacenterConfig()
-	template.SoftPodAntiAffinity = pointer.Bool(true)
+	template.SoftPodAntiAffinity = ptr.To(true)
 	dc, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
 		&template,
@@ -1395,7 +1395,7 @@ func TestValidateDatacenterConfig_Fail_NoServerVersion(t *testing.T) {
 func TestCDC(t *testing.T) {
 	template := GetDatacenterConfig()
 	template.CDC = &cassdcapi.CDCConfiguration{
-		PulsarServiceUrl: pointer.String("pulsar://test-url"),
+		PulsarServiceUrl: ptr.To("pulsar://test-url"),
 	}
 	cassDC, err := NewDatacenter(
 		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
@@ -1482,7 +1482,7 @@ func GetDatacenterConfig() DatacenterConfig {
 		StorageConfig: &cassdcapi.StorageConfig{
 			CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 				StorageClassName: &storageClass,
-				Resources: corev1.ResourceRequirements{
+				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceStorage: resource.MustParse("4Ti"),
 					},

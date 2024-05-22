@@ -32,6 +32,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	//+kubebuilder:scaffold:imports
 	corev1 "k8s.io/api/core/v1"
@@ -103,13 +105,21 @@ func TestWebhook(t *testing.T) {
 
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
+
+	whServer := webhook.NewServer(webhook.Options{
+		Port:    webhookInstallOptions.LocalServingPort,
+		Host:    webhookInstallOptions.LocalServingHost,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+	})
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:         scheme,
+		WebhookServer:  whServer,
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	required.NoError(err)
 
@@ -282,7 +292,7 @@ func testNumTokens(t *testing.T) {
 
 	// Handle new num_token value different from previously specified as nil
 	required.NotEqual(oldCassConfig.CassandraYaml["num_tokens"], newCassConfig.CassandraYaml["num_tokens"])
-	var errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	var _, errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified as nil")
 
 	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = tokens
@@ -293,30 +303,30 @@ func testNumTokens(t *testing.T) {
 
 	// Handle new num_token value different from previously specified as an actual value
 	required.NotEqual(oldCassConfig.CassandraYaml["num_tokens"], newCassConfig.CassandraYaml["num_tokens"])
-	errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified")
 
 	// Handle new num_token not specified when previously specified
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	delete(newCassConfig.CassandraYaml, "num_tokens")
 
-	var errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	var _, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig.CassandraYaml = unstructured.Unstructured{}
 
-	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig = &CassandraConfig{}
-	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig = &CassandraConfig{}
-	errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	// Expected to be able to update without token change, however changes to other config values are made
@@ -330,7 +340,7 @@ func testNumTokens(t *testing.T) {
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
-	errorOnValidate := (*newCluster).ValidateUpdate(oldCluster)
+	_, errorOnValidate := (*newCluster).ValidateUpdate(oldCluster)
 	required.NoError(errorOnValidate)
 
 	// Expected failure for validation with token change while changes to other config values are being made
@@ -339,7 +349,7 @@ func testNumTokens(t *testing.T) {
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
-	errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
 }
 

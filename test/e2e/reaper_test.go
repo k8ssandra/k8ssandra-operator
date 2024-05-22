@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,7 +45,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	reaperVectorPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Reaper.Telemetry.Vector.Enabled = pointer.Bool(false)
+	kc.Spec.Reaper.Telemetry.Vector.Enabled = ptr.To(false)
 	err = f.Client.Patch(ctx, kc, reaperVectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)
@@ -57,7 +57,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	reaperVectorPatch = client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	kc.Spec.Reaper.Telemetry.Vector.Enabled = pointer.Bool(true)
+	kc.Spec.Reaper.Telemetry.Vector.Enabled = ptr.To(true)
 	err = f.Client.Patch(ctx, kc, reaperVectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)

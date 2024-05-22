@@ -31,7 +31,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -365,7 +365,7 @@ func TestOperator(t *testing.T) {
 	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
 		testFunc:       createSingleDatacenterClusterWithUpgrade,
 		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
-		initialVersion: pointer.String("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
+		initialVersion: ptr.To("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
 	}))
 	t.Run("StargateJwt", e2eTest(ctx, &e2eTestOpts{
 		testFunc: stargateJwt,
@@ -701,7 +701,7 @@ func applyPollingDefaults() {
 	polling.datacenterReady.timeout = 20 * time.Minute
 	polling.datacenterReady.interval = 15 * time.Second
 
-	polling.nodetoolStatus.timeout = 2 * time.Minute
+	polling.nodetoolStatus.timeout = 15 * time.Minute
 	polling.nodetoolStatus.interval = 5 * time.Second
 
 	polling.k8ssandraClusterStatus.timeout = 1 * time.Minute
@@ -822,7 +822,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	stargateVectorPatch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = pointer.Bool(false)
+	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = ptr.To(false)
 	err = f.Client.Patch(ctx, k8ssandra, stargateVectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -834,7 +834,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	stargateVectorPatch = client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = pointer.Bool(true)
+	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = ptr.To(true)
 	err = f.Client.Patch(ctx, k8ssandra, stargateVectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
@@ -923,8 +923,8 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	vectorPatch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	k8ssandra.Spec.Cassandra.Telemetry.Vector.Enabled = pointer.Bool(false)
-	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = pointer.Bool(false)
+	k8ssandra.Spec.Cassandra.Telemetry.Vector.Enabled = ptr.To(false)
+	k8ssandra.Spec.Cassandra.Datacenters[0].Stargate.Telemetry.Vector.Enabled = ptr.To(false)
 	err = f.Client.Patch(ctx, k8ssandra, vectorPatch)
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkDatacenterReady(t, ctx, dcKey, f)

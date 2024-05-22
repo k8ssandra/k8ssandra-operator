@@ -184,7 +184,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
 
-	clusterLabelFilter := func(mapObj client.Object) []reconcile.Request {
+	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
@@ -196,23 +196,23 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		return requests
 	}
 
-	cb = cb.Watches(&source.Kind{Type: &cassdcapi.CassandraDatacenter{}},
+	cb = cb.Watches(&cassdcapi.CassandraDatacenter{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&source.Kind{Type: &stargateapi.Stargate{}},
+	cb = cb.Watches(&stargateapi.Stargate{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&source.Kind{Type: &reaperapi.Reaper{}},
+	cb = cb.Watches(&reaperapi.Reaper{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&source.Kind{Type: &v1.ConfigMap{}},
+	cb = cb.Watches(&v1.ConfigMap{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 
 	for _, c := range clusters {
-		cb = cb.Watches(source.NewKindWithCache(&cassdcapi.CassandraDatacenter{}, c.GetCache()),
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{}),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.Watches(source.NewKindWithCache(&stargateapi.Stargate{}, c.GetCache()),
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &stargateapi.Stargate{}),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.Watches(source.NewKindWithCache(&reaperapi.Reaper{}, c.GetCache()),
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &reaperapi.Reaper{}),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.Watches(source.NewKindWithCache(&v1.ConfigMap{}, c.GetCache()),
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &v1.ConfigMap{}),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	}
 

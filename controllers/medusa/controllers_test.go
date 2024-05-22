@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"crypto/tls"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 )
@@ -90,15 +93,19 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(
-				env.Config,
-				ctrl.Options{
-					Scheme:  scheme.Scheme,
-					Host:    env.WebhookInstallOptions.LocalServingHost,
-					Port:    env.WebhookInstallOptions.LocalServingPort,
-					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				},
-			)
+			whServer := webhook.NewServer(webhook.Options{
+				Port:    env.WebhookInstallOptions.LocalServingPort,
+				Host:    env.WebhookInstallOptions.LocalServingHost,
+				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+			})
+
+			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
+				Scheme:         scheme.Scheme,
+				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
+				LeaderElection: false,
+			})
 			if err != nil {
 				return err
 			}
@@ -162,15 +169,19 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(
-				env.Config,
-				ctrl.Options{
-					Scheme:  scheme.Scheme,
-					Host:    env.WebhookInstallOptions.LocalServingHost,
-					Port:    env.WebhookInstallOptions.LocalServingPort,
-					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				},
-			)
+			whServer := webhook.NewServer(webhook.Options{
+				Port:    env.WebhookInstallOptions.LocalServingPort,
+				Host:    env.WebhookInstallOptions.LocalServingHost,
+				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+			})
+
+			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
+				Scheme:         scheme.Scheme,
+				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
+				LeaderElection: false,
+			})
 			if err != nil {
 				return err
 			}
@@ -233,15 +244,19 @@ func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiC
 		}
 
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(
-				env.Config,
-				ctrl.Options{
-					Scheme:  scheme.Scheme,
-					Host:    env.WebhookInstallOptions.LocalServingHost,
-					Port:    env.WebhookInstallOptions.LocalServingPort,
-					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				},
-			)
+			whServer := webhook.NewServer(webhook.Options{
+				Port:    env.WebhookInstallOptions.LocalServingPort,
+				Host:    env.WebhookInstallOptions.LocalServingHost,
+				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+			})
+
+			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
+				Scheme:         scheme.Scheme,
+				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
+				LeaderElection: false,
+			})
 			if err != nil {
 				return err
 			}
@@ -309,15 +324,19 @@ func setupMedusaConfigurationTestEnv(t *testing.T, ctx context.Context) *testuti
 			return err
 		}
 		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			dataPlaneMgr, err := ctrl.NewManager(
-				env.Config,
-				ctrl.Options{
-					Scheme:  scheme.Scheme,
-					Host:    env.WebhookInstallOptions.LocalServingHost,
-					Port:    env.WebhookInstallOptions.LocalServingPort,
-					CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				},
-			)
+			whServer := webhook.NewServer(webhook.Options{
+				Port:    env.WebhookInstallOptions.LocalServingPort,
+				Host:    env.WebhookInstallOptions.LocalServingHost,
+				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
+				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+			})
+
+			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
+				Scheme:         scheme.Scheme,
+				WebhookServer:  whServer,
+				Metrics:        metricsserver.Options{BindAddress: "0"},
+				LeaderElection: false,
+			})
 			if err != nil {
 				return err
 			}

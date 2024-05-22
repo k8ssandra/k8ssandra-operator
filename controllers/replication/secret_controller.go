@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -84,7 +85,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Namespace)
 				if err != nil {
-					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName)
+					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName, "Namespace", rsec.Namespace)
 					return reconcile.Result{}, err
 				}
 
@@ -185,7 +186,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Fetch all the secrets that match the ReplicatedSecret's rules
 	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 	if err != nil {
-		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName)
+		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName, "namespace", req.Namespace)
 		return reconcile.Result{Requeue: true}, err
 	}
 	// Verify secrets have up-to-date hashes
@@ -397,14 +398,15 @@ func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, sele
 	return secrets.Items, nil
 }
 
-func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster, logger logr.Logger) error {
 	err := s.initializeCache()
 	if err != nil {
+		logger.Info("Failed to initialize cache, error", err)
 		return err
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingReplicates := func(secret client.Object) []reconcile.Request {
+	toMatchingReplicates := func(ctx context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		s.selectorMutex.RLock()
 		for k, v := range s.selectors {
@@ -418,11 +420,11 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 
 	for _, c := range clusters {
-		cb = cb.Watches(
-			source.NewKindWithCache(&corev1.Secret{}, c.GetCache()),
+		cb = cb.WatchesRawSource(
+			source.Kind(c.GetCache(), &corev1.Secret{}),
 			handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 	}
 

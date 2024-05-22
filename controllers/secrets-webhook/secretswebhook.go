@@ -23,7 +23,13 @@ import (
 // +kubebuilder:webhook:path=/mutate-v1-pod-secrets-inject,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io,admissionReviewVersions=v1,sideEffects=None
 
 func SetupSecretsInjectorWebhook(mgr ctrl.Manager) {
-	mgr.GetWebhookServer().Register("/mutate-v1-pod-secrets-inject", &webhook.Admission{Handler: &podSecretsInjector{Client: mgr.GetClient()}})
+	mgr.GetWebhookServer().Register("/mutate-v1-pod-secrets-inject",
+		&webhook.Admission{
+			Handler: &podSecretsInjector{
+				Client:  mgr.GetClient(),
+				decoder: admission.NewDecoder(mgr.GetScheme())},
+		},
+	)
 }
 
 // podSecretsInjector is an admission handler that mutates pod manifests

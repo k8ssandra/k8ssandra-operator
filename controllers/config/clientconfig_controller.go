@@ -19,8 +19,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -43,9 +43,10 @@ type ClientConfigReconciler struct {
 
 func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
+	nonCacheClient := r.ClientCache.GetLocalNonCacheClient()
 
 	clientConfig := configapi.ClientConfig{}
-	if err := r.ClientCache.GetLocalClient().Get(ctx, req.NamespacedName, &clientConfig); err != nil {
+	if err := nonCacheClient.Get(ctx, req.NamespacedName, &clientConfig); err != nil {
 		if errors.IsNotFound(err) {
 			// ClientConfig was deleted, shutdown to refresh correct list
 			logger.Info(fmt.Sprintf("ClientConfig %v was deleted, shutting down the operator", req))
@@ -63,7 +64,7 @@ func (r *ClientConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	cCfgHash, secretHash, err := calculateHashes(ctx, r.ClientCache.GetLocalClient(), clientConfig)
+	cCfgHash, secretHash, err := calculateHashes(ctx, nonCacheClient, clientConfig)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// ClientConfig was deleted, shutdown to refresh correct list
@@ -94,7 +95,7 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingClientConfig := func(secret client.Object) []reconcile.Request {
+	toMatchingClientConfig := func(ctx context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		secretKey := types.NamespacedName{Name: secret.GetName(), Namespace: secret.GetNamespace()}
 		if clientConfigName, found := r.secretFilter[secretKey]; found {
@@ -105,7 +106,7 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
 
 	return cb.Complete(r)
 }
@@ -117,12 +118,19 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 	clientConfigs := make([]configapi.ClientConfig, 0)
-	namespaces := strings.Split(watchNamespace, ",")
-
-	for _, ns := range namespaces {
+	namespaces := []string{}
+	if watchNamespace != "" {
+		namespaces = strings.Split(watchNamespace, ",")
+		for _, ns := range namespaces {
+			cConfigs := configapi.ClientConfigList{}
+			if err := uncachedClient.List(ctx, &cConfigs, client.InNamespace(ns)); err != nil {
+				return nil, err
+			}
+			clientConfigs = append(clientConfigs, cConfigs.Items...)
+		}
+	} else {
 		cConfigs := configapi.ClientConfigList{}
-		err := uncachedClient.List(ctx, &cConfigs, client.InNamespace(ns))
-		if err != nil {
+		if err := uncachedClient.List(ctx, &cConfigs); err != nil {
 			return nil, err
 		}
 		clientConfigs = append(clientConfigs, cConfigs.Items...)
@@ -134,7 +142,8 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
-		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces)
+		logger.V(1).Info(fmt.Sprintf("Initializing client config %s namespaces %s", cCfg.Name, namespaces))
+		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +170,7 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 }
 
 // initAdditionalCLusterConfig fetches the clientConfigs for additional clusters
-func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, namespaces []string) (cluster.Cluster, error) {
+func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, namespaces []string, logger logr.Logger) (cluster.Cluster, error) {
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 
 	// Calculate hashes
@@ -191,18 +200,17 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 
 	// Add cluster to the manager
 	var c cluster.Cluster
-	if len(namespaces) > 1 {
-		c, err = cluster.New(cfg, func(o *cluster.Options) {
-			o.Scheme = r.Scheme
-			o.Namespace = ""
-			o.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
-		})
-	} else {
-		c, err = cluster.New(cfg, func(o *cluster.Options) {
-			o.Scheme = r.Scheme
-			o.Namespace = namespaces[0]
-		})
-	}
+	c, err = cluster.New(cfg, func(o *cluster.Options) {
+		o.Scheme = r.Scheme
+		if len(namespaces) > 0 {
+			nsConfig := make(map[string]cache.Config)
+			for _, i := range namespaces {
+				nsConfig[i] = cache.Config{}
+			}
+			o.Cache.DefaultNamespaces = nsConfig
+		}
+	})
+
 	if err != nil {
 		return nil, err
 	}

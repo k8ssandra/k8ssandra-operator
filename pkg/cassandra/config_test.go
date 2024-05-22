@@ -5,8 +5,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/api/resource"
-
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/Jeffail/gabs"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -169,7 +168,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector: pointer.String("G1GC"),
+					GarbageCollector: ptr.To("G1GC"),
 				},
 			},
 			want: `{
@@ -184,7 +183,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionCassandra,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector: pointer.String("ZGC"),
+					GarbageCollector: ptr.To("ZGC"),
 				},
 			},
 			want: `{
@@ -199,7 +198,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionDse,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector:            pointer.String("ZGC"),
+					GarbageCollector:            ptr.To("ZGC"),
 					AdditionalJvm8ServerOptions: []string{"-XX:+UseConcMarkSweepGC"},
 				},
 				DseYaml: unstructured.Unstructured{
@@ -226,7 +225,7 @@ func TestCreateJsonConfig(t *testing.T) {
 			serverType:    api.ServerDistributionDse,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
-					GarbageCollector:            pointer.String("ZGC"),
+					GarbageCollector:            ptr.To("ZGC"),
 					AdditionalJvm8ServerOptions: []string{"-XX:ThreadPriorityPolicy=42", "-XX:+UseConcMarkSweepGC"},
 					AdditionalJvmServerOptions:  []string{"-Dio.netty.maxDirectMemory=0"},
 				},

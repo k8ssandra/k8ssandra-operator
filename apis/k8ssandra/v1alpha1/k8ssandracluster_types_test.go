@@ -1,13 +1,14 @@
 package v1alpha1
 
 import (
-	"sigs.k8s.io/yaml"
 	"testing"
+
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/pointer"
 )
 
 func TestK8ssandraCluster(t *testing.T) {
@@ -77,7 +78,7 @@ func TestNetworkingConfig_ToCassNetworkingConfig(t *testing.T) {
 		{
 			"host network true",
 			&NetworkingConfig{
-				HostNetwork: pointer.Bool(true),
+				HostNetwork: ptr.To(true),
 			},
 			&cassdcapi.NetworkingConfig{
 				HostNetwork: true,
@@ -86,7 +87,7 @@ func TestNetworkingConfig_ToCassNetworkingConfig(t *testing.T) {
 		{
 			"host network false",
 			&NetworkingConfig{
-				HostNetwork: pointer.Bool(false),
+				HostNetwork: ptr.To(false),
 			},
 			&cassdcapi.NetworkingConfig{
 				HostNetwork: false,
@@ -104,7 +105,7 @@ func TestNetworkingConfig_ToCassNetworkingConfig(t *testing.T) {
 		{
 			"all set",
 			&NetworkingConfig{
-				HostNetwork: pointer.Bool(true),
+				HostNetwork: ptr.To(true),
 				NodePort: &cassdcapi.NodePortConfig{
 					Native:       1,
 					NativeSSL:    2,

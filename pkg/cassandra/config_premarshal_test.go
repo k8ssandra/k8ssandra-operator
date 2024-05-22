@@ -7,7 +7,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func Test_preMarshalConfig(t *testing.T) {
@@ -104,23 +104,23 @@ func Test_preMarshalConfig(t *testing.T) {
 		},
 		{
 			"simple",
-			reflect.ValueOf(&simple{Simple1: pointer.String("foo"), Simple2: true}),
+			reflect.ValueOf(&simple{Simple1: ptr.To("foo"), Simple2: true}),
 			semver.MustParse("3.11.14"),
 			"cassandra",
-			map[string]interface{}{"foo": map[string]interface{}{"simple1": pointer.String("foo"), "simple2": true}},
+			map[string]interface{}{"foo": map[string]interface{}{"simple1": ptr.To("foo"), "simple2": true}},
 			assert.NoError,
 		},
 		{
 			"simple DSE",
-			reflect.ValueOf(&simple{SimpleDSE: pointer.Bool(true)}),
+			reflect.ValueOf(&simple{SimpleDSE: ptr.To(true)}),
 			semver.MustParse("6.8.25"),
 			"dse",
-			map[string]interface{}{"foo": map[string]interface{}{"simple": map[string]interface{}{"dse": pointer.Bool(true)}}},
+			map[string]interface{}{"foo": map[string]interface{}{"simple": map[string]interface{}{"dse": ptr.To(true)}}},
 			assert.NoError,
 		},
 		{
 			"simple server type mismatch",
-			reflect.ValueOf(&simple{SimpleDSE: pointer.Bool(true)}),
+			reflect.ValueOf(&simple{SimpleDSE: ptr.To(true)}),
 			semver.MustParse("7.0.0"),
 			"whatever",
 			map[string]interface{}{},
@@ -129,22 +129,22 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"complex 3.11.x",
 			reflect.ValueOf(&komplex{
-				ManyRestrictions: pointer.String("qix"),
-				V3Only:           pointer.Int(123),
-				V4Only:           pointer.Int(456),
+				ManyRestrictions: ptr.To("qix"),
+				V3Only:           ptr.To[int](123),
+				V4Only:           ptr.To[int](456),
 				RetainZero:       true,
 				nonExported:      789,
 				Ignored:          1000,
 				ChildNoRecurseRetainZeroV4Only: &simple{
-					Simple1: pointer.String("foo"),
+					Simple1: ptr.To("foo"),
 					Simple2: true,
 				},
 				ChildRecurseNoPath: &simple{
-					Simple1: pointer.String("bar"),
+					Simple1: ptr.To("bar"),
 					Simple2: false,
 				},
 				ChildRecurse: &simple{
-					Simple1: pointer.String("qix"),
+					Simple1: ptr.To("qix"),
 					Simple2: true,
 				},
 			}),
@@ -152,15 +152,15 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			map[string]interface{}{
 				"foo": map[string]interface{}{
-					"many-restrictions-3x": pointer.String("qix"),
-					"3x-only":              pointer.Int(123),
+					"many-restrictions-3x": ptr.To("qix"),
+					"3x-only":              ptr.To[int](123),
 					"retain-zero":          true,
 					// from ChildRecurseNoPath:
-					"simple1": pointer.String("bar"),
+					"simple1": ptr.To("bar"),
 					//"simple2" omitted because zero value not retained
 					// from ChildRecurse:
 					"foo": map[string]interface{}{
-						"simple1": pointer.String("qix"),
+						"simple1": ptr.To("qix"),
 						"simple2": true,
 					},
 				},
@@ -171,22 +171,22 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"complex 4.x",
 			reflect.ValueOf(&komplex{
-				ManyRestrictions: pointer.String("qix"),
-				V3Only:           pointer.Int(123),
-				V4Only:           pointer.Int(456),
+				ManyRestrictions: ptr.To("qix"),
+				V3Only:           ptr.To[int](123),
+				V4Only:           ptr.To[int](456),
 				RetainZero:       true,
 				nonExported:      789,
 				Ignored:          1000,
 				ChildNoRecurseRetainZeroV4Only: &simple{
-					Simple1: pointer.String("foo"),
+					Simple1: ptr.To("foo"),
 					Simple2: true,
 				},
 				ChildRecurseNoPath: &simple{
-					Simple1: pointer.String("bar"),
+					Simple1: ptr.To("bar"),
 					Simple2: false,
 				},
 				ChildRecurse: &simple{
-					Simple1: pointer.String("qix"),
+					Simple1: ptr.To("qix"),
 					Simple2: true,
 				},
 			}),
@@ -194,21 +194,21 @@ func Test_preMarshalConfig(t *testing.T) {
 			"cassandra",
 			map[string]interface{}{
 				"foo": map[string]interface{}{
-					"many-restrictions-4x": pointer.String("qix"),
-					"4x-only":              pointer.Int(456),
+					"many-restrictions-4x": ptr.To("qix"),
+					"4x-only":              ptr.To[int](456),
 					"retain-zero":          true,
 					// from ChildRecurseNoPath:
-					"simple1": pointer.String("bar"),
+					"simple1": ptr.To("bar"),
 					//"simple2" omitted because zero value not retained
 					// from ChildRecurse:
 					"foo": map[string]interface{}{
-						"simple1": pointer.String("qix"),
+						"simple1": ptr.To("qix"),
 						"simple2": true,
 					},
 				},
 				// from ChildNoRecurseRetainZeroV4Only, which wasn't recursed hence was included as is
 				"child-4x": &simple{
-					Simple1: pointer.String("foo"),
+					Simple1: ptr.To("foo"),
 					Simple2: true,
 				},
 			},
@@ -217,19 +217,19 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"complex DSE 6.8",
 			reflect.ValueOf(&dse{
-				ManyRestrictionsDSE: pointer.String("qix"),
+				ManyRestrictionsDSE: ptr.To("qix"),
 				ChildRecurseDSE: &simple{
-					SimpleDSE: pointer.Bool(true),
+					SimpleDSE: ptr.To(true),
 				},
 			}),
 			semver.MustParse("6.8.25"),
 			"dse",
 			map[string]interface{}{
-				"many-restrictions-dse": pointer.String("qix"),
+				"many-restrictions-dse": ptr.To("qix"),
 				"parent": map[string]interface{}{
 					"foo": map[string]interface{}{
 						"simple": map[string]interface{}{
-							"dse": pointer.Bool(true),
+							"dse": ptr.To(true),
 						},
 					},
 				},
@@ -239,15 +239,15 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"complex DSE 6.8 with cassandra server type",
 			reflect.ValueOf(&dse{
-				ManyRestrictionsDSE: pointer.String("qix"),
+				ManyRestrictionsDSE: ptr.To("qix"),
 				ChildRecurseDSE: &simple{
-					SimpleDSE: pointer.Bool(true),
+					SimpleDSE: ptr.To(true),
 				},
 			}),
 			semver.MustParse("5.0.0"),
 			"cassandra",
 			map[string]interface{}{
-				"many-restrictions-cassandra": pointer.String("qix"),
+				"many-restrictions-cassandra": ptr.To("qix"),
 			},
 			assert.NoError,
 		},
@@ -299,8 +299,8 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"key conflict simple",
 			reflect.ValueOf(conflict1{
-				Field1: pointer.Int(123),
-				Field2: pointer.String("foo"),
+				Field1: ptr.To[int](123),
+				Field2: ptr.To("foo"),
 			}),
 			semver.MustParse("4.1.0"),
 			"cassandra",
@@ -314,8 +314,8 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"key conflict recursive 1",
 			reflect.ValueOf(conflict2{
-				Field1: pointer.Int(123),
-				Field2: &simple{Simple1: pointer.String("foo")},
+				Field1: ptr.To[int](123),
+				Field2: &simple{Simple1: ptr.To("foo")},
 			}),
 			semver.MustParse("4.1.0"),
 			"cassandra",
@@ -329,8 +329,8 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"key conflict recursive 2",
 			reflect.ValueOf(conflict3{
-				Field1: pointer.Int(123),
-				Field2: &simple{Simple1: pointer.String("abc")},
+				Field1: ptr.To[int](123),
+				Field2: &simple{Simple1: ptr.To("abc")},
 			}),
 			semver.MustParse("4.1.0"),
 			"cassandra",
@@ -344,8 +344,8 @@ func Test_preMarshalConfig(t *testing.T) {
 		{
 			"key conflict recursive 3",
 			reflect.ValueOf(conflict4{
-				Field1: pointer.Int(123),
-				Field2: &simple{Simple1: pointer.String("abc")},
+				Field1: ptr.To[int](123),
+				Field2: &simple{Simple1: ptr.To("abc")},
 			}),
 			semver.MustParse("4.1.0"),
 			"cassandra",

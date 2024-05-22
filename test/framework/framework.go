@@ -463,7 +463,7 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 	if len(key.K8sContext) == 0 {
 		for k8sContext := range f.remoteClients {
 			opts := kubectl.Options{Namespace: key.Namespace, Context: k8sContext}
-			err := wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
+			err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 				if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 					return false, err
 				}
@@ -479,7 +479,7 @@ func (f *Framework) WaitForDeploymentToBeReady(key ClusterKey, timeout, interval
 			return f.k8sContextNotFound(key.K8sContext)
 		}
 		opts := kubectl.Options{Namespace: key.Namespace, Context: key.K8sContext}
-		return wait.PollWithContext(context.Background(), interval, timeout, func(ctx context.Context) (bool, error) {
+		return wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", key.Name); err != nil {
 				return false, err
 			}
@@ -498,47 +498,58 @@ func (f *Framework) DeleteK8ssandraCluster(ctx context.Context, key client.Objec
 	if err != nil {
 		return err
 	}
-	return wait.Poll(interval, timeout, func() (bool, error) {
+
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		err := f.Client.Get(ctx, key, kc)
 		return err != nil && errors.IsNotFound(err), nil
 	})
 }
 
-func (f *Framework) DeleteK8ssandraClusters(namespace string, interval, timeout time.Duration) error {
+func (f *Framework) DeleteK8ssandraClusters(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("Deleting K8ssandraClusters", "Namespace", namespace)
 	k8ssandra := &api.K8ssandraCluster{}
 
-	if err := f.Client.DeleteAllOf(context.TODO(), k8ssandra, client.InNamespace(namespace)); err != nil {
+	// We set the context here so that it correctly fails the DeleteAllOf operation if the context has timed out
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := f.Client.DeleteAllOf(ctx, k8ssandra, client.InNamespace(namespace)); err != nil {
 		f.logger.Error(err, "Failed to delete K8ssandraClusters")
 		return err
 	}
 
-	return wait.Poll(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextCancel(ctx, interval, true, func(ctx context.Context) (bool, error) {
 		list := &api.K8ssandraClusterList{}
-		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
-		if err != nil {
+		if err := context.Cause(ctx); err != nil {
+			f.logger.Error(err, "Failed to delete K8ssandraClusters since context is cancelled in loop")
+		}
+		if err := f.Client.List(ctx, list, client.InNamespace(namespace)); err != nil {
 			f.logger.Info("Waiting for k8ssandracluster deletion", "error", err)
 			return false, nil
 		}
+		f.logger.Info("Waiting for K8ssandraClusters to be deleted", "Namespace", namespace, "Count", len(list.Items))
 		return len(list.Items) == 0, nil
 	})
 }
 
-func (f *Framework) DeleteCassandraDatacenters(namespace string, interval, timeout time.Duration) error {
+func (f *Framework) DeleteCassandraDatacenters(namespace string, timeout, interval time.Duration) error {
 	f.logger.Info("Deleting CassandraDatacenters", "Namespace", namespace)
 	dc := &cassdcapi.CassandraDatacenter{}
 
-	if err := f.Client.DeleteAllOf(context.Background(), dc, client.InNamespace(namespace)); err != nil {
+	ctx := context.Background()
+
+	if err := f.Client.DeleteAllOf(ctx, dc, client.InNamespace(namespace)); err != nil {
 		f.logger.Error(err, "Failed to delete CassandraDatacenters")
 	}
 
-	return wait.Poll(interval, timeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		list := &cassdcapi.CassandraDatacenterList{}
-		err := f.Client.List(context.Background(), list, client.InNamespace(namespace))
+		err := f.Client.List(ctx, list, client.InNamespace(namespace))
 		if err != nil {
 			f.logger.Info("Waiting for CassandraDatacenter deletion", "error", err)
 			return false, nil
 		}
+		f.logger.Info("Waiting for CassandraDatacenters to be deleted", "Namespace", namespace, "Count", len(list.Items))
 		return len(list.Items) == 0, nil
 	})
 }

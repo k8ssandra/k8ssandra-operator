@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (r *MedusaBackupSchedule) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -34,18 +35,18 @@ func (r *MedusaBackupSchedule) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &MedusaBackupSchedule{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateCreate() error {
-	return r.validateCronSchedule()
+func (r *MedusaBackupSchedule) ValidateCreate() (admission.Warnings, error) {
+	return nil, r.validateCronSchedule()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateUpdate(old runtime.Object) error {
-	return r.validateCronSchedule()
+func (r *MedusaBackupSchedule) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	return nil, r.validateCronSchedule()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateDelete() error {
-	return nil
+func (r *MedusaBackupSchedule) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func (r *MedusaBackupSchedule) validateCronSchedule() error {

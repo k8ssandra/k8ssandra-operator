@@ -5,8 +5,6 @@ package k8ssandra
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
-
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -17,6 +15,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -53,7 +52,7 @@ func Test_reconcileCassandraDCTelemetry_TracksNamespaces(t *testing.T) {
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
 				Telemetry: &telemetryapi.TelemetrySpec{
 					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled:      pointer.Bool(true),
+						Enabled:      ptr.To(true),
 						CommonLabels: map[string]string{"test-label": "test"},
 					},
 				},
@@ -81,7 +80,7 @@ func Test_mergeTelemetrySpecs(t *testing.T) {
 
 	kc.Spec.Cassandra.Telemetry = &telemetryapi.TelemetrySpec{
 		Mcac: &telemetryapi.McacTelemetrySpec{
-			Enabled: pointer.Bool(true),
+			Enabled: ptr.To(true),
 		},
 	}
 
@@ -94,11 +93,11 @@ func Test_mergeTelemetrySpecs(t *testing.T) {
 			DatacenterOptions: k8ssandraapi.DatacenterOptions{
 				Telemetry: &telemetryapi.TelemetrySpec{
 					Prometheus: &telemetryapi.PrometheusTelemetrySpec{
-						Enabled:      pointer.Bool(true),
+						Enabled:      ptr.To(true),
 						CommonLabels: map[string]string{"test-label": "test"},
 					},
 					Mcac: &telemetryapi.McacTelemetrySpec{
-						Enabled: pointer.Bool(false),
+						Enabled: ptr.To(false),
 					},
 				},
 			},

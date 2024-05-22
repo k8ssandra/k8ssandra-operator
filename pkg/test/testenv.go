@@ -30,7 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -57,7 +58,6 @@ type TestEnv struct {
 
 func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager) error) error {
 	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
-	metrics.DefaultBindAddress = "0"
 
 	if err := registerApis(); err != nil {
 		return err
@@ -79,13 +79,20 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 
 	webhookInstallOptions := &e.Environment.WebhookInstallOptions
+	whServer := webhook.NewServer(webhook.Options{
+		Port:    webhookInstallOptions.LocalServingPort,
+		Host:    webhookInstallOptions.LocalServingHost,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+	})
+
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:         scheme.Scheme,
+		WebhookServer:  whServer,
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 	if err != nil {
 		return err
@@ -169,8 +176,6 @@ type MultiClusterTestEnv struct {
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
-	// Prevent the metrics listener being created (it binds to 8080 for all testEnvs)
-	metrics.DefaultBindAddress = "0"
 
 	// if err := prepareCRDs(); err != nil {
 	// 	t.Fatalf("failed to prepare CRDs: %s", err)
@@ -230,13 +235,20 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	}
 
 	webhookInstallOptions := &e.testEnvs[0].WebhookInstallOptions
+	whServer := webhook.NewServer(webhook.Options{
+		Port:    webhookInstallOptions.LocalServingPort,
+		Host:    webhookInstallOptions.LocalServingHost,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
+		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+	})
+
 	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
-		Scheme:             scheme.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:         scheme.Scheme,
+		WebhookServer:  whServer,
+		LeaderElection: false,
+		Metrics: server.Options{
+			BindAddress: "0",
+		},
 	})
 
 	if err != nil {
