@@ -26365,6 +26365,7 @@ spec:
                             type: string
                         type: object
                     type: object
+                  purgeBackups: false
                   storageProperties:
                     description: Provides all storage backend related properties for
                       backups.
