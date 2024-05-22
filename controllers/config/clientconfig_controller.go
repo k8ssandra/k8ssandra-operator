@@ -121,12 +121,16 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	namespaces := []string{}
 	if watchNamespace != "" {
 		namespaces = strings.Split(watchNamespace, ",")
-	}
-
-	for _, ns := range namespaces {
+		for _, ns := range namespaces {
+			cConfigs := configapi.ClientConfigList{}
+			if err := uncachedClient.List(ctx, &cConfigs, client.InNamespace(ns)); err != nil {
+				return nil, err
+			}
+			clientConfigs = append(clientConfigs, cConfigs.Items...)
+		}
+	} else {
 		cConfigs := configapi.ClientConfigList{}
-		err := uncachedClient.List(ctx, &cConfigs, client.InNamespace(ns))
-		if err != nil {
+		if err := uncachedClient.List(ctx, &cConfigs); err != nil {
 			return nil, err
 		}
 		clientConfigs = append(clientConfigs, cConfigs.Items...)
