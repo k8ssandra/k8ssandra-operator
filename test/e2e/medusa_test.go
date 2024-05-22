@@ -113,9 +113,9 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	checkNoPurgeCronJob(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+	checkNoPurgeCronJob(t, ctx, namespace, dcKey, f, kc)
 }
 
 func checkBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string, k8sContext string, kc *k8ssandraapi.K8ssandraCluster) {
@@ -205,31 +205,10 @@ func checkNoPurgeCronJob(t *testing.T, ctx context.Context, namespace string, dc
 	err := f.Get(ctx, dcKey, dc1)
 	// check medusa containers exist
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	t.Log("Checking that all the Medusa related objects have been created and are in the expected state")
-	// check that the cronjob exists
+	// ensure the cronjob was not created
 	cronJob := &batchv1.CronJob{}
 	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
-	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dc1.SanitizedName())
-	require.Equal("k8ssandra-operator", cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName, "Service account name is not correct")
-	// create a Job from the cronjob spec
-	job := &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "test-purge-job",
-		},
-		Spec: cronJob.Spec.JobTemplate.Spec,
-	}
-	err = f.Create(ctx, dcKey, job)
-	require.NoErrorf(err, "A Medusa purge Job was created when it should not have been. ClusterName: %s, DataceneterName: %s, Namespace: %s, JobName: test-no-purge-job", kc.SanitizedName(), dc1.SanitizedName(), namespace)
-	// ensure the job was not created
-	require.Never(func() bool {
-		updated := &batchv1.Job{}
-		err := f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, "test-purge-job"), updated)
-		if err != nil {
-			return false
-		}
-		return updated.Status.Succeeded == 1
-	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Timeout checking for Medusa purge Job")
+	require.Error(err, "Cronjob should not exist")
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
