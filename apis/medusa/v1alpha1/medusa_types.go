@@ -186,5 +186,5 @@ type MedusaClusterTemplate struct {
 	// Defaults to true.
 	// +kubebuilder:default=true
 	// +optional
-	PurgeBackups bool `json:"purgeBackups,omitempty"`
+	PurgeBackups *bool `json:"purgeBackups,omitempty"`
 }
