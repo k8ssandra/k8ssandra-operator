@@ -10677,7 +10677,7 @@ spec:
                             ServerVersion is the Cassandra or DSE version. The following versions are supported:
                             - Cassandra: 3.11.X, 4.X.X and 5.X.X
                             - DSE: 6.8.X, 7.x.x
-                          pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)|(5\.\d+\.\d+)|(7\.\d+\.\d+)
+                            - HCD: 1.0.x
                           type: string
                         serviceAccount:
                           description: The k8s service account to use for the Cassandra
@@ -23195,13 +23195,14 @@ spec:
                     enum:
                     - cassandra
                     - dse
+                    - hcd
                     type: string
                   serverVersion:
                     description: |-
                       ServerVersion is the Cassandra or DSE version. The following versions are supported:
                       - Cassandra: 3.11.X, 4.X.X and 5.X.X
                       - DSE: 6.8.X, 7.x.x
-                    pattern: (6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)|(5\.\d+\.\d+)|(7\.\d+\.\d+)
+                      - HCD: 1.0.x
                     type: string
                   serviceAccount:
                     description: The k8s service account to use for the Cassandra
