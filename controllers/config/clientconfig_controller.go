@@ -117,7 +117,10 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 	clientConfigs := make([]configapi.ClientConfig, 0)
-	namespaces := strings.Split(watchNamespace, ",")
+	namespaces := []string{}
+	if watchNamespace != "" {
+		namespaces = strings.Split(watchNamespace, ",")
+	}
 
 	for _, ns := range namespaces {
 		cConfigs := configapi.ClientConfigList{}
@@ -194,20 +197,13 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 	var c cluster.Cluster
 	c, err = cluster.New(cfg, func(o *cluster.Options) {
 		o.Scheme = r.Scheme
-		nsConfig := make(map[string]cache.Config)
-		for _, i := range namespaces {
-			if i != "" {
-				logger.V(1).Info(fmt.Sprintf("adding namespace %s for client %s to cache", i, cCfg.GetContextName()))
+		if len(namespaces) > 0 {
+			nsConfig := make(map[string]cache.Config)
+			for _, i := range namespaces {
 				nsConfig[i] = cache.Config{}
 			}
-		}
-		if len(nsConfig) > 0 {
-			logger.V(1).Info(fmt.Sprintf("Setting namespaces %#v for client %s", namespaces, cCfg.GetContextName()))
 			o.Cache.DefaultNamespaces = nsConfig
-		} else {
-			logger.V(1).Info(fmt.Sprintf("Setting all namespaces for client %s, namespaces was  %#v", cCfg.GetContextName(), namespaces))
 		}
-
 	})
 
 	if err != nil {
