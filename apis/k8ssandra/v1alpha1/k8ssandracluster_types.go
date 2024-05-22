@@ -319,6 +319,7 @@ type DatacenterOptions struct {
 	// - Cassandra: 3.11.X, 4.X.X and 5.X.X
 	// - DSE: 6.8.X, 7.x.x
 	// - HCD: 1.0.x
+	// +kubebuilder:validation:Pattern=(\d+\.\d+\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a
@@ -544,9 +545,6 @@ func (sd *ServerDistribution) IsDse() bool {
 func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) float64 {
 	if kc.Spec.Cassandra.ServerType.IsCassandra() && serverVersion.Major() == 3 {
 		return float64(256)
-	}
-	if kc.Spec.Cassandra.ServerType.IsCassandra() {
-		return float64(8)
 	}
 	return float64(16)
 }

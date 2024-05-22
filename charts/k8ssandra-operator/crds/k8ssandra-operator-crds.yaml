@@ -10740,6 +10740,7 @@ spec:
                             - Cassandra: 3.11.X, 4.X.X and 5.X.X
                             - DSE: 6.8.X, 7.x.x
                             - HCD: 1.0.x
+                          pattern: (\d+\.\d+\.\d+)
                           type: string
                         serviceAccount:
                           description: The k8s service account to use for the Cassandra
@@ -23265,6 +23266,7 @@ spec:
                       - Cassandra: 3.11.X, 4.X.X and 5.X.X
                       - DSE: 6.8.X, 7.x.x
                       - HCD: 1.0.x
+                    pattern: (\d+\.\d+\.\d+)
                     type: string
                   serviceAccount:
                     description: The k8s service account to use for the Cassandra
