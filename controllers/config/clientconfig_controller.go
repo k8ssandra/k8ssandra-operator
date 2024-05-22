@@ -196,14 +196,15 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 		o.Scheme = r.Scheme
 		nsConfig := make(map[string]cache.Config)
 		for _, i := range namespaces {
-			nsConfig[i] = cache.Config{}
+			if i != "" {
+				nsConfig[i] = cache.Config{}
+			}
 		}
-		if len(namespaces) > 0 {
-			logger.V(1).Info(fmt.Sprintf("Setting namespaces %v for client %s", namespaces, cCfg.GetContextName()))
+		if len(o.Cache.DefaultNamespaces) > 0 {
+			logger.V(1).Info(fmt.Sprintf("Setting namespaces %#v for client %s", namespaces, cCfg.GetContextName()))
 			o.Cache.DefaultNamespaces = nsConfig
 		} else {
 			logger.V(1).Info(fmt.Sprintf("Setting all namespaces for client %s", cCfg.GetContextName()))
-
 		}
 
 	})
