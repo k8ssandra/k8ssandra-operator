@@ -133,6 +133,7 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 	r.secretFilter = make(map[types.NamespacedName]types.NamespacedName, len(clientConfigs))
 
 	for _, cCfg := range clientConfigs {
+		logger.V(1).Info(fmt.Sprintf("Initializing client config %s namespaces %s", cCfg.Name, namespaces))
 		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces)
 		if err != nil {
 			return nil, err
@@ -190,14 +191,18 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 
 	// Add cluster to the manager
 	var c cluster.Cluster
-	nsConfig := make(map[string]cache.Config)
 	c, err = cluster.New(cfg, func(o *cluster.Options) {
 		o.Scheme = r.Scheme
+		nsConfig := make(map[string]cache.Config)
 		for _, i := range namespaces {
 			nsConfig[i] = cache.Config{}
 		}
-		o.Cache.DefaultNamespaces = nsConfig
+		if len(namespaces) > 0 {
+			o.Cache.DefaultNamespaces = nsConfig
+		}
+
 	})
+
 	if err != nil {
 		return nil, err
 	}

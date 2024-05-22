@@ -154,8 +154,10 @@ func main() {
 			options.Cache.DefaultNamespaces[namespace] = cache.Config{}
 		}
 	} else if watchNamespace != "" {
-		setupLog.Info("watch namespace configured", "namespace", watchNamespace)
+		setupLog.Info("Adding watch namespace to DefaultNamespaces", "namespace", watchNamespace)
 		options.Cache.DefaultNamespaces[watchNamespace] = cache.Config{}
+	} else {
+		setupLog.Info("manager set up with cluster scope")
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
