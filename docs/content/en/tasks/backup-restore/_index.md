@@ -473,7 +473,18 @@ spec:
 ```
 
 The above `CronJob` will be scheduled to run every day at midnight, and trigger a `MedusaTask` object creation to purge the backups.
+### Disabling the purge CronJob
+If you want to disable the automatic creation of the above purge `CronJob`, you can do so by setting the optional `purgeBackups` field to `false` in the `K8ssandraCluster` spec:
 
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+spec:
+  medusa:
+    purgeBackups: false
+ ```
+
+```yaml
 ## Deprecation Notice
 
 The `CassandraBackup` and `CassandraRestore` CRDs are removed in v1.6.0.
