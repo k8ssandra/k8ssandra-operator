@@ -2437,7 +2437,8 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 							},
 						},
 						{
-							Name: "server-system-logger",
+							Name:  "server-system-logger",
+							Image: "test-vector",
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser:              ptr.To[int64](9999),
 								ReadOnlyRootFilesystem: ptr.To(true),

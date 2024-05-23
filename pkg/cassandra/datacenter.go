@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
@@ -414,11 +415,29 @@ func ValidateDatacenterConfig(dcConfig *DatacenterConfig) error {
 }
 
 func AddContainersToPodTemplateSpec(dcConfig *DatacenterConfig, containers ...corev1.Container) {
-	dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
+	for _, i := range containers {
+		idx, found := FindContainer(&dcConfig.PodTemplateSpec, i.Name)
+		if found {
+			newContainer, err := goalesce.DeepMerge(dcConfig.PodTemplateSpec.Spec.Containers[idx], i)
+			dcConfig.PodTemplateSpec.Spec.Containers[idx] = newContainer
+			println(err)
+		} else {
+			dcConfig.PodTemplateSpec.Spec.Containers = append(dcConfig.PodTemplateSpec.Spec.Containers, containers...)
+		}
+	}
 }
 
 func AddInitContainersToPodTemplateSpec(dcConfig *DatacenterConfig, initContainers ...corev1.Container) {
-	dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+	for _, i := range initContainers {
+		idx, found := FindInitContainer(&dcConfig.PodTemplateSpec, i.Name)
+		if found {
+			newContainer, err := goalesce.DeepMerge(dcConfig.PodTemplateSpec.Spec.InitContainers[idx], i)
+			println(err)
+			dcConfig.PodTemplateSpec.Spec.InitContainers[idx] = newContainer
+		} else {
+			dcConfig.PodTemplateSpec.Spec.InitContainers = append(dcConfig.PodTemplateSpec.Spec.InitContainers, initContainers...)
+		}
+	}
 }
 
 func AddK8ssandraVolumesToPodTemplateSpec(dcConfig *DatacenterConfig, extraVolumes api.K8ssandraVolumes) {
