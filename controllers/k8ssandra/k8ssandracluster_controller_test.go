@@ -2530,7 +2530,7 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 		dc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx].SecurityContext.ReadOnlyRootFilesystem,
 		"server-system-logger RunAsUser is not set")
 
-	require.Equal(2, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 2 additionals volumes")
+	require.Equal(3, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 3 additionals volumes")
 	require.Equal("/etc/injected", dc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected injected-volume mount path")
 
 	t.Log("deleting K8ssandraCluster")
