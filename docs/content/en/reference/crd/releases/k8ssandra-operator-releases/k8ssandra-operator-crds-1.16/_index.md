@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.16"
+linkTitle: "K8ssandra-operator CRDs v1.16"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.16.  
 ---
 
 Packages:
@@ -2679,40 +2679,12 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandracontainersindexresizepolicyindex">resizePolicy</a></b></td>
-        <td>[]object</td>
-        <td>
-          Resources resize policy for the container.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandracontainersindexresources">resources</a></b></td>
         <td>object</td>
         <td>
           Compute Resources required by this container.
 Cannot be updated.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          RestartPolicy defines the restart behavior of individual containers in a pod.
-This field may only be set for init containers, and the only allowed value is "Always".
-For non-init containers or when this field is not specified,
-the restart behavior is defined by the Pod's restart policy and the container type.
-Setting the RestartPolicy as "Always" for the init container will have the following effect:
-this init container will be continually restarted on
-exit until all regular containers have terminated. Once all regular
-containers have completed, all init containers with restartPolicy "Always"
-will be shut down. This lifecycle differs from normal init containers and
-is often referred to as a "sidecar" container. Although this init
-container still starts in the init container sequence, it does not wait
-for the container to complete before proceeding to the next init
-container. Instead, the next init container starts immediately after this
-init container is started, or after any startupProbe has successfully
-completed.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -3277,13 +3249,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandracontainersindexlifecyclepoststartsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandracontainersindexlifecyclepoststarttcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
@@ -3406,8 +3371,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -3415,35 +3379,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.containers[index].lifecycle.postStart.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandracontainersindexlifecyclepoststart)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -3524,13 +3459,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           HTTPGet specifies the http request to perform.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandracontainersindexlifecycleprestopsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -3656,8 +3584,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -3665,35 +3592,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.containers[index].lifecycle.preStop.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandracontainersindexlifecycleprestop)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -3778,7 +3676,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandracontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -3895,6 +3794,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -4008,8 +3908,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -4167,7 +4066,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandracontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -4284,6 +4184,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -4397,8 +4298,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -4444,42 +4344,6 @@ Name must be an IANA_SVC_NAME.<br/>
           Optional: Host name to connect to, defaults to the pod IP.<br/>
         </td>
         <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.containers[index].resizePolicy[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandracontainersindex)</sup></sup>
-
-
-
-ContainerResizePolicy represents resource resize policy for the container.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>resourceName</b></td>
-        <td>string</td>
-        <td>
-          Name of the resource to which this resource resize policy applies.
-Supported values: cpu, memory.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          Restart policy to apply when specified resource is resized.
-If not specified, it defaults to NotRequired.<br/>
-        </td>
-        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -4531,7 +4395,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -4838,7 +4702,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -4885,9 +4749,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -4947,7 +4814,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandracontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5064,6 +4932,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -5177,8 +5046,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -6738,40 +6606,12 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexresizepolicyindex">resizePolicy</a></b></td>
-        <td>[]object</td>
-        <td>
-          Resources resize policy for the container.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexresources">resources</a></b></td>
         <td>object</td>
         <td>
           Compute Resources required by this container.
 Cannot be updated.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          RestartPolicy defines the restart behavior of individual containers in a pod.
-This field may only be set for init containers, and the only allowed value is "Always".
-For non-init containers or when this field is not specified,
-the restart behavior is defined by the Pod's restart policy and the container type.
-Setting the RestartPolicy as "Always" for the init container will have the following effect:
-this init container will be continually restarted on
-exit until all regular containers have terminated. Once all regular
-containers have completed, all init containers with restartPolicy "Always"
-will be shut down. This lifecycle differs from normal init containers and
-is often referred to as a "sidecar" container. Although this init
-container still starts in the init container sequence, it does not wait
-for the container to complete before proceeding to the next init
-container. Instead, the next init container starts immediately after this
-init container is started, or after any startupProbe has successfully
-completed.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7336,13 +7176,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexlifecyclepoststartsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexlifecyclepoststarttcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
@@ -7465,8 +7298,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -7474,35 +7306,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].containers[index].lifecycle.postStart.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexcontainersindexlifecyclepoststart)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -7583,13 +7386,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           HTTPGet specifies the http request to perform.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexlifecycleprestopsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7715,8 +7511,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -7724,35 +7519,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].containers[index].lifecycle.preStop.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexcontainersindexlifecycleprestop)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -7837,7 +7603,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7954,6 +7721,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -8067,8 +7835,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -8226,7 +7993,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -8343,6 +8111,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -8456,8 +8225,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -8503,42 +8271,6 @@ Name must be an IANA_SVC_NAME.<br/>
           Optional: Host name to connect to, defaults to the pod IP.<br/>
         </td>
         <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].containers[index].resizePolicy[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexcontainersindex)</sup></sup>
-
-
-
-ContainerResizePolicy represents resource resize policy for the container.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>resourceName</b></td>
-        <td>string</td>
-        <td>
-          Name of the resource to which this resource resize policy applies.
-Supported values: cpu, memory.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          Restart policy to apply when specified resource is resized.
-If not specified, it defaults to NotRequired.<br/>
-        </td>
-        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -8590,7 +8322,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -8897,7 +8629,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -8944,9 +8676,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9006,7 +8741,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexcontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9123,6 +8859,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -9236,8 +8973,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -9611,24 +9347,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -9792,6 +9510,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexpvcspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -9805,10 +9538,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.pvcs[index].pvcSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexpvcspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -10945,7 +10707,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -11188,24 +10950,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -11369,6 +11113,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -11382,10 +11141,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.pvcs[index].volumeSource.ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -12228,28 +12016,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -12275,171 +12041,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -14497,7 +14098,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -14740,24 +14341,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -14921,6 +14504,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -14934,10 +14532,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.volumes[index].ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -15780,28 +15407,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -15827,171 +15432,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -17126,40 +16566,12 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexresizepolicyindex">resizePolicy</a></b></td>
-        <td>[]object</td>
-        <td>
-          Resources resize policy for the container.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexresources">resources</a></b></td>
         <td>object</td>
         <td>
           Compute Resources required by this container.
 Cannot be updated.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          RestartPolicy defines the restart behavior of individual containers in a pod.
-This field may only be set for init containers, and the only allowed value is "Always".
-For non-init containers or when this field is not specified,
-the restart behavior is defined by the Pod's restart policy and the container type.
-Setting the RestartPolicy as "Always" for the init container will have the following effect:
-this init container will be continually restarted on
-exit until all regular containers have terminated. Once all regular
-containers have completed, all init containers with restartPolicy "Always"
-will be shut down. This lifecycle differs from normal init containers and
-is often referred to as a "sidecar" container. Although this init
-container still starts in the init container sequence, it does not wait
-for the container to complete before proceeding to the next init
-container. Instead, the next init container starts immediately after this
-init container is started, or after any startupProbe has successfully
-completed.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17724,13 +17136,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlifecyclepoststartsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlifecyclepoststarttcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
@@ -17853,8 +17258,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -17862,35 +17266,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].initContainers[index].lifecycle.postStart.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlifecyclepoststart)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -17971,13 +17346,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           HTTPGet specifies the http request to perform.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlifecycleprestopsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18103,8 +17471,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -18112,35 +17479,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].initContainers[index].lifecycle.preStop.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlifecycleprestop)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -18225,7 +17563,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18342,6 +17681,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -18455,8 +17795,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -18614,7 +17953,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18731,6 +18071,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -18844,8 +18185,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -18891,42 +18231,6 @@ Name must be an IANA_SVC_NAME.<br/>
           Optional: Host name to connect to, defaults to the pod IP.<br/>
         </td>
         <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].initContainers[index].resizePolicy[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexinitcontainersindex)</sup></sup>
-
-
-
-ContainerResizePolicy represents resource resize policy for the container.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>resourceName</b></td>
-        <td>string</td>
-        <td>
-          Name of the resource to which this resource resize policy applies.
-Supported values: cpu, memory.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          Restart policy to apply when specified resource is resized.
-If not specified, it defaults to NotRequired.<br/>
-        </td>
-        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -18978,7 +18282,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -19285,7 +18589,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -19332,9 +18636,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19394,7 +18701,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexinitcontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19511,6 +18819,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -19624,8 +18933,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -20646,7 +19954,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -20727,9 +20035,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -21325,38 +20636,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexracksindexaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -21390,7 +20670,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -21589,38 +20868,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexracksindexaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -21654,7 +20902,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -21933,38 +21180,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexracksindexaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -21998,7 +21214,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -22197,38 +21412,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexracksindexaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22262,7 +21446,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -22470,7 +21653,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -23213,38 +22396,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -23278,7 +22430,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -23477,38 +22628,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -23542,7 +22662,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -23821,38 +22940,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -23886,7 +22974,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -24085,38 +23172,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24150,7 +23206,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -24537,7 +23592,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatelivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24654,6 +23710,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -24767,8 +23824,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -25639,38 +24695,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -25704,7 +24729,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -25903,38 +24927,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -25968,7 +24961,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -26247,38 +25239,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -26312,7 +25273,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -26511,38 +25471,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -26576,7 +25505,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -26963,7 +25891,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -27080,6 +26009,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -27193,8 +26123,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -27405,7 +26334,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -27522,6 +26452,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -27635,8 +26566,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -27732,7 +26662,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -28330,7 +27260,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -28471,7 +27401,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatereadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -28588,6 +27519,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -28701,8 +27633,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -28798,7 +27729,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -29396,7 +28327,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -29679,24 +28610,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -29860,6 +28773,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexpvcspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -29873,10 +28801,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.additionalVolumes[index].pvcSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexpvcspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -31013,7 +29970,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -31256,24 +30213,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -31437,6 +30376,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -31450,10 +30404,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.additionalVolumes[index].volumeSource.ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -32296,28 +31279,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -32343,171 +31304,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -33601,24 +32397,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -33782,6 +32560,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstorageconfigcassandradatavolumeclaimspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -33795,10 +32588,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].storageConfig.cassandraDataVolumeClaimSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstorageconfigcassandradatavolumeclaimspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -34447,7 +33269,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -34770,24 +33592,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -34951,6 +33755,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexpvcspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -34964,10 +33783,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.extraVolumes.pvcs[index].pvcSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumespvcsindexpvcspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -36104,7 +34952,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -36347,24 +35195,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -36528,6 +35358,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -36541,10 +35386,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.extraVolumes.pvcs[index].volumeSource.ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -37387,28 +36261,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -37434,171 +36286,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.pvcs[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumespvcsindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -39656,7 +38343,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -39899,24 +38586,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -40080,6 +38749,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandraextravolumesvolumesindexephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -40093,10 +38777,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.extraVolumes.volumes[index].ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumesvolumesindexephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -40939,28 +39652,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -40986,171 +39677,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.extraVolumes.volumes[index].projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandraextravolumesvolumesindexprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -42285,40 +40811,12 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexresizepolicyindex">resizePolicy</a></b></td>
-        <td>[]object</td>
-        <td>
-          Resources resize policy for the container.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexresources">resources</a></b></td>
         <td>object</td>
         <td>
           Compute Resources required by this container.
 Cannot be updated.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          RestartPolicy defines the restart behavior of individual containers in a pod.
-This field may only be set for init containers, and the only allowed value is "Always".
-For non-init containers or when this field is not specified,
-the restart behavior is defined by the Pod's restart policy and the container type.
-Setting the RestartPolicy as "Always" for the init container will have the following effect:
-this init container will be continually restarted on
-exit until all regular containers have terminated. Once all regular
-containers have completed, all init containers with restartPolicy "Always"
-will be shut down. This lifecycle differs from normal init containers and
-is often referred to as a "sidecar" container. Although this init
-container still starts in the init container sequence, it does not wait
-for the container to complete before proceeding to the next init
-container. Instead, the next init container starts immediately after this
-init container is started, or after any startupProbe has successfully
-completed.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -42883,13 +41381,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexlifecyclepoststartsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexlifecyclepoststarttcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
@@ -43012,8 +41503,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -43021,35 +41511,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.initContainers[index].lifecycle.postStart.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrainitcontainersindexlifecyclepoststart)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -43130,13 +41591,6 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           HTTPGet specifies the http request to perform.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexlifecycleprestopsleep">sleep</a></b></td>
-        <td>object</td>
-        <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -43262,8 +41716,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -43271,35 +41724,6 @@ This will be canonicalized upon output, so case-variant names will be understood
         <td>string</td>
         <td>
           The header field value<br/>
-        </td>
-        <td>true</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.initContainers[index].lifecycle.preStop.sleep
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrainitcontainersindexlifecycleprestop)</sup></sup>
-
-
-
-Sleep represents the duration that the container should sleep before being terminated.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>seconds</b></td>
-        <td>integer</td>
-        <td>
-          Seconds is the number of seconds to sleep.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
         </td>
         <td>true</td>
       </tr></tbody>
@@ -43384,7 +41808,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -43501,6 +41926,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -43614,8 +42040,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -43773,7 +42198,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -43890,6 +42316,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -44003,8 +42430,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -44050,42 +42476,6 @@ Name must be an IANA_SVC_NAME.<br/>
           Optional: Host name to connect to, defaults to the pod IP.<br/>
         </td>
         <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.initContainers[index].resizePolicy[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrainitcontainersindex)</sup></sup>
-
-
-
-ContainerResizePolicy represents resource resize policy for the container.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>resourceName</b></td>
-        <td>string</td>
-        <td>
-          Name of the resource to which this resource resize policy applies.
-Supported values: cpu, memory.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>restartPolicy</b></td>
-        <td>string</td>
-        <td>
-          Restart policy to apply when specified resource is resized.
-If not specified, it defaults to NotRequired.<br/>
-        </td>
-        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -44137,7 +42527,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -44444,7 +42834,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -44491,9 +42881,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -44553,7 +42946,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandrainitcontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -44670,6 +43064,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -44783,8 +43178,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -45756,7 +44150,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -45837,9 +44231,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46435,38 +44832,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandraracksindexaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46500,7 +44866,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -46699,38 +45064,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandraracksindexaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -46764,7 +45098,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -47043,38 +45376,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandraracksindexaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -47108,7 +45410,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -47307,38 +45608,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandraracksindexaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -47372,7 +45642,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -47580,7 +45849,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -48000,24 +46269,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -48181,6 +46432,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexpvcspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -48194,10 +46460,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.storageConfig.additionalVolumes[index].pvcSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexpvcspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -49334,7 +47629,7 @@ The size limit is also applicable for memory medium.
 The maximum usage on memory medium EmptyDir would be the minimum value between
 the SizeLimit specified here and the sum of memory limits of all containers in a pod.
 The default is nil which means that the limit is undefined.
-More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir<br/>
+More info: http://kubernetes.io/docs/user-guide/volumes#emptydir<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -49577,24 +47872,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -49758,6 +48035,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceephemeralvolumeclaimtemplatespecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -49771,10 +48063,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.storageConfig.additionalVolumes[index].volumeSource.ephemeral.volumeClaimTemplate.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceephemeralvolumeclaimtemplatespecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -50617,28 +48938,6 @@ Projection that may be projected along with other supported volume types
         </tr>
     </thead>
     <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundle">clusterTrustBundle</a></b></td>
-        <td>object</td>
-        <td>
-          ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexconfigmap">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -50664,171 +48963,6 @@ may change the order over time.<br/>
         <td>object</td>
         <td>
           serviceAccountToken is information about the serviceAccountToken data to project<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindex)</sup></sup>
-
-
-
-ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
-of ClusterTrustBundle objects in an auto-updating file.
-
-
-Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
-
-ClusterTrustBundle objects can either be selected by name, or by the
-combination of signer name and a label selector.
-
-
-Kubelet performs aggressive normalization of the PEM contents written
-into the pod filesystem.  Esoteric PEM features such as inter-block
-comments and block headers are stripped.  Certificates are deduplicated.
-The ordering of certificates within the file is arbitrary, and Kubelet
-may change the order over time.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>path</b></td>
-        <td>string</td>
-        <td>
-          Relative path from the volume root to write the bundle.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector">labelSelector</a></b></td>
-        <td>object</td>
-        <td>
-          Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Select a single ClusterTrustBundle by object name.  Mutually-exclusive
-with signerName and labelSelector.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          If true, don't block pod startup if the referenced ClusterTrustBundle(s)
-aren't available.  If using name, then the named ClusterTrustBundle is
-allowed not to exist.  If using signerName, then the combination of
-signerName and labelSelector is allowed to match zero
-ClusterTrustBundles.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>signerName</b></td>
-        <td>string</td>
-        <td>
-          Select all ClusterTrustBundles that match this signer name.
-Mutually-exclusive with name.  The contents of all selected
-ClusterTrustBundles will be unified and deduplicated.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundle)</sup></sup>
-
-
-
-Select all ClusterTrustBundles that match this label selector.  Only has
-effect if signerName is set.  Mutually-exclusive with name.  If unset,
-interpreted as "match nothing".  If set but empty, interpreted as "match
-everything".
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselectormatchexpressionsindex">matchExpressions</a></b></td>
-        <td>[]object</td>
-        <td>
-          matchExpressions is a list of label selector requirements. The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabels</b></td>
-        <td>map[string]string</td>
-        <td>
-          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-map is equivalent to an element of matchExpressions, whose key field is "key", the
-operator is "In", and the values array contains only "value". The requirements are ANDed.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### K8ssandraCluster.spec.cassandra.storageConfig.additionalVolumes[index].volumeSource.projected.sources[index].clusterTrustBundle.labelSelector.matchExpressions[index]
-<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigadditionalvolumesindexvolumesourceprojectedsourcesindexclustertrustbundlelabelselector)</sup></sup>
-
-
-
-A label selector requirement is a selector that contains values, a key, and an operator that
-relates the key and values.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          key is the label key that the selector applies to.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>operator</b></td>
-        <td>string</td>
-        <td>
-          operator represents a key's relationship to a set of values.
-Valid operators are In, NotIn, Exists and DoesNotExist.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>values</b></td>
-        <td>[]string</td>
-        <td>
-          values is an array of string values. If the operator is In or NotIn,
-the values array must be non-empty. If the operator is Exists or DoesNotExist,
-the values array must be empty. This array is replaced during a strategic
-merge patch.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -51922,24 +50056,6 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>volumeAttributesClassName</b></td>
-        <td>string</td>
-        <td>
-          volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
-If specified, the CSI driver will create or update the volume with the attributes defined
-in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-will be set by the persistentvolume controller if it exists.
-If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
-set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
-exists.
-More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass
-(Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b>volumeMode</b></td>
         <td>string</td>
         <td>
@@ -52103,6 +50219,21 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resour
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandrastorageconfigcassandradatavolumeclaimspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>limits</b></td>
         <td>map[string]int or string</td>
         <td>
@@ -52116,10 +50247,39 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.storageConfig.cassandraDataVolumeClaimSpec.resources.claims[index]
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandrastorageconfigcassandradatavolumeclaimspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -52799,7 +50959,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -53212,7 +51372,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -53294,7 +51454,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -53368,7 +51528,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecmedusalivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -53485,6 +51646,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -53598,8 +51760,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -53769,7 +51930,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecmedusareadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -53886,6 +52048,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -53999,8 +52162,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -54318,7 +52480,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -54365,9 +52527,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -55372,38 +53537,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -55437,7 +53571,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -55636,38 +53769,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -55701,7 +53803,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -55980,38 +54081,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56045,7 +54115,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -56244,38 +54313,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56309,7 +54347,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -56936,7 +54973,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -57242,7 +55279,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -57289,9 +55326,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -57375,7 +55415,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -57492,6 +55533,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -57605,8 +55647,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -58015,7 +56056,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -58096,9 +56137,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -58152,7 +56196,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecreaperreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -58269,6 +56314,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -58382,8 +56428,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -58478,7 +56523,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -58783,7 +56828,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -58830,9 +56875,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -59410,7 +57458,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -60242,38 +58290,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecstargateaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -60307,7 +58324,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -60506,38 +58522,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecstargateaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -60571,7 +58556,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -60850,38 +58834,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecstargateaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -60915,7 +58868,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -61114,38 +59066,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#k8ssandraclusterspecstargateaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -61179,7 +59100,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -61566,7 +59486,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecstargatelivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -61683,6 +59604,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -61796,8 +59718,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -62008,7 +59929,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#k8ssandraclusterspecstargatereadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -62125,6 +60047,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -62238,8 +60161,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -62335,7 +60257,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -62933,7 +60855,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -63373,20 +61295,6 @@ were last upserted to the management API<br/>
     </thead>
     <tbody><tr>
         <td><b>hostID</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>ip</b></td>
-        <td>string</td>
-        <td>
-          <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>rack</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -84887,38 +82795,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#reaperspecaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -84952,7 +82829,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -85151,38 +83027,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#reaperspecaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -85216,7 +83061,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -85495,38 +83339,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#reaperspecaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -85560,7 +83373,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -85759,38 +83571,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#reaperspecaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -85824,7 +83605,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -86655,7 +84435,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -86961,7 +84741,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -87008,9 +84788,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -87094,7 +84877,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#reaperspeclivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -87211,6 +84995,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -87324,8 +85109,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -87734,7 +85518,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -87815,9 +85599,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -87871,7 +85658,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#reaperspecreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -87988,6 +85776,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -88101,8 +85890,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -88197,7 +85985,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -88502,7 +86290,7 @@ Unconfined - no profile should be applied.<br/>
           localhostProfile indicates a profile defined in a file on the node should be used.
 The profile must be preconfigured on the node to work.
 Must be a descending path, relative to the kubelet's configured seccomp profile location.
-Must be set if type is "Localhost". Must NOT be set for any other type.<br/>
+Must only be set if type is "Localhost".<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -88549,9 +86337,12 @@ GMSA credential spec named by the GMSACredentialSpecName field.<br/>
         <td>boolean</td>
         <td>
           HostProcess determines if a container should be run as a 'Host Process' container.
-All of a Pod's containers must have the same effective HostProcess value
-(it is not allowed to have a mix of HostProcess containers and non-HostProcess containers).
-In addition, if HostProcess is true then HostNetwork must also be set to true.<br/>
+This field is alpha-level and will only be honored by components that enable the
+WindowsHostProcessContainers feature flag. Setting this field without the feature
+flag will result in errors when validating the Pod. All of a Pod's containers must
+have the same effective HostProcess value (it is not allowed to have a mix of HostProcess
+containers and non-HostProcess containers).  In addition, if HostProcess is true
+then HostNetwork must also be set to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -89129,7 +86920,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -90480,38 +88271,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -90545,7 +88305,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -90744,38 +88503,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -90809,7 +88537,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -91088,38 +88815,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -91153,7 +88849,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -91352,38 +89047,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -91417,7 +89081,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -92247,7 +89910,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#stargatespeclivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -92364,6 +90028,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -92477,8 +90142,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -93349,38 +91013,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecracksindexaffinitypodaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -93414,7 +91047,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -93613,38 +91245,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecracksindexaffinitypodaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -93678,7 +91279,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -93957,38 +91557,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecracksindexaffinitypodantiaffinitypreferredduringschedulingignoredduringexecutionindexpodaffinitytermlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -94022,7 +91591,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -94221,38 +91789,7 @@ Empty topologyKey is not allowed.<br/>
         <td><b><a href="#stargatespecracksindexaffinitypodantiaffinityrequiredduringschedulingignoredduringexecutionindexlabelselector">labelSelector</a></b></td>
         <td>object</td>
         <td>
-          A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>matchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key in (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MatchLabelKeys and LabelSelector.
-Also, MatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>mismatchLabelKeys</b></td>
-        <td>[]string</td>
-        <td>
-          MismatchLabelKeys is a set of pod label keys to select which pods will
-be taken into consideration. The keys are used to lookup values from the
-incoming pod labels, those key-value labels are merged with `LabelSelector` as `key notin (value)`
-to select the group of existing pods which pods will be taken into consideration
-for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
-pod labels will be ignored. The default value is empty.
-The same key is forbidden to exist in both MismatchLabelKeys and LabelSelector.
-Also, MismatchLabelKeys cannot be set when LabelSelector isn't set.
-This is an alpha field and requires enabling MatchLabelKeysInPodAffinity feature gate.<br/>
+          A label query over a set of resources, in this case pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -94286,7 +91823,6 @@ null or empty namespaces list and null namespaceSelector means "this pod's names
 
 
 A label query over a set of resources, in this case pods.
-If it's null, this PodAffinityTerm matches with no Pods.
 
 <table>
     <thead>
@@ -94673,7 +92209,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#stargatespecracksindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -94790,6 +92327,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -94903,8 +92441,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -95115,7 +92652,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#stargatespecracksindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -95232,6 +92770,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -95345,8 +92884,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -95442,7 +92980,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -96040,7 +93578,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -96181,7 +93719,8 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#stargatespecreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -96298,6 +93837,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 GRPC specifies an action involving a GRPC port.
+This is a beta field and requires enabling GRPCContainerProbe feature gate.
 
 <table>
     <thead>
@@ -96411,8 +93951,7 @@ HTTPHeader describes a custom header to be used in HTTP probes
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          The header field name.
-This will be canonicalized upon output, so case-variant names will be understood as the same header.<br/>
+          The header field name<br/>
         </td>
         <td>true</td>
       </tr><tr>
@@ -96508,7 +94047,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
@@ -97106,7 +94645,7 @@ More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-co
         <td>
           Requests describes the minimum amount of compute resources required.
 If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-otherwise to an implementation-defined value. Requests cannot exceed Limits.
+otherwise to an implementation-defined value.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
         </td>
         <td>false</td>
