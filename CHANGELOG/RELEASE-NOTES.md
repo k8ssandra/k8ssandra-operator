@@ -1,20 +1,5 @@
 # k8ssandra-operator - Release Notes
 
-## v1.17.0
-
-### Changes to the way container injection works
-
-Container injection historically appended containers from the Containers field to the podTemplateSpec of the CassandraDatacenter. This was suboptimal in the case that a user wanted to modify the default settings of a container, since the append process did not allow modification of containers deployed by the system by default.
-
-To address this, we have moved to using goalesce to merge container settings by name. This will be fine in the majority of correct, working configurations at present. However, users may see a variation from the existing behaviour if they have an incorrect configuration where they are;
-
-a) overwriting the volumes array for an existing container, without adding back in all volumes required by the container.
-b) applying configurations which would not currently be applied, e.g. a securityContext applied to an existing container would not be set by 1.16.x but will be by 1.17.x.
-
-If you are using this field currently to modify system containers (e.g. cassandra, server-system-logger) we recommend thorough testing to confirm that the podTemplateSpec you from a reconciliation conducted by 1.17.x is the same as the statefulset you obtain under 1.16.x.
-
-NB: this also applies to initContainers.
-
 ## v1.15.0
 
 ### Deprecation of non-namespace-local MedusaConfigRef
