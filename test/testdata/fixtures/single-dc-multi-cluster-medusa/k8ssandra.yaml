@@ -68,6 +68,7 @@ spec:
           jvmOptions:
             heapSize: 512Mi
   medusa:
+    purgeBackups: false
     cassandraUserSecretRef:
       name: cluster2-medusa
     storageProperties:

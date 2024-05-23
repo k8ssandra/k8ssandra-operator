@@ -33,7 +33,6 @@ spec:
         k8sContext: kind-k8ssandra-1
     mgmtAPIHeap: 64Mi
   medusa:
-    purgeBackups: false
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
