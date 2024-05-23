@@ -2,10 +2,11 @@ package telemetry
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -22,8 +23,14 @@ import (
 func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
 	if telemetrySpec.IsVectorEnabled() {
 		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
-		loggerContainer := corev1.Container{
-			Name: reconciliation.SystemLoggerContainerName,
+		originalContainerIdx, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, reconciliation.SystemLoggerContainerName)
+		var loggerContainer corev1.Container
+		if found {
+			loggerContainer = dcConfig.PodTemplateSpec.Spec.Containers[originalContainerIdx]
+		} else {
+			loggerContainer = corev1.Container{
+				Name: reconciliation.SystemLoggerContainerName,
+			}
 		}
 
 		loggerResources := vector.VectorContainerResources(telemetrySpec)
