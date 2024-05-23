@@ -263,7 +263,7 @@ type CassandraClusterTemplate struct {
 	ClusterName string `json:"clusterName,omitempty"`
 
 	// Server type: "cassandra" or "dse".
-	// +kubebuilder:validation:Enum=cassandra;dse
+	// +kubebuilder:validation:Enum=cassandra;dse;hcd
 	// +kubebuilder:default=cassandra
 	ServerType ServerDistribution `json:"serverType,omitempty"`
 }
@@ -318,7 +318,8 @@ type DatacenterOptions struct {
 	// ServerVersion is the Cassandra or DSE version. The following versions are supported:
 	// - Cassandra: 3.11.X, 4.X.X and 5.X.X
 	// - DSE: 6.8.X, 7.x.x
-	// +kubebuilder:validation:Pattern=(6\.8\.\d+)|(3\.11\.\d+)|(4\.\d+\.\d+)|(5\.\d+\.\d+)|(7\.\d+\.\d+)
+	// - HCD: 1.0.x
+	// +kubebuilder:validation:Pattern=(\d+\.\d+\.\d+)
 	ServerVersion string `json:"serverVersion,omitempty"`
 
 	// ServerImage is the image for the cassandra container. Note that this should be a
@@ -530,10 +531,19 @@ type ServerDistribution string
 const (
 	ServerDistributionCassandra = ServerDistribution("cassandra")
 	ServerDistributionDse       = ServerDistribution("dse")
+	ServerDistributionHcd       = ServerDistribution("hcd")
 )
 
+func (sd *ServerDistribution) IsCassandra() bool {
+	return *sd == ServerDistributionCassandra || *sd == ServerDistributionHcd
+}
+
+func (sd *ServerDistribution) IsDse() bool {
+	return *sd == ServerDistributionDse
+}
+
 func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) float64 {
-	if kc.Spec.Cassandra.ServerType == ServerDistributionCassandra && serverVersion.Major() == 3 {
+	if kc.Spec.Cassandra.ServerType.IsCassandra() && serverVersion.Major() == 3 {
 		return float64(256)
 	}
 	return float64(16)

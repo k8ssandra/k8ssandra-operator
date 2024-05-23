@@ -144,9 +144,49 @@ func TestCreateJsonConfig(t *testing.T) {
            }`,
 		},
 		{
+			name:          "HCD [1.0.0] simple",
+			serverVersion: semver.MustParse("1.0.0"),
+			serverType:    api.ServerDistributionHcd,
+			cassandraConfig: api.CassandraConfig{
+				CassandraYaml: unstructured.Unstructured{
+					"num_tokens":                16,
+					"concurrent_reads":          8,
+					"concurrent_writes":         16,
+					"concurrent_counter_writes": 4,
+				},
+			},
+			want: `{
+             "cassandra-yaml": {
+               "num_tokens": 16,
+               "concurrent_reads": 8,
+               "concurrent_writes": 16,
+               "concurrent_counter_writes": 4
+             }
+           }`,
+		},
+		{
 			name:          "[4.0.0] system replication",
 			serverVersion: semver.MustParse("4.0.0"),
 			serverType:    api.ServerDistributionCassandra,
+			cassandraConfig: api.CassandraConfig{
+				JvmOptions: api.JvmOptions{
+					AdditionalOptions: []string{
+						SystemReplicationFactorStrategy + "=dc1:3,dc2:3,dc3:3",
+					},
+				},
+			},
+			want: `{
+             "cassandra-env-sh": {
+               "additional-jvm-opts": [
+                 "-Dcassandra.system_distributed_replication=dc1:3,dc2:3,dc3:3"
+               ]
+             }
+           }`,
+		},
+		{
+			name:          "HCD [1.0.0] system replication",
+			serverVersion: semver.MustParse("1.0.0"),
+			serverType:    api.ServerDistributionHcd,
 			cassandraConfig: api.CassandraConfig{
 				JvmOptions: api.JvmOptions{
 					AdditionalOptions: []string{
@@ -303,4 +343,14 @@ func TestSmartTokenAllocCassandra(t *testing.T) {
 	EnableSmartTokenAllocation(dcConfig)
 	_, exists := dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
 	assert.False(t, exists, "allocate_tokens_for_local_replication_factor should not be set for Cassandra")
+}
+
+func TestSmartTokenAllocHcd(t *testing.T) {
+	dcConfig := &DatacenterConfig{
+		ServerType: api.ServerDistributionHcd,
+	}
+
+	EnableSmartTokenAllocation(dcConfig)
+	_, exists := dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
+	assert.False(t, exists, "allocate_tokens_for_local_replication_factor should not be set for HCD")
 }
