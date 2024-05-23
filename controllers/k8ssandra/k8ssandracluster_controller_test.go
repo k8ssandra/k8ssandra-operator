@@ -2415,6 +2415,11 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
 					ServerVersion: serverVersion,
+					Telemetry: &telemetryapi.TelemetrySpec{
+						Vector: &telemetryapi.VectorSpec{
+							Enabled: ptr.To(true),
+						},
+					},
 					StorageConfig: &cassdcapi.StorageConfig{
 						CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 							StorageClassName: &defaultStorageClass,
@@ -2429,6 +2434,13 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 									Name:      "injected-volume",
 									MountPath: "/injected-volume",
 								},
+							},
+						},
+						{
+							Name: "server-system-logger",
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser:              ptr.To[int64](9999),
+								ReadOnlyRootFilesystem: ptr.To(true),
 							},
 						},
 					},
@@ -2504,6 +2516,18 @@ func injectContainersAndVolumes(t *testing.T, ctx context.Context, f *framework.
 
 	_, foundMain := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "injected-container")
 	require.True(foundMain, "failed to find injected-container")
+
+	vectorContainerIdx, foundVector := cassandra.FindContainer(dc.Spec.PodTemplateSpec, "server-system-logger")
+	require.True(foundVector, "failed to find injected-container")
+	require.Equal(ptr.To[int64](9999),
+		dc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx].SecurityContext.RunAsUser,
+		"server-system-logger RunAsUser is not set")
+	require.Equal(ptr.To(true),
+		dc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx].SecurityContext.ReadOnlyRootFilesystem,
+		"server-system-logger RunAsUser is not set")
+	require.Equal(ptr.To(true),
+		dc.Spec.PodTemplateSpec.Spec.Containers[vectorContainerIdx].SecurityContext.ReadOnlyRootFilesystem,
+		"server-system-logger RunAsUser is not set")
 
 	require.Equal(2, len(dc.Spec.StorageConfig.AdditionalVolumes), "expected 2 additionals volumes")
 	require.Equal("/etc/injected", dc.Spec.StorageConfig.AdditionalVolumes[0].MountPath, "expected injected-volume mount path")
