@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1322](https://github.com/k8ssandra/k8ssandra-operator/issues/1322) Fix bug where server-system-logger customisations from the Containers field would be overwritten when vector was enabled. 
 * [FEATURE] Add support for HCD 1.0
 * [ENHANCEMENT] [#1329](https://github.com/k8ssandra/k8ssandra-operator/issues/1329) Add config emptyDir volume mount on Reaper deployment to allow read only root FS
+* [ENHANCEMENT] [#1278](https://github.com/k8ssandra/k8ssandra-operator/issues/1278) Add toggle to allow the disabling of the Medusa purge CronJob creation
