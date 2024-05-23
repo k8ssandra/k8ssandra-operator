@@ -59,7 +59,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// which is why we're doing this for Cassandra only.
 		// We only set this for the first DC. For subsequent DCs, the replication will be altered and a rebuild
 		// triggered.
-		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra && len(dcConfigs) == 0 {
+		if kc.Spec.Cassandra.ServerType.IsCassandra() && len(dcConfigs) == 0 {
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 
@@ -67,7 +67,7 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		// set (see https://github.com/stargate/stargate/issues/1274).
 		// Set the option preemptively (we don't check `kc.HasStargates()` explicitly, because that causes the operator
 		// to restart the whole DC whenever Stargate is added or removed).
-		if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra && dcConfig.ServerVersion.Major() != 3 {
+		if kc.Spec.Cassandra.ServerType.IsCassandra() && dcConfig.ServerVersion.Major() != 3 {
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 
