@@ -197,6 +197,9 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	// init container should use the same image and tag as the main container.
 	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].Image, deployment.Spec.Template.Spec.InitContainers[0].Image)
 	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
+	assert.Equal(t, deployment.Spec.Template.Spec.Volumes[0].Name, "conf", "deployment should have a volume for the config")
+	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name, "conf", "deployment should have a volume for the config")
+	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath, "/etc/cassandra-reaper/config", "deployment should have a volume for the config")
 
 	// main container is a custom image where the tag isn't specified, so it should default to latest, and pull policy
 	// to Always.

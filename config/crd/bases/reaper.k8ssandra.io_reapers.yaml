@@ -1110,10 +1110,10 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 3.6.0
+                  tag: f52e877
                 description: |-
                   The image to use for the Reaper pod main container.
-                  The default is "thelastpickle/cassandra-reaper:3.6.0".
+                  The default is "thelastpickle/cassandra-reaper:f52e877".
                   TODO: update with real release version.
                 properties:
                   name:
