@@ -1275,7 +1275,7 @@ on ServerVersion.<br/>
         <td>
           Server type: "cassandra" or "dse".<br/>
           <br/>
-            <i>Enum</i>: cassandra, dse<br/>
+            <i>Enum</i>: cassandra, dse, hcd<br/>
             <i>Default</i>: cassandra<br/>
         </td>
         <td>false</td>
@@ -1285,7 +1285,8 @@ on ServerVersion.<br/>
         <td>
           ServerVersion is the Cassandra or DSE version. The following versions are supported:
 - Cassandra: 3.11.X, 4.X.X and 5.X.X
-- DSE: 6.8.X, 7.x.x<br/>
+- DSE: 6.8.X, 7.x.x
+- HCD: 1.0.x<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5537,7 +5538,8 @@ on ServerVersion.<br/>
         <td>
           ServerVersion is the Cassandra or DSE version. The following versions are supported:
 - Cassandra: 3.11.X, 4.X.X and 5.X.X
-- DSE: 6.8.X, 7.x.x<br/>
+- DSE: 6.8.X, 7.x.x
+- HCD: 1.0.x<br/>
         </td>
         <td>false</td>
       </tr><tr>
