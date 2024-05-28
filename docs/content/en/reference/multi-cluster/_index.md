@@ -1,8 +1,9 @@
 ---
-title: "Multi Cluster Connection Management"
+title: "Multi Cluster Connectivity"
 linkTitle: "Multi Cluster"
-description: "Managing connections between multiple Kubernetes clusters in a multi cluster environment."
+description: "Multi-cluster connectivity architecture."
 ---
+
 
 ## Background
 K8ssandra Operator is capable of creating and managing a multi-datacenter Cassandra cluster that spans multiple Kubernetes clusters. The operator uses Kubernetes APIs to manage objects in remote clusters; therefore, it needs to create client connections with appropriate permissions to remote clusters.
@@ -157,9 +158,6 @@ As stated earlier, the operator only processes ClientConfigs at startup. If you 
 
 Proceed with caution before deleting a ClientConfig. If there are any K8ssandraClusters that use the kube config provided by the ClientConfig, then the operator won't be able to properly manage them.
 
-#### Creating a ClientConfig
-Creating a ClientConfig involves creating the kubeconfig file and secret. This can be error prone if done by hand. Instead use the `create-clientconfig.sh` script which can be found [here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
-
 The operator should already be installed in the remote cluster for which you want to create a ClientConfig. The operator service account is created when the operator is installed. Creating the ClientConfig requires access to that service account.
 
 Here is a brief summary of what the script does:
@@ -171,32 +169,4 @@ Here is a brief summary of what the script does:
 * Create a secret for the kubeconfig in the control plane custer
 * Create a ClientConfig in the control plane cluster that references the secret.
 
-Suppose we have two clusters with context names `kind-k8ssandra-0` and `kind-k8ssandra-1` and the control plane is running
-in `kind-k8ssandra-0`. We want to create a ClientConfig for `kind-k8ssandra-1`. This can be accomplished by running the
-following:
-
-```sh
-./create-clientconfig.sh \
-    --namespace             k8ssandra-operator \
-    --src-kubeconfig        ./kubeconfigs/k8ssandra-1 \
-    --dest-kubeconfig       ./kubeconfigs/k8ssandra-0 
-```
-
-The above assumes that each cluster has its configuration stored in distinct files. If you have one single kubeconfig
-for both clusters, then you can create the ClientConfig as follows:
-
-```sh
-./create-clientconfig.sh \
-    --namespace             k8ssandra-operator \
-    --src-kubeconfig        ./kubeconfig \ 
-    --dest-kubeconfig       ./kubeconfig \
-    --src-context           kind-k8ssandra-1 \ 
-    --dest-context          kind-k8ssandra-0
-```
-
-Here `./kubeconfig` refers to the kubeconfig file containing configurations to access both contexts `kind-k8ssandra-0`
-and `kind-k8ssandra-1`.
-
-You can specify the namespace where the secret and ClientConfig are created with the `--namespace` option.
-
-**Note:** Remember to restart the operator in the control plane cluster after creating the ClientConfig.
+See [here]({{< relref "/tasks/data-plane-registration" >}}) for more information on the dataplane registration procedure.
