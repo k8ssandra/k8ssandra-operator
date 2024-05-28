@@ -179,7 +179,7 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.s
 
 [k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) is used to register data planes to control planes. It does this by installing a ClientConfig on the control plane. K8ssandra-client data plane registration is described [here]({{< relref "/tasks/data-plane-registration" >}}).
 
-Here is a summary of what the script does:
+Here is a summary of what the k8ssandra-client's `register` command does':
 
 * Get the k8ssandra-operator service account from the data plane cluster
 * Extract the service account token 

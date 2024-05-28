@@ -265,7 +265,7 @@ false
 
 ### Register the data plane to the control plane
 
-[k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) is used to register data planes to control planes. It does this by installing a ClientConfig on the control plane.
+[k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) is used to register data planes to control planes. It does this by creating a ClientConfig custom resource on the control plane and a secret with a kubeconfig entry providing access to the dataplane.
 
 **Note:** K8ssandra Operator restarts automatically whenever there is a change to a `ClientConfig` (a create, update, or delete operation). This restart is done in order to update connections to remote clusters.
 

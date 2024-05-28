@@ -168,3 +168,5 @@ Here is a brief summary of what the script does:
 * Create a kubeconfig using the token and cert
 * Create a secret for the kubeconfig in the control plane custer
 * Create a ClientConfig in the control plane cluster that references the secret.
+
+See [here]({{< relref "/tasks/data-plane-registration" >}}) for more information on the dataplane registration procedure.
