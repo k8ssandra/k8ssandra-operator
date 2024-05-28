@@ -93,7 +93,7 @@ This section needs to be moved elsewhere, probably a dedicated page of its own.
 ## Connecting to remote clusters
 The control plane needs to establish client connections to remote cluster where the data plane runs. Credentials are provided via a [kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) file that is stored in a Secret. That secret is then referenced via a `ClientConfig` custom resource.
 
-A kubeconfig entry for a cluster hosted by a cloud provider with include an auth token for authenticated with the cloud provider. That token expires. If you use one of these kubeconfigs be aware that the operator will not be able to access the remote cluster once that token expires. For this reason it is recommended that you use the [create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) script for configuring a connection to the remote cluster. This script is discussed in more detail in a later section.
+A kubeconfig entry for a cluster hosted by a cloud provider with include an auth token for authenticated with the cloud provider. That token expires. If you use one of these kubeconfigs be aware that the operator will not be able to access the remote cluster once that token expires. For this reason it is recommended that you use the [here](https://github.com/k8ssandra/k8ssandra-client) script for configuring a connection to the remote cluster. This script is discussed in more detail in a later section.
 -->
 
 ## Installing the operator

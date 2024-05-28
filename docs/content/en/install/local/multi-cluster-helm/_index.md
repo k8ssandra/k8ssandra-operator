@@ -263,9 +263,9 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator \
 false
 ```
 
-### Generate and install ClientConfigs
+### Register the data plane to the control plane
 
-[create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) lives in the k8ssandra-operator repo. It is used to configure access to remote clusters. 
+[k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) is used to register data planes to control planes. It does this by installing a ClientConfig on the control plane.
 
 **Note:** K8ssandra Operator restarts automatically whenever there is a change to a `ClientConfig` (a create, update, or delete operation). This restart is done in order to update connections to remote clusters.
 
@@ -275,49 +275,7 @@ First, set the context to `kind-k8ssandra-0`, the control plane cluster.
 kubectl config use-context kind-k8ssandra-0
 ```
 
-Run the create-clientconfig.sh script, once per data plane cluster.  
-
-```bash
-scripts/create-clientconfig.sh --namespace k8ssandra-operator \
-    --src-kubeconfig ./build/kind-kubeconfig \
-    --dest-kubeconfig ./build/kind-kubeconfig \
-    --src-context kind-k8ssandra-1 \
-    --dest-context kind-k8ssandra-0 \
-    --output-dir clientconfig
-```
-
-**Output:**
-
-```bash
-Creating clientconfig/kubeconfig
-Creating secret kind-k8ssandra-1-config
-Error from server (NotFound): secrets "kind-k8ssandra-1-config" not found
-secret/kind-k8ssandra-1-config created
-Creating ClientConfig clientconfig/kind-k8ssandra-1.yaml
-clientconfig.config.k8ssandra.io/kind-k8ssandra-1 created
-```
-
-Then enter:
-
-```bash
-scripts/create-clientconfig.sh --namespace k8ssandra-operator \
-    --src-kubeconfig ./build/kind-kubeconfig \
-    --dest-kubeconfig ./build/kind-kubeconfig \
-    --src-context kind-k8ssandra-2 \
-    --dest-context kind-k8ssandra-0 \
-    --output-dir clientconfig
-```
-
-**Output:**
-
-```bash
-Creating clientconfig/kubeconfig
-Creating secret kind-k8ssandra-2-config
-Error from server (NotFound): secrets "kind-k8ssandra-2-config" not found
-secret/kind-k8ssandra-2-config created
-Creating ClientConfig clientconfig/kind-k8ssandra-2.yaml
-clientconfig.config.k8ssandra.io/kind-k8ssandra-2 created
-```
+Run k8ssandra-client as described [here]({{< relref "/tasks/data-plane-registration" >}}).
 
 ### Deploy the K8ssandraCluster
 

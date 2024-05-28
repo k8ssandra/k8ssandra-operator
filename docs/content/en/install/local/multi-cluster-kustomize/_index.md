@@ -175,10 +175,9 @@ Verify that the `K8SSANDRA_CONTROL_PLANE` environment variable is set to `false`
 kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="K8SSANDRA_CONTROL_PLANE")].value}'
 ```
 
-### Create a ClientConfig
-Now we need to create a `ClientConfig` for the `kind-k8ssandra-1` cluster. We will use the 
-`create-clientconfig.sh` script which can be found
-[here](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh).
+### Register the data plane
+
+[k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) is used to register data planes to control planes. It does this by installing a ClientConfig on the control plane. K8ssandra-client data plane registration is described [here]({{< relref "/tasks/data-plane-registration" >}}).
 
 Here is a summary of what the script does:
 
@@ -191,16 +190,6 @@ Here is a summary of what the script does:
 
 Create a `ClientConfig` in the `kind-k8ssandra-0` cluster using the service account 
 token and CA cert from `kind-k8ssandra-1`:
-
-```sh
-scripts/create-clientconfig.sh --namespace k8ssandra-operator \
-    --src-kubeconfig ./build/kind-kubeconfig \
-    --dest-kubeconfig ./build/kind-kubeconfig \
-    --src-context kind-k8ssandra-1 \
-    --dest-context kind-k8ssandra-0 \
-    --output-dir clientconfig
-```
-The script stores all of the artifacts that it generates in a directory which is specified with the `--output-dir` option. If not specified, a temp directory is created.
 
 ### Restart the control plane
 

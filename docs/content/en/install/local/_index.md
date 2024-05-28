@@ -30,7 +30,7 @@ Make sure you have the following installed before going through the related inst
 * [kubectl](https://kubernetes.io/docs/tasks/tools/)
  and [helm v3+](https://helm.sh/docs/intro/install/) on your preferred OS. 
 
-Also, note that the [setup-kind-multicluster.sh](#setup-kind-multicluster) and [create-clientconfig.sh](#create-clientconfig) scripts mentioned below are available in the K8ssandra Operator [GitHub repo](https://github.com/k8ssandra/k8ssandra-operator/tree/main/scripts). 
+Also, note that the [setup-kind-multicluster.sh](#setup-kind-multicluster) script mentioned below is available in the K8ssandra Operator [GitHub repo](https://github.com/k8ssandra/k8ssandra-operator/tree/main/scripts). The [k8ssandra-client](https://github.com/k8ssandra/k8ssandra-client) tool is also helpful.
 
 #### kind
 
@@ -64,9 +64,9 @@ The `make NUM_CLUSTERS=<number> create-kind-multicluster` command, which is show
 
 **Tip:** kind generates a `kubeconfig` with the IP address of the API server set to `localhost` because the cluster is intended for local development. We need a `kubeconfig` with the IP address set to the internal address of the API server. The `setup-kind-mulitcluster.sh` script takes care of this requirement for you.  
 
-#### create-clientconfig
+#### k8ssandra-client
 
-[create-clientconfig.sh](https://github.com/k8ssandra/k8ssandra-operator/blob/main/scripts/create-clientconfig.sh) is in the k8ssandra-operator repo. This script is used to configure access to remote clusters, as described in subsequent topics. 
+The k8ssandra-client can be used to register data planes to control planes for multi-cluster use cases. See [here]({{< relref "tasks/data-plane-registration" >}}) for more details.
 
 ## Next steps
 
