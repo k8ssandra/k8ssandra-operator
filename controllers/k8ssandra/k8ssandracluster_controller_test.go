@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/pointer"
 	"math/rand"
 	"reflect"
 	"testing"
