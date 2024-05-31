@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -256,7 +255,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		if len(dcsRequiringUpdate) > 0 {
-			generatedName := fmt.Sprintf("refresh-%d", time.Now().Unix())
+			generatedName := fmt.Sprintf("refresh-%d-%d", kc.Generation, kc.Status.ObservedGeneration)
 			internalTask := &ktaskapi.K8ssandraTask{}
 			err := r.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: generatedName}, internalTask)
 			// If task wasn't found, create it and if task is still running, requeue
