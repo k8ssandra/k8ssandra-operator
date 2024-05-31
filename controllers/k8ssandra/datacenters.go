@@ -156,7 +156,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				patch := client.MergeFrom(kc.DeepCopy())
 				kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
 				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
-					return result.Error(fmt.Errorf("failed to set %s annotation: %v", api.AutomatedUpdateAnnotation, err)), actualDcs
+					return result.Error(fmt.Errorf("failed to set %s condition: %v", api.ClusterRequiresUpdate, err)), actualDcs
 				}
 			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
