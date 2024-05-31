@@ -148,7 +148,6 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !kcExists {
 		return r.reportInvalidSpec(ctx, kTask, "unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
-
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
 		return r.reportInvalidSpec(ctx, kTask, err.Error())
 	} else {
