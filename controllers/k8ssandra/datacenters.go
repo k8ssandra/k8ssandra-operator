@@ -249,8 +249,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	if AllowUpdate(kc) {
 		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
 		for _, dc := range actualDcs {
-			if dc.Status.GetConditionStatus("RequiresUpdate") == corev1.ConditionTrue { // TODO Update this to cassdcapi const when cass-operator is updatedß
-				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.DatacenterName())
+			if dc.Status.GetConditionStatus("RequiresUpdate") == corev1.ConditionTrue { // TODO Update this to cassdcapi const when cass-operator is updated
+				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.ObjectMeta.Name)
 			}
 		}
 
@@ -271,7 +271,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 						Cluster: corev1.ObjectReference{
 							Name: kc.Name,
 						},
-						Datacenters: make([]string, len(dcsRequiringUpdate)),
+						Datacenters: dcsRequiringUpdate,
 						Template: cassctlapi.CassandraTaskTemplate{
 							Jobs: []cassctlapi.CassandraJob{{
 								Name:    fmt.Sprintf("refresh-%s", kc.Name),
