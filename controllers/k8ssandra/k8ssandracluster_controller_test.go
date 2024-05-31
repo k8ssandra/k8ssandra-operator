@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/utils/pointer"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -2690,7 +2689,7 @@ func testGenerationCheck(t *testing.T, ctx context.Context, f *framework.Framewo
 								},
 							},
 							PodSecurityContext: &corev1.PodSecurityContext{
-								RunAsUser: pointer.Int64(999),
+								RunAsUser: ptr.To(int64(999)),
 							},
 							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
