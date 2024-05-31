@@ -566,5 +566,5 @@ func (kc *K8ssandraCluster) GetClusterIdHash() string {
 }
 
 func (k *K8ssandraCluster) GenerationChanged() bool {
-	return k.Status.ObservedGeneration < k.Generation
+	return k.Status.ObservedGeneration != 0 && k.Status.ObservedGeneration < k.Generation
 }
