@@ -50,8 +50,9 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 	require := require.New(t)
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "add-dc-test",
+			Namespace:   namespace,
+			Name:        "add-dc-test",
+			Annotations: map[string]string{api.AutomatedUpdateAnnotation: string(api.AllowUpdateAlways)},
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
@@ -119,8 +120,9 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	require := require.New(t)
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "add-dc-test",
+			Namespace:   namespace,
+			Name:        "add-dc-test",
+			Annotations: map[string]string{api.AutomatedUpdateAnnotation: string(api.AllowUpdateAlways)},
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
