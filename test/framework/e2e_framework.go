@@ -56,7 +56,7 @@ var (
 	nodeToolStatusDN = regexp.MustCompile(`DN\s\s`)
 )
 
-func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
+func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, useHcd bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
 	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
@@ -66,6 +66,10 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, controlPl
 	cqlshBinLocation := "/opt/cassandra/bin/cqlsh"
 	if useDse {
 		cqlshBinLocation = "/opt/dse/bin/cqlsh"
+	}
+
+	if useHcd {
+		cqlshBinLocation = "/opt/hcd/bin/cqlsh"
 	}
 
 	remoteClients := make(map[string]client.Client, 0)

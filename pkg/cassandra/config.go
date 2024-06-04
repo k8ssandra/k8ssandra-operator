@@ -132,7 +132,7 @@ func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 func EnableSmartTokenAllocation(template *DatacenterConfig) {
 	// Note: we put int64 values because even if int values can be marshaled just fine,
 	// Unstructured.DeepCopy() would reject them since int is not a supported json type.
-	if template.ServerType == api.ServerDistributionDse {
+	if template.ServerType == api.ServerDistributionDse || template.ServerType == api.ServerDistributionHcd {
 		template.CassandraConfig.CassandraYaml.PutIfAbsent("allocate_tokens_for_local_replication_factor", int64(3))
 	}
 }

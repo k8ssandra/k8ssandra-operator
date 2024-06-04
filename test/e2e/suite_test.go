@@ -185,6 +185,11 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
 		dse:      true,
 	}))
+	t.Run("CreateSingleHcdDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleHcdDatacenterCluster,
+		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
+		hcd:      true,
+	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:     createSingleDseSearchDatacenterCluster,
 		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
@@ -455,6 +460,9 @@ type e2eTestOpts struct {
 
 	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
 	installMinio bool
+
+	// hcd is used to specify if the e2e tests will run against HCD
+	hcd bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -462,7 +470,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, controlPlane, dataPlanes...)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, opts.hcd, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -1795,6 +1803,20 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+}
+
+func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s has its heap size set", key.Name, key.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, key)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+		if err != nil {
+			t.Logf("failed to unmarshal datacenter %s config: %v", key.Name, err)
+			return false
+		}
+		initialHeapSize := dcConfig["jvm-server-options"].(map[string]interface{})["initial_heap_size"].(float64)
+		return initialHeapSize > 0
+	}), 10*time.Second, 1*time.Second, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
 }
 
 func checkDatacenterUpdating(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
