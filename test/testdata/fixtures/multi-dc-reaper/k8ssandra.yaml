@@ -34,7 +34,7 @@ spec:
     heapSize: 256Mi
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: "4.0.1"
+    serverVersion: "4.0.13"
     datacenters:
       - metadata:
           name: dc1
