@@ -377,6 +377,8 @@ func updateMedusaRestoreInitContainer(req *medusa.RestoreRequest) error {
 	if err := setRestoreMappingInRestoreContainer(req.RestoreJob.Status.RestoreMapping, req.Datacenter); err != nil {
 		return err
 	}
+	// Temp workaround until this is fixed in cass-operator
+	setAutoUpdateSpecAnnotation(req.Datacenter)
 	return setRestoreKeyInRestoreContainer(req.RestoreJob.Status.RestoreKey, req.Datacenter)
 }
 
@@ -473,4 +475,9 @@ func getRestoreInitContainerIndex(dc *cassdcapi.CassandraDatacenter) (int, error
 	}
 
 	return 0, fmt.Errorf("restore initContainer (%s) not found", restoreContainerName)
+}
+
+// There's a race condition that blocks restore job from completing after the DC is stopped. This is a temp workaround to fix it.
+func setAutoUpdateSpecAnnotation(cassdc *cassdcapi.CassandraDatacenter) {
+	cassdc.ObjectMeta.Annotations["cassandra.datastax.com/autoupdate-spec"] = "once"
 }
