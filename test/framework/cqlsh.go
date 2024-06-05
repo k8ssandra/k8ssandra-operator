@@ -32,7 +32,7 @@ func (f *E2eFramework) RetrieveDatabaseCredentials(ctx context.Context, k8sConte
 	return username, password, err
 }
 
-func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, clusterName, pod, serverType, query string) (string, error) {
+func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, clusterName, pod, query string) (string, error) {
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, k8sContext, namespace, clusterName)
 	if err != nil {
 		return "", err
@@ -40,7 +40,7 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	return kubectl.Exec(options, pod,
-		f.CqlshBin(serverType),
+		f.cqlshBin,
 		"--username",
 		username,
 		"--password",
@@ -50,10 +50,10 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 	)
 }
 
-func (f *E2eFramework) ExecuteCqlNoAuth(k8sContext, namespace, pod, serverType, query string) (string, error) {
+func (f *E2eFramework) ExecuteCqlNoAuth(k8sContext, namespace, pod, query string) (string, error) {
 	options := kubectl.Options{Context: k8sContext, Namespace: namespace}
 	return kubectl.Exec(options, pod,
-		f.CqlshBin(serverType),
+		f.cqlshBin,
 		"-e",
 		query,
 	)

@@ -50,20 +50,20 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	// dc 1 num_tokens 4
 
-	output := selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod1, string(kc.Spec.Cassandra.ServerType))
+	output := selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod1)
 	assert.Contains(t, output, "'-9223372036854775808'")
 	assert.Contains(t, output, "'-4611686018427387905'")
 	assert.Contains(t, output, "'-2'")
 	assert.Contains(t, output, "'4611686018427387901'")
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod2, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod2)
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-7686143364045646507'")
 	assert.Contains(t, output, "'-3074457345618258604'")
 	assert.Contains(t, output, "'1537228672809129299'")
 	assert.Contains(t, output, "'6148914691236517202'")
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod3, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Pod3)
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-6148914691236517206'")
 	assert.Contains(t, output, "'-1537228672809129303'")
@@ -76,7 +76,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	//dc 2 num_tokens 8
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod1, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod1)
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-8533254483742592229'")
 	assert.Contains(t, output, "'-6227411474528898279'")
@@ -87,7 +87,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'5301803571539571471'")
 	assert.Contains(t, output, "'7607646580753265421'")
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod2, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod2)
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-7764640147338027579'")
 	assert.Contains(t, output, "'-5458797138124333629'")
@@ -98,7 +98,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	assert.Contains(t, output, "'6070417907944136121'")
 	assert.Contains(t, output, "'8376260917157830071'")
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod3, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Pod3)
 	require.NoError(t, err, "failed to execute CQL query")
 	assert.Contains(t, output, "'-6996025810933462929'")
 	assert.Contains(t, output, "'-4690182801719768979'")
@@ -142,13 +142,13 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 	pod1 := DcPrefix(t, f, dcKey) + "-default-sts-0"
 	pod2 := DcPrefix(t, f, dcKey) + "-default-sts-1"
 
-	output := selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod1, string(kc.Spec.Cassandra.ServerType))
+	output := selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod1)
 	assert.Contains(t, output, "'-9223372036854775808'")
 	assert.Contains(t, output, "'-4611686018427387905'")
 	assert.Contains(t, output, "'-2'")
 	assert.Contains(t, output, "'4611686018427387901'")
 
-	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod2, string(kc.Spec.Cassandra.ServerType))
+	output = selectTokensFromSystemLocal(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), pod2)
 	assert.Contains(t, output, "'-7686143364045646507'")
 	assert.Contains(t, output, "'-3074457345618258604'")
 	assert.Contains(t, output, "'1537228672809129299'")
@@ -166,11 +166,11 @@ func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace strin
 	}, time.Second*15, time.Second)
 }
 
-func selectTokensFromSystemLocal(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName, podName, serverType string) string {
+func selectTokensFromSystemLocal(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext, namespace, clusterName, podName string) string {
 	var output string
 	assert.Eventually(t, func() bool {
 		var err error
-		output, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, podName, serverType, "SELECT tokens FROM system.local")
+		output, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, podName, "SELECT tokens FROM system.local")
 		return err == nil
 	}, 1*time.Minute, 5*time.Second, "failed to query 'SELECT tokens FROM system.local' for pod %s in context %s", podName, k8sContext)
 	return output

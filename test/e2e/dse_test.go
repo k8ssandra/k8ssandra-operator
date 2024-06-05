@@ -35,7 +35,7 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	dcPrefix := DcPrefix(t, f, dcKey)
 
 	t.Log("Check that we can communicate through CQL with DSE")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 
@@ -61,12 +61,12 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 
-	output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
+	output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT server_id FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 	assert.Contains(t, output, "modified", "expected server_id to be modified")
 
-	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
+	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT server_id FROM system.local")
 	require.Error(t, err, "expected CQL query without auth to fail")
 
@@ -90,7 +90,7 @@ func createSingleHcdDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	dcPrefix := DcPrefix(t, f, dcKey)
 
 	t.Log("Check that we can communicate through CQL with DSE")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE", err)
 	opts := kubectl.Options{
@@ -203,7 +203,7 @@ func changeDseWorkload(t *testing.T, ctx context.Context, namespace string, f *f
 	dcPrefix := DcPrefix(t, f, dcKey)
 
 	t.Log("Check that we can communicate through CQL with DSE")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0", string(k8ssandra.Spec.Cassandra.ServerType),
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName(), DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 

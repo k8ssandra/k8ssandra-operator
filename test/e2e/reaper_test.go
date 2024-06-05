@@ -66,7 +66,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType), "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
 
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
@@ -136,12 +136,12 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
 
 	t.Logf("check Stargate auth keyspace created in both clusters. DC prefixes: %s / %s ", dc1Prefix, dc2Prefix)
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType), stargate.AuthKeyspace)
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType), stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", stargate.AuthKeyspace)
 
 	t.Log("check Reaper custom keyspace created in both clusters")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType), "reaper_ks")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", string(kc.Spec.Cassandra.ServerType), "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", "reaper_ks")
 
 	checkStargateReady(t, f, ctx, stargate1Key)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
@@ -251,17 +251,15 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
-	dc := &cassdcapi.CassandraDatacenter{}
-	err := f.Client.Get(ctx, dcKey.NamespacedName, dc)
-	require.NoError(t, err, "failed to get CassandraDatacenter in namespace %s", dcKey.Namespace)
+
 	checkDatacenterReady(t, ctx, dcKey, f)
 	dcPrefix := DcPrefix(t, f, dcKey)
 	t.Log("create Reaper keyspace")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0", dc.Spec.ServerType,
+	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0",
 		"CREATE KEYSPACE reaper_db WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dcKey)+"' : 3} ")
 	require.NoError(t, err, "failed to create Reaper keyspace")
 
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0", dc.Spec.ServerType, "reaper_db")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, "test", dcPrefix+"-rack1-sts-0", "reaper_db")
 
 	checkReaperReady(t, f, ctx, reaperKey)
 

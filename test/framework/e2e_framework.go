@@ -48,6 +48,7 @@ const (
 
 type E2eFramework struct {
 	*Framework
+	cqlshBin string
 }
 
 var (
@@ -60,6 +61,9 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, controlPlane string, d
 	if err != nil {
 		return nil, err
 	}
+
+	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
+	cqlshBin := "cqlsh"
 
 	remoteClients := make(map[string]client.Client, 0)
 	t.Logf("Using config file: %s", kubeconfigFile)
@@ -91,21 +95,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, controlPlane string, d
 
 	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
 
-	return &E2eFramework{Framework: f}, nil
-}
-
-func (f *E2eFramework) CqlshBin(serverType string) string {
-	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
-	cqlshBinLocation := "cqlsh"
-	if serverType == "dse" {
-		cqlshBinLocation = "/opt/dse/bin/cqlsh"
-	}
-
-	if serverType == "hcd" {
-		cqlshBinLocation = "/opt/hcd/bin/cqlsh"
-	}
-
-	return cqlshBinLocation
+	return &E2eFramework{Framework: f, cqlshBin: cqlshBin}, nil
 }
 
 func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client, error) {
