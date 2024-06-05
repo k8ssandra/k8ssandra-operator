@@ -48,7 +48,6 @@ const (
 
 type E2eFramework struct {
 	*Framework
-	cqlshBin string
 }
 
 var (
@@ -56,20 +55,10 @@ var (
 	nodeToolStatusDN = regexp.MustCompile(`DN\s\s`)
 )
 
-func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, useHcd bool, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
+func NewE2eFramework(t *testing.T, kubeconfigFile string, controlPlane string, dataPlanes ...string) (*E2eFramework, error) {
 	config, err := clientcmd.LoadFromFile(kubeconfigFile)
 	if err != nil {
 		return nil, err
-	}
-
-	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
-	cqlshBinLocation := "/opt/cassandra/bin/cqlsh"
-	if useDse {
-		cqlshBinLocation = "/opt/dse/bin/cqlsh"
-	}
-
-	if useHcd {
-		cqlshBinLocation = "/opt/hcd/bin/cqlsh"
 	}
 
 	remoteClients := make(map[string]client.Client, 0)
@@ -102,7 +91,21 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, useDse bool, useHcd bo
 
 	f := NewFramework(remoteClients[controlPlane], controlPlane, validDataPlanes, remoteClients)
 
-	return &E2eFramework{Framework: f, cqlshBin: cqlshBinLocation}, nil
+	return &E2eFramework{Framework: f}, nil
+}
+
+func (f *E2eFramework) CqlshBin(serverType string) string {
+	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
+	cqlshBinLocation := "/opt/cassandra/bin/cqlsh"
+	if serverType == "dse" {
+		cqlshBinLocation = "/opt/dse/bin/cqlsh"
+	}
+
+	if serverType == "hcd" {
+		cqlshBinLocation = "/opt/hcd/bin/cqlsh"
+	}
+
+	return cqlshBinLocation
 }
 
 func newRemoteClient(config *clientcmdapi.Config, context string) (client.Client, error) {

@@ -68,7 +68,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	pod1Name := fmt.Sprintf("%s-default-sts-0", dc1Prefix)
 	pod2Name := fmt.Sprintf("%s-default-sts-0", dc2Prefix)
 
-	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[1], namespace, pod2Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key))
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[1], namespace, pod2Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key), string(kc.Spec.Cassandra.ServerType))
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
 		testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, map[string]int{DcName(t, f, dc2Key): 1})
@@ -101,7 +101,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
-	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key))
+	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key), string(kc.Spec.Cassandra.ServerType))
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
 		testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, map[string]int{DcName(t, f, dc1Key): 1})
@@ -172,12 +172,12 @@ func toggleDcStopped(t *testing.T,
 	}
 }
 
-func checkKeyspaceReplicationsUnaltered(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext string, namespace string, podName, dc1Name, dc2Name string) {
+func checkKeyspaceReplicationsUnaltered(t *testing.T, f *framework.E2eFramework, ctx context.Context, k8sContext string, namespace string, podName, dc1Name, dc2Name, serverType string) {
 	t.Log("checking that keyspace replications didn't change for system and Stargate auth keyspaces")
 	replication := map[string]int{dc1Name: 1, dc2Name: 1}
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_auth", replication)
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_traces", replication)
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_distributed", replication)
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, stargate.AuthKeyspace, replication)
-	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, reaperapi.DefaultKeyspace, replication)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_auth", replication, serverType)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_traces", replication, serverType)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, "system_distributed", replication, serverType)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, stargate.AuthKeyspace, replication, serverType)
+	checkKeyspaceReplication(t, f, ctx, k8sContext, namespace, "cluster1", podName, reaperapi.DefaultKeyspace, replication, serverType)
 }

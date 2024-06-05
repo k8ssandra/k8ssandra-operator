@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -24,7 +25,10 @@ func stargateJwt(t *testing.T, ctx context.Context, namespace string, f *framewo
 	defer jwtUndeployKeycloak(t, f, namespace, cancelFunc)
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
-	jwtCreateAndPopulateSchema(t, f, ctx, namespace)
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err := f.Client.Get(ctx, dc1Key.NamespacedName, dc1)
+	require.NoError(t, err, "failed to get CassandraDatacenter in namespace %s", namespace)
+	jwtCreateAndPopulateSchema(t, f, ctx, namespace, dc1.Spec.ServerType)
 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
@@ -73,18 +77,18 @@ func jwtUndeployKeycloak(t *testing.T, f *framework.E2eFramework, namespace stri
 	require.NoError(t, err)
 }
 
-func jwtCreateAndPopulateSchema(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string) {
-	jwtExecuteCql(t, f, ctx, namespace, "CREATE KEYSPACE IF NOT EXISTS store WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':'1'}")
-	jwtExecuteCql(t, f, ctx, namespace, "CREATE TABLE IF NOT EXISTS store.shopping_cart (userid text PRIMARY KEY, item_count int, last_update_timestamp timestamp);")
-	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('9876', 2, toTimeStamp(toDate(now())))")
-	jwtExecuteCql(t, f, ctx, namespace, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('1234', 5, toTimeStamp(toDate(now())))")
-	jwtExecuteCql(t, f, ctx, namespace, "CREATE ROLE IF NOT EXISTS 'web_user' WITH PASSWORD = 'web_user' AND LOGIN = TRUE")
-	jwtExecuteCql(t, f, ctx, namespace, "GRANT MODIFY ON TABLE store.shopping_cart TO web_user")
-	jwtExecuteCql(t, f, ctx, namespace, "GRANT SELECT ON TABLE store.shopping_cart TO web_user")
+func jwtCreateAndPopulateSchema(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, serverType string) {
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "CREATE KEYSPACE IF NOT EXISTS store WITH REPLICATION = {'class':'NetworkTopologyStrategy', 'dc1':'1'}")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "CREATE TABLE IF NOT EXISTS store.shopping_cart (userid text PRIMARY KEY, item_count int, last_update_timestamp timestamp);")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('9876', 2, toTimeStamp(toDate(now())))")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "INSERT INTO store.shopping_cart (userid, item_count, last_update_timestamp) VALUES ('1234', 5, toTimeStamp(toDate(now())))")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "CREATE ROLE IF NOT EXISTS 'web_user' WITH PASSWORD = 'web_user' AND LOGIN = TRUE")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "GRANT MODIFY ON TABLE store.shopping_cart TO web_user")
+	jwtExecuteCql(t, f, ctx, namespace, serverType, "GRANT SELECT ON TABLE store.shopping_cart TO web_user")
 }
 
-func jwtExecuteCql(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, query string) {
-	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "cluster1", "cluster1-dc1-default-sts-0", query)
+func jwtExecuteCql(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace, query, serverType string) {
+	_, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, "cluster1", "cluster1-dc1-default-sts-0", serverType, query)
 	require.NoError(t, err)
 }
 

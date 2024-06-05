@@ -183,28 +183,23 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
 	}))
 	t.Run("CreateSingleHcdDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleHcdDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
-		hcd:      true,
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:     createSingleDseSearchDatacenterCluster,
 		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
-		dse:          true,
 		installMinio: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseGraphDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse-graph", controlPlane),
-		dse:      true,
 	}))
 	t.Run("ChangeDseWorkload", e2eTest(ctx, &e2eTestOpts{
 		testFunc: changeDseWorkload,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -455,14 +450,8 @@ type e2eTestOpts struct {
 	// an upgrade test.
 	initialVersion *string
 
-	// dse is used to specify if the e2e tests will run against DSE or Cassandra
-	dse bool
-
 	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
 	installMinio bool
-
-	// hcd is used to specify if the e2e tests will run against HCD
-	hcd bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -470,7 +459,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, opts.hcd, controlPlane, dataPlanes...)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -1109,7 +1098,7 @@ func createMultiDatacenterClusterDifferentTopologies(t *testing.T, ctx context.C
 
 	replication := map[string]int{DcName(t, f, dc1Key): 2, DcName(t, f, dc2Key): 1}
 	checkKeyspaceReplication(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
-		"system_auth", replication)
+		"system_auth", replication, string(kc.Spec.Cassandra.ServerType))
 }
 
 func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
@@ -1151,11 +1140,11 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 
 	dcSize := 2
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"' : %d}", dcSize))
 	require.NoError(err, "failed to create keyspace")
 
@@ -1225,7 +1214,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -1275,11 +1264,11 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 
 	dcSize := 2
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s' : %d}", DcName(t, f, dc1Key), dcSize))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s' : %d}", DcName(t, f, dc1Key), dcSize))
 	require.NoError(err, "failed to create keyspace")
 
@@ -1338,7 +1327,7 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 	keyspaces := []string{"system_auth", "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -1469,11 +1458,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	checkReaperReady(t, f, ctx, reaper2Key)
 
 	t.Log("create keyspaces")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s': 1, '%s': 2}", DcName(t, f, dc1Key), DcName(t, f, dc2Key)))
 	require.NoError(err, "failed to create keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		fmt.Sprintf("CREATE KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s': 1, '%s': 2}", DcName(t, f, dc1Key), DcName(t, f, dc2Key)))
 	require.NoError(err, "failed to create keyspace")
 	dc2Name := DcName(t, f, dc2Key)
@@ -1493,11 +1482,11 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	}, 5*time.Minute, 5*time.Second, "timed out waiting for an error on dc2 removal")
 
 	t.Log("alter keyspaces to remove replicas from DC2")
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		"ALTER KEYSPACE ks1 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"': 1}")
 	require.NoError(err, "failed to alter keyspace")
 
-	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 		"ALTER KEYSPACE ks2 WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '"+DcName(t, f, dc1Key)+"': 1}")
 	require.NoError(err, "failed to alter keyspace")
 
@@ -1508,7 +1497,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	keyspaces := []string{"system_auth", stargate.AuthKeyspace, reaperapi.DefaultKeyspace, "ks1", "ks2"}
 	for _, ks := range keyspaces {
 		assert.Eventually(func() bool {
-			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
+			output, err := f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0", string(kc.Spec.Cassandra.ServerType),
 				fmt.Sprintf("SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = '%s'", ks))
 			if err != nil {
 				t.Logf("replication check for keyspace %s failed: %v", ks, err)
@@ -1926,10 +1915,10 @@ func checkKeyspaceExists(
 	t *testing.T,
 	f *framework.E2eFramework,
 	ctx context.Context,
-	k8sContext, namespace, clusterName, pod, keyspace string,
+	k8sContext, namespace, clusterName, pod, keyspace, serverType string,
 ) {
 	assert.Eventually(t, func() bool {
-		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
+		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, serverType, "describe keyspaces")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)
 			return false
@@ -1944,9 +1933,10 @@ func checkKeyspaceReplication(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace string,
 	replication map[string]int,
+	serverType string,
 ) {
 	assert.Eventually(t, func() bool {
-		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspace "+keyspace)
+		desc, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, serverType, "describe keyspace "+keyspace)
 		if err != nil {
 			t.Logf("failed to desctibe keyspace %s: %v", keyspace, err)
 			return false
