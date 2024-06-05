@@ -15,7 +15,7 @@ spec:
       secure: false 
   cassandra:
     clusterName: "First Cluster"
-    serverVersion: 6.8.36
+    serverVersion: 6.8.43
     serverType: dse
     datacenters:
       - metadata:
