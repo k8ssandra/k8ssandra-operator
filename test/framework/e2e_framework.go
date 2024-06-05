@@ -96,7 +96,7 @@ func NewE2eFramework(t *testing.T, kubeconfigFile string, controlPlane string, d
 
 func (f *E2eFramework) CqlshBin(serverType string) string {
 	// Specify if DSE is used to adjust paths to binaries (cqlsh, ...)
-	cqlshBinLocation := "/opt/cassandra/bin/cqlsh"
+	cqlshBinLocation := "cqlsh"
 	if serverType == "dse" {
 		cqlshBinLocation = "/opt/dse/bin/cqlsh"
 	}

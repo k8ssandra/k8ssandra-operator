@@ -1917,7 +1917,7 @@ func checkKeyspaceExists(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace, serverType string,
 ) {
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, serverType, "describe keyspaces")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)

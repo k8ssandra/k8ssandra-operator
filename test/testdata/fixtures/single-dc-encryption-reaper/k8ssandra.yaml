@@ -19,6 +19,7 @@ spec:
     heapSize: 256Mi
   cassandra:
     serverVersion: 3.11.14
+    serverImage: "k8ssandra/cass-management-api:3.11.14"
     datacenters:
       - metadata:
           name: dc1
