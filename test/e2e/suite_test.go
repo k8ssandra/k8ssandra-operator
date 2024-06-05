@@ -2066,38 +2066,6 @@ func DcName(
 	return cassdc.DatacenterName()
 }
 
-func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash, namespace, dcPrefix string) string {
-	stargateChan := make(chan string)
-	go func() {
-		for {
-			stargateDeploymentResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
-			if stargateDeploymentResourceHash != initialStargateResourceHash {
-				stargateChan <- stargateDeploymentResourceHash
-				return
-			}
-			time.Sleep(time.Second)
-		}
-	}()
-
-	stargateUpgradeTimeout := time.After(5 * time.Minute)
-	for {
-		select {
-		case newStargateResourceHash := <-stargateChan:
-			t.Logf("Stargate deployment resource hash changed to %s", newStargateResourceHash)
-			return newStargateResourceHash
-		case <-stargateUpgradeTimeout:
-			t.Log("Stargate deployment resource hash did not change")
-			return initialStargateResourceHash
-		}
-	}
-}
-
-func waitForStargateRollout(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace, dcPrefix string) {
-	options1 := kubectl.Options{Namespace: namespace, Context: f.DataPlaneContexts[0]}
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", dcPrefix))
-	require.NoError(t, err)
-}
-
 func checkMetricsFiltersAbsence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
 	t.Logf("check that metric filters are absent on dc %s in cluster %s", dcKey.Name, dcKey.K8sContext)
 	cassdc := &cassdcapi.CassandraDatacenter{}
