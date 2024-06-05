@@ -450,14 +450,8 @@ type e2eTestOpts struct {
 	// an upgrade test.
 	initialVersion *string
 
-	// dse is used to specify if the e2e tests will run against DSE or Cassandra
-	dse bool
-
 	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
 	installMinio bool
-
-	// hcd is used to specify if the e2e tests will run against HCD
-	hcd bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
