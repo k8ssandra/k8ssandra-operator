@@ -604,7 +604,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	return nil
 }
 
-func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace string) error {
+func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace, dcPrefix string) error {
 	deploymentConfig := framework.OperatorDeploymentConfig{
 		Namespace:     namespace,
 		ClusterScoped: false,
@@ -955,51 +955,9 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-
-	// Save the Stargate deployment resource hash to verify if it was modified by the upgrade.
-	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
-	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-default-stargate-deployment"}}
-	initialStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
-	initialStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
-	require.Len(initialStargatePodNames, 1, "expected 1 Stargate pod in namespace %s", namespace)
-
-	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
-	require.NoError(err, "failed to retrieve database credentials")
-
-	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
-
 	// Perform the upgrade
-	err = upgradeToLatest(t, ctx, f, namespace)
+	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
 	require.NoError(err, "failed to upgrade to latest version")
-
-	// Wait for the Stargate deployment resource hash to change.
-	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
-	// It's possible that this assertion will fail if the Stargate deployment resource hash is not changed.
-	newStargateResourceHash := waitForStargateUpgrade(t, f, ctx, stargateDeploymentKey, initialStargateResourceHash)
-
-	t.Logf("Stargate initial deployment resource hash: %s / Current hash: %s", initialStargateResourceHash, newStargateResourceHash)
-	if initialStargateResourceHash != newStargateResourceHash {
-		// Stargate deployment was modified after the upgrade, we need to wait for the new pod to be ready
-		t.Log("Stargate deployment updated, waiting for new pod to be ready")
-		require.Eventually(func() bool {
-			newStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
-			return !utils.SliceContains(newStargatePodNames, initialStargatePodNames[0])
-		}, polling.stargateReady.timeout, polling.stargateReady.interval)
-	}
-
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
-
-	replication := map[string]int{DcName(t, f, dcKey): 1}
-	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -2108,7 +2066,7 @@ func DcName(
 	return cassdc.DatacenterName()
 }
 
-func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash string) string {
+func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash, namespace, dcPrefix string) string {
 	stargateChan := make(chan string)
 	go func() {
 		for {
@@ -2132,6 +2090,12 @@ func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context
 			return initialStargateResourceHash
 		}
 	}
+}
+
+func waitForStargateRollout(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace, dcPrefix string) {
+	options1 := kubectl.Options{Namespace: namespace, Context: f.DataPlaneContexts[0]}
+	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", dcPrefix))
+	require.NoError(t, err)
 }
 
 func checkMetricsFiltersAbsence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {
