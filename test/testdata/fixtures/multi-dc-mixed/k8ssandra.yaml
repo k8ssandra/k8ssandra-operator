@@ -5,7 +5,7 @@ metadata:
 spec:
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: "4.0.3"
+    serverVersion: "4.0.13"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
