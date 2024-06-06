@@ -34,6 +34,7 @@ spec:
       max_heap_size: 512m
   serverType: cassandra
   serverVersion: 3.11.14
+  serverImage: "k8ssandra/cass-management-api:3.11.14"
   networking:
     hostNetwork: false
   size: 3

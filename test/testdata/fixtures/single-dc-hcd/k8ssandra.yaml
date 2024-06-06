@@ -3,14 +3,21 @@ kind: K8ssandraCluster
 metadata:
   name: test
 spec:
+  auth: true
   cassandra:
-    serverVersion: 3.11.14
-    serverImage: "k8ssandra/cass-management-api:3.11.14"
+    serverVersion: 1.0.0
+    serverImage: datastax/hcd:1.0.0-early-preview
+    serverType: hcd
+    dseWorkloads:
+      graphEnabled: false
+      searchEnabled: false
     datacenters:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 1
+        size: 2
+        networking:
+          hostNetwork: true
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -20,12 +27,9 @@ spec:
               requests:
                 storage: 5Gi
         config:
+          dseYaml:
+            server_id: server-id
           jvmOptions:
-            heap_initial_size: 384Mi
-            heap_max_size: 384Mi
-            gc: CMS
-            gc_cms_survivor_ratio: 4
-            gc_cms_max_tenuring_threshold: 2
-            gc_cms_initiating_occupancy_fraction: 76
-            gc_cms_wait_duration_ms: 11000
+            heap_initial_size: 512Mi
+            heap_max_size: 512Mi
     mgmtAPIHeap: 64Mi

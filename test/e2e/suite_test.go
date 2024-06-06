@@ -183,23 +183,23 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
+	}))
+	t.Run("CreateSingleHcdDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleHcdDatacenterCluster,
+		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:     createSingleDseSearchDatacenterCluster,
 		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
-		dse:          true,
 		installMinio: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseGraphDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse-graph", controlPlane),
-		dse:      true,
 	}))
 	t.Run("ChangeDseWorkload", e2eTest(ctx, &e2eTestOpts{
 		testFunc: changeDseWorkload,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -450,9 +450,6 @@ type e2eTestOpts struct {
 	// an upgrade test.
 	initialVersion *string
 
-	// dse is used to specify if the e2e tests will run against DSE or Cassandra
-	dse bool
-
 	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
 	installMinio bool
 }
@@ -462,7 +459,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, controlPlane, dataPlanes...)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -1797,6 +1794,20 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
 }
 
+func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s has its heap size set", key.Name, key.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, key)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+		if err != nil {
+			t.Logf("failed to unmarshal datacenter %s config: %v", key.Name, err)
+			return false
+		}
+		initialHeapSize := dcConfig["jvm-server-options"].(map[string]interface{})["initial_heap_size"].(float64)
+		return initialHeapSize > 0
+	}), 10*time.Second, 1*time.Second, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+}
+
 func checkDatacenterUpdating(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
 	t.Logf("check that datacenter %s in cluster %s is updating", key.Name, key.K8sContext)
 	withDatacenter := f.NewWithDatacenter(ctx, key)
@@ -1906,7 +1917,7 @@ func checkKeyspaceExists(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace string,
 ) {
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)

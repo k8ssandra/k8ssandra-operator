@@ -6,6 +6,7 @@ spec:
   cassandra:
     clusterName: "E2E Test Cluster"
     serverVersion: "4.0.13"
+    serverImage: "k8ssandra/cass-management-api:4.0.13"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
