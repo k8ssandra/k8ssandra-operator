@@ -89,10 +89,10 @@ func createSingleHcdDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 
-	t.Log("Check that we can communicate through CQL with DSE")
+	t.Log("Check that we can communicate through CQL with HCD")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
 		"SELECT * FROM system.local")
-	require.NoError(t, err, "failed to execute CQL query against DSE", err)
+	require.NoError(t, err, "failed to execute CQL query against HCD", err)
 	opts := kubectl.Options{
 		Namespace: namespace,
 		Context:   f.DataPlaneContexts[0],
