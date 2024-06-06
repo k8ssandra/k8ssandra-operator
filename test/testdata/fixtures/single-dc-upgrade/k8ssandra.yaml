@@ -5,11 +5,21 @@ metadata:
 spec:
   cassandra:
     serverVersion: 3.11.14
+    serverImage: "k8ssandra/cass-management-api:3.11.14"
     datacenters:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
         size: 2
+        initContainers:
+          - name: "server-config-init"
+            resources:
+              requests:
+                memory: 256Mi
+                cpu: 1
+              limits:
+                memory: 512Mi
+                cpu: 1
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -18,21 +28,4 @@ spec:
             resources:
               requests:
                 storage: 5Gi
-        stargate:
-          size: 1
-          heapSize: 384Mi
-          livenessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          readinessProbe:
-            initialDelaySeconds: 100
-            periodSeconds: 10
-            failureThreshold: 20
-            successThreshold: 1
-            timeoutSeconds: 20
-          cassandraConfigMapRef:
-            name: cassandra-config
     mgmtAPIHeap: 64Mi

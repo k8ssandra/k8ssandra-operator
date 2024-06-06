@@ -51,14 +51,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xms.
 	// +optional
-	InitialHeapSize *resource.Quantity `json:"heap_initial_size,omitempty" cass-config:"^3.11.x:jvm-options/initial_heap_size;>=4.x,dse@>=6.8.x:jvm-server-options/initial_heap_size"`
+	InitialHeapSize *resource.Quantity `json:"heap_initial_size,omitempty" cass-config:"^3.11.x:jvm-options/initial_heap_size;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/initial_heap_size"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xmx.
 	// +optional
-	MaxHeapSize *resource.Quantity `json:"heap_max_size,omitempty" cass-config:"^3.11.x:jvm-options/max_heap_size;>=4.x,dse@>=6.8.x:jvm-server-options/max_heap_size"`
+	MaxHeapSize *resource.Quantity `json:"heap_max_size,omitempty" cass-config:"^3.11.x:jvm-options/max_heap_size;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/max_heap_size"`
 
 	// GENERAL VM OPTIONS
 
@@ -68,7 +68,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -ea.
 	// +optional
-	EnableAssertions *bool `json:"vm_enable_assertions,omitempty" cass-config:"^3.11.x:jvm-options/enable_assertions;>=4.x,dse@>=6.8.x:jvm-server-options/enable_assertions"`
+	EnableAssertions *bool `json:"vm_enable_assertions,omitempty" cass-config:"^3.11.x:jvm-options/enable_assertions;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/enable_assertions"`
 
 	// Enable thread priorities.
 	// Enabled by default.
@@ -76,7 +76,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseThreadPriorities.
 	// +optional
-	EnableThreadPriorities *bool `json:"vm_enable_thread_priorities,omitempty" cass-config:"^3.11.x:jvm-options/use_thread_priorities;>=4.x,dse@>=6.8.x:jvm-server-options/use_thread_priorities"`
+	EnableThreadPriorities *bool `json:"vm_enable_thread_priorities,omitempty" cass-config:"^3.11.x:jvm-options/use_thread_priorities;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/use_thread_priorities"`
 
 	// Enable lowering thread priority without being root on linux.
 	// See CASSANDRA-1181 for details.
@@ -91,7 +91,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+HeapDumpOnOutOfMemoryError.
 	// +optional
-	HeapDumpOnOutOfMemoryError *bool `json:"vm_heap_dump_on_out_of_memory_error,omitempty" cass-config:"^3.11.x:jvm-options/heap_dump_on_out_of_memory_error;>=4.x,dse@>=6.8.x:jvm-server-options/heap_dump_on_out_of_memory_error"`
+	HeapDumpOnOutOfMemoryError *bool `json:"vm_heap_dump_on_out_of_memory_error,omitempty" cass-config:"^3.11.x:jvm-options/heap_dump_on_out_of_memory_error;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/heap_dump_on_out_of_memory_error"`
 
 	// Per-thread stack size.
 	// Defaults to 256Ki.
@@ -99,7 +99,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Xss.
 	// +optional
-	PerThreadStackSize *resource.Quantity `json:"vm_per_thread_stack_size,omitempty" cass-config:"^3.11.x:jvm-options/per_thread_stack_size;>=4.x,dse@>=6.8.x:jvm-server-options/per_thread_stack_size"`
+	PerThreadStackSize *resource.Quantity `json:"vm_per_thread_stack_size,omitempty" cass-config:"^3.11.x:jvm-options/per_thread_stack_size;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/per_thread_stack_size"`
 
 	// The size of interned string table. Larger sizes are beneficial to gossip.
 	// Defaults to 1000003.
@@ -107,7 +107,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:StringTableSize.
 	// +optional
-	StringTableSize *resource.Quantity `json:"vm_string_table_size,omitempty" cass-config:"^3.11.x:jvm-options/string_table_size;>=4.x,dse@>=6.8.x:jvm-server-options/string_table_size"`
+	StringTableSize *resource.Quantity `json:"vm_string_table_size,omitempty" cass-config:"^3.11.x:jvm-options/string_table_size;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/string_table_size"`
 
 	// Ensure all memory is faulted and zeroed on startup.
 	// Enabled by default.
@@ -115,7 +115,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+AlwaysPreTouch.
 	// +optional
-	AlwaysPreTouch *bool `json:"vm_always_pre_touch,omitempty" cass-config:"^3.11.x:jvm-options/always_pre_touch;>=4.x,dse@>=6.8.x:jvm-server-options/always_pre_touch"`
+	AlwaysPreTouch *bool `json:"vm_always_pre_touch,omitempty" cass-config:"^3.11.x:jvm-options/always_pre_touch;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/always_pre_touch"`
 
 	// Disable biased locking to avoid biased lock revocation pauses.
 	// Disabled by default.
@@ -125,7 +125,7 @@ type JvmOptions struct {
 	// Note: the Cass Config Builder option is named use_biased_locking, but setting it to true
 	// disables biased locking.
 	// +optional
-	DisableBiasedLocking *bool `json:"vm_disable_biased_locking,omitempty" cass-config:"^3.11.x:jvm-options/use_biased_locking;>=4.x,dse@>=6.8.x:jvm-server-options/use-biased-locking"`
+	DisableBiasedLocking *bool `json:"vm_disable_biased_locking,omitempty" cass-config:"^3.11.x:jvm-options/use_biased_locking;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/use-biased-locking"`
 
 	// Enable thread-local allocation blocks.
 	// Enabled by default.
@@ -133,7 +133,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseTLAB.
 	// +optional
-	UseTlab *bool `json:"vm_use_tlab,omitempty" cass-config:"^3.11.x:jvm-options/use_tlb;>=4.x,dse@>=6.8.x:jvm-server-options/use_tlb"`
+	UseTlab *bool `json:"vm_use_tlab,omitempty" cass-config:"^3.11.x:jvm-options/use_tlb;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/use_tlb"`
 
 	// Allow resizing of thread-local allocation blocks.
 	// Enabled by default.
@@ -141,7 +141,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+ResizeTLAB.
 	// +optional
-	ResizeTlab *bool `json:"vm_resize_tlab,omitempty" cass-config:"^3.11.x:jvm-options/resize_tlb;>=4.x,dse@>=6.8.x:jvm-server-options/resize_tlb"`
+	ResizeTlab *bool `json:"vm_resize_tlab,omitempty" cass-config:"^3.11.x:jvm-options/resize_tlb;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/resize_tlb"`
 
 	// Disable hsperfdata mmap'ed file.
 	// Enabled by default.
@@ -149,7 +149,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+PerfDisableSharedMem.
 	// +optional
-	DisablePerfSharedMem *bool `json:"vm_disable_perf_shared_mem,omitempty" cass-config:"^3.11.x:jvm-options/perf_disable_shared_mem;>=4.x,dse@>=6.8.x:jvm-server-options/perf_disable_shared_mem"`
+	DisablePerfSharedMem *bool `json:"vm_disable_perf_shared_mem,omitempty" cass-config:"^3.11.x:jvm-options/perf_disable_shared_mem;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/perf_disable_shared_mem"`
 
 	// Prefer binding to IPv4 network interfaces.
 	// Enabled by default.
@@ -157,70 +157,70 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Djava.net.preferIPv4Stack=true.
 	// +optional
-	PreferIpv4 *bool `json:"vm_prefer_ipv4,omitempty" cass-config:"^3.11.x:jvm-options/java_net_prefer_ipv4_stack;>=4.x,dse@>=6.8.x:jvm-server-options/java_net_prefer_ipv4_stack"`
+	PreferIpv4 *bool `json:"vm_prefer_ipv4,omitempty" cass-config:"^3.11.x:jvm-options/java_net_prefer_ipv4_stack;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/java_net_prefer_ipv4_stack"`
 
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UseNUMA.
 	// +optional
-	UseNuma *bool `json:"vm_use_numa,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/use_numa"`
+	UseNuma *bool `json:"vm_use_numa,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/use_numa"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.printHeapHistogramOnOutOfMemoryError.
 	// +optional
-	PrintHeapHistogramOnOutOfMemoryError *bool `json:"vm_print_heap_histogram_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/print_heap_histogram_on_out_of_memory_error"`
+	PrintHeapHistogramOnOutOfMemoryError *bool `json:"vm_print_heap_histogram_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/print_heap_histogram_on_out_of_memory_error"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+ExitOnOutOfMemoryError.
 	// +optional
-	ExitOnOutOfMemoryError *bool `json:"vm_exit_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/exit_on_out_of_memory_error"`
+	ExitOnOutOfMemoryError *bool `json:"vm_exit_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/exit_on_out_of_memory_error"`
 
 	// Disabled by default. Requires `exit_on_out_of_memory_error` to be disabled..
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+CrashOnOutOfMemoryError.
 	// +optional
-	CrashOnOutOfMemoryError *bool `json:"vm_crash_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/crash_on_out_of_memory_error"`
+	CrashOnOutOfMemoryError *bool `json:"vm_crash_on_out_of_memory_error,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/crash_on_out_of_memory_error"`
 
 	// Defaults to 300000 milliseconds.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:GuaranteedSafepointInterval.
 	// +optional
-	GuaranteedSafepointIntervalMs *int `json:"vm_guaranteed_safepoint_interval_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/guaranteed-safepoint-interval"`
+	GuaranteedSafepointIntervalMs *int `json:"vm_guaranteed_safepoint_interval_ms,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/guaranteed-safepoint-interval"`
 
 	// Defaults to 65536.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dio.netty.eventLoop.maxPendingTasks.
 	// +optional
-	NettyEventloopMaxPendingTasks *int `json:"netty_eventloop_maxpendingtasks,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/io_netty_eventloop_maxpendingtasks"`
+	NettyEventloopMaxPendingTasks *int `json:"netty_eventloop_maxpendingtasks,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/io_netty_eventloop_maxpendingtasks"`
 
 	// Netty setting `io.netty.tryReflectionSetAccessible`.
 	// Defaults to true.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Dio.netty.tryReflectionSetAccessible=true.
 	// +optional
-	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x:jvm11-server-options/io_netty_try_reflection_set_accessible;dse@>=6.8.x:jvm8-server-options/io_netty_try_reflection_set_accessible"`
+	NettyTryReflectionSetAccessible *bool `json:"netty_try_reflection_set_accessible,omitempty" cass-config:">=4.x,hcd@>=1.x.x:jvm11-server-options/io_netty_try_reflection_set_accessible;dse@>=6.8.x:jvm8-server-options/io_netty_try_reflection_set_accessible"`
 
 	// Defaults to 1048576.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Djdk.nio.maxCachedBufferSize.
 	// +optional
-	NioMaxCachedBufferSize *resource.Quantity `json:"nio_maxcachedbuffersize,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/jdk_nio_maxcachedbuffersize"`
+	NioMaxCachedBufferSize *resource.Quantity `json:"nio_maxcachedbuffersize,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jdk_nio_maxcachedbuffersize"`
 
 	// Align direct memory allocations on page boundaries.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dsun.nio.PageAlignDirectMemory=true.
 	// +optional
-	NioAlignDirectMemory *bool `json:"nio_align_direct_memory,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/page-align-direct-memory"`
+	NioAlignDirectMemory *bool `json:"nio_align_direct_memory,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/page-align-direct-memory"`
 
 	// Allow the current VM to attach to itself.
 	// Defaults to true.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -Djdk.attach.allowAttachSelf=true.
 	// +optional
-	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x:jvm11-server-options/jdk_attach_allow_attach_self;dse@>=6.8.x:jvm8-server-options/jdk_attach_allow_attach_self"`
+	JdkAllowAttachSelf *bool `json:"jdk_allow_attach_self,omitempty" cass-config:">=4.x,hcd@>=1.x.x:jvm11-server-options/jdk_attach_allow_attach_self;dse@>=6.8.x:jvm8-server-options/jdk_attach_allow_attach_self"`
 
 	// CASSANDRA STARTUP OPTIONS
 
@@ -230,7 +230,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.available_processors.
 	// +optional
-	AvailableProcessors *int `json:"cassandra_available_processors,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_available_processors;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_available_processors"`
+	AvailableProcessors *int `json:"cassandra_available_processors,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_available_processors;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_available_processors"`
 
 	// Enable pluggable metrics reporter.
 	// Disabled by default.
@@ -239,7 +239,7 @@ type JvmOptions struct {
 	// Corresponds to: -Dcassandra.metricsReporterConfigFile.
 	// +optional
 	// TODO mountable directory
-	MetricsReporterConfigFile *string `json:"cassandra_metrics_reporter_config_file,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_metrics_reporter_config_file;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_metrics_reporter_config_file"`
+	MetricsReporterConfigFile *string `json:"cassandra_metrics_reporter_config_file,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_metrics_reporter_config_file;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_metrics_reporter_config_file"`
 
 	// Amount of time in milliseconds that a node waits before joining the ring.
 	// Disabled by default.
@@ -247,7 +247,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.ring_delay_ms.
 	// +optional
-	RingDelayMs *int `json:"cassandra_ring_delay_ms,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_ring_delay_ms;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_ring_delay_ms"`
+	RingDelayMs *int `json:"cassandra_ring_delay_ms,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_ring_delay_ms;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_ring_delay_ms"`
 
 	// Default location for the trigger JARs.
 	// Disabled by default.
@@ -256,7 +256,7 @@ type JvmOptions struct {
 	// Corresponds to: -Dcassandra.triggers_dir.
 	// +optional
 	// TODO mountable directory
-	TriggersDirectory *string `json:"cassandra_triggers_directory,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_triggers_dir;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_triggers_dir"`
+	TriggersDirectory *string `json:"cassandra_triggers_directory,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_triggers_dir;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_triggers_dir"`
 
 	// For testing new compaction and compression strategies.
 	// Disabled by default.
@@ -264,7 +264,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.write_survey.
 	// +optional
-	WriteSurvey *bool `json:"cassandra_write_survey,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_write_survey;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_write_survey"`
+	WriteSurvey *bool `json:"cassandra_write_survey,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_write_survey;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_write_survey"`
 
 	// Disable remote configuration via JMX of auth caches.
 	// Disabled by default.
@@ -272,7 +272,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.disable_auth_caches_remote_configuration.
 	// +optional
-	DisableAuthCachesRemoteConfiguration *bool `json:"cassandra_disable_auth_caches_remote_configuration,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_disable_auth_caches_remote_configuration;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_disable_auth_caches_remote_configuration"`
+	DisableAuthCachesRemoteConfiguration *bool `json:"cassandra_disable_auth_caches_remote_configuration,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_disable_auth_caches_remote_configuration;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_disable_auth_caches_remote_configuration"`
 
 	// Disable dynamic calculation of the page size used when indexing an entire partition (during
 	// initial index build/rebuild).
@@ -281,7 +281,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.force_default_indexing_page_size.
 	// +optional
-	ForceDefaultIndexingPageSize *bool `json:"cassandra_force_default_indexing_page_size,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_force_default_indexing_page_size;>=4.x,dse@>=6.8.x:jvm-server-options/cassandra_force_default_indexing_page_size"`
+	ForceDefaultIndexingPageSize *bool `json:"cassandra_force_default_indexing_page_size,omitempty" cass-config:"^3.11.x:jvm-options/cassandra_force_default_indexing_page_size;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_force_default_indexing_page_size"`
 
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
@@ -295,14 +295,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.expiration_date_overflow_policy.
 	// +optional
-	ExpirationDateOverflowPolicy *string `json:"cassandra_expiration_date_overflow_policy,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/cassandra_expiration_date_overflow_policy"`
+	ExpirationDateOverflowPolicy *string `json:"cassandra_expiration_date_overflow_policy,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_expiration_date_overflow_policy"`
 
 	// Imposes an upper bound on hint lifetime below the normal min gc_grace_seconds.
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -Dcassandra.maxHintTTL.
 	// +optional
-	MaxHintTtlSeconds *int `json:"cassandra_max_hint_ttl_seconds,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/cassandra_max_hint_ttl"`
+	MaxHintTtlSeconds *int `json:"cassandra_max_hint_ttl_seconds,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/cassandra_max_hint_ttl"`
 
 	// GC OPTIONS
 
@@ -316,7 +316,7 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Enum=G1GC;CMS;ZGC;Shenandoah;Graal;Custom
 	// +kubebuilder:default=G1GC
 	// +optional
-	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x:jvm11-server-options/garbage_collector;dse@>=6.8.x:jvm8-server-options/garbage_collector"`
+	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x,hcd@>=1.x.x:jvm11-server-options/garbage_collector;dse@>=6.8.x:jvm8-server-options/garbage_collector"`
 
 	// CMS
 
@@ -366,14 +366,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent;>=4.x:jvm11-server-options/g1r_set_updating_pause_time_percent;dse@>=6.8.x:jvm8-server-options/g1r_set_updating_pause_time_percent"`
+	G1RSetUpdatingPauseTimePercent *int `json:"gc_g1_rset_updating_pause_time_percent,omitempty" cass-config:"^3.11.x:jvm-options/g1r_set_updating_pause_time_percent;>=4.x,hcd@>=1.x.x:jvm11-server-options/g1r_set_updating_pause_time_percent;dse@>=6.8.x:jvm8-server-options/g1r_set_updating_pause_time_percent"`
 
 	// G1GC Max GC Pause in milliseconds. Defaults to 500. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:MaxGCPauseMillis.
 	// +optional
-	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis;>=4.x:jvm11-server-options/max_gc_pause_millis;dse@>=6.8.x:jvm8-server-options/max_gc_pause_millis"`
+	G1MaxGcPauseMs *int `json:"gc_g1_max_gc_pause_ms,omitempty" cass-config:"^3.11.x:jvm-options/max_gc_pause_millis;>=4.x,hcd@>=1.x.x:jvm11-server-options/max_gc_pause_millis;dse@>=6.8.x:jvm8-server-options/max_gc_pause_millis"`
 
 	// Initiating Heap Occupancy Percentage. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
@@ -382,14 +382,14 @@ type JvmOptions struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	// +optional
-	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent;>=4.x:jvm11-server-options/initiating_heap_occupancy_percent;dse@>=6.8.x:jvm8-server-options/initiating_heap_occupancy_percent"`
+	G1InitiatingHeapOccupancyPercent *int `json:"gc_g1_initiating_heap_occupancy_percent,omitempty" cass-config:"^3.11.x:jvm-options/initiating_heap_occupancy_percent;>=4.x,hcd@>=1.x.x:jvm11-server-options/initiating_heap_occupancy_percent;dse@>=6.8.x:jvm8-server-options/initiating_heap_occupancy_percent"`
 
 	// Parallel GC Threads. Can only be used when G1 garbage collector is used.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ParallelGCThreads.
 	// +optional
-	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads;>=4.x:jvm11-server-options/parallel_gc_threads;dse@>=6.8.x:jvm8-server-options/parallel_gc_threads"`
+	G1ParallelGcThreads *int `json:"gc_g1_parallel_threads,omitempty" cass-config:"^3.11.x:jvm-options/parallel_gc_threads;>=4.x,hcd@>=1.x.x:jvm11-server-options/parallel_gc_threads;dse@>=6.8.x:jvm8-server-options/parallel_gc_threads"`
 
 	// Concurrent GC Threads. Can only be used when G1 garbage collector is used.
 	// Disabled by default.
@@ -397,7 +397,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
 	// Corresponds to: -XX:ConcGCThreads.
 	// +optional
-	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads;>=4.x:jvm11-server-options/conc_gc_threads;dse@>=6.8.x:jvm8-server-options/conc_gc_threads"`
+	G1ConcGcThreads *int `json:"gc_g1_conc_threads,omitempty" cass-config:"^3.11.x:jvm-options/conc_gc_threads;>=4.x,hcd@>=1.x.x:jvm11-server-options/conc_gc_threads;dse@>=6.8.x:jvm8-server-options/conc_gc_threads"`
 
 	// GC LOGGING OPTIONS (currently only available for Cassandra 3.11)
 
@@ -484,32 +484,32 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxPort *int `json:"jmx_port,omitempty" cass-config:"^3.11.x:jvm-options/jmx-port;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-port"`
+	JmxPort *int `json:"jmx_port,omitempty" cass-config:"^3.11.x:jvm-options/jmx-port;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jmx-port"`
 
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Possible values for 3.11 include `local-no-auth`, `remote-no-auth`, and `remote-dse-unified-auth`. Defaults to `local-no-auth`.
 	// Possible values for 4.0 include `local-no-auth`, `remote-no-auth`. Defaults to `local-no-auth`.
 	// +optional
-	JmxConnectionType *string `json:"jmx_connection_type,omitempty" cass-config:"^3.11.x:jvm-options/jmx-connection-type;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-connection-type"`
+	JmxConnectionType *string `json:"jmx_connection_type,omitempty" cass-config:"^3.11.x:jvm-options/jmx-connection-type;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jmx-connection-type"`
 
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Defaults to false.
 	// Valid only when JmxConnectionType is "remote-no-auth", "remote-dse-unified-auth".
 	// +optional
-	JmxRemoteSsl *bool `json:"jmx_remote_ssl,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl"`
+	JmxRemoteSsl *bool `json:"jmx_remote_ssl,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jmx-remote-ssl"`
 
 	// Remote SSL options.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxRemoteSslOpts *string `json:"jmx_remote_ssl_opts,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl-opts;>=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl-opts"`
+	JmxRemoteSslOpts *string `json:"jmx_remote_ssl_opts,omitempty" cass-config:"^3.11.x:jvm-options/jmx-remote-ssl-opts;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jmx-remote-ssl-opts"`
 
 	// Require Client Authentication for remote SSL? Defaults to false.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// +optional
-	JmxRemoteSslRequireClientAuth *bool `json:"jmx_remote_ssl_require_client_auth,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/jmx-remote-ssl-require-client-auth"`
+	JmxRemoteSslRequireClientAuth *bool `json:"jmx_remote_ssl_require_client_auth,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/jmx-remote-ssl-require-client-auth"`
 
 	// DEBUG OPTIONS
 
@@ -519,7 +519,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UnlockCommercialFeatures.
 	// +optional
-	UnlockCommercialFeatures *bool `json:"debug_unlock_commercial_features,omitempty" cass-config:"^3.11.x:jvm-options/unlock_commercial_features;>=4.x,dse@>=6.8.x:jvm-server-options/unlock_commercial_features"`
+	UnlockCommercialFeatures *bool `json:"debug_unlock_commercial_features,omitempty" cass-config:"^3.11.x:jvm-options/unlock_commercial_features;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/unlock_commercial_features"`
 
 	// Enable Flight Recorder (Use in production is subject to Oracle licensing).
 	// Disabled by default.
@@ -527,7 +527,7 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+FlightRecorder.
 	// +optional
-	EnableFlightRecorder *bool `json:"debug_enable_flight_recorder,omitempty" cass-config:"^3.11.x:jvm-options/flight_recorder;>=4.x,dse@>=6.8.x:jvm-server-options/flight_recorder"`
+	EnableFlightRecorder *bool `json:"debug_enable_flight_recorder,omitempty" cass-config:"^3.11.x:jvm-options/flight_recorder;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/flight_recorder"`
 
 	// Listen for JVM remote debuggers on port 1414.
 	// Disabled by default.
@@ -535,14 +535,14 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=1414".
 	// +optional
-	ListenForRemoteDebuggers *bool `json:"debug_listen_remote_debuggers,omitempty" cass-config:"^3.11.x:jvm-options/agent_lib_jdwp;>=4.x,dse@>=6.8.x:jvm-server-options/agent_lib_jdwp"`
+	ListenForRemoteDebuggers *bool `json:"debug_listen_remote_debuggers,omitempty" cass-config:"^3.11.x:jvm-options/agent_lib_jdwp;>=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/agent_lib_jdwp"`
 
 	// Disable honoring user code @Contended annotations.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:-RestrictContended.
 	// +optional
-	DisableContendedAnnotations *bool `json:"debug_disable_contended_annotations,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/restrict-contended"`
+	DisableContendedAnnotations *bool `json:"debug_disable_contended_annotations,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/restrict-contended"`
 
 	// Whether the compiler should generate the necessary metadata for the parts of the code not at
 	// safe points as well. For use with Flight Recorder.
@@ -550,27 +550,27 @@ type JvmOptions struct {
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+DebugNonSafepoints.
 	// +optional
-	DebugNonSafepoints *bool `json:"debug_non_safepoints,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/debug-non-safepoints"`
+	DebugNonSafepoints *bool `json:"debug_non_safepoints,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/debug-non-safepoints"`
 
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+UnlockDiagnosticVMOptions.
 	// +optional
-	UnlockDiagnosticVmOptions *bool `json:"debug_unlock_diagnostic_vm_options,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/unlock-diagnostic-vm-options"`
+	UnlockDiagnosticVmOptions *bool `json:"debug_unlock_diagnostic_vm_options,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/unlock-diagnostic-vm-options"`
 
 	// Make Cassandra JVM log internal method compilation (developers only).
 	// Disabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+LogCompilation.
 	// +optional
-	LogCompilation *bool `json:"debug_log_compilation,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/log_compilation"`
+	LogCompilation *bool `json:"debug_log_compilation,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/log_compilation"`
 
 	// Preserve Frame Pointer.
 	// Enabled by default.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm-server.options.
 	// Corresponds to: -XX:+PreserveFramePointer.
 	// +optional
-	PreserveFramePointer *bool `json:"debug_preserve_frame_pointer,omitempty" cass-config:">=4.x,dse@>=6.8.x:jvm-server-options/preserve-frame-pointer"`
+	PreserveFramePointer *bool `json:"debug_preserve_frame_pointer,omitempty" cass-config:">=4.x,dse@>=6.8.x,hcd@>=1.x.x:jvm-server-options/preserve-frame-pointer"`
 
 	// Additional, arbitrary JVM options which are written into the cassandra-env.sh file.
 	// +optional

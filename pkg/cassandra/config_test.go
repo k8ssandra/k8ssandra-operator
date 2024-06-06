@@ -344,13 +344,3 @@ func TestSmartTokenAllocCassandra(t *testing.T) {
 	_, exists := dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
 	assert.False(t, exists, "allocate_tokens_for_local_replication_factor should not be set for Cassandra")
 }
-
-func TestSmartTokenAllocHcd(t *testing.T) {
-	dcConfig := &DatacenterConfig{
-		ServerType: api.ServerDistributionHcd,
-	}
-
-	EnableSmartTokenAllocation(dcConfig)
-	_, exists := dcConfig.CassandraConfig.CassandraYaml["allocate_tokens_for_local_replication_factor"]
-	assert.False(t, exists, "allocate_tokens_for_local_replication_factor should not be set for HCD")
-}

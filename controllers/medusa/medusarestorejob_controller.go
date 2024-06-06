@@ -377,6 +377,7 @@ func updateMedusaRestoreInitContainer(req *medusa.RestoreRequest) error {
 	if err := setRestoreMappingInRestoreContainer(req.RestoreJob.Status.RestoreMapping, req.Datacenter); err != nil {
 		return err
 	}
+
 	return setRestoreKeyInRestoreContainer(req.RestoreJob.Status.RestoreKey, req.Datacenter)
 }
 

@@ -38,7 +38,8 @@ spec:
             anAnnotationKeyDcLevel: anAnnotationValueDCLevel
         k8sContext: kind-k8ssandra-0
         size: 3
-        serverVersion: 4.0.6
+        serverVersion: 4.0.13
+        serverImage: "k8ssandra/cass-management-api:4.0.13"
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard

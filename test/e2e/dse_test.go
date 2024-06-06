@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"net/http"
 	"testing"
 	"time"
@@ -73,6 +74,32 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	checkStargateReady(t, f, ctx, stargateKey)
 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
+}
+
+// createSingleDseDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running
+func createSingleHcdDatacenterCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	t.Log("check that the K8ssandraCluster was created")
+	kc := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", namespace)
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+	checkDatacenterHasHeapSizeSet(t, ctx, dcKey, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
+	dcPrefix := DcPrefix(t, f, dcKey)
+
+	t.Log("Check that we can communicate through CQL with HCD")
+	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
+		"SELECT * FROM system.local")
+	require.NoError(t, err, "failed to execute CQL query against HCD", err)
+	opts := kubectl.Options{
+		Namespace: namespace,
+		Context:   f.DataPlaneContexts[0],
+	}
+	output, err := kubectl.Exec(opts, dcPrefix+"-default-sts-0", "ps", "-aux")
+	require.NoError(t, err, "failed to execute ps command")
+	assert.Contains(t, output, "java -Dhcd.server_process -Xms536870912 -Xmx536870912", "expected heap size to be set to 512M")
 }
 
 // createSingleDseSearchDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running with search enabled

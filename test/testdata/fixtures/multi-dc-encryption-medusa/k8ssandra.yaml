@@ -30,6 +30,7 @@ spec:
       name: client-certificates
   cassandra:
     serverVersion: "3.11.14"
+    serverImage: "k8ssandra/cass-management-api:3.11.14"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard

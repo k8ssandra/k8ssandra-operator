@@ -15,6 +15,7 @@ func Test_preMarshalConfig(t *testing.T) {
 		Simple1   *string `cass-config:"*:foo/simple1"`
 		Simple2   bool    `cass-config:"*:foo/simple2"`
 		SimpleDSE *bool   `cass-config:"dse@6.8.x:foo/simple/dse"`
+		SimpleHCD *bool   `cass-config:"hcd@1.x.x:foo/simple/hcd"`
 	}
 	type komplex struct {
 		ManyRestrictions               *string `cass-config:"^3.11.x:foo/many-restrictions-3x;cassandra@>=4.x:foo/many-restrictions-4x"`
@@ -30,6 +31,10 @@ func Test_preMarshalConfig(t *testing.T) {
 	type dse struct {
 		ManyRestrictionsDSE *string `cass-config:">=4.x:many-restrictions-cassandra;dse@>=6.8.x:many-restrictions-dse"`
 		ChildRecurseDSE     *simple `cass-config:"dse@*:parent/;recurse"`
+	}
+	type hcd struct {
+		ManyRestrictionsHCD *string `cass-config:">=4.x:many-restrictions-cassandra;dse@>=6.8.x:many-restrictions-dse;hcd@>=1.x.x:many-restrictions-hcd"`
+		ChildRecurseHCD     *simple `cass-config:"hcd@*:parent/;recurse"`
 	}
 	type invalid1 struct {
 		Field1 string `cass-config:"dse@*:path:invalid tag"`
@@ -116,6 +121,14 @@ func Test_preMarshalConfig(t *testing.T) {
 			semver.MustParse("6.8.25"),
 			"dse",
 			map[string]interface{}{"foo": map[string]interface{}{"simple": map[string]interface{}{"dse": ptr.To(true)}}},
+			assert.NoError,
+		},
+		{
+			"simple HCD",
+			reflect.ValueOf(&simple{SimpleHCD: ptr.To(true)}),
+			semver.MustParse("1.0.0"),
+			"hcd",
+			map[string]interface{}{"foo": map[string]interface{}{"simple": map[string]interface{}{"hcd": ptr.To(true)}}},
 			assert.NoError,
 		},
 		{
@@ -230,6 +243,28 @@ func Test_preMarshalConfig(t *testing.T) {
 					"foo": map[string]interface{}{
 						"simple": map[string]interface{}{
 							"dse": ptr.To(true),
+						},
+					},
+				},
+			},
+			assert.NoError,
+		},
+		{
+			"complex HCD 1.0",
+			reflect.ValueOf(&hcd{
+				ManyRestrictionsHCD: ptr.To("qix"),
+				ChildRecurseHCD: &simple{
+					SimpleHCD: ptr.To(true),
+				},
+			}),
+			semver.MustParse("1.0.0"),
+			"hcd",
+			map[string]interface{}{
+				"many-restrictions-hcd": ptr.To("qix"),
+				"parent": map[string]interface{}{
+					"foo": map[string]interface{}{
+						"simple": map[string]interface{}{
+							"hcd": ptr.To(true),
 						},
 					},
 				},

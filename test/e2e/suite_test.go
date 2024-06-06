@@ -183,23 +183,23 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateSingleDseDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
+	}))
+	t.Run("CreateSingleHcdDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleHcdDatacenterCluster,
+		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc:     createSingleDseSearchDatacenterCluster,
 		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
-		dse:          true,
 		installMinio: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseGraphDatacenterCluster,
 		fixture:  framework.NewTestFixture("single-dc-dse-graph", controlPlane),
-		dse:      true,
 	}))
 	t.Run("ChangeDseWorkload", e2eTest(ctx, &e2eTestOpts{
 		testFunc: changeDseWorkload,
 		fixture:  framework.NewTestFixture("single-dc-dse", controlPlane),
-		dse:      true,
 	}))
 	t.Run("CreateStargateAndDatacenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createStargateAndDatacenter,
@@ -450,9 +450,6 @@ type e2eTestOpts struct {
 	// an upgrade test.
 	initialVersion *string
 
-	// dse is used to specify if the e2e tests will run against DSE or Cassandra
-	dse bool
-
 	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
 	installMinio bool
 }
@@ -462,7 +459,7 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
 
-		f, err := framework.NewE2eFramework(t, kubeconfigFile, opts.dse, controlPlane, dataPlanes...)
+		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
 		}
@@ -604,7 +601,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	return nil
 }
 
-func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace string) error {
+func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace, dcPrefix string) error {
 	deploymentConfig := framework.OperatorDeploymentConfig{
 		Namespace:     namespace,
 		ClusterScoped: false,
@@ -716,7 +713,7 @@ func applyPollingDefaults() {
 	polling.medusaBackupDone.timeout = 10 * time.Minute
 	polling.medusaBackupDone.interval = 15 * time.Second
 
-	polling.medusaRestoreDone.timeout = 10 * time.Minute
+	polling.medusaRestoreDone.timeout = 15 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
 	polling.datacenterUpdating.timeout = 1 * time.Minute
@@ -955,51 +952,9 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-
-	// Save the Stargate deployment resource hash to verify if it was modified by the upgrade.
-	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
-	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-default-stargate-deployment"}}
-	initialStargateResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
-	initialStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
-	require.Len(initialStargatePodNames, 1, "expected 1 Stargate pod in namespace %s", namespace)
-
-	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
-	require.NoError(err, "failed to retrieve database credentials")
-
-	t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dcPrefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
-
 	// Perform the upgrade
-	err = upgradeToLatest(t, ctx, f, namespace)
+	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
 	require.NoError(err, "failed to upgrade to latest version")
-
-	// Wait for the Stargate deployment resource hash to change.
-	// It'll allow to wait for the pod to be successfully upgraded before performing the Stargate API tests.
-	// It's possible that this assertion will fail if the Stargate deployment resource hash is not changed.
-	newStargateResourceHash := waitForStargateUpgrade(t, f, ctx, stargateDeploymentKey, initialStargateResourceHash)
-
-	t.Logf("Stargate initial deployment resource hash: %s / Current hash: %s", initialStargateResourceHash, newStargateResourceHash)
-	if initialStargateResourceHash != newStargateResourceHash {
-		// Stargate deployment was modified after the upgrade, we need to wait for the new pod to be ready
-		t.Log("Stargate deployment updated, waiting for new pod to be ready")
-		require.Eventually(func() bool {
-			newStargatePodNames := GetStargatePodNames(t, f, ctx, stargateDeploymentKey)
-			return !utils.SliceContains(newStargatePodNames, initialStargatePodNames[0])
-		}, polling.stargateReady.timeout, polling.stargateReady.interval)
-	}
-
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
-
-	replication := map[string]int{DcName(t, f, dcKey): 1}
-	testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dcPrefix, username, password, false, replication)
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -1839,6 +1794,20 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
 }
 
+func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s has its heap size set", key.Name, key.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, key)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		dcConfig, err := utils.UnmarshalToMap(dc.Spec.Config)
+		if err != nil {
+			t.Logf("failed to unmarshal datacenter %s config: %v", key.Name, err)
+			return false
+		}
+		initialHeapSize := dcConfig["jvm-server-options"].(map[string]interface{})["initial_heap_size"].(float64)
+		return initialHeapSize > 0
+	}), 10*time.Second, 1*time.Second, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+}
+
 func checkDatacenterUpdating(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
 	t.Logf("check that datacenter %s in cluster %s is updating", key.Name, key.K8sContext)
 	withDatacenter := f.NewWithDatacenter(ctx, key)
@@ -1948,7 +1917,7 @@ func checkKeyspaceExists(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace string,
 ) {
-	assert.Eventually(t, func() bool {
+	require.Eventually(t, func() bool {
 		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)
@@ -2106,32 +2075,6 @@ func DcName(
 	err := f.Get(context.Background(), dcKey, cassdc)
 	require.NoError(t, err)
 	return cassdc.DatacenterName()
-}
-
-func waitForStargateUpgrade(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateDeploymentKey framework.ClusterKey, initialStargateResourceHash string) string {
-	stargateChan := make(chan string)
-	go func() {
-		for {
-			stargateDeploymentResourceHash := GetStargateResourceHash(t, f, ctx, stargateDeploymentKey)
-			if stargateDeploymentResourceHash != initialStargateResourceHash {
-				stargateChan <- stargateDeploymentResourceHash
-				return
-			}
-			time.Sleep(time.Second)
-		}
-	}()
-
-	stargateUpgradeTimeout := time.After(5 * time.Minute)
-	for {
-		select {
-		case newStargateResourceHash := <-stargateChan:
-			t.Logf("Stargate deployment resource hash changed to %s", newStargateResourceHash)
-			return newStargateResourceHash
-		case <-stargateUpgradeTimeout:
-			t.Log("Stargate deployment resource hash did not change")
-			return initialStargateResourceHash
-		}
-	}
 }
 
 func checkMetricsFiltersAbsence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) error {

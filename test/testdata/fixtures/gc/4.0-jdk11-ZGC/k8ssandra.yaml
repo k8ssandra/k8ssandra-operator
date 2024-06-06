@@ -4,7 +4,8 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 4.0.3
+    serverVersion: 4.0.13
+    serverImage: "k8ssandra/cass-management-api:4.0.13"
     datacenters:
       - metadata:
           name: dc1
