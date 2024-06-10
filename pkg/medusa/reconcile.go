@@ -496,7 +496,13 @@ func MedusaPurgeCronJobName(clusterName string, dcName string) string {
 
 func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace string, logger logr.Logger) (*batchv1.CronJob, error) {
 	cronJobName := MedusaPurgeCronJobName(cassdcapi.CleanupForKubernetes(clusterName), dcConfig.SanitizedName())
-	logger.Info(fmt.Sprintf("Creating Medusa purge backups cronjob: %s", cronJobName))
+	// The MedusaTask must be created in the same namespace as the CassandraDatacenter. If the CassandraDatacenter
+	// does not have a namespace specified, use the namespace of the K8ssandraCluster.
+	dcNamespace := dcConfig.Meta.Namespace
+	if dcNamespace == "" {
+		dcNamespace = namespace
+	}
+	logger.Info(fmt.Sprintf("Creating Medusa purge backups cronjob definition: %s", cronJobName))
 	if len(cronJobName) > 253 {
 		return nil, fmt.Errorf("Medusa purge backups cronjob name too long (must be less than 253 characters). Length: %d, Job name: %s", len(cronJobName), cronJobName)
 	}
@@ -526,7 +532,7 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace s
 									Command: []string{
 										"/bin/bash",
 										"-c",
-										createPurgeTaskStr(dcConfig.SanitizedName(), namespace),
+										createPurgeTaskStr(dcConfig.SanitizedName(), dcNamespace),
 									},
 								},
 							},
