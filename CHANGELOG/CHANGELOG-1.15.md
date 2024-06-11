@@ -22,3 +22,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [1287](https://github.com/k8ssandra/k8ssandra-operator/pull/1287) Use the same image for Reaper init and main containers
 * [ENHANCEMENT] [1288](https://github.com/k8ssandra/k8ssandra-operator/issues/1288) Allow disabling the CRD upgrader
 * [CHANGE] Upgrade Reaper to v3.6.0
+* [FEATURE] [#1280](https://github.com/k8ssandra/k8ssandra-operator/issues/1280) Env variables DEFAULT_REGISTRY and IMAGE_PULL_SECRETS allow overriding the default imagePullSecrets as well as the default registry to use when deploying medusa/reaper/stargate.
+* [BUGFIX] [#1240](https://github.com/k8ssandra/k8ssandra-operator/issues/1240) The PullSecretRef for medusa is ignored in the standalone deployment of medusa

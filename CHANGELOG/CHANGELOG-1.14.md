@@ -13,11 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
-* [FEATURE] [#1260](https://github.com/k8ssandra/k8ssandra-operator/issues/1260) Update controller-gen to version 0.14.0.
-* [FEATURE] [#1280](https://github.com/k8ssandra/k8ssandra-operator/issues/1280) Env variables DEFAULT_REGISTRY and IMAGE_PULL_SECRETS allow overriding the default imagePullSecrets as well as the default registry to use when deploying medusa/reaper/stargate.
-* [BUGFIX] [#1253](https://github.com/k8ssandra/k8ssandra-operator/issues/1253) Medusa storage secrets are now labelled with a unique label.
-* [BUGFIX] [#1240](https://github.com/k8ssandra/k8ssandra-operator/issues/1240) The PullSecretRef for medusa is ignored in the standalone deployment of medusa
+## v1.14.1 - 2024-06-11
+
+* [BUGFIX] [#1334](https://github.com/k8ssandra/k8ssandra-operator/issues/1334) Delete `MedusaBackupJobs` during purge
+* [BUGFIX] [#1336](https://github.com/k8ssandra/k8ssandra-operator/issues/1336) Propagate labels to the sync `MedusaTask` created after purge
 
 ## v1.14.0 - 2024-04-02
 
