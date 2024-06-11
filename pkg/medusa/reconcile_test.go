@@ -685,7 +685,7 @@ func TestPurgeCronJob(t *testing.T) {
 	logger := logr.New(logr.Discard().GetSink())
 
 	// Call the function with the test inputs
-	actualCronJob, err := PurgeCronJob(dcConfig, clusterName, namespace, namespace, logger)
+	actualCronJob, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.Nil(t, err)
 	assert.Equal(t, fmt.Sprintf("%s-%s-medusa-purge", "testcluster", "testdc"), actualCronJob.ObjectMeta.Name)
 	assert.Equal(t, 3, len(actualCronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Command))
@@ -703,6 +703,6 @@ func TestPurgeCronJobNameTooLong(t *testing.T) {
 	logger := logr.New(logr.Discard().GetSink())
 
 	// Call the function with the test inputs
-	_, err := PurgeCronJob(dcConfig, clusterName, namespace, namespace, logger)
+	_, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.NotNil(t, err)
 }
