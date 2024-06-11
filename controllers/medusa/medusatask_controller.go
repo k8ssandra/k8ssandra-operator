@@ -301,6 +301,20 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 						return ctrl.Result{}, err
 					} else {
 						logger.Info("Deleted Cassandra Backup", "Backup", backup.ObjectMeta.Name)
+
+						backupJob := medusav1alpha1.MedusaBackupJob{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      backup.GetName(),
+								Namespace: backup.GetNamespace(),
+							},
+						}
+						logger.Info("Deleting MedusaBackupJob", "MedusaBackupJob", backupJob.GetName())
+
+						if err := r.Delete(ctx, &backupJob); err != nil && !errors.IsNotFound(err) {
+							logger.Error(err, "failed to delete MedusaBackupJob", "MedusaBackupJob", backupJob.GetName())
+						} else {
+							logger.Info("Deleted MedusaBackupJob", "MedusaBackupJob", backupJob.GetName())
+						}
 					}
 				}
 			}
@@ -377,6 +391,7 @@ func (r *MedusaTaskReconciler) scheduleSyncForPurge(task *medusav1alpha1.MedusaT
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      task.GetObjectMeta().GetName() + "-sync",
 					Namespace: task.Namespace,
+					Labels:    task.GetLabels(),
 				},
 				Spec: medusav1alpha1.MedusaTaskSpec{
 					Operation:           medusav1alpha1.OperationTypeSync,

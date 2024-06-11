@@ -154,6 +154,9 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	backup4Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup4)
 	require.True(backup4Created, "failed to create backup4")
 
+	// Ensure that 4 backups and backup jobs were created
+	checkBackupsAndJobs(require, ctx, 4, namespace, f, []string{})
+
 	// Purge backups and verify that only one out of three remains
 	t.Log("purge backups")
 
@@ -161,6 +164,9 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "purge-backups",
+			Labels: map[string]string{
+				"app": "medusa",
+			},
 		},
 		Spec: api.MedusaTaskSpec{
 			CassandraDatacenter: "dc1",
@@ -194,8 +200,17 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 			return false
 		}
 
+		v, ok := updated.Labels["app"]
+		if !ok || v != "medusa" {
+			return false
+		}
+
 		return !updated.Status.FinishTime.IsZero()
 	}, timeout, interval)
+
+	// Ensure that 2 backups and backup jobs were deleted
+	deletedBackups := []string{backup1, backup2}
+	checkBackupsAndJobs(require, ctx, 2, namespace, f, deletedBackups)
 
 	medusaBackup4Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, backup4)
 	medusaBackup4 := &api.MedusaBackup{}
@@ -206,4 +221,21 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
+}
+
+func checkBackupsAndJobs(require *require.Assertions, ctx context.Context, expectedLen int, namespace string, f *framework.Framework, deleted []string) {
+	var backups api.MedusaBackupList
+	err := f.List(ctx, framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "list-backups"), &backups)
+	require.NoError(err, "failed to list medusabackup")
+	require.Len(backups.Items, expectedLen, "expected %d backups, got %d", expectedLen, len(backups.Items))
+
+	var jobs api.MedusaBackupJobList
+	err = f.List(ctx, framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "list-backup-jobs"), &jobs)
+	require.NoError(err, "failed to list medusabackupjobs")
+	require.Len(jobs.Items, expectedLen, "expected %d jobs, got %d", expectedLen, len(jobs.Items))
+
+	for _, d := range deleted {
+		require.NotContains(backups.Items, d, "MedusaBackup %s to have been deleted", d)
+		require.NotContains(jobs.Items, d, "MedusaBackupJob %s to have been deleted", d)
+	}
 }
