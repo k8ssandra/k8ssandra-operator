@@ -3,6 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,16 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
+
+	// Disable purges
+	err = f.Get(ctx, kcKey, kc)
+	require.NoError(err, "Error getting the K8ssandraCluster")
+	medusaPurgePatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	kc.Spec.Medusa.PurgeBackups = ptr.To(false)
+	err = f.Client.Patch(ctx, kc, medusaPurgePatch)
+	require.NoError(err, "failed to patch K8ssandraCluster with purge modification in namespace %s", namespace)
+	checkPurgeCronJobDeleted(t, ctx, namespace, dcKey, f, kc)
+
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
@@ -113,9 +125,9 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+	checkNoPurgeCronJob(t, ctx, namespace, dcKey, f, kc)
 }
 
 func checkBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string, k8sContext string, kc *k8ssandraapi.K8ssandraCluster) {
@@ -171,7 +183,7 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 	err := f.Get(ctx, dcKey, dc1)
 	// check medusa containers exist
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	t.Log("Checking that all the Medusa related objects have been created and are in the expected state")
+	t.Log("Checking that the purge Cron Job exists")
 	// check that the cronjob exists
 	cronJob := &batchv1.CronJob{}
 	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
@@ -196,6 +208,36 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 		}
 		return updated.Status.Succeeded == 1
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge Job didn't finish within timeout")
+}
+
+func checkNoPurgeCronJob(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	t.Log("Checking that the purge Cron Job doesn't exist")
+	// Get the Cassandra pod
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc1)
+	// check medusa containers exist
+	require.NoError(err, "Error getting the CassandraDatacenter")
+	// ensure the cronjob was not created
+	cronJob := &batchv1.CronJob{}
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
+	require.Error(err, "Cronjob should not exist")
+}
+
+func checkPurgeCronJobDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	// Get the Cassandra pod
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc1)
+	t.Log("Checking that the purge Cron Job was deleted")
+	require.NoError(err, "Error getting the CassandraDatacenter")
+
+	require.Eventually(func() bool {
+		// ensure the cronjob was deleted
+		cronJob := &batchv1.CronJob{}
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
+		return errors.IsNotFound(err)
+	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge CronJob wasn't deleted within timeout")
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {

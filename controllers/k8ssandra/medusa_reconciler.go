@@ -3,6 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"os"
 
 	"github.com/adutra/goalesce"
@@ -98,19 +100,41 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		kcKey := utils.GetKey(kc)
 		// Create a cron job to purge Medusa backups
+		logger.Info("Checking if Medusa backups should be purged, PurgeBackups: " + fmt.Sprintf("%t", *medusaSpec.PurgeBackups))
 		operatorNamespace := r.getOperatorNamespace()
-		purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), operatorNamespace, logger)
-		if err != nil {
-			logger.Info("Failed to create Medusa purge backups cronjob", "error", err)
-			return result.Error(err)
-		}
-		purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
-		switch {
-		case recRes.IsError():
-			return recRes
-		case recRes.IsRequeue():
-			return recRes
+		if backupPurgeIsOn(medusaSpec.PurgeBackups) {
+			purgeCronJob, err := medusa.PurgeCronJob(dcConfig, kc.SanitizedName(), operatorNamespace, logger)
+			if err != nil {
+				logger.Info("Failed to generate Medusa purge backups cronjob definition", "error", err)
+				return result.Error(err)
+			}
+			purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
+			recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
+			switch {
+			case recRes.IsError():
+				return recRes
+			case recRes.IsRequeue():
+				return recRes
+			}
+		} else {
+			// if an existing purge cron job exists, delete it
+			cronJobName := medusa.MedusaPurgeCronJobName(kc.SanitizedName(), dcConfig.SanitizedName())
+			cronJobKey := types.NamespacedName{Namespace: operatorNamespace, Name: cronJobName}
+			cronJob := &batchv1.CronJob{}
+			if err := remoteClient.Get(ctx, cronJobKey, cronJob); err != nil {
+				// If the error is anything else but not found, fail the reconcile
+				if !errors.IsNotFound(err) {
+					logger.Error(err, "Failed to get Medusa purge backups cronjob")
+					return result.Error(err)
+				}
+			} else {
+				// The cron job exists, delete it
+				logger.Info("Deleting Medusa purge backups cronjob (may have been created before PurgeBackups was set to false")
+				if err := remoteClient.Delete(ctx, cronJob); err != nil {
+					logger.Info("Failed to delete Medusa purge backups cronjob", "error", err)
+					return result.Error(err)
+				}
+			}
 		}
 
 	} else {
@@ -118,6 +142,13 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 	}
 
 	return result.Continue()
+}
+
+func backupPurgeIsOn(purgeBackups *bool) bool {
+	if purgeBackups == nil {
+		return true
+	}
+	return *purgeBackups
 }
 
 // Generate a secret for Medusa or use the existing one if provided in the spec

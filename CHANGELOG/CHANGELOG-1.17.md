@@ -23,3 +23,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] Add support for HCD 1.0
 * [ENHANCEMENT] [#1329](https://github.com/k8ssandra/k8ssandra-operator/issues/1329) Add config emptyDir volume mount on Reaper deployment to allow read only root FS
 * [BUGFIX] Fix HCD jvm options generation
+* [ENHANCEMENT] [#1278](https://github.com/k8ssandra/k8ssandra-operator/issues/1278) Add toggle to allow the disabling of the Medusa purge CronJob creation

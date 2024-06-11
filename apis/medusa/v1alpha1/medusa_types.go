@@ -181,4 +181,10 @@ type MedusaClusterTemplate struct {
 	// Define the liveness probe settings to use for the Medusa containers.
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// PurgeBackups toggles if the medusa backups should be purged nightly or not
+	// Defaults to true.
+	// +kubebuilder:default=true
+	// +optional
+	PurgeBackups *bool `json:"purgeBackups,omitempty"`
 }
