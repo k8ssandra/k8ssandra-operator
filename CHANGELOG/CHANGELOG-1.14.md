@@ -13,7 +13,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.14.1 - 2024-06-11
 
 * [BUGFIX] [#1334](https://github.com/k8ssandra/k8ssandra-operator/issues/1334) Delete `MedusaBackupJobs` during purge
 * [BUGFIX] [#1336](https://github.com/k8ssandra/k8ssandra-operator/issues/1336) Propagate labels to the sync `MedusaTask` created after purge
