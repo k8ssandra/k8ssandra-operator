@@ -34,6 +34,7 @@ const (
 	fakeBackupFileCount = int64(13)
 	fakeBackupByteSize  = int64(42)
 	fakeBackupHumanSize = "42.00 B"
+	fakeMaxBackupCount  = 1
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -392,8 +393,13 @@ func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medu
 }
 
 func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+	size := len(c.RequestedBackups)
+	if size > fakeMaxBackupCount {
+		c.RequestedBackups = c.RequestedBackups[size-fakeMaxBackupCount:]
+	}
+
 	response := &medusa.PurgeBackupsResponse{
-		NbBackupsPurged:           2,
+		NbBackupsPurged:           int32(size - len(c.RequestedBackups)),
 		NbObjectsPurged:           10,
 		TotalObjectsWithinGcGrace: 0,
 		TotalPurgedSize:           1000,
