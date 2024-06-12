@@ -1275,7 +1275,7 @@ on ServerVersion.<br/>
         <td>
           Server type: "cassandra" or "dse".<br/>
           <br/>
-            <i>Enum</i>: cassandra, dse<br/>
+            <i>Enum</i>: cassandra, dse, hcd<br/>
             <i>Default</i>: cassandra<br/>
         </td>
         <td>false</td>
@@ -1285,7 +1285,8 @@ on ServerVersion.<br/>
         <td>
           ServerVersion is the Cassandra or DSE version. The following versions are supported:
 - Cassandra: 3.11.X, 4.X.X and 5.X.X
-- DSE: 6.8.X, 7.x.x<br/>
+- DSE: 6.8.X, 7.x.x
+- HCD: 1.0.x<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5537,7 +5538,8 @@ on ServerVersion.<br/>
         <td>
           ServerVersion is the Cassandra or DSE version. The following versions are supported:
 - Cassandra: 3.11.X, 4.X.X and 5.X.X
-- DSE: 6.8.X, 7.x.x<br/>
+- DSE: 6.8.X, 7.x.x
+- HCD: 1.0.x<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -52978,6 +52980,16 @@ StorageProperties override the settings from MedusaConfiguration object to allow
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>purgeBackups</b></td>
+        <td>boolean</td>
+        <td>
+          PurgeBackups toggles if the medusa backups should be purged nightly or not
+Defaults to true.<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecmedusareadinessprobe">readinessProbe</a></b></td>
         <td>object</td>
         <td>
@@ -54688,10 +54700,10 @@ and must contain two keys: "username" and "password".<br/>
         <td>object</td>
         <td>
           The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.0".
+The default is "thelastpickle/cassandra-reaper:f52e877".
 TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.6.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:f52e877]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56624,7 +56636,7 @@ TODO: Add other useful fields. apiVersion, kind, uid?<br/>
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.0".
+The default is "thelastpickle/cassandra-reaper:f52e877".
 TODO: update with real release version.
 
 <table>
@@ -84150,10 +84162,10 @@ and must contain two keys: "username" and "password".<br/>
         <td>object</td>
         <td>
           The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.0".
+The default is "thelastpickle/cassandra-reaper:f52e877".
 TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.6.0]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:f52e877]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -86343,7 +86355,7 @@ TODO: Add other useful fields. apiVersion, kind, uid?<br/>
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.0".
+The default is "thelastpickle/cassandra-reaper:f52e877".
 TODO: update with real release version.
 
 <table>

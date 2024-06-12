@@ -103,9 +103,9 @@ they will join together in a multi-datacenter cluster.<br/>
         <td><b>serverType</b></td>
         <td>enum</td>
         <td>
-          Server type: "cassandra" or "dse"<br/>
+          Server type: "cassandra", "dse" or "hcd"<br/>
           <br/>
-            <i>Enum</i>: cassandra, dse<br/>
+            <i>Enum</i>: cassandra, dse, hcd<br/>
         </td>
         <td>true</td>
       </tr><tr>
