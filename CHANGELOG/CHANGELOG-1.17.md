@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.17.0 - 2024-06-12
+
 * [BUGFIX] [#1334](https://github.com/k8ssandra/k8ssandra-operator/issues/1334) Delete `MedusaBackupJobs` during purge
 * [BUGFIX] [#1336](https://github.com/k8ssandra/k8ssandra-operator/issues/1336) Propagate labels to the sync `MedusaTask` created after purge
 * [CHANGE] []() Update cass-operator to v1.21.0
