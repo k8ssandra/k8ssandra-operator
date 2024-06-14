@@ -53,6 +53,7 @@ type ReaperReconciler struct {
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="apps",namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="apps",namespace="k8ssandra",resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=services,verbs=get;list;watch;create
 
@@ -91,6 +92,26 @@ func (r *ReaperReconciler) reconcile(ctx context.Context, actualReaper *reaperap
 	actualReaper.Status.Progress = reaperapi.ReaperProgressPending
 	actualReaper.Status.SetNotReady()
 
+	if actualReaper.Spec.ControlPlaneMode {
+		logger.Info("Reconciling Reaper in Control Plane mode as StatefulSet")
+		if result, err := r.reconcileAsStatefulSet(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+			return result, err
+		}
+	} else {
+		logger.Info("Reconciling Reaper as Deployment")
+		if result, err := r.reconcileAsDeployment(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+			return result, err
+		}
+	}
+
+	actualReaper.Status.Progress = reaperapi.ReaperProgressRunning
+	actualReaper.Status.SetReady()
+
+	logger.Info("Reaper successfully reconciled")
+	return ctrl.Result{}, nil
+}
+
+func (r *ReaperReconciler) reconcileAsDeployment(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (ctrl.Result, error) {
 	actualDc, result, err := r.reconcileDatacenter(ctx, actualReaper, logger)
 	if !result.IsZero() || err != nil {
 		return result, err
@@ -98,24 +119,36 @@ func (r *ReaperReconciler) reconcile(ctx context.Context, actualReaper *reaperap
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressDeploying
 
-	if result, err = r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
-	if result, err = r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressConfiguring
 
-	if result, err = r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+	if result, err := r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
-	actualReaper.Status.Progress = reaperapi.ReaperProgressRunning
-	actualReaper.Status.SetReady()
+	return ctrl.Result{}, nil
+}
 
-	logger.Info("Reaper successfully reconciled")
+func (r *ReaperReconciler) reconcileAsStatefulSet(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (ctrl.Result, error) {
+	actualReaper.Status.Progress = reaperapi.ReaperProgressDeploying
+
+	if result, err := r.reconcileStatefulSet(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+		return result, err
+	}
+
+	if result, err := r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+		return result, err
+	}
+
+	actualReaper.Status.Progress = reaperapi.ReaperProgressConfiguring
+
 	return ctrl.Result{}, nil
 }
 
@@ -244,6 +277,103 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 
 	logger.Info("Reaper Deployment ready")
+	return ctrl.Result{}, nil
+}
+
+func (r *ReaperReconciler) reconcileStatefulSet(
+	ctx context.Context,
+	actualReaper *reaperapi.Reaper,
+	logger logr.Logger,
+) (ctrl.Result, error) {
+
+	statefuleSetKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Name}
+	logger = logger.WithValues("StatefulSet", statefuleSetKey)
+	logger.Info(fmt.Sprintf("Reconciling Reaper StatefulSet, req was %#v", actualReaper))
+
+	authVars, err := r.collectAuthVars(ctx, actualReaper, logger)
+	if err != nil {
+		logger.Error(err, "Failed to collect Reaper auth variables")
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+	}
+	logger.Info("Collected Reaper auth variables", "authVars", authVars)
+
+	var keystorePassword *string
+	var truststorePassword *string
+
+	if actualReaper.Spec.ClientEncryptionStores != nil && !actualReaper.Spec.UseExternalSecrets() {
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameKeystore); err != nil {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else {
+			keystorePassword = pointer.String(password)
+		}
+
+		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameTruststore); err != nil {
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else {
+			truststorePassword = pointer.String(password)
+		}
+	}
+
+	// TODO reconcile Vector configmap
+	//if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *actualReaper, actualDc, r.Client, logger); err != nil {
+	//	return vectorReconcileResult, err
+	//} else if vectorReconcileResult.Requeue {
+	//	return vectorReconcileResult, nil
+	//}
+
+	logger.Info("Reconciling reaper statefulset", "actualReaper", actualReaper)
+	desiredStatefulSet := reaper.NewStatefulSet(actualReaper, keystorePassword, truststorePassword, logger, authVars...)
+
+	actualStatefuleSet := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, statefuleSetKey, actualStatefuleSet); err != nil {
+		if errors.IsNotFound(err) {
+			if err = controllerutil.SetControllerReference(actualReaper, desiredStatefulSet, r.Scheme); err != nil {
+				logger.Error(err, "Failed to set owner on Reaper StatefulSet")
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			} else if err = r.Create(ctx, desiredStatefulSet); err != nil {
+				if errors.IsAlreadyExists(err) {
+					// the read from the local cache didn't catch that the resource was created
+					// already; simply requeue until the cache is up-to-date
+					return ctrl.Result{Requeue: true}, nil
+				} else {
+					logger.Error(err, "Failed to create Reaper StatefulSet")
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+				}
+			}
+			logger.Info("Reaper StatefulSet created successfully")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		} else {
+			logger.Error(err, "Failed to get Reaper StatefulSet")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		}
+	}
+
+	if err = r.reconcileReaperTelemetry(ctx, actualReaper, logger, r.Client); err != nil {
+		logger.Error(err, "reconcileReaperTelemetry failed")
+		return ctrl.Result{}, err
+	}
+
+	actualStatefuleSet = actualStatefuleSet.DeepCopy()
+
+	// Check if the statefulset needs to be updated
+	if !annotations.CompareHashAnnotations(actualStatefuleSet, desiredStatefulSet) {
+		logger.Info("Updating Reaper StatefulSet")
+		resourceVersion := actualStatefuleSet.GetResourceVersion()
+		desiredStatefulSet.DeepCopyInto(actualStatefuleSet)
+		actualStatefuleSet.SetResourceVersion(resourceVersion)
+		if err := controllerutil.SetControllerReference(actualReaper, actualStatefuleSet, r.Scheme); err != nil {
+			logger.Error(err, "Failed to set controller reference on updated Reaper StatefulSet")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else if err := r.Update(ctx, actualStatefuleSet); err != nil {
+			logger.Error(err, "Failed to update Reaper StatefulSet")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		} else {
+			logger.Info("Reaper StatefulSet updated successfully")
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		}
+	}
+
+	logger.Info("Reaper StatefulSet ready")
 	return ctrl.Result{}, nil
 }
 
