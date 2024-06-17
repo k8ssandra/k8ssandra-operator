@@ -39,6 +39,12 @@ type MedusaBackupScheduleSpec struct {
 	// The "Allow" property is only valid if all the other active Tasks have "Allow" as well.
 	// +optional
 	ConcurrencyPolicy batchv1.ConcurrencyPolicy `json:"concurrencyPolicy,omitempty"`
+
+	// Specifies the type of operation to be performed
+	// +kubebuilder:validation:Enum=backup;purge
+	// +kubebuilder:default=backup
+	// +optional
+	OperationType string `json:"operationType,omitempty"`
 }
 
 // MedusaBackupScheduleStatus defines the observed state of MedusaBackupSchedule

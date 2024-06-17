@@ -93,22 +93,24 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	nextExecution := sched.Next(previousExecution).UTC()
 
 	createBackup := false
+	createPurge := false
 
 	if nextExecution.Before(now) {
 		if backupSchedule.Spec.ConcurrencyPolicy == batchv1.ForbidConcurrent {
-			if activeTasks, err := r.activeTasks(backupSchedule, dc); err != nil {
+			if activeTasks, err := r.activeTasks(backupSchedule, dc, backupSchedule.Spec.OperationType); err != nil {
 				logger.V(1).Info("failed to get activeTasks", "error", err)
 				return ctrl.Result{}, err
 			} else {
-				if len(activeTasks) > 0 {
-					logger.V(1).Info("Postponing backup schedule due to existing active backups", "MedusaBackupSchedule", req.NamespacedName)
+				if activeTasks > 0 {
+					logger.V(1).Info("Postponing backup schedule due to an unfinished existing job", "MedusaBackupSchedule", req.NamespacedName)
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 				}
 			}
 		}
 		nextExecution = sched.Next(now)
 		previousExecution = now
-		createBackup = true && !backupSchedule.Spec.Disabled
+		createBackup = true && !backupSchedule.Spec.Disabled && (backupSchedule.Spec.OperationType == "backup" || backupSchedule.Spec.OperationType == "")
+		createPurge = true && !backupSchedule.Spec.Disabled && (backupSchedule.Spec.OperationType == string(medusav1alpha1.OperationTypePurge))
 	}
 
 	// Update the status if there are modifications
@@ -140,6 +142,27 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 		}
 	}
 
+	if createPurge {
+		logger.V(1).Info("Scheduled time has been reached, creating a backup purge job", "MedusaBackupSchedule", req.NamespacedName)
+		generatedName := fmt.Sprintf("%s-%d", backupSchedule.Name, now.Unix())
+		purgeJob := &medusav1alpha1.MedusaTask{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      generatedName,
+				Namespace: backupSchedule.Namespace,
+				Labels:    dc.GetDatacenterLabels(),
+			},
+			Spec: medusav1alpha1.MedusaTaskSpec{
+				CassandraDatacenter: backupSchedule.Spec.BackupSpec.CassandraDatacenter,
+				Operation:           medusav1alpha1.OperationTypePurge,
+			},
+		}
+
+		if err := r.Client.Create(ctx, purgeJob); err != nil {
+			// We've already updated the Status times.. we'll miss this job now?
+			return ctrl.Result{}, err
+		}
+	}
+
 	nextRunTime := nextExecution.Sub(now)
 	logger.V(1).Info("Requeing for next scheduled event", "nextRuntime", nextRunTime.String())
 	return ctrl.Result{RequeueAfter: nextRunTime}, nil
@@ -162,19 +185,35 @@ func defaults(backupSchedule *medusav1alpha1.MedusaBackupSchedule) {
 	}
 }
 
-func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alpha1.MedusaBackupSchedule, dc *cassdcapi.CassandraDatacenter) ([]medusav1alpha1.MedusaBackupJob, error) {
-	backupJobs := &medusav1alpha1.MedusaBackupJobList{}
-	if err := r.Client.List(context.Background(), backupJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
-		return nil, err
-	}
-	activeJobs := make([]medusav1alpha1.MedusaBackupJob, 0)
-	for _, job := range backupJobs.Items {
-		if job.Status.FinishTime.IsZero() {
-			activeJobs = append(activeJobs, job)
+func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alpha1.MedusaBackupSchedule, dc *cassdcapi.CassandraDatacenter, operationType string) (int, error) {
+	if operationType == "" || operationType == "backup" {
+		backupJobs := &medusav1alpha1.MedusaBackupJobList{}
+		if err := r.Client.List(context.Background(), backupJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+			return 0, err
 		}
-	}
+		activeJobs := make([]medusav1alpha1.MedusaBackupJob, 0)
+		for _, job := range backupJobs.Items {
+			if job.Status.FinishTime.IsZero() {
+				activeJobs = append(activeJobs, job)
+			}
+		}
 
-	return activeJobs, nil
+		return len(activeJobs), nil
+	} else if operationType == string(medusav1alpha1.OperationTypePurge) {
+		purgeJobs := &medusav1alpha1.MedusaTaskList{}
+		if err := r.Client.List(context.Background(), purgeJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+			return 0, err
+		}
+		activeJobs := make([]medusav1alpha1.MedusaTask, 0)
+		for _, job := range purgeJobs.Items {
+			if job.Status.FinishTime.IsZero() {
+				activeJobs = append(activeJobs, job)
+			}
+		}
+
+		return len(activeJobs), nil
+	}
+	return 0, fmt.Errorf("unknown operation type %s", operationType)
 }
 
 // SetupWithManager sets up the controller with the Manager.

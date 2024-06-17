@@ -90,6 +90,13 @@ spec:
               disabled:
                 description: Disabled if set ensures this job is not scheduling anything
                 type: boolean
+              operationType:
+                default: backup
+                description: Specifies the type of operation to be performed
+                enum:
+                - backup
+                - purge
+                type: string
             required:
             - backupSpec
             - cronSchedule
