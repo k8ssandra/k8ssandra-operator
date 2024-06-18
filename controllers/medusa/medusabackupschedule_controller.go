@@ -92,7 +92,6 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 			return ctrl.Result{}, err
 		} else {
 			logger.Info("updated task with owner reference", "CassandraDatacenter", dcKey)
-			return ctrl.Result{}, nil
 		}
 	}
 
