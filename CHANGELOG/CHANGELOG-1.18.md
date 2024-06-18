@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [FEATURE] [#1310](https://github.com/k8ssandra/k8ssandra-operator/issues/1310) Enhance the MedusaBackupSchedule API to allow scheduling purge tasks
+* [BUGFIX] [#1222](https://github.com/k8ssandra/k8ssandra-operator/issues/1222) Consider DC-level config when validating numToken updates in webhook
