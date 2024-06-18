@@ -62,7 +62,7 @@ type MedusaBackupScheduleStatus struct {
 // +kubebuilder:printcolumn:name="Datacenter",type=string,JSONPath=".spec.backupSpec.cassandraDatacenter",description="Datacenter which the task targets"
 // +kubebuilder:printcolumn:name="ScheduledExecution",type="date",JSONPath=".status.nextSchedule",description="Next scheduled execution time"
 // +kubebuilder:printcolumn:name="LastExecution",type="date",JSONPath=".status.lastExecution",description="Previous execution time"
-// +kubebuilder:printcolumn:name="BackupType",type="string",JSONPath=".spec.backupSpec.backupType",description="Type of backup"
+// +kubebuilder:printcolumn:name="OperationType",type="string",JSONPath=".spec.operationType",description="Type of scheduled operation"
 // MedusaBackupSchedule is the Schema for the medusabackupschedules API
 type MedusaBackupSchedule struct {
 	metav1.TypeMeta   `json:",inline"`

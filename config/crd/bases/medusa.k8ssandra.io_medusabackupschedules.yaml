@@ -27,9 +27,9 @@ spec:
       jsonPath: .status.lastExecution
       name: LastExecution
       type: date
-    - description: Type of backup
-      jsonPath: .spec.backupSpec.backupType
-      name: BackupType
+    - description: Type of scheduled operation
+      jsonPath: .spec.operationType
+      name: OperationType
       type: string
     name: v1alpha1
     schema:

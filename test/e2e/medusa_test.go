@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -55,6 +56,7 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
+	checkPurgeTaskWasCreated(t, ctx, namespace, dcKey, f, kc)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
 	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 
@@ -238,6 +240,30 @@ func checkPurgeCronJobDeleted(t *testing.T, ctx context.Context, namespace strin
 		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.SanitizedName())), cronJob)
 		return errors.IsNotFound(err)
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge CronJob wasn't deleted within timeout")
+}
+
+func checkPurgeTaskWasCreated(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	// list MedusaTask objects
+	t.Log("Checking that the purge task was created")
+	require.Eventually(func() bool {
+		medusaTasks := &medusa.MedusaTaskList{}
+		err := f.List(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, ""), medusaTasks)
+		if err != nil {
+			t.Logf("failed to list MedusaTasks: %v", err)
+			return false
+		}
+		// check that the task is a purge task
+		found := false
+		for _, task := range medusaTasks.Items {
+			if task.Spec.Operation == medusa.OperationTypePurge && task.Spec.CassandraDatacenter == dcKey.Name {
+				found = true
+				break
+			}
+		}
+		return found
+	}, 2*time.Minute, 5*time.Second, "Medusa purge task wasn't created within timeout")
+
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {

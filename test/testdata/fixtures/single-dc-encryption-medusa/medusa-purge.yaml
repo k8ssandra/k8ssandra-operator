@@ -1,0 +1,10 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaBackupSchedule
+metadata:
+  name: purge-schedule
+  namespace: k8ssandra-operator
+spec:
+  backupSpec:
+    cassandraDatacenter: dc1
+  cronSchedule: '* * * * *'
+  operationType: purge

@@ -14,7 +14,24 @@ spec:
     singular: medusatask
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Datacenter which the task targets
+      jsonPath: .spec.cassandraDatacenter
+      name: Datacenter
+      type: string
+    - description: Type of operation
+      jsonPath: .spec.operation
+      name: Operation
+      type: string
+    - description: Start time
+      jsonPath: .status.startTime
+      name: Start
+      type: date
+    - description: Finish time
+      jsonPath: .status.finishTime
+      name: Finish
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MedusaTask is the Schema for the MedusaTasks API
