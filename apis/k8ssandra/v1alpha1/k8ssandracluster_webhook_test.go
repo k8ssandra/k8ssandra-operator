@@ -216,6 +216,7 @@ func testStorageConfigValidation(t *testing.T) {
 	required := require.New(t)
 	createNamespace(required, "storage-namespace")
 	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
+	cluster.Spec.Cassandra.DatacenterOptions.ServerVersion = "3.11.10"
 
 	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
 	err := k8sClient.Create(ctx, cluster)
