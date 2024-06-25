@@ -249,7 +249,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	if AllowUpdate(kc) {
 		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
 		for _, dc := range actualDcs {
-			if dc.Status.GetConditionStatus("RequiresUpdate") == corev1.ConditionTrue { // TODO Update this to cassdcapi const when cass-operator is updated
+			if dc.Status.GetConditionStatus(cassdcapi.DatacenterRequiresUpdate) == corev1.ConditionTrue {
 				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.ObjectMeta.Name)
 			}
 		}
