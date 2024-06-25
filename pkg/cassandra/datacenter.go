@@ -158,9 +158,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      template.Meta.Name,
-			Annotations: map[string]string{
-				cassdcapi.UpdateAllowedAnnotation: string(cassdcapi.AllowUpdateAlways),
-			},
 			Labels: utils.MergeMap(map[string]string{
 				api.NameLabel:      api.NameLabelValue,
 				api.PartOfLabel:    api.PartOfLabelValue,
