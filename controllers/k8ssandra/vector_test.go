@@ -67,7 +67,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 

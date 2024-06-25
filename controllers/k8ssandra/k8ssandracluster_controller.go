@@ -19,6 +19,7 @@ package k8ssandra
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
@@ -33,6 +34,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -94,7 +96,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if kc.GetDeletionTimestamp() == nil {
 		if err != nil {
 			kc.Status.Error = err.Error()
-			r.Recorder.Event(kc, v1.EventTypeWarning, "Reconcile Error", err.Error())
+			r.Recorder.Event(kc, corev1.EventTypeWarning, "Reconcile Error", err.Error())
 		} else {
 			kc.Status.Error = "None"
 		}
@@ -154,6 +156,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
+	if res := updateStatus(ctx, r.Client, kc); res.Completed() {
+		return res.Output()
+	}
+
 	kcLogger.Info("Finished reconciling the k8ssandracluster")
 
 	return result.Done().Output()
@@ -179,10 +185,31 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 	return result.Continue()
 }
 
+func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster) result.ReconcileResult {
+	if AllowUpdate(kc) {
+		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
+			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
+				delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
+				if err := r.Update(ctx, kc); err != nil {
+					return result.Error(err)
+				}
+			}
+		}
+		kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
+	}
+
+	kc.Status.ObservedGeneration = kc.Generation
+	if err := r.Status().Update(ctx, kc); err != nil {
+		return result.Error(err)
+	}
+
+	return result.Continue()
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})) // No generation changed predicate here?
+		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
 	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)

@@ -2,6 +2,8 @@ package k8ssandra
 
 import (
 	"context"
+	"testing"
+
 	"github.com/go-logr/logr/testr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -19,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) {
@@ -217,7 +218,7 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 		}
 	}()
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
@@ -332,7 +333,7 @@ func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *frame
 		}
 	}()
 
-	verifyFinalizerAdded(ctx, t, f, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
+	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
