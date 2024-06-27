@@ -215,13 +215,13 @@ func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alp
 
 		return len(activeJobs), nil
 	} else if operationType == string(medusav1alpha1.OperationTypePurge) {
-		purgeJobs := &medusav1alpha1.MedusaTaskList{}
-		if err := r.Client.List(context.Background(), purgeJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+		medusaTasks := &medusav1alpha1.MedusaTaskList{}
+		if err := r.Client.List(context.Background(), medusaTasks, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
 			return 0, err
 		}
 		activeJobs := make([]medusav1alpha1.MedusaTask, 0)
-		for _, job := range purgeJobs.Items {
-			if job.Status.FinishTime.IsZero() {
+		for _, job := range medusaTasks.Items {
+			if job.Spec.Operation == medusav1alpha1.OperationTypePurge && job.Status.FinishTime.IsZero() {
 				activeJobs = append(activeJobs, job)
 			}
 		}
