@@ -18,11 +18,11 @@ package v1alpha1
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -150,26 +150,8 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warning
 		}
 	}
 
-	oldCassConfig := oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
-	newCassConfig := r.Spec.Cassandra.DatacenterOptions.CassandraConfig
-	if oldCassConfig != nil && newCassConfig != nil {
-		oldNumTokens, oldNumTokensExists := oldCassConfig.CassandraYaml["num_tokens"]
-		newNumTokens, newNumTokensExists := newCassConfig.CassandraYaml["num_tokens"]
-
-		if !oldNumTokensExists {
-			cassVersion, err := semver.NewVersion(oldCluster.Spec.Cassandra.ServerVersion)
-			if err != nil {
-				return nil, err
-			}
-			defaultNumTokens := oldCluster.DefaultNumTokens(cassVersion)
-			if newNumTokensExists && newNumTokens.(float64) != defaultNumTokens {
-				return nil, ErrNumTokens
-			}
-		} else {
-			if oldNumTokens != newNumTokens {
-				return nil, ErrNumTokens
-			}
-		}
+	if err := validateUpdateNumTokens(oldCluster.Spec.Cassandra, r.Spec.Cassandra); err != nil {
+		return nil, err
 	}
 
 	// Verify that the cluster name override was not changed
@@ -190,6 +172,71 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warning
 	}
 
 	return nil, nil
+}
+
+func validateUpdateNumTokens(
+	oldCassandra *CassandraClusterTemplate,
+	newCassandra *CassandraClusterTemplate,
+) error {
+	oldNumTokensPerDc, err := numTokensPerDc(oldCassandra)
+	if err != nil {
+		return err
+	}
+	newNumTokensPerDc, err := numTokensPerDc(newCassandra)
+	if err != nil {
+		return err
+	}
+
+	for dcName, newNumTokens := range newNumTokensPerDc {
+		oldNumTokens, oldExists := oldNumTokensPerDc[dcName]
+		if oldExists && oldNumTokens != newNumTokens {
+			return ErrNumTokens
+		}
+	}
+	return nil
+}
+
+func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}, error) {
+	var globalNumTokens interface{}
+	globalConfig := cassandra.DatacenterOptions.CassandraConfig
+	if globalConfig != nil {
+		globalNumTokens = globalConfig.CassandraYaml["num_tokens"]
+	}
+
+	numTokensPerDc := make(map[string]interface{})
+	for _, dc := range cassandra.Datacenters {
+		var numTokens interface{}
+		// Try to set from DC config
+		config := dc.DatacenterOptions.CassandraConfig
+		if config != nil {
+			numTokens = config.CassandraYaml["num_tokens"]
+		}
+		// Otherwise, try from global config
+		if numTokens == nil {
+			numTokens = globalNumTokens
+		}
+		// Otherwise, use version-specific default
+		if numTokens == nil {
+			versionString := dc.ServerVersion
+			if versionString == "" {
+				versionString = cassandra.ServerVersion
+			}
+			if versionString == "" {
+				return nil, errors.New("serverVersion should be set globally or at DC level")
+			}
+			version, err := semver.NewVersion(versionString)
+			if err != nil {
+				return nil, err
+			}
+			if cassandra.ServerType.IsCassandra() && version.Major() == 3 {
+				numTokens = float64(256)
+			} else {
+				numTokens = float64(16)
+			}
+		}
+		numTokensPerDc[dc.Meta.Name] = numTokens
+	}
+	return numTokensPerDc, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

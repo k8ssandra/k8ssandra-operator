@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -540,13 +539,6 @@ func (sd *ServerDistribution) IsCassandra() bool {
 
 func (sd *ServerDistribution) IsDse() bool {
 	return *sd == ServerDistributionDse
-}
-
-func (kc *K8ssandraCluster) DefaultNumTokens(serverVersion *semver.Version) float64 {
-	if kc.Spec.Cassandra.ServerType.IsCassandra() && serverVersion.Major() == 3 {
-		return float64(256)
-	}
-	return float64(16)
 }
 
 // GetClusterIdHash should be used to derive short form unique identifiers for the cluster,

@@ -216,6 +216,7 @@ func testStorageConfigValidation(t *testing.T) {
 	required := require.New(t)
 	createNamespace(required, "storage-namespace")
 	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
+	cluster.Spec.Cassandra.DatacenterOptions.ServerVersion = "3.11.10"
 
 	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
 	err := k8sClient.Create(ctx, cluster)
@@ -492,4 +493,87 @@ func testMedusaNonLocalNamespace(t *testing.T) {
 	err := badCluster.validateK8ssandraCluster()
 	required.Error(err)
 	required.Contains(err.Error(), "Medusa config must be namespace local")
+}
+
+// TestValidateUpdateNumTokens is a unit test for numTokens updates.
+func TestValidateUpdateNumTokens(t *testing.T) {
+	type config struct {
+		globalVersion   string
+		dcVersion       string
+		globalNumTokens int
+		dcNumTokens     int
+	}
+	type testCase struct {
+		oldConfig config
+		newConfig config
+		expected  error
+	}
+	testCases := []testCase{
+		{
+			oldConfig: config{globalVersion: "3.11.10"},
+			newConfig: config{globalVersion: "4.1.3"},
+			expected:  ErrNumTokens,
+		},
+		{
+			oldConfig: config{globalVersion: "3.11.10"},
+			newConfig: config{globalNumTokens: 256},
+			expected:  nil,
+		},
+		{
+			oldConfig: config{globalVersion: "3.11.10"},
+			newConfig: config{dcNumTokens: 256},
+			expected:  nil,
+		},
+		{
+			oldConfig: config{dcVersion: "3.11.10"},
+			newConfig: config{globalNumTokens: 256},
+			expected:  nil,
+		},
+		{
+			oldConfig: config{dcVersion: "3.11.10"},
+			newConfig: config{dcNumTokens: 256},
+			expected:  nil,
+		},
+		{
+			oldConfig: config{dcNumTokens: 10},
+			newConfig: config{dcNumTokens: 10},
+			expected:  nil,
+		},
+		{
+			oldConfig: config{globalNumTokens: 10},
+			newConfig: config{dcNumTokens: 10},
+			expected:  nil,
+		},
+	}
+	toCassandra := func(c config) *CassandraClusterTemplate {
+		cassandra := &CassandraClusterTemplate{ServerType: ServerDistributionCassandra}
+		options := DatacenterOptions{ServerVersion: c.globalVersion}
+		if c.globalNumTokens != 0 {
+			options.CassandraConfig = &CassandraConfig{
+				CassandraYaml: unstructured.Unstructured{"num_tokens": float64(c.globalNumTokens)}}
+		}
+		cassandra.DatacenterOptions = options
+		dc := CassandraDatacenterTemplate{
+			Meta: EmbeddedObjectMeta{Name: "dc1"},
+		}
+		dcOptions := DatacenterOptions{ServerVersion: c.dcVersion}
+		if c.dcNumTokens != 0 {
+			dcOptions.CassandraConfig = &CassandraConfig{
+				CassandraYaml: unstructured.Unstructured{"num_tokens": float64(c.dcNumTokens)}}
+		}
+		dc.DatacenterOptions = dcOptions
+		cassandra.Datacenters = []CassandraDatacenterTemplate{dc}
+		return cassandra
+	}
+	for _, testCase := range testCases {
+		oldCassandra := toCassandra(testCase.oldConfig)
+		newCassandra := toCassandra(testCase.newConfig)
+		err := validateUpdateNumTokens(oldCassandra, newCassandra)
+		if testCase.expected == nil {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+			require.Equal(t, testCase.expected.Error(), err.Error())
+		}
+	}
 }
