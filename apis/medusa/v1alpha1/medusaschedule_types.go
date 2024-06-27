@@ -39,6 +39,12 @@ type MedusaBackupScheduleSpec struct {
 	// The "Allow" property is only valid if all the other active Tasks have "Allow" as well.
 	// +optional
 	ConcurrencyPolicy batchv1.ConcurrencyPolicy `json:"concurrencyPolicy,omitempty"`
+
+	// Specifies the type of operation to be performed
+	// +kubebuilder:validation:Enum=backup;purge
+	// +kubebuilder:default=backup
+	// +optional
+	OperationType string `json:"operationType,omitempty"`
 }
 
 // MedusaBackupScheduleStatus defines the observed state of MedusaBackupSchedule
@@ -56,7 +62,7 @@ type MedusaBackupScheduleStatus struct {
 // +kubebuilder:printcolumn:name="Datacenter",type=string,JSONPath=".spec.backupSpec.cassandraDatacenter",description="Datacenter which the task targets"
 // +kubebuilder:printcolumn:name="ScheduledExecution",type="date",JSONPath=".status.nextSchedule",description="Next scheduled execution time"
 // +kubebuilder:printcolumn:name="LastExecution",type="date",JSONPath=".status.lastExecution",description="Previous execution time"
-// +kubebuilder:printcolumn:name="BackupType",type="string",JSONPath=".spec.backupSpec.backupType",description="Type of backup"
+// +kubebuilder:printcolumn:name="OperationType",type="string",JSONPath=".spec.operationType",description="Type of scheduled operation"
 // MedusaBackupSchedule is the Schema for the medusabackupschedules API
 type MedusaBackupSchedule struct {
 	metav1.TypeMeta   `json:",inline"`

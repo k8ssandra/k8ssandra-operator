@@ -90,6 +90,10 @@ const (
 //+kubebuilder:subresource:status
 
 // MedusaTask is the Schema for the MedusaTasks API
+// +kubebuilder:printcolumn:name="Datacenter",type=string,JSONPath=".spec.cassandraDatacenter",description="Datacenter which the task targets"
+// +kubebuilder:printcolumn:name="Operation",type="string",JSONPath=".spec.operation",description="Type of operation"
+// +kubebuilder:printcolumn:name="Start",type="date",JSONPath=".status.startTime",description="Start time"
+// +kubebuilder:printcolumn:name="Finish",type="date",JSONPath=".status.finishTime",description="Finish time"
 type MedusaTask struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
