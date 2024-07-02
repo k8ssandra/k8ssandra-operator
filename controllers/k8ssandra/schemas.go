@@ -48,8 +48,12 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		return recResult
 	}
 
-	if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
-		return recResult
+	// we only want to reconcile the Reaper schema if we're deploying Reaper together with k8ssandra cluster
+	// otherwise we just register the k8ssandra cluster with an external reaper (happens after reconciling the DCs)
+	if kc.Spec.Reaper != nil && !kc.Spec.Reaper.HasReaperRef() {
+		if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+			return recResult
+		}
 	}
 
 	decommCassDcName, dcNameOverride := k8ssandra.GetDatacenterForDecommission(kc)

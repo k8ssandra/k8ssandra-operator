@@ -71,8 +71,8 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
 
-		// Inject Reaper settings
-		if kc.Spec.Reaper != nil {
+		// Inject Reaper settings, unless we just reference an existing Reaper
+		if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name == "" {
 			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())
 		}
 

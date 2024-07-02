@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -96,8 +97,17 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		}
 	}
 
-	if updated := reaperTemplate.EnsureDeploymentMode(); updated {
-		logger.Info("Forced SINGLE deployment mode for Reaper because it has 'local' storage type")
+	// we might have nil-ed the template because a DC got stopped, so we need to re-check
+	if reaperTemplate != nil {
+		if reaperTemplate.HasReaperRef() {
+			logger.Info("ReaperRef present, registering with referenced Reaper instead of creating a new one")
+			return r.addClusterToExternalReaper(ctx, kc, actualDc, logger)
+		}
+	}
+
+	if reaperTemplate != nil && reaperTemplate.StorageType == reaperapi.StorageTypeLocal && reaperTemplate.DeploymentMode == reaperapi.DeploymentModePerDc {
+		err := fmt.Errorf("reaper with 'local' storage cannot have multiple instances needed for 'per-dc' deployment mode")
+		return result.Error(err)
 	}
 
 	actualReaper := &reaperapi.Reaper{}
@@ -255,4 +265,28 @@ func getSingleReaperDcName(kc *api.K8ssandraCluster) string {
 		}
 	}
 	return ""
+}
+
+func (r *K8ssandraClusterReconciler) addClusterToExternalReaper(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	actualDc *cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+) result.ReconcileResult {
+	manager := reaper.NewManager()
+	manager.SetK8sClient(r)
+	if username, password, err := manager.GetUiCredentials(ctx, kc.Spec.Reaper.UiUserSecretRef, kc.Namespace); err != nil {
+		logger.Error(err, "Failed to get Reaper UI user secret")
+		return result.Error(err)
+	} else {
+		if err = manager.ConnectWithReaperRef(ctx, kc, username, password); err != nil {
+			logger.Error(err, "Failed to connect to external Reaper")
+			return result.Error(err)
+		}
+		if err = manager.AddClusterToReaper(ctx, actualDc); err != nil {
+			logger.Error(err, "Failed to add cluster to external Reaper")
+			return result.Error(err)
+		}
+	}
+	return result.Continue()
 }

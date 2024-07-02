@@ -26497,7 +26497,8 @@ spec:
               reaper:
                 description: |-
                   Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
-                  If this is non-nil, Reaper will be deployed on every Cassandra datacenter in this K8ssandraCluster.
+                  If this is non-nil, Reaper might be deployed on every Cassandra datacenter in this K8ssandraCluster, unless
+                  there is a Control Plane Reaper present. In that case, the K8ssandraCluster will get registered to it.
                 properties:
                   ServiceAccountName:
                     default: default
@@ -27538,6 +27539,7 @@ spec:
                     enum:
                     - PER_DC
                     - SINGLE
+                    - CONTROL_PLANE
                     type: string
                   heapSize:
                     anyOf:
@@ -28377,6 +28379,52 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  reaperRef:
+                    description: |-
+                      When there is a CONTROL_PLANE Reaper out there, this field allows registering a K8ssandra cluster to it.
+                      Populating this field disables some operator behaviour related to setting Reaper up.
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      fieldPath:
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
+                        type: string
+                      kind:
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                        type: string
+                      resourceVersion:
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                        type: string
+                      uid:
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
                   resources:
                     description: Main Container resources.
                     properties:

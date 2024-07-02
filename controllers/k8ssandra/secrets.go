@@ -2,7 +2,6 @@ package k8ssandra
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
@@ -41,6 +40,10 @@ func SuperuserSecretName(kc *api.K8ssandraCluster) string {
 }
 
 func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+	if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name != "" {
+		logger.Info("ReaperRef points to an existing Reaper, we don't need a new Reaper CQL secret")
+		return result.Continue()
+	}
 	if kc.Spec.Reaper != nil {
 		// Reaper secrets are only required when authentication is enabled on the cluster
 		if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
@@ -60,9 +63,12 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.SanitizedName())
 			}
 			kcKey := utils.GetKey(kc)
-			if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
-				logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
-				return result.Error(err)
+			if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name == "" {
+				// We reconcile the CQL user secret only if are reconciling k8ssandra-cluster-specific Reaper
+				if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
+					logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
+					return result.Error(err)
+				}
 			}
 			if kc.Spec.Reaper.UiUserSecretRef == nil || kc.Spec.Reaper.UiUserSecretRef.Name != "" {
 				if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kcKey); err != nil {

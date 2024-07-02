@@ -30,12 +30,13 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	DeploymentModeSingle = "SINGLE"
-	DeploymentModePerDc  = "PER_DC"
-	ReaperLabel          = "k8ssandra.io/reaper"
-	DefaultKeyspace      = "reaper_db"
-	StorageTypeCassandra = "cassandra"
-	StorageTypeLocal     = "local"
+	DeploymentModeSingle       = "SINGLE"
+	DeploymentModePerDc        = "PER_DC"
+	DeploymentModeControlPlane = "CONTROL_PLANE"
+	ReaperLabel                = "k8ssandra.io/reaper"
+	DefaultKeyspace            = "reaper_db"
+	StorageTypeCassandra       = "cassandra"
+	StorageTypeLocal           = "local"
 )
 
 type ReaperTemplate struct {
@@ -235,22 +236,21 @@ type ReaperClusterTemplate struct {
 
 	// +optional
 	// +kubebuilder:default="PER_DC"
-	// +kubebuilder:validation:Enum:=PER_DC;SINGLE
+	// +kubebuilder:validation:Enum:=PER_DC;SINGLE;CONTROL_PLANE
 	DeploymentMode string `json:"deploymentMode,omitempty"`
+
+	// When there is a CONTROL_PLANE Reaper out there, this field allows registering a K8ssandra cluster to it.
+	// Populating this field disables some operator behaviour related to setting Reaper up.
+	// +optional
+	ReaperRef corev1.ObjectReference `json:"reaperRef,omitempty"`
 }
 
-// EnsureDeploymentMode ensures that a deployment mode is SINGLE if we use the local storage type. This is to prevent
-// several instances of Reapers with local storage that would interfere with each other.
-func (t *ReaperClusterTemplate) EnsureDeploymentMode() bool {
-	if t != nil {
-		if t.StorageType == StorageTypeLocal {
-			if t.DeploymentMode != DeploymentModeSingle {
-				t.DeploymentMode = DeploymentModeSingle
-				return true
-			}
-		}
-	}
-	return false
+func (rct *ReaperClusterTemplate) HasReaperRef() bool {
+	return rct != nil && rct.ReaperRef.Name != ""
+}
+
+func (rct *ReaperClusterTemplate) IsControlPlane() bool {
+	return rct != nil && rct.DeploymentMode == DeploymentModeControlPlane
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.
@@ -258,8 +258,8 @@ func (t *ReaperClusterTemplate) EnsureDeploymentMode() bool {
 type CassandraDatacenterRef struct {
 
 	// The datacenter name.
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+	// +optional
+	Name string `json:"name,omitempty"`
 
 	// The datacenter namespace. If empty, the datacenter will be assumed to reside in the same namespace as the Reaper
 	// instance.
@@ -274,8 +274,8 @@ type ReaperSpec struct {
 	// DatacenterRef is the reference of a CassandraDatacenter resource that this Reaper instance should manage. It will
 	// also be used as the backend for persisting Reaper's state. Reaper must be able to access the JMX port (7199 by
 	// default) and the CQL port (9042 by default) on this DC.
-	// +kubebuilder:validation:Required
-	DatacenterRef CassandraDatacenterRef `json:"datacenterRef"`
+	// +optional
+	DatacenterRef CassandraDatacenterRef `json:"datacenterRef,omitempty"`
 
 	// DatacenterAvailability indicates to Reaper its deployment in relation to the target datacenter's network.
 	// For single-DC clusters, the default (ALL) is fine. For multi-DC clusters, it is recommended to use EACH,

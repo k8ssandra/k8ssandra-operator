@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,25 +92,36 @@ func (r *ReaperReconciler) reconcile(ctx context.Context, actualReaper *reaperap
 	actualReaper.Status.Progress = reaperapi.ReaperProgressPending
 	actualReaper.Status.SetNotReady()
 
-	actualDc, result, err := r.reconcileDatacenter(ctx, actualReaper, logger)
-	if !result.IsZero() || err != nil {
-		return result, err
+	var actualDc *cassdcapi.CassandraDatacenter
+	if actualReaper.Spec.DatacenterRef.Name == "" {
+		logger.Info("No CassandraDatacenter reference specified, skipping CassandraDatacenter reconciliation")
+		actualDc = &cassdcapi.CassandraDatacenter{}
+	} else {
+		reconciledDc, result, err := r.reconcileDatacenter(ctx, actualReaper, logger)
+		if !result.IsZero() || err != nil {
+			return result, err
+		}
+		actualDc = reconciledDc.DeepCopy()
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressDeploying
 
-	if result, err = r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileDeployment(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
-	if result, err = r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
+	if result, err := r.reconcileService(ctx, actualReaper, logger); !result.IsZero() || err != nil {
 		return result, err
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressConfiguring
 
-	if result, err = r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
-		return result, err
+	if actualReaper.Spec.DatacenterRef.Name == "" {
+		logger.Info("skipping adding DC to Reaper because its a Control Plane Reaper")
+	} else {
+		if result, err := r.configureReaper(ctx, actualReaper, actualDc, logger); !result.IsZero() || err != nil {
+			return result, err
+		}
 	}
 
 	actualReaper.Status.Progress = reaperapi.ReaperProgressRunning
@@ -185,10 +197,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 
 	// reconcile Vector configmap
-	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *actualReaper, actualDc, r.Client, logger); err != nil {
-		return vectorReconcileResult, err
-	} else if vectorReconcileResult.Requeue {
-		return vectorReconcileResult, nil
+	// do this only if we're not a control plane reaper. a CP reaper has no vector agent with it
+	if actualReaper.Spec.DatacenterRef.Name != "" {
+		if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *actualReaper, actualDc, r.Client, logger); err != nil {
+			return vectorReconcileResult, err
+		} else if vectorReconcileResult.Requeue {
+			return vectorReconcileResult, nil
+		}
 	}
 
 	logger.Info("Reconciling reaper deployment", "actualReaper", actualReaper)
@@ -236,10 +251,28 @@ func (r *ReaperReconciler) reconcileDeployment(
 		return ctrl.Result{}, err
 	}
 
-	// if using local storage, we need to ensure only one Reaper exists ~ the STS has at most 1 replica
-	err = reaper.EnsureSingleReplica(actualReaper, actualDeployment, desiredDeployment, logger)
-	if err != nil {
-		return ctrl.Result{}, err
+	// if using memory storage, we need to ensure only one Reaper exists ~ the STS has at most 1 replica
+	if actualReaper.Spec.StorageType == reaperapi.StorageTypeLocal {
+		var desiredReplicas int32
+		if desiredReplicas, err = getDeploymentReplicas(desiredDeployment); err != nil {
+			return ctrl.Result{}, err
+		}
+		if desiredReplicas > 1 {
+			logger.Info(fmt.Sprintf("reaper with memory storage can only have one replica, not allowing the %d that are desired", desiredReplicas))
+			if err = forceSingleReplica(&desiredDeployment); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		var actualReplicas int32
+		if actualReplicas, err = getDeploymentReplicas(actualDeployment); err != nil {
+			return ctrl.Result{}, err
+		}
+		if actualReplicas > 1 {
+			logger.Info(fmt.Sprintf("reaper with memory storage currently has %d replicas, scaling down to 1", actualReplicas))
+			if err = forceSingleReplica(&desiredDeployment); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// Check if the deployment needs to be updated
@@ -273,6 +306,31 @@ func (r *ReaperReconciler) reconcileDeployment(
 
 	logger.Info("Reaper Deployment ready")
 	return ctrl.Result{}, nil
+}
+
+func getDeploymentReplicas(actualDeployment client.Object) (int32, error) {
+	switch actual := actualDeployment.(type) {
+	case *appsv1.Deployment:
+		return *actual.Spec.Replicas, nil
+	case *appsv1.StatefulSet:
+		return *actual.Spec.Replicas, nil
+	default:
+		err := fmt.Errorf("failed to get replicas of unexpected deployment type type %T", actualDeployment)
+		return math.MaxInt32, err
+	}
+}
+
+func forceSingleReplica(desiredDeployment *client.Object) error {
+	switch desired := (*desiredDeployment).(type) {
+	case *appsv1.Deployment:
+		desired.Spec.Replicas = ptr.To[int32](1)
+	case *appsv1.StatefulSet:
+		desired.Spec.Replicas = ptr.To[int32](1)
+	default:
+		err := fmt.Errorf("failed to set replicas for deployment of unexpected type %T", desiredDeployment)
+		return err
+	}
+	return nil
 }
 
 func (r *ReaperReconciler) reconcileService(
@@ -334,8 +392,9 @@ func (r *ReaperReconciler) reconcileService(
 
 func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *reaperapi.Reaper, actualDc *cassdcapi.CassandraDatacenter, logger logr.Logger) (ctrl.Result, error) {
 	manager := r.NewManager()
+	manager.SetK8sClient(r)
 	// Get the Reaper UI secret username and password values if auth is enabled
-	if username, password, err := r.getReaperUICredentials(ctx, actualReaper, logger); err != nil {
+	if username, password, err := manager.GetUiCredentials(ctx, actualReaper.Spec.UiUserSecretRef, actualReaper.Namespace); err != nil {
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	} else {
 		if err := manager.Connect(ctx, actualReaper, username, password); err != nil {
@@ -353,27 +412,6 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 		}
 	}
 	return ctrl.Result{}, nil
-}
-
-func (r *ReaperReconciler) getReaperUICredentials(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (string, string, error) {
-
-	if actualReaper.Spec.UiUserSecretRef == nil || actualReaper.Spec.UiUserSecretRef.Name == "" {
-		// The UI user secret doesn't exist, meaning auth is disabled
-		return "", "", nil
-	}
-
-	secretKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Spec.UiUserSecretRef.Name}
-	if secret, err := r.getSecret(ctx, secretKey); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Reaper ui secret does not exist")
-			return "", "", err
-		} else {
-			logger.Error(err, "failed to get reaper ui secret")
-			return "", "", err
-		}
-	} else {
-		return string(secret.Data["username"]), string(secret.Data["password"]), nil
-	}
 }
 
 func (r *ReaperReconciler) collectAuthVars(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) ([]*corev1.EnvVar, error) {
