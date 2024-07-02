@@ -294,6 +294,30 @@ func TestNewStatefulSet(t *testing.T) {
 	})
 }
 
+func TestNewStatefulSetForControlPlane(t *testing.T) {
+	reaper := newTestControlPlaneReaper()
+	noDataCenter := &cassdcapi.CassandraDatacenter{}
+
+	sts := NewStatefulSet(reaper, noDataCenter, testlogr.NewTestLogger(t), nil, nil)
+	podSpec := sts.Spec.Template.Spec
+	container := podSpec.Containers[0]
+	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
+		{
+			Name:  "REAPER_STORAGE_TYPE",
+			Value: "memory",
+		},
+		{
+			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
+			Value: "false",
+		},
+		{
+			Name:  "REAPER_DATACENTER_AVAILABILITY",
+			Value: "",
+		},
+	})
+
+}
+
 func TestHttpManagementConfiguration(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.HttpManagement.Enabled = true
@@ -698,6 +722,23 @@ func newTestReaper() *reaperapi.Reaper {
 	}
 }
 
+func newTestControlPlaneReaper() *reaperapi.Reaper {
+	namespace := "reaper-cp-test"
+	reaperName := "cp-reaper"
+	return &reaperapi.Reaper{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      reaperName,
+		},
+		Spec: reaperapi.ReaperSpec{
+			ReaperTemplate: reaperapi.ReaperTemplate{
+				StorageType:   "local",
+				StorageConfig: newTestStorageConfig(),
+			},
+		},
+	}
+}
+
 func newTestDatacenter() *cassdcapi.CassandraDatacenter {
 	namespace := "service-test"
 	dcName := "dc1"
@@ -805,4 +846,38 @@ func TestLabelsAnnotations(t *testing.T) {
 
 	assert.Equal(t, deploymentLabels, deployment.Labels)
 	assert.Equal(t, podLabels, deployment.Spec.Template.Labels)
+}
+
+func TestGetAdaptiveIncremental(t *testing.T) {
+	reaper := &reaperapi.Reaper{}
+	dc := &cassdcapi.CassandraDatacenter{}
+
+	adaptive, incremental := getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.False(t, adaptive)
+	assert.False(t, incremental)
+
+	reaper.Spec.AutoScheduling.RepairType = "ADAPTIVE"
+	adaptive, incremental = getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.True(t, adaptive)
+	assert.False(t, incremental)
+
+	reaper.Spec.AutoScheduling.RepairType = "INCREMENTAL"
+	adaptive, incremental = getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.False(t, adaptive)
+	assert.True(t, incremental)
+
+	reaper.Spec.AutoScheduling.RepairType = "AUTO"
+	adaptive, incremental = getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.True(t, adaptive)
+	assert.False(t, incremental)
+
+	dc.Spec.ServerVersion = "3.11.1"
+	adaptive, incremental = getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.True(t, adaptive)
+	assert.False(t, incremental)
+
+	dc.Spec.ServerVersion = "4.0.0"
+	adaptive, incremental = getAdaptiveIncremental(reaper, dc.Spec.ServerVersion)
+	assert.False(t, adaptive)
+	assert.True(t, incremental)
 }

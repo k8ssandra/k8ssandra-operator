@@ -69,8 +69,11 @@ func TestReaper(t *testing.T) {
 func newMockManager() reaper.Manager {
 	m := new(mocks.ReaperManager)
 	m.On("Connect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("ConnectWithReaperRef", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	m.On("AddClusterToReaper", mock.Anything, mock.Anything).Return(nil)
 	m.On("VerifyClusterIsConfigured", mock.Anything, mock.Anything).Return(true, nil)
+	m.On("GetUiCredentials", mock.Anything, mock.Anything, mock.Anything).Return("admin", "admin", nil)
+	m.On("SetK8sClient", mock.Anything)
 	m.Test(currentTest)
 	return m
 }

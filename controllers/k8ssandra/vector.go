@@ -2,6 +2,7 @@ package k8ssandra
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -12,8 +13,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,27 +49,11 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 			return recRes
 		}
 	} else {
-		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
+		if err := shared.DeleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
 			return result.Error(err)
 		}
 	}
 
 	dcLogger.Info("Vector Agent ConfigMap successfully reconciled")
 	return result.Continue()
-}
-
-func deleteConfigMapIfExists(ctx context.Context, remoteClient client.Client, configMapKey client.ObjectKey, logger logr.Logger) error {
-	configMap := &corev1.ConfigMap{}
-	if err := remoteClient.Get(ctx, configMapKey, configMap); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-		logger.Error(err, "Failed to get ConfigMap", configMapKey)
-		return err
-	}
-	if err := remoteClient.Delete(ctx, configMap); err != nil {
-		logger.Error(err, "Failed to delete ConfigMap", configMapKey)
-		return err
-	}
-	return nil
 }

@@ -543,6 +543,12 @@ func testReaperStorage(t *testing.T) {
 	reaperWithoutStorageSize.Spec.Reaper.StorageConfig.Resources.Requests = corev1.ResourceList{}
 	err = reaperWithoutStorageSize.validateK8ssandraCluster()
 	required.Error(err)
+
+	kc := createClusterObjWithCassandraConfig("kc-with-per-dc-reaper-and-local-storage", "ns")
+	kc.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
+	kc.Spec.Reaper.DeploymentMode = reaperapi.DeploymentModePerDc
+	err = kc.validateK8ssandraCluster()
+	required.Equal(ErrNoReaperPerDcWithLocal, err)
 }
 
 // TestValidateUpdateNumTokens is a unit test for numTokens updates.

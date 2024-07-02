@@ -96,6 +96,14 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 		}
 	}
 
+	// we might have nil-ed the template because a DC got stopped, so we need to re-check
+	if reaperTemplate != nil {
+		if reaperTemplate.HasReaperRef() {
+			logger.Info("ReaperRef present, registering with referenced Reaper instead of creating a new one")
+			return r.addClusterToExternalReaper(ctx, kc, actualDc, logger)
+		}
+	}
+
 	if updated := reaperTemplate.EnsureDeploymentMode(); updated {
 		logger.Info("Forced SINGLE deployment mode for Reaper because it has 'local' storage type")
 	}
@@ -255,4 +263,28 @@ func getSingleReaperDcName(kc *api.K8ssandraCluster) string {
 		}
 	}
 	return ""
+}
+
+func (r *K8ssandraClusterReconciler) addClusterToExternalReaper(
+	ctx context.Context,
+	kc *api.K8ssandraCluster,
+	actualDc *cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+) result.ReconcileResult {
+	manager := reaper.NewManager()
+	manager.SetK8sClient(r)
+	if username, password, err := manager.GetUiCredentials(ctx, kc.Spec.Reaper.UiUserSecretRef, kc.Namespace); err != nil {
+		logger.Error(err, "Failed to get Reaper UI user secret")
+		return result.RequeueSoon(r.DefaultDelay)
+	} else {
+		if err = manager.ConnectWithReaperRef(ctx, kc, username, password); err != nil {
+			logger.Error(err, "Failed to connect to external Reaper")
+			return result.RequeueSoon(r.DefaultDelay)
+		}
+		if err = manager.AddClusterToReaper(ctx, actualDc); err != nil {
+			logger.Error(err, "Failed to add cluster to external Reaper")
+			return result.RequeueSoon(r.DefaultDelay)
+		}
+	}
+	return result.Continue()
 }

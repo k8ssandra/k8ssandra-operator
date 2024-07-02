@@ -99,6 +99,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
+	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterWithMedusaConfigRef", testEnv.ControllerTest(ctx, createSingleDcClusterWithMedusaConfigRef))
 	t.Run("CreateSingleDcClusterWithManagementApiSecured", testEnv.ControllerTest(ctx, createSingleDcClusterWithManagementApiSecured))
@@ -771,40 +772,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.CassandraClusterTemplate{
-				Datacenters: []api.CassandraDatacenterTemplate{
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc1",
-						},
-						K8sContext: f.DataPlaneContexts[0],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.14",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-					},
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc2",
-						},
-						K8sContext: f.DataPlaneContexts[1],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.14",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-					},
-				},
-			},
+			Cassandra: newTwoDcCassandraClusterTemplate(f),
 		},
 	}
 
@@ -1152,6 +1120,15 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
+	stargate := &stargateapi.StargateDatacenterTemplate{
+		StargateClusterTemplate: stargateapi.StargateClusterTemplate{
+			Size: 1,
+		},
+	}
+	cct := newTwoDcCassandraClusterTemplate(f)
+	cct.Datacenters[0].Stargate = stargate.DeepCopy()
+	cct.Datacenters[1].Stargate = stargate.DeepCopy()
+
 	clusterName := "cluster-multi-stargate"
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1159,50 +1136,7 @@ func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *fram
 			Name:      clusterName,
 		},
 		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.CassandraClusterTemplate{
-				Datacenters: []api.CassandraDatacenterTemplate{
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc1",
-						},
-						K8sContext: f.DataPlaneContexts[0],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.14",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
-							},
-						},
-					},
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc2",
-						},
-						K8sContext: f.DataPlaneContexts[1],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "3.11.14",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
-							},
-						},
-					},
-				},
-			},
+			Cassandra: cct,
 		},
 	}
 
