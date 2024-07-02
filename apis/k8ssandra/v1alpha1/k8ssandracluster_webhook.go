@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	"github.com/Masterminds/semver/v3"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,13 +35,17 @@ import (
 )
 
 var (
-	clientCache        *clientcache.ClientCache
-	ErrNumTokens       = fmt.Errorf("num_tokens value can't be changed")
-	ErrReaperKeyspace  = fmt.Errorf("reaper keyspace can not be changed")
-	ErrNoStorageConfig = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
-	ErrNoResourcesSet  = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
-	ErrClusterName     = fmt.Errorf("cluster name can not be changed")
-	ErrNoStoragePrefix = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
+	clientCache                 *clientcache.ClientCache
+	ErrNumTokens                = fmt.Errorf("num_tokens value can't be changed")
+	ErrReaperKeyspace           = fmt.Errorf("reaper keyspace can not be changed")
+	ErrNoStorageConfig          = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
+	ErrNoResourcesSet           = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
+	ErrClusterName              = fmt.Errorf("cluster name can not be changed")
+	ErrNoStoragePrefix          = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
+	ErrNoReaperStorageConfig    = fmt.Errorf("reaper StorageConfig not set")
+	ErrNoReaperAccessMode       = fmt.Errorf("reaper StorageConfig.AccessModes not set")
+	ErrNoReaperResourceRequests = fmt.Errorf("reaper StorageConfig.Resources.Requests not set")
+	ErrNoReaperStorageRequest   = fmt.Errorf("reaper StorageConfig.Resources.Requests.Storage not set")
 )
 
 // log is for logging in this package.
@@ -110,6 +115,10 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 	}
 
 	if err := r.ValidateMedusa(); err != nil {
+		return err
+	}
+
+	if err := r.validateReaper(); err != nil {
 		return err
 	}
 
@@ -278,5 +287,28 @@ func (r *K8ssandraCluster) ValidateMedusa() error {
 		}
 	}
 
+	return nil
+}
+
+func (r *K8ssandraCluster) validateReaper() error {
+	if r.Spec.Reaper == nil {
+		return nil
+	}
+	if r.Spec.Reaper.StorageType != reaperapi.StorageTypeLocal {
+		return nil
+	}
+	if r.Spec.Reaper.StorageConfig == nil {
+		return ErrNoReaperStorageConfig
+	}
+	// not checking StorageClassName because Kubernetes will use a default one if it's not set
+	if r.Spec.Reaper.StorageConfig.AccessModes == nil {
+		return ErrNoReaperAccessMode
+	}
+	if r.Spec.Reaper.StorageConfig.Resources.Requests == nil {
+		return ErrNoReaperResourceRequests
+	}
+	if r.Spec.Reaper.StorageConfig.Resources.Requests.Storage().IsZero() {
+		return ErrNoReaperStorageRequest
+	}
 	return nil
 }

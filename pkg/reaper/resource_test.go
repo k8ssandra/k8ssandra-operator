@@ -38,7 +38,7 @@ func Test_computeReaperDcAvailability(t *testing.T) {
 						},
 					},
 					Reaper: &reaperapi.ReaperClusterTemplate{
-						DeploymentMode: DeploymentModePerDc,
+						DeploymentMode: reaperapi.DeploymentModePerDc,
 					},
 				},
 			},
@@ -55,7 +55,7 @@ func Test_computeReaperDcAvailability(t *testing.T) {
 						},
 					},
 					Reaper: &reaperapi.ReaperClusterTemplate{
-						DeploymentMode: DeploymentModeSingle,
+						DeploymentMode: reaperapi.DeploymentModeSingle,
 					},
 				},
 			},

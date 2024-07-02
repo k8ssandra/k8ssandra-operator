@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"net"
 	"path/filepath"
 	"testing"
@@ -52,6 +53,23 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
+
+var minimalInMemoryReaperStorageConfig = &corev1.PersistentVolumeClaimSpec{
+	StorageClassName: func() *string { s := "test"; return &s }(),
+	AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+	Resources: corev1.VolumeResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceStorage: resource.MustParse("1Gi"),
+		},
+	},
+}
+
+var minimalInMemoryReaperConfig = &reaperapi.ReaperClusterTemplate{
+	ReaperTemplate: reaperapi.ReaperTemplate{
+		StorageType:   reaperapi.StorageTypeLocal,
+		StorageConfig: minimalInMemoryReaperStorageConfig,
+	},
+}
 
 func TestWebhook(t *testing.T) {
 	required := require.New(t)
@@ -160,6 +178,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("InvalidDcName", testInvalidDcName)
 	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
 	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
+	t.Run("ReaperStorage", testReaperStorage)
 }
 
 func testContextValidation(t *testing.T) {
@@ -494,6 +513,36 @@ func testMedusaNonLocalNamespace(t *testing.T) {
 	err := badCluster.validateK8ssandraCluster()
 	required.Error(err)
 	required.Contains(err.Error(), "Medusa config must be namespace local")
+}
+
+func testReaperStorage(t *testing.T) {
+	required := require.New(t)
+
+	reaperWithNoStorageConfig := createMinimalClusterObj("reaper-no-storage-config", "ns")
+	reaperWithNoStorageConfig.Spec.Reaper = &reaperapi.ReaperClusterTemplate{
+		ReaperTemplate: reaperapi.ReaperTemplate{
+			StorageType: reaperapi.StorageTypeLocal,
+		},
+	}
+	err := reaperWithNoStorageConfig.validateK8ssandraCluster()
+	required.Error(err)
+
+	reaperWithDefaultConfig := createClusterObjWithCassandraConfig("reaper-default-storage-config", "ns")
+	reaperWithDefaultConfig.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
+	err = reaperWithDefaultConfig.validateK8ssandraCluster()
+	required.NoError(err)
+
+	reaperWithoutAccessMode := createClusterObjWithCassandraConfig("reaper-no-access-mode", "ns")
+	reaperWithoutAccessMode.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
+	reaperWithoutAccessMode.Spec.Reaper.StorageConfig.AccessModes = nil
+	err = reaperWithoutAccessMode.validateK8ssandraCluster()
+	required.Error(err)
+
+	reaperWithoutStorageSize := createClusterObjWithCassandraConfig("reaper-no-storage-size", "ns")
+	reaperWithoutStorageSize.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
+	reaperWithoutStorageSize.Spec.Reaper.StorageConfig.Resources.Requests = corev1.ResourceList{}
+	err = reaperWithoutStorageSize.validateK8ssandraCluster()
+	required.Error(err)
 }
 
 // TestValidateUpdateNumTokens is a unit test for numTokens updates.

@@ -39,7 +39,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 
 	// check that the Reaper Vector container and config map exist
-	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkContainerPresence(t, ctx, f, reaperKey, kc, getPodTemplateSpec, reaper.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Logf("check that if Reaper Vector is disabled, the agent and configmap are deleted")
@@ -52,7 +52,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 	checkFinalizerRbacRule(t, f, ctx, namespace)
-	checkContainerDeleted(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkContainerDeleted(t, ctx, f, reaperKey, kc, getPodTemplateSpec, reaper.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Logf("check that if Reaper Vector is enabled, the agent and configmap are re-created")
@@ -64,8 +64,11 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkContainerPresence(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
+	checkContainerPresence(t, ctx, f, reaperKey, kc, getPodTemplateSpec, reaper.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
+
+	t.Log("check Reaper app type")
+	checkReaperAppType(t, ctx, f, reaperKey, kc)
 
 	t.Log("check Reaper keyspace created")
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
@@ -79,11 +82,13 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
+	createEmptyKeyspaceTable(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "test_ks", "test_table")
+
 	t.Run("TestReaperApi[0]", func(t *testing.T) {
 		t.Log("test Reaper API in context", f.DataPlaneContexts[0])
 		reaperUiSecretKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "mycluster-reaper-ui"}}
 		username, password := retrieveCredentials(t, f, ctx, reaperUiSecretKey)
-		testReaperApi(t, ctx, f.DataPlaneContexts[0], DcClusterName(t, f, dcKey), "reaper_db", username, password)
+		testReaperApi(t, ctx, f.DataPlaneContexts[0], DcClusterName(t, f, dcKey), "test_ks", username, password)
 	})
 }
 

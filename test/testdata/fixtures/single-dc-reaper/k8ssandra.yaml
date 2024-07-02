@@ -4,6 +4,13 @@ metadata:
   name: test
 spec:
   reaper:
+    storageType: local
+    storageConfig:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+          requests:
+              storage: 1Gi
     httpManagement:
       enabled: true
     heapSize: 256Mi
