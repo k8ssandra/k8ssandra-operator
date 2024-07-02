@@ -487,6 +487,26 @@ func TestSkipSchemaMigration(t *testing.T) {
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
+func TestStorageTypes(t *testing.T) {
+	tests := []struct {
+		name        string
+		storageType string
+	}{
+		{"memory type test", "memory"},
+		{"cassandra type test", "cassandra"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reaper := newTestReaper()
+			reaper.Spec.StorageType = tt.storageType
+			logger := testlogr.NewTestLogger(t)
+			deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+			assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+			assert.Equal(t, tt.storageType, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
+		})
+	}
+}
+
 func newTestReaper() *reaperapi.Reaper {
 	namespace := "service-test"
 	reaperName := "test-reaper"
@@ -502,7 +522,8 @@ func newTestReaper() *reaperapi.Reaper {
 				Namespace: namespace,
 			},
 			ReaperTemplate: reaperapi.ReaperTemplate{
-				Keyspace: "reaper_db",
+				Keyspace:    "reaper_db",
+				StorageType: "cassandra",
 				ResourceMeta: &meta.ResourceMeta{
 					CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
 					Pods: meta.Tags{

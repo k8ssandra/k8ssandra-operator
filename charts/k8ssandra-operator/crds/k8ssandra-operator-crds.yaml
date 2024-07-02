@@ -28672,6 +28672,12 @@ spec:
                             type: string
                         type: object
                     type: object
+                  storageType:
+                    default: cassandra
+                    enum:
+                    - cassandra
+                    - memory
+                    type: string
                   telemetry:
                     description: |-
                       Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster
@@ -34560,6 +34566,12 @@ spec:
                   if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
                   example, because a DC is down).
                 type: boolean
+              storageType:
+                default: cassandra
+                enum:
+                - cassandra
+                - memory
+                type: string
               telemetry:
                 description: |-
                   Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster

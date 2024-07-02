@@ -66,7 +66,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	envVars := []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
-			Value: "cassandra",
+			Value: reaper.Spec.StorageType,
 		},
 		{
 			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
