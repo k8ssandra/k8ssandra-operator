@@ -41,4 +41,10 @@ func TestEnsureDeploymentMode(t *testing.T) {
 	changed = rct.EnsureDeploymentMode()
 	assert.False(t, changed)
 	assert.Equal(t, DeploymentModePerDc, rct.DeploymentMode)
+
+	cpReaper := rct.DeepCopy()
+	cpReaper.DeploymentMode = DeploymentModeControlPlane
+	changed = cpReaper.EnsureDeploymentMode()
+	assert.False(t, changed)
+	assert.Equal(t, DeploymentModeControlPlane, cpReaper.DeploymentMode)
 }

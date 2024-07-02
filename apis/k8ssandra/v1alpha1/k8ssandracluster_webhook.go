@@ -294,21 +294,22 @@ func (r *K8ssandraCluster) validateReaper() error {
 	if r.Spec.Reaper == nil {
 		return nil
 	}
-	if r.Spec.Reaper.StorageType != reaperapi.StorageTypeLocal {
-		return nil
-	}
-	if r.Spec.Reaper.StorageConfig == nil {
+	if r.Spec.Reaper.StorageType == reaperapi.StorageTypeLocal && r.Spec.Reaper.StorageConfig == nil {
 		return ErrNoReaperStorageConfig
 	}
-	// not checking StorageClassName because Kubernetes will use a default one if it's not set
-	if r.Spec.Reaper.StorageConfig.AccessModes == nil {
-		return ErrNoReaperAccessMode
-	}
-	if r.Spec.Reaper.StorageConfig.Resources.Requests == nil {
-		return ErrNoReaperResourceRequests
-	}
-	if r.Spec.Reaper.StorageConfig.Resources.Requests.Storage().IsZero() {
-		return ErrNoReaperStorageRequest
+	if r.Spec.Reaper.StorageType == reaperapi.StorageTypeLocal {
+		// we're checking for validity of the storage config in Reaper's webhook too, so this is a duplicate of that
+		// for now, I don't see a better way of reusing code to validate the storage config
+		// not checking StorageClassName because Kubernetes will use a default one if it's not set
+		if r.Spec.Reaper.StorageConfig.AccessModes == nil {
+			return ErrNoReaperAccessMode
+		}
+		if r.Spec.Reaper.StorageConfig.Resources.Requests == nil {
+			return ErrNoReaperResourceRequests
+		}
+		if r.Spec.Reaper.StorageConfig.Resources.Requests.Storage().IsZero() {
+			return ErrNoReaperStorageRequest
+		}
 	}
 	return nil
 }

@@ -274,6 +274,12 @@ func TestOperator(t *testing.T) {
 		skipK8ssandraClusterCleanup:  true,
 		doCassandraDatacenterCleanup: true,
 	}))
+	t.Run("CreateControlPlaneReaperAndDataCenter", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createControlPlaneReaperAndDatacenter,
+		fixture:                      framework.NewTestFixture("reaper-control-plane", controlPlane),
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: false,
+	}))
 	t.Run("ClusterScoped", func(t *testing.T) {
 		t.Run("MultiDcMultiCluster", e2eTest(ctx, &e2eTestOpts{
 			testFunc:             multiDcMultiCluster,
@@ -1909,6 +1915,35 @@ func getSecret(t *testing.T, f *framework.E2eFramework, ctx context.Context, sec
 		secretKey,
 	)
 	return secret
+}
+
+func createKeyspaceAndTable(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace, table string, replicationFactor int,
+) {
+	_, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, fmt.Sprintf("CREATE KEYSPACE %s WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : %d};", keyspace, replicationFactor))
+	require.NoError(t, err, "failed to create keyspace")
+
+	_, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, fmt.Sprintf("CREATE TABLE %s.%s (id int PRIMARY KEY);", keyspace, table))
+	require.NoError(t, err, "failed to create table")
+}
+
+func checkKeyspaceNeverCreated(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace string,
+) {
+	require.Never(t, func() bool {
+		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "DESCRIBE KEYSPACES")
+		if err != nil {
+			t.Logf("failed to describe keyspaces: %v", err)
+			return false
+		}
+		return strings.Contains(keyspaces, keyspace)
+	}, 1*time.Minute, 3*time.Second)
 }
 
 func checkKeyspaceExists(

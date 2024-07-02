@@ -3,6 +3,7 @@ package reaper
 import (
 	"bytes"
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"text/template"
 
 	"github.com/go-logr/logr"
@@ -13,8 +14,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -52,29 +51,13 @@ func (r *ReaperReconciler) reconcileVectorConfigMap(
 		}
 
 	} else {
-		if err := deleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
+		if err := shared.DeleteConfigMapIfExists(ctx, remoteClient, configMapKey, dcLogger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	dcLogger.Info("Reaper Vector Agent ConfigMap reconciliation complete")
 	return ctrl.Result{}, nil
-}
-
-func deleteConfigMapIfExists(ctx context.Context, remoteClient client.Client, configMapKey client.ObjectKey, logger logr.Logger) error {
-	configMap := &corev1.ConfigMap{}
-	if err := remoteClient.Get(ctx, configMapKey, configMap); err != nil {
-		if errors.IsNotFound(err) {
-			return nil
-		}
-		logger.Error(err, "Failed to get ConfigMap", configMapKey)
-		return err
-	}
-	if err := remoteClient.Delete(ctx, configMap); err != nil {
-		logger.Error(err, "Failed to delete ConfigMap", configMapKey)
-		return err
-	}
-	return nil
 }
 
 func CreateVectorToml(telemetrySpec *telemetryapi.TelemetrySpec) (string, error) {

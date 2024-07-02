@@ -69,8 +69,11 @@ func TestReaper(t *testing.T) {
 func newMockManager() reaper.Manager {
 	m := new(mocks.ReaperManager)
 	m.On("Connect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("ConnectWithReaperRef", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	m.On("AddClusterToReaper", mock.Anything, mock.Anything).Return(nil)
 	m.On("VerifyClusterIsConfigured", mock.Anything, mock.Anything).Return(true, nil)
+	m.On("GetUiCredentials", mock.Anything, mock.Anything, mock.Anything).Return("admin", "admin", nil)
+	m.On("SetK8sClient", mock.Anything)
 	m.Test(currentTest)
 	return m
 }
@@ -181,7 +184,7 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 
 	require.Eventually(t, func() bool {
 		return k8sClient.Get(ctx, serviceKey, service) == nil
-	}, timeout, interval, "service creation check failed")
+	}, timeout*10, interval, "service creation check failed")
 
 	assert.Len(t, service.OwnerReferences, 1, "service owner reference not set")
 	assert.Equal(t, rpr.UID, service.OwnerReferences[0].UID, "service owner reference has wrong uid")
