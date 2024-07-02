@@ -67,11 +67,11 @@ func deleteConfigMapIfExists(ctx context.Context, remoteClient client.Client, co
 		if errors.IsNotFound(err) {
 			return nil
 		}
-		logger.Error(err, "Failed to get ConfigMap", configMapKey)
+		logger.Error(err, "Failed to get ConfigMap", "configMapKey", configMapKey)
 		return err
 	}
 	if err := remoteClient.Delete(ctx, configMap); err != nil {
-		logger.Error(err, "Failed to delete ConfigMap", configMapKey)
+		logger.Error(err, "Failed to delete ConfigMap", "configMapKey", configMapKey)
 		return err
 	}
 	return nil

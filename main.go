@@ -229,6 +229,11 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
 			os.Exit(1)
 		}
+
+		if err = (&reaperapi.Reaper{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Reaper")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&stargatectrl.StargateReconciler{

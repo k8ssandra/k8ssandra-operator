@@ -117,6 +117,11 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
 
+	err = (&reaperapi.Reaper{}).SetupWebhookWithManager(k8sManager)
+	if err != nil {
+		return err
+	}
+
 	go func() {
 		err = k8sManager.Start(ctx)
 		if err != nil {
@@ -270,6 +275,11 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		if err = initReconcilers(k8sManager, clientCache, clusters); err != nil {
 			return err
 		}
+	}
+
+	err = (&reaperapi.Reaper{}).SetupWebhookWithManager(k8sManager)
+	if err != nil {
+		return err
 	}
 
 	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)

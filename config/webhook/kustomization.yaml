@@ -15,6 +15,9 @@ patchesJson6902:
     kind: ValidatingWebhookConfiguration
   patch: |-
     - op: replace
+      path: /webhooks/2/clientConfig/service/name
+      value: k8ssandra-operator-webhook-service
+    - op: replace
       path: /webhooks/1/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
     - op: replace
