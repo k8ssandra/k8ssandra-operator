@@ -62,21 +62,26 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Value: "false",
 		},
 		{
-			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
-		},
-		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: reaper.Spec.DatacenterAvailability,
 		},
-		{
+	}
+
+	// env vars used to interact with Cassandra cluster used for storage (not the one to repair) are only needed
+	// when we actually have a cass-dc available
+	if dc.DatacenterName() != "" {
+		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_CASS_LOCAL_DC",
 			Value: dc.DatacenterName(),
-		},
-		{
+		})
+		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: reaper.Spec.Keyspace,
-		},
+		})
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_CASS_CONTACT_POINTS",
+			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
+		})
 	}
 
 	if reaper.Spec.AutoScheduling.Enabled {
@@ -84,7 +89,11 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Name:  "REAPER_AUTO_SCHEDULING_ENABLED",
 			Value: "true",
 		})
-		adaptive, incremental := getAdaptiveIncremental(reaper, dc)
+		var serverVersion = ""
+		if dc != nil && dc.Spec.ServerVersion != "" {
+			serverVersion = dc.Spec.ServerVersion
+		}
+		adaptive, incremental := getAdaptiveIncremental(reaper, serverVersion)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
 			Value: fmt.Sprintf("%v", adaptive),
@@ -496,14 +505,14 @@ func addAuthEnvVars(template *corev1.PodTemplateSpec, vars []*corev1.EnvVar) {
 	}
 }
 
-func getAdaptiveIncremental(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (adaptive bool, incremental bool) {
+func getAdaptiveIncremental(reaper *api.Reaper, serverVersion string) (adaptive bool, incremental bool) {
 	switch reaper.Spec.AutoScheduling.RepairType {
 	case "ADAPTIVE":
 		adaptive = true
 	case "INCREMENTAL":
 		incremental = true
 	case "AUTO":
-		if semver.MustParse(dc.Spec.ServerVersion).Major() == 3 {
+		if serverVersion == "" || semver.MustParse(serverVersion).Major() == 3 {
 			adaptive = true
 		} else {
 			incremental = true
