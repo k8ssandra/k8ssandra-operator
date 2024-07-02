@@ -28610,6 +28610,12 @@ spec:
                             type: string
                         type: object
                     type: object
+                  storageType:
+                    default: cassandra
+                    enum:
+                    - cassandra
+                    - memory
+                    type: string
                   telemetry:
                     description: |-
                       Telemetry defines the desired telemetry integrations to deploy targeting the Reaper pods for all DCs in this cluster

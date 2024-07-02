@@ -36,6 +36,14 @@ const (
 
 type ReaperTemplate struct {
 
+	// The storage backend to store Reaper's data. Defaults to "cassandra" which causes Reaper to be stateless and store
+	// its state to a Cassandra cluster it repairs (implying there must be one Reaper for each Cassandra cluster).
+	// The "memory" option makes Reaper to store its state locally, allowing a single Reaper to repair several clusters.
+	// +kubebuilder:validation:Enum=cassandra;memory
+	// +kubebuilder:default="cassandra"
+	// +optional
+	StorageType string `json:"storageType,omitempty"`
+
 	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
 	// does not exist, and if this Reaper resource is managed by K8ssandra.
 	// +kubebuilder:default="reaper_db"
