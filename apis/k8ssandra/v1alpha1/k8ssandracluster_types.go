@@ -55,7 +55,8 @@ type K8ssandraClusterSpec struct {
 	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
 
 	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
-	// If this is non-nil, Reaper will be deployed on every Cassandra datacenter in this K8ssandraCluster.
+	// If this is non-nil, Reaper might be deployed on every Cassandra datacenter in this K8ssandraCluster, unless
+	// there is a Control Plane Reaper present. In that case, the K8ssandraCluster will get registered to it.
 	// +optional
 	Reaper *reaperapi.ReaperClusterTemplate `json:"reaper,omitempty"`
 

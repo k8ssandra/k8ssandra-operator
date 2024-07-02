@@ -47,15 +47,21 @@ func NewReaper(
 			Labels:      labels,
 		},
 		Spec: reaperapi.ReaperSpec{
-			ReaperTemplate: reaperTemplate.ReaperTemplate,
-			DatacenterRef: reaperapi.CassandraDatacenterRef{
-				Name:      dc.Name,
-				Namespace: dc.Namespace,
-			},
+			ReaperTemplate:         reaperTemplate.ReaperTemplate,
 			DatacenterAvailability: computeReaperDcAvailability(kc),
 			ClientEncryptionStores: kc.Spec.Cassandra.ClientEncryptionStores,
 		},
 	}
+	if kc.Spec.Reaper != nil {
+		if kc.Spec.Reaper.ReaperRef.Name == "" {
+			// we only set the DatacenterRef if we do not have an external Reaper referred to via the ReaperRef
+			desiredReaper.Spec.DatacenterRef = reaperapi.CassandraDatacenterRef{
+				Name:      dc.Name,
+				Namespace: dc.Namespace,
+			}
+		}
+	}
+
 	if kc.Spec.IsAuthEnabled() && !kc.Spec.UseExternalSecrets() {
 		logger.Info("Auth is enabled, adding user secrets to Reaper spec")
 		// if auth is enabled in this cluster, the k8ssandra controller will automatically create two secrets for

@@ -75,6 +75,11 @@ type ReaperTemplate struct {
 	// +optional
 	UiUserSecretRef *corev1.LocalObjectReference `json:"uiUserSecretRef,omitempty"`
 
+	// When there is a CONTROL_PLANE Reaper out there, this field allows registering a K8ssandra cluster to it.
+	// Populating this field disables some operator behaviour related to setting Reaper up.
+	// +optional
+	ReaperRef corev1.ObjectReference `json:"reaperRef,omitempty"`
+
 	// SecretsProvider defines whether the secrets used for credentials and certs will be backed
 	// by an external secret backend. This moves the responsibility of generating and storing
 	// secrets from the operators to the user and will rely on a mutating webhook to inject
@@ -258,8 +263,8 @@ func (t *ReaperClusterTemplate) EnsureDeploymentMode() bool {
 type CassandraDatacenterRef struct {
 
 	// The datacenter name.
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
+	// +optional
+	Name string `json:"name,omitempty"`
 
 	// The datacenter namespace. If empty, the datacenter will be assumed to reside in the same namespace as the Reaper
 	// instance.
@@ -274,8 +279,8 @@ type ReaperSpec struct {
 	// DatacenterRef is the reference of a CassandraDatacenter resource that this Reaper instance should manage. It will
 	// also be used as the backend for persisting Reaper's state. Reaper must be able to access the JMX port (7199 by
 	// default) and the CQL port (9042 by default) on this DC.
-	// +kubebuilder:validation:Required
-	DatacenterRef CassandraDatacenterRef `json:"datacenterRef"`
+	// +optional
+	DatacenterRef CassandraDatacenterRef `json:"datacenterRef,omitempty"`
 
 	// DatacenterAvailability indicates to Reaper its deployment in relation to the target datacenter's network.
 	// For single-DC clusters, the default (ALL) is fine. For multi-DC clusters, it is recommended to use EACH,
@@ -298,6 +303,18 @@ type ReaperSpec struct {
 	// +optional
 	// +kubebuilder:default=false
 	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
+}
+
+func (in *ReaperTemplate) HasReaperRef() bool {
+	return in != nil && in.ReaperRef.Name != ""
+}
+
+func (in *ReaperSpec) HasDatacenterRef() bool {
+	return in != nil && in.DatacenterRef.Name != ""
+}
+
+func (in *ReaperSpec) IsControlPlane() bool {
+	return in != nil && !in.HasReaperRef() && !in.HasDatacenterRef()
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.

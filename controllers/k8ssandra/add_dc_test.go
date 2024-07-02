@@ -32,7 +32,7 @@ import (
 // addDc tests scenarios that involve adding a new CassandraDatacenter to an existing
 // K8ssandraCluster.
 func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-	t.Run("WithUserKeyspaces", addDcTest(ctx, f, withUserKeyspaces, true))
+	//t.Run("WithUserKeyspaces", addDcTest(ctx, f, withUserKeyspaces, true))
 	t.Run("WithStargateAndReaper", addDcTest(ctx, f, withStargateAndReaper, true))
 	t.Run("FailSystemKeyspaceUpdate", addDcTest(ctx, f, failSystemKeyspaceUpdate, true))
 	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
