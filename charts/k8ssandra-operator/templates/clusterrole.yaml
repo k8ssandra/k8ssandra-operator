@@ -388,6 +388,12 @@ rules:
 - apiGroups:
     - reaper.k8ssandra.io
   resources:
+    - reapers/finalizers
+  verbs:
+    - update
+- apiGroups:
+    - reaper.k8ssandra.io
+  resources:
     - reapers/status
   verbs:
     - get

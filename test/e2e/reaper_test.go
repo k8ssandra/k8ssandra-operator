@@ -16,6 +16,7 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -50,6 +51,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+	checkFinalizerRbacRule(t, f, ctx, namespace)
 	checkContainerDeleted(t, ctx, f, reaperKey, getPodTemplateSpecForDeployment, reaper.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
@@ -83,6 +85,27 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 		username, password := retrieveCredentials(t, f, ctx, reaperUiSecretKey)
 		testReaperApi(t, ctx, f.DataPlaneContexts[0], DcClusterName(t, f, dcKey), "reaper_db", username, password)
 	})
+}
+
+func checkFinalizerRbacRule(t *testing.T, f *framework.E2eFramework, ctx context.Context, namespace string) {
+	require := require.New(t)
+	roleKey := types.NamespacedName{Namespace: namespace, Name: "k8ssandra-operator"}
+	role := &rbacv1.Role{}
+	require.NoError(f.Client.Get(ctx, roleKey, role), "Failed to get Role %s", roleKey)
+	found := false
+OuterLoop:
+	for ruleIdx := range role.Rules {
+		rule := &role.Rules[ruleIdx]
+		if rule.Resources[0] == "reapers/finalizers" {
+			for _, verb := range rule.Verbs {
+				if verb == "update" {
+					found = true
+					break OuterLoop
+				}
+			}
+		}
+	}
+	require.True(found, "Failed to find reaper finalizer update rule in Role %s", roleKey)
 }
 
 func createSingleReaperWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

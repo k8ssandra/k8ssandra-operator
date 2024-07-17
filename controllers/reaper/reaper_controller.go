@@ -52,6 +52,7 @@ type ReaperReconciler struct {
 
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers/finalizers,verbs=update
 // +kubebuilder:rbac:groups="apps",namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=services,verbs=get;list;watch;create
