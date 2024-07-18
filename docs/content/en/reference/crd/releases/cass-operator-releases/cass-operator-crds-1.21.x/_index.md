@@ -1,9 +1,9 @@
 ---
-title: "cass-operator CRDs latest build"
-linkTitle: "cass-operator CRDs latest build"
+title: "cass-operator CRDs v1.21.x"
+linkTitle: "cass-operator CRDs v1.21.x"
 weight: 5
 description: >
-  Configuration reference for the CRDs used with cass-operator latest build.  
+  Configuration reference for the CRDs used with cass-operator v1.21.x.  
 ---
 
 Packages:
@@ -289,16 +289,6 @@ roll out.<br/>
         <td>object</td>
         <td>
           Config for the Management API certificates<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>minReadySeconds</b></td>
-        <td>integer</td>
-        <td>
-          MinReadySeconds sets the minimum number of seconds for which a newly created pod should be ready without any of its containers crashing, for it to be considered available. Defaults to 5 seconds and is set in the StatefulSet spec.
-Setting to 0 might cause multiple Cassandra pods to restart at the same time despite PodDisruptionBudget settings.<br/>
-          <br/>
-            <i>Format</i>: int32<br/>
         </td>
         <td>false</td>
       </tr><tr>
