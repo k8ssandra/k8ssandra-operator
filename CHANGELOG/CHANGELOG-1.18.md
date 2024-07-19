@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#1310](https://github.com/k8ssandra/k8ssandra-operator/issues/1310) Enhance the MedusaBackupSchedule API to allow scheduling purge tasks
 * [BUGFIX] [#1222](https://github.com/k8ssandra/k8ssandra-operator/issues/1222) Consider DC-level config when validating numToken updates in webhook
 * [BUGFIX] [#1366](https://github.com/k8ssandra/k8ssandra-operator/issues/1366) Reaper deployment can't be created on OpenShift due to missing RBAC rule
+* [CHANGE] Update cassandra-medusa to 0.22.0
