@@ -25,4 +25,8 @@ If you are using a cloud provider, explore the following topics for cloud-specif
 * [DigitalOcean Kubernetes]({{< relref "install/doks/" >}}) (DOKS)
 * [Google Kubernetes Engine]({{< relref "install/gke/" >}}) (GKE)
 
+## Upgrade
+
+* [Upgrade notes]({{< relref "install/upgrade/" >}}) (Upgrade notes)
+
 **Tip:** For an architectural overview of K8ssandra Operator and its new `K8ssandraCluster` custom resource, see the [K8ssandra Operator]({{< relref "components/k8ssandra-operator/" >}}) component page.
