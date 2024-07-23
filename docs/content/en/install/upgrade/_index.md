@@ -10,7 +10,7 @@ Upgrading the operators is usually a straight-forward operation based on the sta
 
 ## Updates after operator upgrade to running Cassandra clusters
 
-Sometimes the updates to operators might bring new features or improvements to existing running Cassandra clusters. However, starting from release 1.18 we will no longer update them automatically when the operators are upgraded to prevent a rolling restart on inconvenient time. If there are changes to be applied after upgrading, the ``K8ssandraCluster`` instances are marked with a Status Condition ``RequiresUpdate`` set to True. 
+Sometimes the updates to operators might bring new features or improvements to existing running Cassandra clusters. However, starting from release 1.18 we will no longer update them automatically when the operators are upgraded to prevent a rolling restart at an inconvenient time. If there are changes to be applied after upgrading, the ``K8ssandraCluster`` instances are marked with a Status Condition ``RequiresUpdate`` set to True. 
 
 The updates are applied automatically if the ``K8ssandraCluster`` Spec is modified. However, since this is not often necessary the alternative way to apply the updates is to place an annotation on the ``K8ssandraCluster`` (in ``metadata.annotations``). The annotation ``k8ssandra.io/autoupdate-spec`` has two accepted values, ``once`` and ``always``. When setting the value to ``once``, the clusters are upgraded with a rolling restart (if needed) and then the annotation is removed. If set to ``always`` the cluster is upgraded yet the annotation is not removed and the old behavior of updating the clusters as soon as operator is upgraded will be used. 
 
