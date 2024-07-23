@@ -191,6 +191,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					dcLogger.Error(err, "Failed to update datacenter")
 					return result.Error(err), actualDcs
 				}
+
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
 
 			if actualDc.Spec.Stopped {

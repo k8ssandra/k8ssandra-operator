@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -156,7 +157,7 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
-	if res := updateStatus(ctx, r.Client, kc); res.Completed() {
+	if res := updateStatus(ctx, r.Client, kc, kcLogger); res.Completed() {
 		return res.Output()
 	}
 
@@ -185,7 +186,7 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 	return result.Continue()
 }
 
-func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster) result.ReconcileResult {
+func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster, kcLogger logr.Logger) result.ReconcileResult {
 	if AllowUpdate(kc) {
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
@@ -198,6 +199,7 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 		kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
 	}
 
+	kcLogger.Info(fmt.Sprintf("Updating observed generation to %d", kc.Generation))
 	kc.Status.ObservedGeneration = kc.Generation
 	if err := r.Status().Update(ctx, kc); err != nil {
 		return result.Error(err)
