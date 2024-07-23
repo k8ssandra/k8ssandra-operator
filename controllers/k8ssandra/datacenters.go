@@ -33,7 +33,8 @@ const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
 )
 
-func AllowUpdate(kc *api.K8ssandraCluster) bool {
+func AllowUpdate(kc *api.K8ssandraCluster, logger logr.Logger) bool {
+	logger.Info(fmt.Sprintf("Generation: %d, ObservedGeneration: %d", kc.Generation, kc.Status.ObservedGeneration))
 	return kc.GenerationChanged() || metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation)
 }
 
@@ -150,7 +151,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc)
 
-			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
+			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc, logger) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
 				// We're not allowed to update, but need to
 				patch := client.MergeFrom(kc.DeepCopy())
@@ -248,7 +249,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 	}
 
-	if AllowUpdate(kc) {
+	if AllowUpdate(kc, logger) {
 		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
 		for _, dc := range actualDcs {
 			if dc.Status.GetConditionStatus(cassdcapi.DatacenterRequiresUpdate) == corev1.ConditionTrue {
