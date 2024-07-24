@@ -9,6 +9,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
@@ -150,6 +151,9 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			}
 
 			r.setStatusForDatacenter(kc, actualDc)
+
+			dcDiff := cmp.Diff(actualDc, desiredDc)
+			logger.Info(fmt.Sprintf("ObservedGeneration: %d, Generation: %d, Datacenter: %v, dcDiff: %s", actualDc.Status.ObservedGeneration, actualDc.GetGeneration(), dcKey, dcDiff))
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc, logger) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
