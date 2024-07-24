@@ -187,7 +187,7 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 }
 
 func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster, kcLogger logr.Logger) result.ReconcileResult {
-	if AllowUpdate(kc) {
+	if AllowUpdate(kc, kcLogger) {
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
 				delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
