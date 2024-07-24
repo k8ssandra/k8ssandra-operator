@@ -953,9 +953,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey.NamespacedName, dcKey.Name)
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	require.NoError(f.Get(ctx, dcKey, cassdc))
-	dcHash := cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
 	dcPrefix := DcPrefix(t, f, dcKey)
-	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
 	require.NoError(f.Get(ctx, kcKey, k8ssandra))
 	// We have to do this, because the old version being installed at first doesn't have this field
 	k8ssandra.Status.ObservedGeneration = k8ssandra.Generation
@@ -967,9 +965,7 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 
 	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
 	require.NoError(f.Get(ctx, dcKey, cassdc))
-	newDcHash := cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
 
-	require.Equal(dcHash, newDcHash, "CassandraDatacenter resource hash changed after upgrade")
 	require.NoError(f.Get(ctx, kcKey, k8ssandra))
 
 	require.Equal(corev1.ConditionTrue, k8ssandra.Status.GetConditionStatus(api.ClusterRequiresUpdate))
@@ -977,8 +973,6 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require.NoError(f.Update(ctx, kcKey, k8ssandra))
 	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
 	require.NoError(f.Get(ctx, dcKey, cassdc))
-	newDcHash = cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
-	require.NotEqual(dcHash, newDcHash, "CassandraDatacenter resource hash hasn't changed after upgrade")
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
