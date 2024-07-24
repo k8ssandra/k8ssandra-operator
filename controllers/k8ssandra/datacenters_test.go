@@ -1,6 +1,8 @@
 package k8ssandra
 
 import (
+	"testing"
+
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -8,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 var (
@@ -262,4 +263,28 @@ func TestGetSourceDatacenterName_Conflict(t *testing.T) {
 		t.Errorf("An error was expected as src dc and target dc should be different")
 	}
 
+}
+
+func TestAllowUpdate(t *testing.T) {
+	assert := assert.New(t)
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Generation: 2,
+		},
+		Spec: api.K8ssandraClusterSpec{},
+	}
+
+	kc.Status = api.K8ssandraClusterStatus{
+		ObservedGeneration: 0,
+	}
+
+	assert.True(AllowUpdate(kc))
+	kc.Status.ObservedGeneration = 1
+	assert.True(AllowUpdate(kc))
+	kc.Status.ObservedGeneration = 2
+	assert.False(AllowUpdate(kc))
+	metav1.SetMetaDataAnnotation(&kc.ObjectMeta, api.AutomatedUpdateAnnotation, string(api.AllowUpdateOnce))
+	assert.True(AllowUpdate(kc))
+	metav1.SetMetaDataAnnotation(&kc.ObjectMeta, api.AutomatedUpdateAnnotation, string(api.AllowUpdateAlways))
+	assert.True(AllowUpdate(kc))
 }

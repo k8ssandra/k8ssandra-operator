@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -193,4 +194,24 @@ metadata:
 	assert.Equal(t, "addSeedSvcAnnotationValue1", dc.Meta.ServiceConfig.AdditionalSeedService.Annotations["addSeedSvcAnnotation1"])
 	assert.Equal(t, "nodePortSvcLabelValue1", dc.Meta.ServiceConfig.NodePortService.Labels["nodePortSvcLabel1"])
 	assert.Equal(t, "nodePortSvcAnnotationValue1", dc.Meta.ServiceConfig.NodePortService.Annotations["nodePortSvcAnnotation1"])
+}
+
+func TestGenerationChanged(t *testing.T) {
+	assert := assert.New(t)
+	kc := &K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Generation: 2,
+		},
+		Spec: K8ssandraClusterSpec{},
+	}
+
+	kc.Status = K8ssandraClusterStatus{
+		ObservedGeneration: 0,
+	}
+
+	assert.True(kc.GenerationChanged())
+	kc.Status.ObservedGeneration = 2
+	assert.False(kc.GenerationChanged())
+	kc.ObjectMeta.Generation = 3
+	assert.True(kc.GenerationChanged())
 }

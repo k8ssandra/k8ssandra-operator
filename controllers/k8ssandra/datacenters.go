@@ -9,7 +9,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
-	"github.com/google/go-cmp/cmp"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
@@ -34,8 +33,7 @@ const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
 )
 
-func AllowUpdate(kc *api.K8ssandraCluster, logger logr.Logger) bool {
-	logger.Info(fmt.Sprintf("Generation: %d, ObservedGeneration: %d", kc.Generation, kc.Status.ObservedGeneration))
+func AllowUpdate(kc *api.K8ssandraCluster) bool {
 	return kc.GenerationChanged() || metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation)
 }
 
@@ -152,10 +150,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc)
 
-			dcDiff := cmp.Diff(actualDc, desiredDc)
-			logger.Info(fmt.Sprintf("ObservedGeneration: %d, Generation: %d, Datacenter: %v, dcDiff: %s", actualDc.Status.ObservedGeneration, actualDc.GetGeneration(), dcKey, dcDiff))
-
-			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc, logger) {
+			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
 				// We're not allowed to update, but need to
 				patch := client.MergeFrom(kc.DeepCopy())
@@ -253,7 +248,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 	}
 
-	if AllowUpdate(kc, logger) {
+	if AllowUpdate(kc) {
 		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
 		for _, dc := range actualDcs {
 			if dc.Status.GetConditionStatus(cassdcapi.DatacenterRequiresUpdate) == corev1.ConditionTrue {
