@@ -955,6 +955,11 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require.NoError(f.Get(ctx, dcKey, cassdc))
 	dcHash := cassdc.ObjectMeta.Annotations[api.ResourceHashAnnotation]
 	dcPrefix := DcPrefix(t, f, dcKey)
+	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
+	require.NoError(f.Get(ctx, kcKey, k8ssandra))
+	// We have to do this, because the old version being installed at first doesn't have this field
+	k8ssandra.Status.ObservedGeneration = k8ssandra.Generation
+	require.NoError(f.Client.Status().Update(ctx, k8ssandra))
 
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
