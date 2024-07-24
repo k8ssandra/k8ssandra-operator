@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.18.0 - 2024-07-24
+
 * [CHANGE] Update cassandra-medusa to 0.22.0
 * [CHANGE] Update cass-operator to v1.22.0
 * [FEATURE] [#1310](https://github.com/k8ssandra/k8ssandra-operator/issues/1310) Enhance the MedusaBackupSchedule API to allow scheduling purge tasks
