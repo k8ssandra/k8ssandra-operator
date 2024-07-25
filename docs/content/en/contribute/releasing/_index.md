@@ -8,12 +8,11 @@ description: "How to perform releases of k8ssandra-operator"
 
 ## Prerequisites
 
-[yq](https://github.com/mikefarah/yq) and [Hugo](https://gohugo.io/documentation/) installed.
+[yq](https://github.com/mikefarah/yq) installed.
 
 With MacOS / Homebrew:
 ```shell
 brew install yq
-brew install hugo
 ```
 
 ## Major / Minor Release
@@ -74,7 +73,9 @@ git commit -m"Update changelog for v${RELEASED_MAJOR_MINOR?}.0"
 
 ```shell
 cd docs
-hugo mod clean
+
+npm install
+npm run clean
 npm run build:production
 
 cd ..
@@ -118,10 +119,14 @@ The diff should look like this:
      version: 0.29.0
 ```
 
-Commit and push the changes:
+Commit:
 ```shell
 git add config/deployments/default/kustomization.yaml charts/k8ssandra-operator/Chart.yaml
 git commit -m"Release v${RELEASED_MAJOR_MINOR?}.0"
+```
+
+Push the changes:
+```shell
 git push ${GIT_REMOTE?} release/${RELEASED_MAJOR_MINOR?}
 ```
 
@@ -206,7 +211,7 @@ git cherry-pick -n <your commit SHA-1s...>
 Amend the merge commit with your cherry-picks:
 ```shell
 git add .
-git commit --amend
+git commit --amend --no-edit
 ```
 
 Update the version in the release chart:
@@ -331,7 +336,9 @@ git commit -m"Update changelog for v${RELEASED_FULL?}"
 
 ```shell
 cd docs
-hugo mod clean
+
+npm install
+npm run clean
 npm run build:production
 
 cd ..
@@ -375,10 +382,14 @@ The diff should look like this:
      version: 0.29.0
 ```
 
-Commit and push the changes:
+Commit:
 ```shell
 git add config/deployments/default/kustomization.yaml charts/k8ssandra-operator/Chart.yaml
 git commit -m"Release v${RELEASED_FULL?}"
+```
+
+Push the changes:
+```shell
 git push ${GIT_REMOTE?} release/${RELEASED_MAJOR_MINOR?}
 ```
 
@@ -464,7 +475,7 @@ git cherry-pick -n <your commit SHA-1s...>
 Amend the merge commit with your cherry-picks:
 ```shell
 git add .
-git commit --amend
+git commit --amend --no-edit
 ```
 
 Push all the changes:
