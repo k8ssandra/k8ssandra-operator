@@ -2251,17 +2251,3 @@ func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyClusterLevel"] == "anAnnotationValueClusterLevel")
 	return nil
 }
-
-func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	t.Log("check K8ssandraCluster reconciliation finished")
-	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
-
-	assert.Eventually(t, func() bool {
-		kc := &api.K8ssandraCluster{}
-		if err := f.Client.Get(ctx, key, kc); err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
-		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "cluster hasn't finished reconciliation")
-}
