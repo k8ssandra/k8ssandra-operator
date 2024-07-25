@@ -11,14 +11,17 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	agent "github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +32,10 @@ import (
 const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
 )
+
+func AllowUpdate(kc *api.K8ssandraCluster) bool {
+	return kc.GenerationChanged() || metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation)
+}
 
 func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) (result.ReconcileResult, []*cassdcapi.CassandraDatacenter) {
 	kcKey := utils.GetKey(kc)
@@ -143,9 +150,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc)
 
-			if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
-				dcLogger.Info("Updating datacenter")
-
+			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
+				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
+				// We're not allowed to update, but need to
+				patch := client.MergeFrom(kc.DeepCopy())
+				kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
+				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
+					return result.Error(fmt.Errorf("failed to set %s condition: %v", api.ClusterRequiresUpdate, err)), actualDcs
+				}
+			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
 					// If actualDc is created with SuperuserSecretName, it can't be changed anymore. We should reject all changes coming from K8ssandraCluster
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
@@ -178,6 +191,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					dcLogger.Error(err, "Failed to update datacenter")
 					return result.Error(err), actualDcs
 				}
+
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
 
 			if actualDc.Spec.Stopped {
@@ -233,17 +248,60 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 	}
 
+	if AllowUpdate(kc) {
+		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
+		for _, dc := range actualDcs {
+			if dc.Status.GetConditionStatus(cassdcapi.DatacenterRequiresUpdate) == corev1.ConditionTrue {
+				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.ObjectMeta.Name)
+			}
+		}
+
+		if len(dcsRequiringUpdate) > 0 {
+			generatedName := fmt.Sprintf("refresh-%d-%d", kc.Generation, kc.Status.ObservedGeneration)
+			internalTask := &ktaskapi.K8ssandraTask{}
+			err := r.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: generatedName}, internalTask)
+			// If task wasn't found, create it and if task is still running, requeue
+			if errors.IsNotFound(err) {
+				// Delegate work to the task controller for Datacenter operations
+				task := &ktaskapi.K8ssandraTask{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kc.Namespace,
+						Name:      generatedName,
+						Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
+					},
+					Spec: ktaskapi.K8ssandraTaskSpec{
+						Cluster: corev1.ObjectReference{
+							Name: kc.Name,
+						},
+						Datacenters: dcsRequiringUpdate,
+						Template: cassctlapi.CassandraTaskTemplate{
+							Jobs: []cassctlapi.CassandraJob{{
+								Name:    fmt.Sprintf("refresh-%s", kc.Name),
+								Command: "refresh",
+							}},
+						},
+						DcConcurrencyPolicy: batchv1.ForbidConcurrent,
+					},
+				}
+
+				if err := r.Create(ctx, task); err != nil {
+					return result.Error(err), actualDcs
+				}
+
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
+
+			} else if internalTask.Status.CompletionTime.IsZero() {
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
+			}
+		}
+	}
+
 	// If we reach this point all CassandraDatacenters are ready. We only set the
 	// CassandraInitialized condition if it is unset, i.e., only once. This allows us to
 	// distinguish whether we are deploying a CassandraDatacenter as part of a new cluster
 	// or as part of an existing cluster.
 	if kc.Status.GetConditionStatus(api.CassandraInitialized) == corev1.ConditionUnknown {
-		now := metav1.Now()
-		kc.Status.SetCondition(api.K8ssandraClusterCondition{
-			Type:               api.CassandraInitialized,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: &now,
-		})
+		kc.Status.SetConditionStatus(api.CassandraInitialized, corev1.ConditionTrue)
 	}
 
 	return result.Continue(), actualDcs

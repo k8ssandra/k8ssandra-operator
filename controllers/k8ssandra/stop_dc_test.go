@@ -49,8 +49,9 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "stop-dc-test",
+			Namespace:   namespace,
+			Name:        "stop-dc-test",
+			Annotations: map[string]string{api.AutomatedUpdateAnnotation: string(api.AllowUpdateAlways)},
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{

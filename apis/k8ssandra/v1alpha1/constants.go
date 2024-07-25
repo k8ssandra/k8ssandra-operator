@@ -64,7 +64,16 @@ const (
 
 	// Annotation to indicate the purpose of a given resource.
 	PurposeAnnotation = "k8ssandra.io/purpose"
+
+	// AutomatedUpdateAnnotation is an annotation that allows the Datacenters to be updated even if no changes were done to the K8ssandraCluster spec
+	AutomatedUpdateAnnotation = "k8ssandra.io/autoupdate-spec"
+
+	AllowUpdateAlways AllowUpdateType = "always"
+	AllowUpdateOnce   AllowUpdateType = "once"
 )
+
+// TODO Use the accepted values from cass-operator's api instead to prevent drift, once Kubernetes dependencies are updated in k8ssandra-operator
+type AllowUpdateType string
 
 var (
 	SystemKeyspaces = []string{"system_traces", "system_distributed", "system_auth"}

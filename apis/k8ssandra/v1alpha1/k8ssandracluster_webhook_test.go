@@ -159,6 +159,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("MedusaPrefixMissing", testMedusaPrefixMissing)
 	t.Run("InvalidDcName", testInvalidDcName)
 	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
+	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
 }
 
 func testContextValidation(t *testing.T) {
@@ -576,4 +577,21 @@ func TestValidateUpdateNumTokens(t *testing.T) {
 			require.Equal(t, testCase.expected.Error(), err.Error())
 		}
 	}
+}
+
+func testAutomatedUpdateAnnotation(t *testing.T) {
+	require := require.New(t)
+	createNamespace(require, "automated-update-namespace")
+	cluster := createMinimalClusterObj("automated-update-test", "automated-update-namespace")
+	require.NoError(cluster.validateK8ssandraCluster())
+
+	// Test should accept values once and always
+	metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AutomatedUpdateAnnotation, string(AllowUpdateOnce))
+	require.NoError(cluster.validateK8ssandraCluster())
+
+	metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AutomatedUpdateAnnotation, string(AllowUpdateAlways))
+	require.NoError(cluster.validateK8ssandraCluster())
+
+	cluster.Annotations[AutomatedUpdateAnnotation] = string("true")
+	require.Error(cluster.validateK8ssandraCluster())
 }

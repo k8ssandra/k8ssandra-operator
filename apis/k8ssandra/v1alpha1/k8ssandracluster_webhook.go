@@ -21,6 +21,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -97,6 +98,14 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 			if dc.DatacenterOptions.Resources == nil {
 				return ErrNoResourcesSet
 			}
+		}
+	}
+
+	if metav1.HasAnnotation(r.ObjectMeta, AutomatedUpdateAnnotation) {
+		// Allow only always and once in the annotation
+		annotationValue := r.ObjectMeta.GetAnnotations()[AutomatedUpdateAnnotation]
+		if annotationValue != string(AllowUpdateAlways) && annotationValue != string(AllowUpdateOnce) {
+			return fmt.Errorf("invalid value for %s annotation: %s", AutomatedUpdateAnnotation, annotationValue)
 		}
 	}
 
