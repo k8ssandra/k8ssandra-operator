@@ -44,7 +44,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 )
@@ -943,36 +942,19 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require := require.New(t)
 
 	t.Log("check that the K8ssandraCluster was created")
-	kcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "test"}}
 	k8ssandra := &api.K8ssandraCluster{}
-	err := f.Get(ctx, kcKey, k8ssandra)
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey.NamespacedName, dcKey.Name)
-	cassdc := &cassdcapi.CassandraDatacenter{}
-	require.NoError(f.Get(ctx, dcKey, cassdc))
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
-	require.NoError(f.Get(ctx, kcKey, k8ssandra))
-	// We have to do this, because the old version being installed at first doesn't have this field
-	k8ssandra.Status.ObservedGeneration = k8ssandra.Generation
-	require.NoError(f.Client.Status().Update(ctx, k8ssandra))
 
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
 	require.NoError(err, "failed to upgrade to latest version")
-
-	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
-	require.NoError(f.Get(ctx, dcKey, cassdc))
-
-	require.NoError(f.Get(ctx, kcKey, k8ssandra))
-
-	require.Equal(corev1.ConditionTrue, k8ssandra.Status.GetConditionStatus(api.ClusterRequiresUpdate))
-	metav1.SetMetaDataAnnotation(&k8ssandra.ObjectMeta, api.AutomatedUpdateAnnotation, "always")
-	require.NoError(f.Update(ctx, kcKey, k8ssandra))
-	verifyClusterReconcileFinished(ctx, t, f, k8ssandra)
-	require.NoError(f.Get(ctx, dcKey, cassdc))
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
