@@ -1,9 +1,9 @@
 ---
-title: "cass-operator CRDs latest build"
-linkTitle: "cass-operator CRDs latest build"
+title: "cass-operator CRDs v1.21.x"
+linkTitle: "cass-operator CRDs v1.21.x"
 weight: 5
 description: >
-  Configuration reference for the CRDs used with cass-operator latest build.  
+  Configuration reference for the CRDs used with cass-operator v1.21.x.  
 ---
 
 Packages:
@@ -292,16 +292,6 @@ roll out.<br/>
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>minReadySeconds</b></td>
-        <td>integer</td>
-        <td>
-          MinReadySeconds sets the minimum number of seconds for which a newly created pod should be ready without any of its containers crashing, for it to be considered available. Defaults to 5 seconds and is set in the StatefulSet spec.
-Setting to 0 might cause multiple Cassandra pods to restart at the same time despite PodDisruptionBudget settings.<br/>
-          <br/>
-            <i>Format</i>: int32<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#cassandradatacenterspecnetworking">networking</a></b></td>
         <td>object</td>
         <td>
@@ -338,14 +328,6 @@ More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#no
           A list of the named racks in the datacenter, representing independent failure domains. The
 number of racks should match the replication factor in the keyspaces you plan to create, and
 the number of racks cannot easily be changed once a datacenter is deployed.<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>readOnlyRootFilesystem</b></td>
-        <td>boolean</td>
-        <td>
-          ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
-new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)<br/>
         </td>
         <td>false</td>
       </tr><tr>
