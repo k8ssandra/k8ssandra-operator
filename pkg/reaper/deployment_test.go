@@ -1,6 +1,7 @@
 package reaper
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	"testing"
 
 	testlogr "github.com/go-logr/logr/testing"
@@ -251,6 +252,48 @@ func TestNewDeployment(t *testing.T) {
 	assert.Equal(t, probe, container.ReadinessProbe)
 }
 
+func TestNewStatefulSet(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = newTestStorageConfig()
+
+	logger := testlogr.NewTestLogger(t)
+
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+
+	podSpec := sts.Spec.Template.Spec
+	assert.Len(t, podSpec.Containers, 1)
+
+	container := podSpec.Containers[0]
+
+	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
+		{
+			Name:  "REAPER_STORAGE_TYPE",
+			Value: "memory",
+		},
+		{
+			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
+			Value: "false",
+		},
+		{
+			Name:  "REAPER_CASS_CONTACT_POINTS",
+			Value: "[cluster1-dc1-service]",
+		},
+		{
+			Name:  "REAPER_DATACENTER_AVAILABILITY",
+			Value: "",
+		},
+		{
+			Name:  "REAPER_CASS_LOCAL_DC",
+			Value: "dc1",
+		},
+		{
+			Name:  "REAPER_CASS_KEYSPACE",
+			Value: "reaper_db",
+		},
+	})
+}
+
 func TestHttpManagementConfiguration(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.HttpManagement.Enabled = true
@@ -487,6 +530,141 @@ func TestSkipSchemaMigration(t *testing.T) {
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
+func TestDeploymentTypes(t *testing.T) {
+	logger := testlogr.NewTestLogger(t)
+
+	// reaper with cassandra backend becomes a deployment
+	reaper := newTestReaper()
+	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
+
+	// asking for a deployment with memory backend does not work
+	reaper = newTestReaper()
+	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	assert.Nil(t, deployment)
+
+	// reaper with memory backend becomes a stateful set
+	reaper = newTestReaper()
+	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.ReaperTemplate.StorageConfig = &corev1.PersistentVolumeClaimSpec{
+		StorageClassName: func() *string { s := "test"; return &s }(),
+		AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+		Resources: corev1.VolumeResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: resource.MustParse("1Gi"),
+			},
+		},
+	}
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
+	assert.Equal(t, "memory", sts.Spec.Template.Spec.Containers[0].Env[0].Value)
+
+	// asking for a stateful set with cassandra backend does not work
+	reaper = newTestReaper()
+	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	sts = NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	assert.Nil(t, sts)
+}
+
+func TestMakeActualDeploymentType(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
+	d, err := MakeActualDeploymentType(reaper)
+	assert.Nil(t, err)
+	assert.IsType(t, &appsv1.Deployment{}, d)
+
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	sts, err := MakeActualDeploymentType(reaper)
+	assert.Nil(t, err)
+	assert.IsType(t, &appsv1.StatefulSet{}, sts)
+
+	reaper.Spec.StorageType = "invalid"
+	d, err = MakeActualDeploymentType(reaper)
+	assert.NotNil(t, err)
+	assert.Nil(t, d)
+}
+
+func TestMakeDesiredDeploymentType(t *testing.T) {
+	reaper := newTestReaper()
+	fakeDc := newTestDatacenter()
+	logger := testlogr.NewTestLogger(t)
+
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
+	d, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	assert.Nil(t, err)
+	assert.IsType(t, &appsv1.Deployment{}, d)
+
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = newTestStorageConfig()
+	sts, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	assert.Nil(t, err)
+	assert.IsType(t, &appsv1.StatefulSet{}, sts)
+
+	reaper.Spec.StorageType = "invalid"
+	d, err = MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	assert.NotNil(t, err)
+	assert.Nil(t, d)
+}
+
+func TestDeepCopyActualDeployment(t *testing.T) {
+	reaper := newTestReaper()
+
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
+	deployment, err := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	assert.Nil(t, err)
+	deepCopy, err := DeepCopyActualDeployment(deployment)
+	assert.Nil(t, err)
+	assert.Equal(t, deployment, deepCopy)
+
+	wrongDeployment := &appsv1.DaemonSet{}
+	deepCopy, err = DeepCopyActualDeployment(wrongDeployment)
+	assert.NotNil(t, err)
+	assert.Nil(t, deepCopy)
+}
+
+func TestEnsureSingleReplica(t *testing.T) {
+	reaper := newTestReaper()
+	logger := testlogr.NewTestLogger(t)
+	oneReplica := int32(1)
+	twoReplicas := int32(2)
+
+	// deployment size is not touched on Deployments
+	actualDeployment, _ := MakeActualDeploymentType(reaper)
+	desiredDeployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	desiredDeployment.Spec.Replicas = func() *int32 { i := int32(2); return &i }()
+	err := EnsureSingleReplica(reaper, actualDeployment, desiredDeployment, logger)
+	assert.Nil(t, err)
+	assert.Equal(t, int32(2), *desiredDeployment.Spec.Replicas)
+
+	// deployment size greater than 1 is not allowed on Stateful Sets
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = newTestStorageConfig()
+	actualStatefulSet, _ := MakeActualDeploymentType(reaper)
+	err = setDeploymentReplicas(&actualStatefulSet, &oneReplica)
+	assert.Nil(t, err)
+	desiredStatefulSet := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	desiredStatefulSet.Spec.Replicas = &twoReplicas
+	err = EnsureSingleReplica(reaper, actualStatefulSet, desiredStatefulSet, logger)
+	// errors out because we desire 2 replicas
+	assert.Nil(t, err)
+
+	// if we find a STS with more than 1 replicas, we forcefully scale it down
+	actualStatefulSet, _ = MakeActualDeploymentType(reaper)
+	err = setDeploymentReplicas(&actualStatefulSet, &twoReplicas)
+	assert.Nil(t, err)
+	desiredStatefulSetObject, _ := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, logger)
+	err = setDeploymentReplicas(&desiredStatefulSetObject, &oneReplica)
+	assert.Nil(t, err)
+
+	assert.Equal(t, twoReplicas, getDeploymentReplicas(desiredDeployment, logger))
+	err = EnsureSingleReplica(reaper, actualStatefulSet, desiredStatefulSetObject, logger)
+	assert.Nil(t, err)
+	assert.Equal(t, oneReplica, getDeploymentReplicas(desiredStatefulSetObject, logger))
+}
+
 func newTestReaper() *reaperapi.Reaper {
 	namespace := "service-test"
 	reaperName := "test-reaper"
@@ -502,7 +680,8 @@ func newTestReaper() *reaperapi.Reaper {
 				Namespace: namespace,
 			},
 			ReaperTemplate: reaperapi.ReaperTemplate{
-				Keyspace: "reaper_db",
+				Keyspace:    "reaper_db",
+				StorageType: "cassandra",
 				ResourceMeta: &meta.ResourceMeta{
 					CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
 					Pods: meta.Tags{
@@ -531,6 +710,18 @@ func newTestDatacenter() *cassdcapi.CassandraDatacenter {
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			ClusterName:   clusterName,
 			ServerVersion: "4.0.1",
+		},
+	}
+}
+
+func newTestStorageConfig() *corev1.PersistentVolumeClaimSpec {
+	return &corev1.PersistentVolumeClaimSpec{
+		StorageClassName: func() *string { s := "test"; return &s }(),
+		AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+		Resources: corev1.VolumeResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: resource.MustParse("1Gi"),
+			},
 		},
 	}
 }

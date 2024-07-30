@@ -15,9 +15,6 @@ import (
 )
 
 const (
-	DeploymentModeSingle = "SINGLE"
-	DeploymentModePerDc  = "PER_DC"
-
 	DatacenterAvailabilityEach = "EACH"
 	DatacenterAvailabilityAll  = "ALL"
 )
@@ -104,7 +101,7 @@ func NewReaper(
 // See https://cassandra-reaper.io/docs/usage/multi_dc/.
 // If we have more than one DC, and each DC has its own Reaper instance, use EACH; otherwise, use ALL.
 func computeReaperDcAvailability(kc *k8ssandraapi.K8ssandraCluster) string {
-	if kc.Spec.Reaper.DeploymentMode == DeploymentModeSingle || len(kc.Spec.Cassandra.Datacenters) == 1 {
+	if kc.Spec.Reaper.DeploymentMode == reaperapi.DeploymentModeSingle || len(kc.Spec.Cassandra.Datacenters) == 1 {
 		return DatacenterAvailabilityAll
 	}
 	return DatacenterAvailabilityEach

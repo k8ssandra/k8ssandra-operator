@@ -18,7 +18,6 @@ package k8ssandra
 
 import (
 	"context"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -87,7 +86,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 	reaperTemplate := kc.Spec.Reaper.DeepCopy()
 	if reaperTemplate != nil {
-		if reaperTemplate.DeploymentMode == reaper.DeploymentModeSingle && getSingleReaperDcName(kc) != actualDc.Name {
+		if reaperTemplate.DeploymentMode == reaperapi.DeploymentModeSingle && getSingleReaperDcName(kc) != actualDc.Name {
 			logger.Info("DC is not Reaper DC: skipping Reaper deployment")
 			reaperTemplate = nil
 		}
@@ -95,6 +94,10 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 			logger.Info("DC is stopped: skipping Reaper deployment")
 			reaperTemplate = nil
 		}
+	}
+
+	if updated := reaperTemplate.EnsureDeploymentMode(); updated {
+		logger.Info("Forced SINGLE deployment mode for Reaper because it has 'local' storage type")
 	}
 
 	actualReaper := &reaperapi.Reaper{}

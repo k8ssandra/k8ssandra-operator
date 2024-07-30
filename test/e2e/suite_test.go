@@ -812,7 +812,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	// check that the Stargate Vector container and config map exist
 	stargateDeploymentKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-default-stargate-deployment"}}
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Logf("check that if Stargate Vector is disabled, the agent and configmap are deleted")
@@ -824,7 +824,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkContainerDeleted(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerDeleted(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Logf("check that if Stargate Vector is enabled, the agent and configmap are re-created")
@@ -836,7 +836,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Log("check that if Stargate is deleted directly it gets re-created")
@@ -847,7 +847,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Log("delete Stargate in k8ssandracluster resource")
@@ -893,7 +893,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to patch K8ssandraCluster in operatorNamespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Log("check that Cassandra DC was not restarted")
@@ -931,7 +931,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	// Check that Stargate Vector's configmap is deleted
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkContainerDeleted(t, ctx, f, stargateDeploymentKey, getPodTemplateSpecForDeployment, stargate.VectorContainerName)
+	checkContainerDeleted(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 }
 
@@ -1927,6 +1927,28 @@ func checkKeyspaceExists(
 	}, 1*time.Minute, 3*time.Second)
 }
 
+func checkReaperAppType(
+	t *testing.T,
+	ctx context.Context,
+	f *framework.E2eFramework,
+	reaperKey framework.ClusterKey,
+	kc *api.K8ssandraCluster,
+) {
+	assert.Eventually(t, func() bool {
+		if kc.Spec.Reaper.StorageType == reaperapi.StorageTypeCassandra {
+			d := &appsv1.Deployment{}
+			assert.NoError(t, f.Get(ctx, reaperKey, d))
+			return true
+		}
+		if kc.Spec.Reaper.StorageType == reaperapi.StorageTypeLocal {
+			sts := &appsv1.StatefulSet{}
+			assert.NoError(t, f.Get(ctx, reaperKey, sts))
+			return true
+		}
+		return false
+	}, 1*time.Minute, 3*time.Second)
+}
+
 func checkKeyspaceReplication(
 	t *testing.T,
 	f *framework.E2eFramework,
@@ -1947,6 +1969,33 @@ func checkKeyspaceReplication(
 				return false
 			}
 		}
+		return true
+	}, 1*time.Minute, 3*time.Second)
+}
+
+func createEmptyKeyspaceTable(t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	k8sContext, namespace, clusterName, pod, keyspace, table string,
+) {
+	assert.Eventually(t, func() bool {
+		dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+		dcName := DcName(t, f, dcKey)
+		createKeyspaceStatement := fmt.Sprintf("CREATE KEYSPACE %s WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', '%s' : 3};", keyspace, dcName)
+		createTableStatement := fmt.Sprintf("CREATE TABLE %s.%s (id int PRIMARY KEY);", keyspace, table)
+
+		_, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, createKeyspaceStatement)
+		if err != nil {
+			t.Logf("failed to create keyspace %s: %v", keyspace, err)
+			return false
+		}
+
+		_, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, createTableStatement)
+		if err != nil {
+			t.Logf("failed to create table %s.%s: %v", keyspace, table, err)
+			return false
+		}
+
 		return true
 	}, 1*time.Minute, 3*time.Second)
 }
@@ -2199,23 +2248,42 @@ func checkVectorConfigMapDeleted(t *testing.T, ctx context.Context, f *framework
 
 }
 
-func getPodTemplateSpecForDeployment(t *testing.T, ctx context.Context, f *framework.E2eFramework, deploymentKey framework.ClusterKey) *corev1.PodTemplateSpec {
-	sg := &appsv1.Deployment{}
-	require.NoError(t, f.Get(ctx, deploymentKey, sg), "failed to get Deployment")
+func getPodTemplateSpec(t *testing.T, ctx context.Context, f *framework.E2eFramework, appKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec {
+	// this gets called for other pods than reapers (eg stargate). before reaper gained the option of being a STS, everything was a deployment
+	if kc.Spec.Reaper == nil {
+		return getPodTemplateSpecForDeployment(t, ctx, f, appKey)
+	}
+	if kc.Spec.Reaper.StorageType == reaperapi.StorageTypeCassandra {
+		return getPodTemplateSpecForDeployment(t, ctx, f, appKey)
+	} else {
+		return getPodTemplateSpecForStatefulSet(t, ctx, f, appKey)
+	}
+}
+
+func getPodTemplateSpecForStatefulSet(t *testing.T, ctx context.Context, f *framework.E2eFramework, stsKey framework.ClusterKey) *corev1.PodTemplateSpec {
+	sg := &appsv1.StatefulSet{}
+	require.NoError(t, f.Get(ctx, stsKey, sg), "failed to get StatefulSet", "StatefulSet key", stsKey)
 
 	return &sg.Spec.Template
 }
 
-func checkContainerPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) *corev1.PodTemplateSpec, containerName string) {
+func getPodTemplateSpecForDeployment(t *testing.T, ctx context.Context, f *framework.E2eFramework, deploymentKey framework.ClusterKey) *corev1.PodTemplateSpec {
+	sg := &appsv1.Deployment{}
+	require.NoError(t, f.Get(ctx, deploymentKey, sg), "failed to get Deployment", "deploymentKey", deploymentKey)
+
+	return &sg.Spec.Template
+}
+
+func checkContainerPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, kc *api.K8ssandraCluster, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec, containerName string) {
 	t.Logf("check that %s contains Container named %s", podKey.Name, containerName)
-	podTempSpec := specFunction(t, ctx, f, podKey)
+	podTempSpec := specFunction(t, ctx, f, podKey, kc)
 	_, containerFound := cassandra.FindContainer(podTempSpec, containerName)
 	require.True(t, containerFound, "cannot find Container in pod template spec")
 }
 
-func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey) *corev1.PodTemplateSpec, containerName string) {
+func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, kc *api.K8ssandraCluster, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec, containerName string) {
 	t.Logf("check that %s does not have a Container named %s", podKey.Name, containerName)
-	podTempSpec := specFunction(t, ctx, f, podKey)
+	podTempSpec := specFunction(t, ctx, f, podKey, kc)
 	_, containerFound := cassandra.FindContainer(podTempSpec, containerName)
 	require.False(t, containerFound, "Found Container in pod template spec")
 }

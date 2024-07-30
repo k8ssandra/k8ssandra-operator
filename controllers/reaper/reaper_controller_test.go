@@ -2,6 +2,8 @@ package reaper
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 	"testing"
 	"time"
 
@@ -61,6 +63,7 @@ func TestReaper(t *testing.T) {
 	t.Run("CreateReaperWithAutoSchedulingEnabled", reaperControllerTest(ctx, testEnv, testCreateReaperWithAutoSchedulingEnabled))
 	t.Run("CreateReaperWithAuthEnabled", reaperControllerTest(ctx, testEnv, testCreateReaperWithAuthEnabled))
 	t.Run("CreateReaperWithAuthEnabledExternalSecret", reaperControllerTest(ctx, testEnv, testCreateReaperWithAuthEnabledExternalSecret))
+	t.Run("CreateReaperWithLocalStorageBackend", reaperControllerTest(ctx, testEnv, testCreateReaperWithLocalStorageType))
 }
 
 func newMockManager() reaper.Manager {
@@ -315,6 +318,7 @@ func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sC
 func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
 	t.Log("create the Reaper object")
 	rpr := newReaper(testNamespace)
+	rpr.Spec.StorageType = reaperapi.StorageTypeCassandra
 	rpr.Spec.AutoScheduling = reaperapi.AutoScheduling{
 		Enabled: true,
 	}
@@ -330,6 +334,13 @@ func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context
 	}, timeout, interval, "deployment creation check failed")
 
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+
+	// deployment with Cassandra backend has an init container
+	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
+
+	// reaper with cassandra-storage backend and this config has just one volume - for configuration
+	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 1)
 
 	autoSchedulingEnabled := false
 	for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
@@ -525,6 +536,37 @@ func testCreateReaperWithAuthEnabledExternalSecret(t *testing.T, ctx context.Con
 	assert.False(t, envVarSecretHasKey(envVars, "REAPER_AUTH_PASSWORD", "password"), "Cassandra auth password env var secret key not found")
 }
 
+func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
+	t.Log("create the Reaper object")
+	r := newReaper(testNamespace)
+	r.Spec.StorageType = reaperapi.StorageTypeLocal
+	r.Spec.StorageConfig = newStorageConfig()
+	err := k8sClient.Create(ctx, r)
+	require.NoError(t, err)
+
+	t.Log("check that the stateful set is created")
+	stsKey := types.NamespacedName{Namespace: testNamespace, Name: reaperName}
+	sts := &appsv1.StatefulSet{}
+
+	require.Eventually(t, func() bool {
+		return k8sClient.Get(ctx, stsKey, sts) == nil
+	}, timeout, interval, "stateful set creation check failed")
+
+	// when deployed as STS, Reaper has no init container
+	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, sts.Spec.Template.Spec.InitContainers, 0)
+
+	// Reaper's API does not allow specifying replica count, so we have no easy way to increase this
+	assert.Equal(t, ptr.To[int32](1), sts.Spec.Replicas)
+
+	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
+	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
+	assert.Equal(t, "conf", confVolumeMount.Name)
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
+}
+
 // Check if env var exists
 func envVarExists(envVars []corev1.EnvVar, name string) bool {
 	for _, envVar := range envVars {
@@ -604,4 +646,16 @@ func patchDeploymentStatus(t *testing.T, ctx context.Context, deployment *appsv1
 	deployment.Status.ReadyReplicas = readyReplicas
 	err := k8sClient.Status().Patch(ctx, deployment, deploymentPatch)
 	require.NoError(t, err)
+}
+
+func newStorageConfig() *corev1.PersistentVolumeClaimSpec {
+	return &corev1.PersistentVolumeClaimSpec{
+		StorageClassName: func() *string { s := "test"; return &s }(),
+		AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+		Resources: corev1.VolumeResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceStorage: resource.MustParse("1Gi"),
+			},
+		},
+	}
 }

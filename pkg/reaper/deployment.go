@@ -2,6 +2,11 @@ package reaper
 
 import (
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"k8s.io/utils/ptr"
+	"math"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -10,8 +15,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,31 +45,17 @@ var defaultImage = images.Image{
 	Tag:        DefaultVersion,
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
-	selector := metav1.LabelSelector{
-		MatchExpressions: []metav1.LabelSelectorRequirement{
-			// Note: managed-by shouldn't be used here, but we're keeping it for backwards compatibility, since changing
-			// a deployment's selector is a breaking change.
-			{
-				Key:      v1alpha1.ManagedByLabel,
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{v1alpha1.NameLabelValue},
-			},
-			{
-				Key:      api.ReaperLabel,
-				Operator: metav1.LabelSelectorOpIn,
-				Values:   []string{reaper.Name},
-			},
-		},
+func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []corev1.EnvVar {
+	var storageType string
+	if reaper.Spec.StorageType == api.StorageTypeLocal {
+		storageType = "memory"
+	} else {
+		storageType = "cassandra"
 	}
-
-	readinessProbe := computeProbe(reaper.Spec.ReadinessProbe)
-	livenessProbe := computeProbe(reaper.Spec.LivenessProbe)
-
 	envVars := []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
-			Value: "cassandra",
+			Value: storageType,
 		},
 		{
 			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
@@ -169,12 +158,10 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		}
 	}
 
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "conf",
-			MountPath: "/etc/cassandra-reaper/config",
-		},
-	}
+	return envVars
+}
+
+func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{
 		{
 			Name: "conf",
@@ -183,29 +170,12 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			},
 		},
 	}
-	// if client encryption is turned on, we need to mount the keystore and truststore volumes
-	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
-		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
-		volumes = append(volumes, *keystoreVolume)
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      keystoreVolume.Name,
-			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore),
-		})
-		volumes = append(volumes, *truststoreVolume)
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      truststoreVolume.Name,
-			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
-		})
 
-		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "JAVA_OPTS",
-			Value: javaOpts,
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
-			Value: "true",
-		})
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "conf",
+			MountPath: "/etc/cassandra-reaper/config",
+		},
 	}
 
 	if reaper.Spec.HttpManagement.Enabled && reaper.Spec.HttpManagement.Keystores != nil {
@@ -224,66 +194,210 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		})
 	}
 
-	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
-
-	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
-	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
-
-	podMeta := getPodMeta(reaper)
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   reaper.Namespace,
-			Name:        reaper.Name,
-			Labels:      createServiceAndDeploymentLabels(reaper),
-			Annotations: map[string]string{},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &selector,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      podMeta.Labels,
-					Annotations: podMeta.Annotations,
+	if reaper.Spec.StorageType == api.StorageTypeLocal {
+		volumes = append(volumes, corev1.Volume{
+			Name: "reaper-data",
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: fmt.Sprintf("reaper-data-%s", reaper.Name),
 				},
-				Spec: corev1.PodSpec{
-					Affinity:       reaper.Spec.Affinity,
-					InitContainers: computeInitContainers(reaper, mainImage, envVars, volumeMounts, initContainerResources),
-					Containers: []corev1.Container{
-						{
-							Name:            "reaper",
-							Image:           mainImage.String(),
-							ImagePullPolicy: mainImage.PullPolicy,
-							SecurityContext: reaper.Spec.SecurityContext,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "app",
-									ContainerPort: 8080,
-									Protocol:      "TCP",
-								},
-								{
-									Name:          "admin",
-									ContainerPort: 8081,
-									Protocol:      "TCP",
-								},
-							},
-							ReadinessProbe: readinessProbe,
-							LivenessProbe:  livenessProbe,
-							Env:            envVars,
-							VolumeMounts:   volumeMounts,
-							Resources:      *mainContainerResources,
-						},
-					},
-					ServiceAccountName: reaper.Spec.ServiceAccountName,
-					Tolerations:        reaper.Spec.Tolerations,
-					SecurityContext:    reaper.Spec.PodSecurityContext,
-					ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage),
-					Volumes:            volumes,
-				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "reaper-data",
+			MountPath: "/var/lib/cassandra-reaper/storage",
+		})
+	}
+
+	return volumes, volumeMounts
+}
+
+func makeSelector(reaper *api.Reaper) *metav1.LabelSelector {
+	return &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			// Note: managed-by shouldn't be used here, but we're keeping it for backwards compatibility, since changing
+			// a deployment's selector is a breaking change.
+			{
+				Key:      v1alpha1.ManagedByLabel,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{v1alpha1.NameLabelValue},
+			},
+			{
+				Key:      api.ReaperLabel,
+				Operator: metav1.LabelSelectorOpIn,
+				Values:   []string{reaper.Name},
 			},
 		},
 	}
-	addAuthEnvVars(deployment, authVars)
-	configureVector(reaper, deployment, dc, logger)
+}
+
+func makeObjectMeta(reaper *api.Reaper) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace:   reaper.Namespace,
+		Name:        reaper.Name,
+		Labels:      createServiceAndDeploymentLabels(reaper),
+		Annotations: map[string]string{},
+	}
+}
+
+func computePodMeta(reaper *api.Reaper) metav1.ObjectMeta {
+	podMeta := getPodMeta(reaper)
+	return metav1.ObjectMeta{
+		Labels:      podMeta.Labels,
+		Annotations: podMeta.Annotations,
+	}
+}
+
+func configureClientEncryption(reaper *api.Reaper, envVars *[]corev1.EnvVar, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount, keystorePassword *string, truststorePassword *string) {
+	// if client encryption is turned on, we need to mount the keystore and truststore volumes
+	// by client we mean a C* client, so this is only relevant if we are making a Deployment which uses C* as storage backend
+	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
+		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
+		*volumes = append(*volumes, *keystoreVolume)
+		*volumeMounts = append(*volumeMounts, corev1.VolumeMount{
+			Name:      keystoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore),
+		})
+		*volumes = append(*volumes, *truststoreVolume)
+		*volumeMounts = append(*volumeMounts, corev1.VolumeMount{
+			Name:      truststoreVolume.Name,
+			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
+		})
+
+		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
+		*envVars = append(*envVars, corev1.EnvVar{
+			Name:  "JAVA_OPTS",
+			Value: javaOpts,
+		})
+		*envVars = append(*envVars, corev1.EnvVar{
+			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
+			Value: "true",
+		})
+	}
+}
+
+func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string) corev1.PodSpec {
+	envVars := computeEnvVars(reaper, dc)
+	volumes, volumeMounts := computeVolumes(reaper)
+	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
+	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
+
+	if keystorePassword != nil && truststorePassword != nil {
+		configureClientEncryption(reaper, &envVars, &volumes, &volumeMounts, keystorePassword, truststorePassword)
+	}
+
+	var initContainers []corev1.Container
+	if initContainerResources != nil {
+		initContainers = computeInitContainers(reaper, mainImage, envVars, volumeMounts, initContainerResources)
+	} else {
+		initContainers = nil
+	}
+
+	return corev1.PodSpec{
+		Affinity:       reaper.Spec.Affinity,
+		InitContainers: initContainers,
+		Containers: []corev1.Container{
+			{
+				Name:            "reaper",
+				Image:           mainImage.String(),
+				ImagePullPolicy: mainImage.PullPolicy,
+				SecurityContext: reaper.Spec.SecurityContext,
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "app",
+						ContainerPort: 8080,
+						Protocol:      "TCP",
+					},
+					{
+						Name:          "admin",
+						ContainerPort: 8081,
+						Protocol:      "TCP",
+					},
+				},
+				ReadinessProbe: computeProbe(reaper.Spec.ReadinessProbe),
+				LivenessProbe:  computeProbe(reaper.Spec.LivenessProbe),
+				Env:            envVars,
+				VolumeMounts:   volumeMounts,
+				Resources:      *mainContainerResources,
+			},
+		},
+		ServiceAccountName: reaper.Spec.ServiceAccountName,
+		Tolerations:        reaper.Spec.Tolerations,
+		SecurityContext:    reaper.Spec.PodSecurityContext,
+		ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage),
+		Volumes:            volumes,
+	}
+}
+
+func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
+
+	vcs := make([]corev1.PersistentVolumeClaim, 0)
+
+	volumeClaimsPec := reaper.Spec.StorageConfig.DeepCopy()
+
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "reaper-data",
+			Namespace: reaper.Namespace,
+		},
+		Spec: *volumeClaimsPec,
+	}
+	vcs = append(vcs, *pvc)
+
+	return vcs
+}
+
+func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, _ *string, _ *string, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
+
+	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeLocal {
+		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than Memory"), "bad storage type", "storageType", reaper.Spec.StorageType)
+		return nil
+	}
+
+	if reaper.Spec.ReaperTemplate.StorageConfig == nil {
+		logger.Error(fmt.Errorf("reaper spec needs storage config when using memory sotrage type"), "missing storage config")
+		return nil
+	}
+
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: makeObjectMeta(reaper),
+		Spec: appsv1.StatefulSetSpec{
+			Selector: makeSelector(reaper),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: computePodMeta(reaper),
+				Spec:       computePodSpec(reaper, dc, nil, nil, nil),
+			},
+			VolumeClaimTemplates: computeVolumeClaims(reaper),
+			Replicas:             ptr.To[int32](1),
+		},
+	}
+	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
+	configureVector(reaper, &statefulSet.Spec.Template, dc, logger)
+	annotations.AddHashAnnotation(statefulSet)
+	return statefulSet
+}
+
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+
+	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeCassandra {
+		logger.Error(fmt.Errorf("cannot be creating a Reaper deployment with storage type other than Cassandra"), "bad storage type", "storageType", reaper.Spec.ReaperTemplate.StorageType)
+		return nil
+	}
+
+	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: makeObjectMeta(reaper),
+		Spec: appsv1.DeploymentSpec{
+			Selector: makeSelector(reaper),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: computePodMeta(reaper),
+				Spec:       computePodSpec(reaper, dc, initContainerResources, keystorePassword, truststorePassword),
+			},
+		},
+	}
+	addAuthEnvVars(&deployment.Spec.Template, authVars)
+	configureVector(reaper, &deployment.Spec.Template, dc, logger)
 	annotations.AddHashAnnotation(deployment)
 	return deployment
 }
@@ -367,18 +481,18 @@ func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
 	return probe
 }
 
-func addAuthEnvVars(deployment *appsv1.Deployment, vars []*corev1.EnvVar) {
-	envVars := deployment.Spec.Template.Spec.Containers[0].Env
+func addAuthEnvVars(template *corev1.PodTemplateSpec, vars []*corev1.EnvVar) {
+	envVars := template.Spec.Containers[0].Env
 	for _, v := range vars {
 		envVars = append(envVars, *v)
 	}
-	deployment.Spec.Template.Spec.Containers[0].Env = envVars
-	if len(deployment.Spec.Template.Spec.InitContainers) > 0 {
-		initEnvVars := deployment.Spec.Template.Spec.InitContainers[0].Env
+	template.Spec.Containers[0].Env = envVars
+	if len(template.Spec.InitContainers) > 0 {
+		initEnvVars := template.Spec.InitContainers[0].Env
 		for _, v := range vars {
 			initEnvVars = append(initEnvVars, *v)
 		}
-		deployment.Spec.Template.Spec.InitContainers[0].Env = initEnvVars
+		template.Spec.InitContainers[0].Env = initEnvVars
 	}
 }
 
@@ -411,4 +525,93 @@ func getPodMeta(reaper *api.Reaper) meta.Tags {
 		Labels:      labels,
 		Annotations: podAnnotations,
 	}
+}
+
+func MakeActualDeploymentType(actualReaper *api.Reaper) (client.Object, error) {
+	if actualReaper.Spec.StorageType == api.StorageTypeCassandra {
+		return &appsv1.Deployment{}, nil
+	} else if actualReaper.Spec.StorageType == api.StorageTypeLocal {
+		return &appsv1.StatefulSet{}, nil
+	} else {
+		err := fmt.Errorf("invalid storage type %s", actualReaper.Spec.StorageType)
+		return nil, err
+	}
+}
+
+func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) (client.Object, error) {
+	if actualReaper.Spec.StorageType == api.StorageTypeCassandra {
+		return NewDeployment(actualReaper, dc, keystorePassword, truststorePassword, logger, authVars...), nil
+	} else if actualReaper.Spec.StorageType == api.StorageTypeLocal {
+		// we're checking for this same thing in the k8ssandra-cluster webohooks
+		// but in tests (and in the future) we'll be creating reaper directly (not through k8ssandra-cluster)
+		// so we need to double-check
+		if actualReaper.Spec.StorageConfig == nil {
+			err := fmt.Errorf("storageConfig is required for memory storage")
+			return nil, err
+		}
+		return NewStatefulSet(actualReaper, dc, logger, keystorePassword, truststorePassword, authVars...), nil
+	} else {
+		err := fmt.Errorf("invalid storage type %s", actualReaper.Spec.StorageType)
+		return nil, err
+	}
+}
+
+func DeepCopyActualDeployment(actualDeployment client.Object) (client.Object, error) {
+	switch actual := actualDeployment.(type) {
+	case *appsv1.Deployment:
+		actualDeployment = actual.DeepCopy()
+		return actualDeployment, nil
+	case *appsv1.StatefulSet:
+		actualDeployment = actual.DeepCopy()
+		return actualDeployment, nil
+	default:
+		err := fmt.Errorf("unexpected type %T", actualDeployment)
+		return nil, err
+	}
+}
+
+func EnsureSingleReplica(actualReaper *api.Reaper, actualDeployment client.Object, desiredDeployment client.Object, logger logr.Logger) error {
+	if actualReaper.Spec.StorageType == api.StorageTypeLocal {
+		desiredReplicas := getDeploymentReplicas(desiredDeployment, logger)
+		if desiredReplicas > 1 {
+			logger.Info(fmt.Sprintf("reaper with memory storage can only have one replica, not allowing the desired %d", desiredReplicas))
+			if err := setDeploymentReplicas(&desiredDeployment, ptr.To[int32](1)); err != nil {
+				return err
+			}
+		}
+		actualReplicas := getDeploymentReplicas(actualDeployment, logger)
+		if actualReplicas > 1 {
+			logger.Info(fmt.Sprintf("reaper with memory storage currently has %d replicas, scaling down to 1", actualReplicas))
+			if err := setDeploymentReplicas(&desiredDeployment, ptr.To[int32](1)); err != nil {
+				// returning error if the setter failed
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func getDeploymentReplicas(actualDeployment client.Object, logger logr.Logger) int32 {
+	switch actual := actualDeployment.(type) {
+	case *appsv1.Deployment:
+		return *actual.Spec.Replicas
+	case *appsv1.StatefulSet:
+		return *actual.Spec.Replicas
+	default:
+		logger.Error(fmt.Errorf("unexpected type %T", actualDeployment), "Failed to get deployment replicas")
+		return math.MaxInt32
+	}
+}
+
+func setDeploymentReplicas(desiredDeployment *client.Object, numberOfReplicas *int32) error {
+	switch desired := (*desiredDeployment).(type) {
+	case *appsv1.Deployment:
+		desired.Spec.Replicas = numberOfReplicas
+	case *appsv1.StatefulSet:
+		desired.Spec.Replicas = numberOfReplicas
+	default:
+		err := fmt.Errorf("unexpected type %T", desiredDeployment)
+		return err
+	}
+	return nil
 }

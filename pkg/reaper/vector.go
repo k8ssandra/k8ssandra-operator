@@ -2,7 +2,6 @@ package reaper
 
 import (
 	"fmt"
-
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,7 +12,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -49,7 +47,7 @@ func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraD
 	}
 }
 
-func configureVector(reaper *api.Reaper, deployment *appsv1.Deployment, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) {
+func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) {
 	if reaper.Spec.Telemetry.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Reaper deployments")
 		vectorImage := vector.DefaultVectorImage
@@ -83,9 +81,9 @@ func configureVector(reaper *api.Reaper, deployment *appsv1.Deployment, dc *cass
 			},
 		}
 		// Add the container and volume to the deployment
-		cassandra.UpdateContainer(&deployment.Spec.Template, VectorContainerName, func(c *corev1.Container) {
+		cassandra.UpdateContainer(template, VectorContainerName, func(c *corev1.Container) {
 			*c = vectorAgentContainer
 		})
-		cassandra.AddVolumesToPodTemplateSpec(&deployment.Spec.Template, vectorAgentVolume)
+		cassandra.AddVolumesToPodTemplateSpec(template, vectorAgentVolume)
 	}
 }

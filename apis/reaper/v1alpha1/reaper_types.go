@@ -30,11 +30,28 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 const (
-	ReaperLabel     = "k8ssandra.io/reaper"
-	DefaultKeyspace = "reaper_db"
+	DeploymentModeSingle = "SINGLE"
+	DeploymentModePerDc  = "PER_DC"
+	ReaperLabel          = "k8ssandra.io/reaper"
+	DefaultKeyspace      = "reaper_db"
+	StorageTypeCassandra = "cassandra"
+	StorageTypeLocal     = "local"
 )
 
 type ReaperTemplate struct {
+
+	// The storage backend to store Reaper's data. Defaults to "cassandra" which causes Reaper to be stateless and store
+	// its state to a Cassandra cluster it repairs (implying there must be one Reaper for each Cassandra cluster).
+	// The "local" option makes Reaper to store its state locally, allowing a single Reaper to repair several clusters.
+	// +kubebuilder:validation:Enum=cassandra;local
+	// +kubebuilder:default="cassandra"
+	// +optional
+	StorageType string `json:"storageType,omitempty"`
+
+	// If StorageType is "local", Reaper will need a Persistent Volume to persist its data. This field allows
+	// configuring that Persistent Volume.
+	// +optional
+	StorageConfig *corev1.PersistentVolumeClaimSpec `json:"storageConfig,omitempty"`
 
 	// The keyspace to use to store Reaper's state. Will default to "reaper_db" if unspecified. Will be created if it
 	// does not exist, and if this Reaper resource is managed by K8ssandra.
@@ -220,6 +237,20 @@ type ReaperClusterTemplate struct {
 	// +kubebuilder:default="PER_DC"
 	// +kubebuilder:validation:Enum:=PER_DC;SINGLE
 	DeploymentMode string `json:"deploymentMode,omitempty"`
+}
+
+// EnsureDeploymentMode ensures that a deployment mode is SINGLE if we use the local storage type. This is to prevent
+// several instances of Reapers with local storage that would interfere with each other.
+func (t *ReaperClusterTemplate) EnsureDeploymentMode() bool {
+	if t != nil {
+		if t.StorageType == StorageTypeLocal {
+			if t.DeploymentMode != DeploymentModeSingle {
+				t.DeploymentMode = DeploymentModeSingle
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.
