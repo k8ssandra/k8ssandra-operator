@@ -1,0 +1,24 @@
+apiVersion: reaper.k8ssandra.io/v1alpha1
+kind: Reaper
+metadata:
+  name: reaper1
+spec:
+  storageType: local
+  storageConfig:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 256Mi
+  httpManagement:
+    enabled: true
+  heapSize: 256Mi
+  autoScheduling:
+    enabled: false
+  uiUserSecretRef:
+    name: reaper-ui-secret
+  containerImage:
+    repository: thelastpickle
+    name: cassandra-reaper
+    tag: "3.0.0"
+    pullPolicy: Always

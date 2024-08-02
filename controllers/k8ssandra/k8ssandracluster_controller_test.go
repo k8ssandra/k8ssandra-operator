@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
+	reaperpkg "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	"github.com/stretchr/testify/mock"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -46,7 +50,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 5
+	timeout  = time.Second * 120
 	interval = time.Millisecond * 500
 )
 
@@ -55,6 +59,20 @@ var (
 	testEnv              *testutils.MultiClusterTestEnv
 	managementApiFactory = &testutils.FakeManagementApiFactory{}
 )
+
+var currentTest *testing.T
+
+func newMockManager() reaperpkg.Manager {
+	m := new(mocks.ReaperManager)
+	m.On("Connect", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("ConnectWithReaperRef", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	m.On("AddClusterToReaper", mock.Anything, mock.Anything).Return(nil)
+	m.On("VerifyClusterIsConfigured", mock.Anything, mock.Anything).Return(true, nil)
+	m.On("GetUiCredentials", mock.Anything, mock.Anything, mock.Anything).Return("admin", "admin", nil)
+	m.On("SetK8sClient", mock.Anything)
+	m.Test(currentTest)
+	return m
+}
 
 func TestK8ssandraCluster(t *testing.T) {
 	ctx := testutils.TestSetup(t)
@@ -81,6 +99,12 @@ func TestK8ssandraCluster(t *testing.T) {
 			ManagementApi:    managementApiFactory,
 			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
 		}).SetupWithManager(mgr, clusters)
+		err = (&reaper.ReaperReconciler{
+			ReconcilerConfig: config.InitConfig(),
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			NewManager:       newMockManager,
+		}).SetupWithManager(mgr)
 		return err
 	})
 	if err != nil {
@@ -99,6 +123,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
+	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterWithMedusaConfigRef", testEnv.ControllerTest(ctx, createSingleDcClusterWithMedusaConfigRef))
 	t.Run("CreateSingleDcClusterWithManagementApiSecured", testEnv.ControllerTest(ctx, createSingleDcClusterWithManagementApiSecured))

@@ -56,6 +56,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-reaper-k8ssandra-io-v1alpha1-reaper
+  failurePolicy: Fail
+  name: vreaper.kb.io
+  rules:
+  - apiGroups:
+    - reaper.k8ssandra.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - reapers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-k8ssandra-io-v1alpha1-k8ssandracluster
   failurePolicy: Fail
   name: vk8ssandracluster.kb.io
