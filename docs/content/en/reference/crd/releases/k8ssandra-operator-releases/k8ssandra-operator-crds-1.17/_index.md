@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.17"
+linkTitle: "K8ssandra-operator CRDs v1.17"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.17.  
 ---
 
 Packages:
@@ -63094,15 +63094,6 @@ TODO Figure out how to inline this field<br/>
             <i>Default</i>: None<br/>
         </td>
         <td>false</td>
-      </tr><tr>
-        <td><b>observedGeneration</b></td>
-        <td>integer</td>
-        <td>
-          ObservedGeneration is the last observed generation of the K8ssandraCluster.<br/>
-          <br/>
-            <i>Format</i>: int64<br/>
-        </td>
-        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -82449,16 +82440,6 @@ The "Allow" property is only valid if all the other active Tasks have "Allow" as
         <td>boolean</td>
         <td>
           Disabled if set ensures this job is not scheduling anything<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>operationType</b></td>
-        <td>enum</td>
-        <td>
-          Specifies the type of operation to be performed<br/>
-          <br/>
-            <i>Enum</i>: backup, purge<br/>
-            <i>Default</i>: backup<br/>
         </td>
         <td>false</td>
       </tr></tbody>
