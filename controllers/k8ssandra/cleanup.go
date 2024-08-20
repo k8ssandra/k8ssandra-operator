@@ -204,6 +204,10 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 	}
 
 	if dc != nil {
+		if err := r.deleteContactPointsService(ctx, kc, dc, logger); err != nil {
+			return result.Error(err)
+		}
+
 		if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
 			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
 			// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
