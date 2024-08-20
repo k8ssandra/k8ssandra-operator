@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Update cassandra-medusa to 0.22.2
+
 ## v1.18.0 - 2024-07-24
 
 * [CHANGE] Update cassandra-medusa to 0.22.0
