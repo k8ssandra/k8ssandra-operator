@@ -55,6 +55,7 @@ import (
 const (
 	k8ssandraTaskFinalizer = "control.k8ssandra.io/finalizer"
 	defaultTTL             = time.Duration(86400) * time.Second
+	invalidSpecErrorFormat = "invalid spec: %s"
 )
 
 var (
@@ -149,7 +150,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.reportInvalidSpec(ctx, kTask, "unknown K8ssandraCluster %s.%s", kcKey.Namespace, kcKey.Name)
 	}
 	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
-		return r.reportInvalidSpec(ctx, kTask, err.Error())
+		return r.reportInvalidSpec(ctx, kTask, invalidSpecErrorFormat, err.Error())
 	} else {
 		for _, dc := range dcs {
 			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
