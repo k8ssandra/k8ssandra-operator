@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] Update cassandra-medusa to 0.22.2
+* [BUGFIX] Fix golangci-lint reported issue in the operator and bump the action to v6
 
 ## v1.18.0 - 2024-07-24
 
