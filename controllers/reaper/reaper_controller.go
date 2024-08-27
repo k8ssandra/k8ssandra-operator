@@ -19,7 +19,6 @@ package reaper
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -53,7 +52,7 @@ type ReaperReconciler struct {
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers/finalizers,verbs=update
-// +kubebuilder:rbac:groups="apps",namespace="k8ssandra",resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="apps",namespace="k8ssandra",resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="core",namespace="k8ssandra",resources=services,verbs=get;list;watch;create
 
@@ -193,9 +192,17 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 
 	logger.Info("Reconciling reaper deployment", "actualReaper", actualReaper)
-	desiredDeployment := reaper.NewDeployment(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
 
-	actualDeployment := &appsv1.Deployment{}
+	// work out how to deploy Reaper
+	actualDeployment, err := reaper.MakeActualDeploymentType(actualReaper)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	desiredDeployment, err := reaper.MakeDesiredDeploymentType(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if err := r.Get(ctx, deploymentKey, actualDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			if err = controllerutil.SetControllerReference(actualReaper, desiredDeployment, r.Scheme); err != nil {
@@ -224,13 +231,33 @@ func (r *ReaperReconciler) reconcileDeployment(
 		return ctrl.Result{}, err
 	}
 
-	actualDeployment = actualDeployment.DeepCopy()
+	actualDeployment, err = reaper.DeepCopyActualDeployment(actualDeployment)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// if using local storage, we need to ensure only one Reaper exists ~ the STS has at most 1 replica
+	err = reaper.EnsureSingleReplica(actualReaper, actualDeployment, desiredDeployment, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Check if the deployment needs to be updated
 	if !annotations.CompareHashAnnotations(actualDeployment, desiredDeployment) {
 		logger.Info("Updating Reaper Deployment")
 		resourceVersion := actualDeployment.GetResourceVersion()
-		desiredDeployment.DeepCopyInto(actualDeployment)
+
+		// the DeepCopyInto is called on an actual Deployment or STS, can't easily refactor that out
+		switch desired := desiredDeployment.(type) {
+		case *appsv1.Deployment:
+			desired.DeepCopyInto(actualDeployment.(*appsv1.Deployment))
+		case *appsv1.StatefulSet:
+			desired.DeepCopyInto(actualDeployment.(*appsv1.StatefulSet))
+		default:
+			err := fmt.Errorf("unexpected type %T", desiredDeployment)
+			return ctrl.Result{}, err
+		}
+
 		actualDeployment.SetResourceVersion(resourceVersion)
 		if err := controllerutil.SetControllerReference(actualReaper, actualDeployment, r.Scheme); err != nil {
 			logger.Error(err, "Failed to set controller reference on updated Reaper Deployment")
