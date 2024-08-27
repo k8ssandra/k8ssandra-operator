@@ -58,9 +58,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     [cassandra]
     use_sudo = false
     {{- if .Spec.Medusa.CertificatesSecretRef.Name }}
-    certfile = /etc/certificates/rootca.crt
-    usercert = /etc/certificates/client.crt_signed
-    userkey = /etc/certificates/client.key
+    certfile = /etc/certificates/{{ .Spec.Medusa.CertificatesSettings.Certfile }}
+    usercert = /etc/certificates/{{ .Spec.Medusa.CertificatesSettings.Usercert }}
+    userkey = /etc/certificates/{{ .Spec.Medusa.CertificatesSettings.Userkey }}
     {{- end}}
 
     [storage]

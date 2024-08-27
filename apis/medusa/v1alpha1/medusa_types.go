@@ -117,6 +117,25 @@ type Storage struct {
 	PodStorage *PodStorageSettings `json:"podStorage,omitempty"`
 }
 
+type Certificates struct {
+	// Settings for TLS certificates used when client-side encryption is enabled with Medusa.
+
+	// Custom name for the CA certificate key in the Secret.
+	// Defaults to 'rootca.crt.
+	// +optional
+	Certfile string `json:"certfile,omitempty"`
+
+	// Custom name for the client certificate key in the Secret.
+	// Defaults to 'client.crt_signed'.
+	// +optional
+	Usercert string `json:"usercert,omitempty"`
+
+	// Custom name for the client private key in the Secret.
+	// Defaults to 'client.key'.
+	// +optional
+	Userkey string `json:"userkey,omitempty"`
+}
+
 type PodStorageSettings struct {
 	// Settings for the pod's storage when backups use the local storage provider.
 
@@ -161,10 +180,15 @@ type MedusaClusterTemplate struct {
 	StorageProperties Storage `json:"storageProperties,omitempty"`
 
 	// Certificates for Medusa if client encryption is enabled in Cassandra.
-	// The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".
+	// The Secret should be in the same namespace as the Cassandra instance and must include the keys for the CA certificate, client certificate, and client private key.
+    // By default, the keys in the Secret are expected to be named "rootca.crt", "client.crt_signed", and "client.key". However, these names can be customized using the 'certfile', 'usercert', and 'userkey' options.
 	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
 	// +optional
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
+
+    // Certificates settings for Medusa if client encryption is enabled in Cassandra.
+	// +optional
+	CertificatesSettings Certificates `json:"certificatesSettings,omitempty"`
 
 	// medusa-restore init container resources.
 	// +optional

@@ -25696,6 +25696,30 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  certificatesSettings:
+                    description: "Settings for TLS certificates used when client-side encryption
+                      is enabled with Medusa. The Secret must reside in the same namespace
+                      as the Cassandra instance. It must contain keys for the CA certificate,
+                      client certificate, and client private key. Custom names for these keys can
+                      be specified. See https://docs.datastax.com/en/developer/python-driver/latest/security/
+                      for more information on the required files."
+                    properties:
+                      certfile:
+                        default: rootca.crt
+                        description: "Custom name for the CA certificate key within the Secret's `data` field.
+                          Defaults to 'rootca.crt' if not specified"
+                        type: string
+                      usercert:
+                        default: client.crt_signed
+                        description: "Custom name for the client certificate key within the Secret's `data` field.
+                          Defaults to 'client.crt_signed' if not specified."
+                        type: string
+                      userkey:
+                        default: client.key
+                        description: "Custom name for the client private key within the Secret's `data` field.
+                          Defaults to 'client.key' if not specified."
+                        type: string
+                    type: object
                   containerImage:
                     description: |-
                       MedusaContainerImage is the image characteristics to use for Medusa containers. Leave nil
