@@ -253,15 +253,25 @@ func (r *ReaperReconciler) reconcileDeployment(
 
 	// if using memory storage, we need to ensure only one Reaper exists ~ the STS has at most 1 replica
 	if actualReaper.Spec.StorageType == reaperapi.StorageTypeLocal {
-		desiredReplicas := getDeploymentReplicas(desiredDeployment, logger)
+		var desiredReplicas int32
+		if desiredReplicas, err = getDeploymentReplicas(desiredDeployment); err != nil {
+			return ctrl.Result{}, err
+		}
 		if desiredReplicas > 1 {
 			logger.Info(fmt.Sprintf("reaper with memory storage can only have one replica, not allowing the %d that are desired", desiredReplicas))
-			forceSingleReplica(&desiredDeployment, logger)
+			if err = forceSingleReplica(&desiredDeployment); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
-		actualReplicas := getDeploymentReplicas(actualDeployment, logger)
+		var actualReplicas int32
+		if actualReplicas, err = getDeploymentReplicas(actualDeployment); err != nil {
+			return ctrl.Result{}, err
+		}
 		if actualReplicas > 1 {
 			logger.Info(fmt.Sprintf("reaper with memory storage currently has %d replicas, scaling down to 1", actualReplicas))
-			forceSingleReplica(&desiredDeployment, logger)
+			if err = forceSingleReplica(&desiredDeployment); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -298,27 +308,29 @@ func (r *ReaperReconciler) reconcileDeployment(
 	return ctrl.Result{}, nil
 }
 
-func getDeploymentReplicas(actualDeployment client.Object, logger logr.Logger) int32 {
+func getDeploymentReplicas(actualDeployment client.Object) (int32, error) {
 	switch actual := actualDeployment.(type) {
 	case *appsv1.Deployment:
-		return *actual.Spec.Replicas
+		return *actual.Spec.Replicas, nil
 	case *appsv1.StatefulSet:
-		return *actual.Spec.Replicas
+		return *actual.Spec.Replicas, nil
 	default:
-		logger.Error(fmt.Errorf("unexpected type %T", actualDeployment), "Failed to get deployment replicas")
-		return math.MaxInt32
+		err := fmt.Errorf("failed to get replicas of unexpected deployment type type %T", actualDeployment)
+		return math.MaxInt32, err
 	}
 }
 
-func forceSingleReplica(desiredDeployment *client.Object, logger logr.Logger) {
+func forceSingleReplica(desiredDeployment *client.Object) error {
 	switch desired := (*desiredDeployment).(type) {
 	case *appsv1.Deployment:
 		desired.Spec.Replicas = ptr.To[int32](1)
 	case *appsv1.StatefulSet:
 		desired.Spec.Replicas = ptr.To[int32](1)
 	default:
-		logger.Error(fmt.Errorf("unexpected type %T", desiredDeployment), "Failed to set deployment replicas")
+		err := fmt.Errorf("failed to set replicas for deployment of unexpected type %T", desiredDeployment)
+		return err
 	}
+	return nil
 }
 
 func (r *ReaperReconciler) reconcileService(
