@@ -248,32 +248,33 @@ func computePodMeta(reaper *api.Reaper) metav1.ObjectMeta {
 	}
 }
 
-func configureClientEncryption(reaper *api.Reaper, envVars *[]corev1.EnvVar, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount, keystorePassword *string, truststorePassword *string) {
+func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount, keystorePassword *string, truststorePassword *string) ([]corev1.EnvVar, []corev1.Volume, []corev1.VolumeMount) {
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
 	// by client we mean a C* client, so this is only relevant if we are making a Deployment which uses C* as storage backend
 	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
 		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
-		*volumes = append(*volumes, *keystoreVolume)
-		*volumeMounts = append(*volumeMounts, corev1.VolumeMount{
+		volumes = append(volumes, *keystoreVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      keystoreVolume.Name,
 			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore),
 		})
-		*volumes = append(*volumes, *truststoreVolume)
-		*volumeMounts = append(*volumeMounts, corev1.VolumeMount{
+		volumes = append(volumes, *truststoreVolume)
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      truststoreVolume.Name,
 			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
 		})
 
 		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
-		*envVars = append(*envVars, corev1.EnvVar{
+		envVars = append(envVars, corev1.EnvVar{
 			Name:  "JAVA_OPTS",
 			Value: javaOpts,
 		})
-		*envVars = append(*envVars, corev1.EnvVar{
+		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		})
 	}
+	return envVars, volumes, volumeMounts
 }
 
 func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string) corev1.PodSpec {
@@ -283,7 +284,7 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
 	if keystorePassword != nil && truststorePassword != nil {
-		configureClientEncryption(reaper, &envVars, &volumes, &volumeMounts, keystorePassword, truststorePassword)
+		envVars, volumes, volumeMounts = configureClientEncryption(reaper, envVars, volumes, volumeMounts, keystorePassword, truststorePassword)
 	}
 
 	var initContainers []corev1.Container
