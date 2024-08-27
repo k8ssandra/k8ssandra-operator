@@ -241,6 +241,10 @@ spec:
   medusa:
     certificatesSecretRef:
       name: client-certificates
+    certificatesSettings:
+      certfile: rootca.crt
+      usercert: client.crt_signed
+      userkey: client.key
 ```
 
 This will provide Medusa with the client certificate and key, as well as the root CA certificate, which will be used to connect to the Cassandra cluster through the Python Driver.
