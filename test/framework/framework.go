@@ -783,8 +783,8 @@ func (f *Framework) NewAllPodsEndpoints(
 			Namespace: dcKey.Namespace,
 			Name:      fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
 			Labels: map[string]string{
-				api.TmpK8ssandraClusterNamespaceLabel: kcKey.Namespace,
-				api.TmpK8ssandraClusterNameLabel:      kcKey.Name,
+				api.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
+				api.K8ssandraClusterNameLabel:      kcKey.Name,
 			},
 		},
 		Subsets: []corev1.EndpointSubset{

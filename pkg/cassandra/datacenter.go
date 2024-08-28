@@ -239,8 +239,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	dc.Spec.AdditionalServiceConfig.AllPodsService.Labels = utils.MergeMap(
 		dc.Spec.AdditionalServiceConfig.AllPodsService.Labels,
 		map[string]string{
-			api.TmpK8ssandraClusterNameLabel:      klusterKey.Name,
-			api.TmpK8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+			api.K8ssandraClusterNameLabel:      klusterKey.Name,
+			api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 		})
 
 	dc.Spec.Tolerations = template.Tolerations

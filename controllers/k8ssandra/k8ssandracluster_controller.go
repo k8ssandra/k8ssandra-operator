@@ -228,8 +228,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	endpointsFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
-		kcName := labels.GetLabel(mapObj, api.TmpK8ssandraClusterNameLabel)
-		kcNamespace := labels.GetLabel(mapObj, api.TmpK8ssandraClusterNamespaceLabel)
+		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		kcNamespace := labels.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
 
 		if kcName != "" && kcNamespace != "" && strings.HasSuffix(mapObj.GetName(), "all-pods-service") {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})

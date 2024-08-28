@@ -58,11 +58,6 @@ const (
 	K8ssandraClusterNameLabel      = "k8ssandra.io/cluster-name"
 	K8ssandraClusterNamespaceLabel = "k8ssandra.io/cluster-namespace"
 
-	// TODO this is a workaround because cass-operator does not let us set k8ssandra.io/* labels in
-	//  AdditionalServiceConfig. Remove and replace by the two original constants once this is fixed.
-	TmpK8ssandraClusterNameLabel      = "not.k8ssandra.io/cluster-name"
-	TmpK8ssandraClusterNamespaceLabel = "not.k8ssandra.io/cluster-namespace"
-
 	DatacenterLabel = "k8ssandra.io/datacenter"
 	// Forces refresh of secrets which relate to roles and authn in Cassandra.
 	RefreshAnnotation = "k8ssandra.io/refresh"
