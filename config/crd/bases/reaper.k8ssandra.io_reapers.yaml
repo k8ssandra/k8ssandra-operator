@@ -1181,8 +1181,6 @@ spec:
                       The datacenter namespace. If empty, the datacenter will be assumed to reside in the same namespace as the Reaper
                       instance.
                     type: string
-                required:
-                - name
                 type: object
               heapSize:
                 anyOf:
@@ -2768,8 +2766,6 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-            required:
-            - datacenterRef
             type: object
           status:
             description: ReaperStatus defines the observed state of Reaper

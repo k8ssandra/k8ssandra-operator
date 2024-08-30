@@ -305,6 +305,34 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 	})
 }
 
+func createControlPlaneReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	reaperKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+
+	checkReaperReady(t, f, ctx, reaperKey)
+	checkDatacenterReady(t, ctx, dcKey, f)
+
+	dcPrefix := DcPrefix(t, f, dcKey)
+
+	createKeyspaceAndTable(t, f, ctx, f.DataPlaneContexts[0], namespace, "e2etestcluster", dcPrefix+"-default-sts-0", "test_ks", "test_table", 2)
+
+	t.Log("deploying Reaper ingress routes in context", f.ControlPlaneContext)
+	reaperRestHostAndPort := ingressConfigs[f.ControlPlaneContext].ReaperRest
+	f.DeployReaperIngresses(t, f.ControlPlaneContext, namespace, "reaper1-service", reaperRestHostAndPort)
+	defer f.UndeployAllIngresses(t, f.ControlPlaneContext, namespace)
+	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
+
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context", f.ControlPlaneContext)
+		secretKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}}
+		username, password := retrieveCredentials(t, f, ctx, secretKey)
+		testReaperApi(t, ctx, f.ControlPlaneContext, DcClusterName(t, f, dcKey), "test_ks", username, password)
+	})
+
+	t.Log("verify Reaper keyspace absent")
+	checkKeyspaceNeverCreated(t, f, ctx, f.DataPlaneContexts[0], namespace, "e2etestcluster", dcPrefix+"-default-sts-0", "reaper_db")
+}
+
 func checkReaperReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, reaperKey framework.ClusterKey) {
 	t.Logf("check that Reaper %s in cluster %s is ready", reaperKey.Name, reaperKey.K8sContext)
 	withReaper := f.NewWithReaper(ctx, reaperKey)
@@ -428,10 +456,12 @@ func testReaperApi(t *testing.T, ctx context.Context, k8sContext, clusterName, k
 	sanitizedClusterName := cassdcapi.CleanupForKubernetes(clusterName)
 	reaperClient := connectReaperApi(t, ctx, k8sContext, sanitizedClusterName, username, password)
 	repairId := triggerRepair(t, ctx, sanitizedClusterName, keyspace, reaperClient)
-	t.Log("Waiting for one segment to be repaired and canceling run")
+	t.Log("waiting for one segment to be repaired, then canceling run")
 	waitForOneSegmentToBeDone(t, ctx, repairId, reaperClient)
+	t.Log("a segment has completed")
 	err := reaperClient.AbortRepairRun(ctx, repairId)
 	require.NoErrorf(t, err, "Failed to abort repair run %s: %s", repairId, err)
+	t.Log("repair aborted")
 }
 
 func checkClusterIsRegisteredInReaper(t *testing.T, ctx context.Context, clusterName string, reaperClient reaperclient.Client) {

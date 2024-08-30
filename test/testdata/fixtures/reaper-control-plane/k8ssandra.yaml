@@ -1,36 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cassandra-config
+data:
+  cassandra.yaml: |
+    concurrent_reads: 32
+    concurrent_writes: 32
+    concurrent_counter_writes: 32
+---
 apiVersion: k8ssandra.io/v1alpha1
 kind: K8ssandraCluster
 metadata:
   name: test
 spec:
   reaper:
-    deploymentMode: SINGLE
-    storageType: local
-    storageConfig:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-          requests:
-              storage: 1Gi
-    httpManagement:
-      enabled: true
-    heapSize: 256Mi
-    autoScheduling:
-      enabled: false
-    telemetry:
-      vector:
-        enabled: true
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 100m
-            memory: 512Mi
+    reaperRef:
+      name: reaper1
+    uiUserSecretRef:
+      name: reaper-ui-secret
   cassandra:
+    clusterName: "E2E Test Cluster"
     serverVersion: "3.11.14"
     serverImage: "k8ssandra/cass-management-api:3.11.14"
-    clusterName: "My Cluster"
     jmxInitContainerImage:
       repository: library
       name: busybox
@@ -50,4 +41,5 @@ spec:
         config:
           jvmOptions:
             heapSize: 384Mi
+            cassandra_ring_delay_ms: 0
     mgmtAPIHeap: 64Mi
