@@ -925,7 +925,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	}, timeout, interval, "timed out waiting for creation of contact-points Service for dc2")
 
 	t.Log("simulate a change of Endpoints in dc2")
-	f.Update(ctx, dc2Key, f.NewAllPodsEndpoints(kcKey, kc, dc2Key, "10.0.0.3"))
+	err = f.Update(ctx, dc2Key, f.NewAllPodsEndpoints(kcKey, kc, dc2Key, "10.0.0.3"))
+	require.NoError(err, "failed to update Endpoints")
 
 	t.Log("check that the contact-points Service for dc2 was updated")
 	require.Eventually(func() bool {
