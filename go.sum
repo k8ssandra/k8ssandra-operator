@@ -1438,8 +1438,8 @@ github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7V
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
 github.com/jung-kurt/gofpdf v1.0.0/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
-github.com/k8ssandra/cass-operator v1.22.0 h1:SVBOO8/YcayTx7mlP+wXWKYFYE64Yg0Usoc62rkaNyc=
-github.com/k8ssandra/cass-operator v1.22.0/go.mod h1:KtROSvoTwB6eFzcRjOmTUAGkbDHnNtK4ayk4KDllHy4=
+github.com/k8ssandra/cass-operator v1.22.1 h1:fm3QA1UpH9mD3PvsaLIvY/eFXpPQ/eDkkhIEr414CBw=
+github.com/k8ssandra/cass-operator v1.22.1/go.mod h1:KtROSvoTwB6eFzcRjOmTUAGkbDHnNtK4ayk4KDllHy4=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5 h1:Dq0VdM960G3AbhYwFuaebmsE08IzOYHYhngUfDmWaAc=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5/go.mod h1:WsQymIaVT39xbcstZhdqynUS13AGzP2p6U9Hsk1oy5M=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=

@@ -15,4 +15,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Update cass-operator to v1.22.1
 * [FEATURE] [#1277](https://github.com/k8ssandra/k8ssandra-operator/issues/1277) Introduce Reaper's Control Plane deployment mode
