@@ -147,8 +147,9 @@ func (r *K8ssandraClusterReconciler) newContactPointsService(
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:  corev1.ServiceTypeClusterIP,
-			Ports: ports,
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: corev1.ClusterIPNone,
+			Ports:     ports,
 			// We don't provide a selector since the operator manages the Endpoints directly
 		},
 	}
