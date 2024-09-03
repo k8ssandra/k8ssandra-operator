@@ -10,6 +10,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [DOCS]
 * [TESTING]
 ```
+
+## Unreleased
+
+
 ## 1.19.0 - 2024-09-02
 
 * [CHANGE] Update cass-operator to v1.22.1
