@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -343,4 +344,37 @@ func (r *K8ssandraClusterReconciler) deleteCronJobs(
 		}
 	}
 	return
+}
+
+// setDcOwnership loads the remote resource identified by controlledKey, sets dc as its owner, and writes it back. If
+// the remote resource does not exist, this is a no-op.
+func setDcOwnership[T client.Object](
+	ctx context.Context,
+	dc *cassdcapi.CassandraDatacenter,
+	controlledKey client.ObjectKey,
+	controlled T,
+	remoteClient client.Client,
+	scheme *runtime.Scheme,
+	logger logr.Logger,
+) result.ReconcileResult {
+	if err := remoteClient.Get(ctx, controlledKey, controlled); err != nil {
+		if errors.IsNotFound(err) {
+			return result.Continue()
+		}
+		logger.Error(err, "Failed to get controlled resource", "key", controlledKey)
+		return result.Error(err)
+	}
+	if controllerutil.HasControllerReference(controlled) {
+		// Assume this is us from a previous reconcile loop
+		return result.Continue()
+	}
+	if err := controllerutil.SetControllerReference(dc, controlled, scheme); err != nil {
+		logger.Error(err, "Failed to set DC owner reference", "key", controlledKey)
+		return result.Error(err)
+	}
+	if err := remoteClient.Update(ctx, controlled); err != nil {
+		logger.Error(err, "Failed to update controlled resource", "key", controlledKey)
+		return result.Error(err)
+	}
+	return result.Continue()
 }
