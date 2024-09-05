@@ -119,15 +119,23 @@ Reaper also has the ability to listen and display live Cassandra’s emitted Dia
 
 In Cassandra 4.0, internal system “diagnostic events” have become available, via the work done in CASSANDRA-12944. These allow operators to observe internal Cassandra events, for example in unit tests and with external tools. These diagnostic events provide operational monitoring and troubleshooting beyond logs and metrics.
 
-Reaper can use Postgres and Cassandra itself as a storage backend for its data, and is capable of repairing all Cassandra versions since 1.2 up to the latest 4.0.
+Reaper does not need an external database to store its data. It can run with a _local_ storage, which means Reaper will persist its in-memory data to the local file system. Reaper can also use Postgres and Cassandra itself as a storage backend for its data, and is capable of repairing all Cassandra versions since 1.2 up to the latest 4.0.
 
 In order to make Reaper more efficient, segment orchestration was recently revamped and modernized. It opened for a long awaited feature: fully concurrent repairs for different keyspaces and tables.
 These changes also introduced a long awaited feature by allowing fully concurrent repairs for different keyspaces/tables.
 
 ## Deploying Reaper in k8ssandra-operator
 
-Reaper is not deployed by default by k8ssandra-operator.  
-In order to deploy it with the default settings, you'll need to add the following section to your `K8ssandraCluster` manifest:
+Reaper is not deployed by default by k8ssandra-operator. It can be deployed in two modes:
+
+* **_bundled_** : This is the conventional way of deploying one (or several co-operating instances of) Reaper per k8ssandra cluster.
+* **_control plane_** : This is a more recent way of deploying just one instance of Reaper that takes care of repairing several k8ssandra clusters. 
+
+### Deploying a bundled Reaper
+
+Bundled Reaper is the default way of deploying Reaper. 
+
+In order to deploy Reaper with the default settings, you'll need to add the following section to your `K8ssandraCluster` manifest:
 
 ```yaml
 spec:
@@ -143,7 +151,58 @@ spec:
     deploymentMode: SINGLE
 ```
 
-The list of available configuration options can be found in the [Reaper CRD]({{< relref "/reference/crd/k8ssandra-operator-crds-latest/#k8ssandraclusterspecreaper" >}}).
+### Deploying a control plane Reaper
+
+In order to deploy a control plane Reaper, you'll need to create the Reaper object directly:
+
+```yaml
+kind: Reaper
+metadata:
+  name: cp-reaper
+spec:
+  storageType: local
+  storageConfig:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 256Mi
+  httpManagement:
+    enabled: true
+```
+
+The _control plane_ Reaper must use a _local_ storage because there's no Cassandra cluster yet. 
+The local storage requires its own config, mostly to ensure enough disk space is allocated to Reaper. You can skip the `storageType` field, which will make the k8s cluster use whatever the default storage class is.
+It's also a good idea to enable the `httpManagement`. This will make Reaper use HTTP instead of JMX when interacting with Cassandra.
+
+In order to enrol a k8ssandra cluster in the control plane Reaper, you'll need to add a `reaperRef` to the `reaper` section of the `K8ssandraCluster` manifest:
+
+```yaml
+spec:
+  reaper:
+    reaperRef:
+      name: cp-reaper
+```
+
+The k8ssandra-operator will then take care of enrolling the k8ssandra cluster in the control plane Reaper instead of deploying a bundled Reaper.
+
+By default, Reaper will not require authentication when connecting to it. If you wish to use authentication when connecting to Reaper, you first need to create a secret yourself. Then, you can reference this secret in Reaper's manifest:
+
+```yaml
+kind: Reaper
+metadata:
+  name: cp-reaper
+spec:
+  # other fields
+  uiUserSecretRef:
+    name: reaper-ui-secret
+```
+
+This same secret then needs to be referenced in the `K8ssandraCluster` manifest at `spec.reaper.uiUserSecretRef`. The k8ssandra-operator will use these credentials when enrolling the k8ssandra cluster in the control plane Reaper. 
+
+### Configuring Reaper
+
+The list of available configuration options can be found in the [Reaper CRD]({{< relref "/reference/crd/k8ssandra-operator-crds-latest/#k8ssandraclusterspecreaper" >}}). It's applicable for both bundled and control plane Reapers.
 
 ## Next steps
 
