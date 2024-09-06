@@ -183,6 +183,8 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 			return recResult
 		} else if recResult := r.setupVectorCleanup(ctx, kc, dc, remoteClient, logger); recResult.Completed() {
 			return recResult
+		} else if recResult := r.setupMedusaCleanup(ctx, kc, dc, remoteClient, logger); recResult.Completed() {
+			return recResult
 		}
 	}
 	return result.Continue()
