@@ -123,9 +123,7 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, cassDcName string, logger logr.Logger) result.ReconcileResult {
 	kcKey := utils.GetKey(kc)
 
-	var remoteClient client.Client
-
-	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
+	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName)
 	if err != nil {
 		return result.Error(err)
 	}
@@ -166,29 +164,16 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	ctx context.Context,
 	kcKey client.ObjectKey,
 	dcName string,
-	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+) (*cassdcapi.CassandraDatacenter, client.Client, error) {
 	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	dcList := &cassdcapi.CassandraDatacenterList{}
 
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, dcList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
-			}
-			for _, dc := range dcList.Items {
-				if dc.Name == dcName {
-					return &dc, remoteClient, nil
-				}
-			}
-		}
-	} else {
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
 		err := remoteClient.List(ctx, dcList, options)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
+			return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
 		}
-
 		for _, dc := range dcList.Items {
 			if dc.Name == dcName {
 				return &dc, remoteClient, nil
