@@ -8,17 +8,13 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -62,22 +58,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			}
 		} else if err = remoteClient.Delete(ctx, dc); err != nil {
 			logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
-			hasErrors = true
-		}
-
-		if r.deleteDeployments(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteServices(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteK8ssandraConfigMaps(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteCronJobs(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 	}
@@ -217,133 +197,6 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	}
 
 	return nil, nil, nil
-}
-
-func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
-	configMaps := &corev1.ConfigMapList{}
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	if err := remoteClient.List(ctx, configMaps, &options); err != nil {
-		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, rp := range configMaps.Items {
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !apierrors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete configmap", "ConfigMap", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteServices(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	serviceList := &corev1.ServiceList{}
-	if err := remoteClient.List(ctx, serviceList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list K8ssandra services", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, rp := range serviceList.Items {
-		kcLogger.Info("Deleting service", "Service", utils.GetKey(&rp))
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Service", "Service", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteDeployments(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	deploymentList := &appsv1.DeploymentList{}
-	if err := remoteClient.List(ctx, deploymentList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list K8ssandra deployments", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, item := range deploymentList.Items {
-		kcLogger.Info("Deleting deployment", "Deployment", utils.GetKey(&item))
-		if err := remoteClient.Delete(ctx, &item); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Deployment", "Deployment", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteCronJobs(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	cronJobList := &batchv1.CronJobList{}
-	if err := remoteClient.List(ctx, cronJobList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list Medusa CronJobs", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, item := range cronJobList.Items {
-		kcLogger.Info("Deleting CronJob", "CronJob", utils.GetKey(&item))
-		if err := remoteClient.Delete(ctx, &item); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete CronJob", "CronJob", key, "Context", dcTemplate.K8sContext)
-			}
-		}
-	}
-	return
 }
 
 // setDcOwnership loads the remote resource identified by controlledKey, sets dc as its owner, and writes it back. If
