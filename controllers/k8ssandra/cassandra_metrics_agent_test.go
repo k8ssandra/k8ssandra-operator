@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
@@ -87,9 +85,13 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	// check that we have the right ConfigMap
 	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test-dc1" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
 	agentCm := corev1.ConfigMap{}
-	if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
-		assert.Fail(t, "could not find expected metrics-agent-config configmap")
-	}
+	require.Eventually(func() bool {
+		if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
+			t.Log("could not find expected metrics-agent-config configmap")
+			return false
+		}
+		return f.IsOwnedByCassandraDatacenter(&agentCm)
+	}, timeout, interval)
 
 	// Verify the ConfigMap is set to be mounted
 	require.True(len(dc.Spec.StorageConfig.AdditionalVolumes) > 0)
@@ -109,9 +111,4 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t,
-		agentCmKey,
-		&corev1.ConfigMap{},
-		timeout,
-		interval)
 }

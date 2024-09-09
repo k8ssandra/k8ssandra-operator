@@ -69,6 +69,7 @@ func (r *K8ssandraClusterReconciler) setupVectorCleanup(
 	remoteClient client.Client,
 	logger logr.Logger,
 ) result.ReconcileResult {
+	logger.Info("Setting up Vector Agent ConfigMap cleanup")
 	configMapKey := client.ObjectKey{
 		Namespace: dc.Namespace,
 		Name:      telemetry.VectorAgentConfigMapName(kc.SanitizedName(), dc.SanitizedName()),

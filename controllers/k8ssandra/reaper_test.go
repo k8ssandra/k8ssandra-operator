@@ -254,7 +254,10 @@ func createMultiDcClusterWithControlPlaneReaper(t *testing.T, ctx context.Contex
 			Name:      "reaper"},
 	}
 	t.Log("check that control plane reaper is created")
-	require.Eventually(f.ReaperExists(ctx, cpReaperKey), timeout, interval)
+	withReaper := f.NewWithReaper(ctx, cpReaperKey)
+	require.Eventually(withReaper(func(r *reaperapi.Reaper) bool {
+		return true
+	}), timeout, interval)
 
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
