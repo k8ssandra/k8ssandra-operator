@@ -182,6 +182,7 @@ spec:
   reaper:
     reaperRef:
       name: cp-reaper
+      namespace: reaper-namespace
 ```
 
 The k8ssandra-operator will then take care of enrolling the k8ssandra cluster in the control plane Reaper instead of deploying a bundled Reaper.
