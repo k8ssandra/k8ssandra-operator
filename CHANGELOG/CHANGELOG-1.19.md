@@ -14,4 +14,3 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 * [CHANGE] Update cass-operator to v1.22.1
 * [FEATURE] [#1277](https://github.com/k8ssandra/k8ssandra-operator/issues/1277) Introduce Reaper's Control Plane deployment mode
-* [FEATURE] [#1382](https://github.com/k8ssandra/k8ssandra-operator/issues/1382) Add service to expose DC nodes in the control plane

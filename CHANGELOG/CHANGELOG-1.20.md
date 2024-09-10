@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#1399](https://github.com/k8ssandra/k8ssandra-operator/issues/1399) Fixed SecretSyncController to handle multiple namespaces
+* [FEATURE] [#1382](https://github.com/k8ssandra/k8ssandra-operator/issues/1382) Add service to expose DC nodes in the control plane
