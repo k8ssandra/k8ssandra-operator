@@ -445,6 +445,10 @@ type DatacenterOptions struct {
 	// Use cautiously.
 	// +optional
 	DatacenterName string `json:"datacenterName,omitempty"`
+
+	// ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
+	// new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
+	ReadOnlyRootFilesystem *bool `json:"readOnlyRootFilesystem,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to

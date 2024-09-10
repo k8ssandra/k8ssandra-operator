@@ -114,6 +114,7 @@ type DatacenterConfig struct {
 	ExternalSecrets           bool
 	McacEnabled               bool
 	DatacenterName            string
+	ReadOnlyRootFilesystem    *bool
 
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
@@ -165,22 +166,23 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			}, labels.CleanedUpByLabels(klusterKey)),
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
-			Size:                template.Size,
-			Stopped:             template.Stopped,
-			ServerVersion:       template.ServerVersion.String(),
-			ServerImage:         template.ServerImage,
-			ServerType:          string(template.ServerType),
-			Config:              rawConfig,
-			Racks:               template.Racks,
-			StorageConfig:       *template.StorageConfig,
-			ClusterName:         template.Cluster,
-			SuperuserSecretName: superUserSecretName,
-			Users:               template.Users,
-			Networking:          template.Networking,
-			PodTemplateSpec:     &template.PodTemplateSpec,
-			CDC:                 template.CDC,
-			DseWorkloads:        template.DseWorkloads,
-			ServiceAccountName:  template.ServiceAccount,
+			Size:                   template.Size,
+			Stopped:                template.Stopped,
+			ServerVersion:          template.ServerVersion.String(),
+			ServerImage:            template.ServerImage,
+			ServerType:             string(template.ServerType),
+			Config:                 rawConfig,
+			Racks:                  template.Racks,
+			StorageConfig:          *template.StorageConfig,
+			ClusterName:            template.Cluster,
+			SuperuserSecretName:    superUserSecretName,
+			Users:                  template.Users,
+			Networking:             template.Networking,
+			PodTemplateSpec:        &template.PodTemplateSpec,
+			CDC:                    template.CDC,
+			DseWorkloads:           template.DseWorkloads,
+			ServiceAccountName:     template.ServiceAccount,
+			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,
 		},
 	}
 
@@ -374,6 +376,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 	dcConfig.ServiceAccount = mergedOptions.ServiceAccount
+	dcConfig.ReadOnlyRootFilesystem = mergedOptions.ReadOnlyRootFilesystem
 
 	dcConfig.Meta.Tags = goalesceutils.MergeCRs(clusterTemplate.Meta.Tags, dcTemplate.Meta.Tags)
 	dcConfig.Meta.CommonLabels = goalesceutils.MergeCRs(clusterTemplate.Meta.CommonLabels, dcTemplate.Meta.CommonLabels)
