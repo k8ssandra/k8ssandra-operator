@@ -144,7 +144,11 @@ func (c Configurator) GetTelemetryAgentConfigMap() (*corev1.ConfigMap, error) {
 }
 
 func (c Configurator) configMapName() string {
-	return cassdcapi.CleanupForKubernetes(c.Kluster.CassClusterName() + "-" + c.DcName + "-metrics-agent-config")
+	return ConfigMapName(c.Kluster.CassClusterName(), c.DcName)
+}
+
+func ConfigMapName(kcCqlName, dcCqlName string) string {
+	return cassdcapi.CleanupForKubernetes(kcCqlName + "-" + dcCqlName + "-metrics-agent-config")
 }
 
 func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatacenter) result.ReconcileResult {

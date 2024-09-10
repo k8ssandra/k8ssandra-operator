@@ -6,6 +6,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry/cassandra_agent"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,10 +21,9 @@ func (r *K8ssandraClusterReconciler) setupTelemetryCleanup(
 	remoteClient client.Client,
 	logger logr.Logger,
 ) result.ReconcileResult {
-	// TODO this should be factored better with the rest of the telemetry code
 	configMapKey := client.ObjectKey{
 		Namespace: dc.Namespace,
-		Name:      kc.SanitizedName() + "-" + dc.SanitizedName() + "-per-node-config",
+		Name:      cassandra_agent.ConfigMapName(kc.CassClusterName(), dc.DatacenterName()),
 	}
 	return setDcOwnership(ctx, dc, configMapKey, &corev1.ConfigMap{}, remoteClient, r.Scheme, logger)
 }

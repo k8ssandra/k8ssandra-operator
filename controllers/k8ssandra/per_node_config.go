@@ -185,7 +185,7 @@ func (r *K8ssandraClusterReconciler) setupPerNodeConfigurationCleanup(
 ) result.ReconcileResult {
 	configMapKey := client.ObjectKey{
 		Namespace: dc.Namespace,
-		Name:      kc.SanitizedName() + "-" + dc.SanitizedName() + "-metrics-agent-config",
+		Name:      nodeconfig.NewDefaultPerNodeConfigMapName(kc.CassClusterName(), dc.DatacenterName()),
 	}
 	return setDcOwnership(ctx, dc, configMapKey, &corev1.ConfigMap{}, remoteClient, r.Scheme, logger)
 }

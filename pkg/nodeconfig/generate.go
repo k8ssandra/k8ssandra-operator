@@ -39,9 +39,13 @@ func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, kc *k8ssandraapi.K8s
 
 func NewDefaultPerNodeConfigMapKey(kc *k8ssandraapi.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) types.NamespacedName {
 	return types.NamespacedName{
-		Name:      cassdcapi.CleanupForKubernetes(kc.CassClusterName() + "-" + dcConfig.CassDcName() + "-per-node-config"),
+		Name:      NewDefaultPerNodeConfigMapName(kc.CassClusterName(), dcConfig.CassDcName()),
 		Namespace: utils.FirstNonEmptyString(dcConfig.Meta.Namespace, kc.Namespace),
 	}
+}
+
+func NewDefaultPerNodeConfigMapName(kcCqlName, dcCqlName string) string {
+	return cassdcapi.CleanupForKubernetes(kcCqlName + "-" + dcCqlName + "-per-node-config")
 }
 
 func newPerNodeConfigMap(kcKey, configKey types.NamespacedName) *corev1.ConfigMap {
