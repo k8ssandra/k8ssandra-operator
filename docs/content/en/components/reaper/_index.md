@@ -175,7 +175,7 @@ The _control plane_ Reaper must use a _local_ storage because there's no Cassand
 The local storage requires its own config, mostly to ensure enough disk space is allocated to Reaper. You can skip the `storageClassName` field to use the default storage class, or set it to specify one explicitly.
 We recommend enabling the `httpManagement` feature. This will make Reaper use HTTP instead of JMX when interacting with Cassandra.
 
-In order to enrol a k8ssandra cluster in the control plane Reaper, you'll need to add a `reaperRef` to the `reaper` section of the `K8ssandraCluster` manifest:
+In order to enroll a k8ssandra cluster in the control plane Reaper, you'll need to add a `reaperRef` to the `reaper` section of the `K8ssandraCluster` manifest:
 
 ```yaml
 spec:
