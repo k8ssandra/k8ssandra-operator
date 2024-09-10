@@ -119,7 +119,7 @@ Reaper also has the ability to listen and display live Cassandra’s emitted Dia
 
 In Cassandra 4.0, internal system “diagnostic events” have become available, via the work done in CASSANDRA-12944. These allow operators to observe internal Cassandra events, for example in unit tests and with external tools. These diagnostic events provide operational monitoring and troubleshooting beyond logs and metrics.
 
-Reaper does not need an external database to store its data. It can run with a _local_ storage, which means Reaper will persist its in-memory data to the local file system. Reaper can also use Postgres and Cassandra itself as a storage backend for its data, and is capable of repairing all Cassandra versions since 1.2 up to the latest 4.0.
+Reaper does not need an external database to store its data. It can run with a _local_ storage, which means Reaper will persist its in-memory data to the local file system. Reaper can also use Cassandra itself as a storage backend for its data, and is capable of repairing all Cassandra versions since 1.2 up to the latest 4.0.
 
 In order to make Reaper more efficient, segment orchestration was recently revamped and modernized. It opened for a long awaited feature: fully concurrent repairs for different keyspaces and tables.
 These changes also introduced a long awaited feature by allowing fully concurrent repairs for different keyspaces/tables.
