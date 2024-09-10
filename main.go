@@ -213,7 +213,7 @@ func main() {
 		if err = (&replicationctrl.SecretSyncController{
 			ReconcilerConfig: reconcilerConfig,
 			ClientCache:      clientCache,
-			WatchNamespaces:  []string{watchNamespace},
+			WatchNamespaces:  strings.Split(watchNamespace, ","),
 		}).SetupWithManager(mgr, additionalClusters, setupLog); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "SecretSync")
 			os.Exit(1)
