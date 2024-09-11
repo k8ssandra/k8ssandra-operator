@@ -234,6 +234,15 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	dc.Spec.AdditionalServiceConfig = m.ServiceConfig.ToCassAdditionalServiceConfig()
 
+	// We need these two labels to always be present, in order to watch Endpoints resources (see SetupWithManager in the
+	// K8ssandraCluster controller)
+	dc.Spec.AdditionalServiceConfig.AllPodsService.Labels = utils.MergeMap(
+		dc.Spec.AdditionalServiceConfig.AllPodsService.Labels,
+		map[string]string{
+			api.K8ssandraClusterNameLabel:      klusterKey.Name,
+			api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
+		})
+
 	dc.Spec.Tolerations = template.Tolerations
 
 	if !template.McacEnabled {

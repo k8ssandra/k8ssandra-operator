@@ -831,6 +831,22 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
+	t.Log("simulate the creation of the all-pods Endpoints for dc1")
+	err = f.Create(ctx, dc1Key, f.NewAllPodsEndpoints(kcKey, kc, dc1Key, "10.0.0.1"))
+	require.NoError(err, "failed to create Endpoints")
+
+	t.Log("check that the contact-points Service for dc1 was created in the control plane")
+	require.Eventually(func() bool {
+		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc1Key)
+		if err != nil {
+			t.Logf("failed to get contact-points Service: %v", err)
+			return false
+		}
+		return len(endpoints.Subsets) == 1 &&
+			endpoints.Subsets[0].Addresses[0].IP == "10.0.0.1" &&
+			endpoints.Subsets[0].Ports[0].Port == 9042
+	}, timeout, interval, "timed out waiting for creation of contact-points Service for dc1")
+
 	t.Log("check that dc2 has not been created yet")
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 	dc2 := &cassdcapi.CassandraDatacenter{}
@@ -891,6 +907,38 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	t.Log("simulate the creation of the all-pods Endpoints for dc2")
+	err = f.Create(ctx, dc2Key, f.NewAllPodsEndpoints(kcKey, kc, dc2Key, "10.0.0.2"))
+	require.NoError(err, "failed to create Endpoints")
+
+	t.Log("check that the contact-points Service for dc2 was created in the control plane")
+	require.Eventually(func() bool {
+		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
+		if err != nil {
+			t.Logf("failed to get contact-points Service: %v", err)
+			return false
+		}
+		return len(endpoints.Subsets) == 1 &&
+			endpoints.Subsets[0].Addresses[0].IP == "10.0.0.2" &&
+			endpoints.Subsets[0].Ports[0].Port == 9042
+	}, timeout, interval, "timed out waiting for creation of contact-points Service for dc2")
+
+	t.Log("simulate a change of Endpoints in dc2")
+	err = f.Update(ctx, dc2Key, f.NewAllPodsEndpoints(kcKey, kc, dc2Key, "10.0.0.3"))
+	require.NoError(err, "failed to update Endpoints")
+
+	t.Log("check that the contact-points Service for dc2 was updated")
+	require.Eventually(func() bool {
+		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
+		if err != nil {
+			t.Logf("failed to get contact-points Service: %v", err)
+			return false
+		}
+		return len(endpoints.Subsets) == 1 &&
+			endpoints.Subsets[0].Addresses[0].IP == "10.0.0.3" &&
+			endpoints.Subsets[0].Ports[0].Port == 9042
+	}, timeout, interval, "timed out waiting for update of contact-points Service for dc2")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)

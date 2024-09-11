@@ -772,3 +772,46 @@ func (f *Framework) AssertObjectDoesNotExist(ctx context.Context, t *testing.T, 
 		return err != nil && errors.IsNotFound(err)
 	}, timeout, interval, fmt.Sprintf("failed to verify object (%+v) does not exist", key))
 }
+
+// NewAllPodsEndpoints simulates the *-all-pods-service Endpoints that lists the nodes of a DC (in real life, this is
+// done by the CassandraDatacenter's StatefulSet).
+func (f *Framework) NewAllPodsEndpoints(
+	kcKey ClusterKey, kc *api.K8ssandraCluster, dcKey ClusterKey, podIp string,
+) *corev1.Endpoints {
+	return &corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dcKey.Namespace,
+			Name:      fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
+			Labels: map[string]string{
+				api.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
+				api.K8ssandraClusterNameLabel:      kcKey.Name,
+			},
+		},
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{{IP: podIp}},
+				Ports:     []corev1.EndpointPort{{Name: "mock-port", Port: 9042, Protocol: corev1.ProtocolTCP}},
+			},
+		},
+	}
+}
+
+func (f *Framework) GetContactPointsService(
+	ctx context.Context, kcKey ClusterKey, kc *api.K8ssandraCluster, dcKey ClusterKey,
+) (*corev1.Service, *corev1.Endpoints, error) {
+	serviceKey := types.NamespacedName{
+		Namespace: kcKey.Namespace,
+		Name:      fmt.Sprintf("%s-%s-contact-points-service", kc.SanitizedName(), dcKey.Name),
+	}
+	service := &corev1.Service{}
+	err := f.Client.Get(ctx, serviceKey, service)
+	if err != nil {
+		return nil, nil, err
+	}
+	endpoints := &corev1.Endpoints{}
+	err = f.Client.Get(ctx, serviceKey, endpoints)
+	if err != nil {
+		return nil, nil, err
+	}
+	return service, endpoints, nil
+}

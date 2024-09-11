@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -223,6 +224,19 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		return requests
 	}
 
+	// Use a more specific filter for Endpoints because we are only interested in one particular service.
+	endpointsFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
+		requests := make([]reconcile.Request, 0)
+
+		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
+		kcNamespace := labels.GetLabel(mapObj, api.K8ssandraClusterNamespaceLabel)
+
+		if kcName != "" && kcNamespace != "" && strings.HasSuffix(mapObj.GetName(), "all-pods-service") {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: kcNamespace, Name: kcName}})
+		}
+		return requests
+	}
+
 	cb = cb.Watches(&cassdcapi.CassandraDatacenter{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&stargateapi.Stargate{},
@@ -231,6 +245,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&v1.ConfigMap{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+	cb = cb.Watches(&v1.Endpoints{},
+		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{}),
@@ -241,6 +257,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &v1.ConfigMap{}),
 			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &v1.Endpoints{}),
+			handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 	}
 
 	return cb.Complete(r)
