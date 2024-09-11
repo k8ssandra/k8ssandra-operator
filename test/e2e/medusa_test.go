@@ -44,6 +44,7 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
+	checkDatacenterReadOnlyRootFS(t, ctx, dcKey, f, kc)
 
 	// Disable purges
 	err = f.Get(ctx, kcKey, kc)

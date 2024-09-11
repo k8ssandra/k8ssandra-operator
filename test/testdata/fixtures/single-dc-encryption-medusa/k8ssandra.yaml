@@ -16,7 +16,6 @@ metadata:
   namespace: k8ssandra-operator
 spec:
   medusa:
-
     storageProperties:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
@@ -30,8 +29,9 @@ spec:
       name: client-certificates
   cassandra:
     clusterName: "First Cluster"
-    serverVersion: 3.11.14
-    serverImage: "k8ssandra/cass-management-api:3.11.14"
+    serverVersion: 4.1.5
+    serverImage: "k8ssandra/cass-management-api:4.1.5"
+    readOnlyRootFilesystem: true
     datacenters:
       - metadata:
           name: dc1
