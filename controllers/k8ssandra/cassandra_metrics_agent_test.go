@@ -76,6 +76,47 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	t.Log("check that the datacenter was created")
 	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
 	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	t.Log("update datacenter status to ready")
+	kcKey := framework.NewClusterKey(f.ControlPlaneContext, namespace, kc.Name)
+	err = f.PatchDatacenterStatus(ctx, dcKey, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+		})
+	})
+	require.NoError(err, "failed to update datacenter status to ready")
+
+	t.Log("check that the K8ssandraCluster status is updated")
+	require.Eventually(func() bool {
+		kc := &api.K8ssandraCluster{}
+		err = f.Get(ctx, kcKey, kc)
+
+		if err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+
+		if len(kc.Status.Datacenters) == 0 {
+			return false
+		}
+
+		k8ssandraStatus, found := kc.Status.Datacenters[dcKey.Name]
+		if !found {
+			t.Logf("status for datacenter %s not found", dcKey)
+			return false
+		}
+
+		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
+		return condition != nil && condition.Status == corev1.ConditionTrue
+	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
+
+	require.Eventually(func() bool {
+		return f.UpdateDatacenterGeneration(ctx, t, dcKey)
+	}, timeout, interval, "failed to update dc1 generation")
+
 	// Check that we have the right volumes and volume mounts.
 	dc := &cassdcapi.CassandraDatacenter{}
 	if err := f.Get(ctx, dcKey, dc); err != nil {
@@ -83,7 +124,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	}
 
 	// check that we have the right ConfigMap
-	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test-dc1" + "-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
+	agentCmKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Name: "test-dc1-metrics-agent-config", Namespace: namespace}, K8sContext: f.DataPlaneContexts[0]}
 	agentCm := corev1.ConfigMap{}
 	require.Eventually(func() bool {
 		if err := f.Get(ctx, agentCmKey, &agentCm); err != nil {
@@ -111,4 +152,13 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+}
+
+func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
+	for _, condition := range status.Conditions {
+		if condition.Type == condType {
+			return &condition
+		}
+	}
+	return nil
 }
