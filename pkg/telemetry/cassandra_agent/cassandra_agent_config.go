@@ -3,7 +3,6 @@ package cassandra_agent
 import (
 	"context"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
 
 	"github.com/adutra/goalesce"
@@ -162,9 +161,6 @@ func (c Configurator) ReconcileTelemetryAgentConfig(dc *cassdcapi.CassandraDatac
 		Namespace: c.Kluster.Namespace,
 	}
 	desiredCm.SetLabels(labels.CleanedUpByLabels(KlKey))
-	if err := controllerutil.SetControllerReference(dc, desiredCm, c.RemoteClient.Scheme()); err != nil {
-		return result.Error(err)
-	}
 
 	recRes := reconciliation.ReconcileObject(c.Ctx, c.RemoteClient, c.RequeueDelay, *desiredCm)
 	switch {
