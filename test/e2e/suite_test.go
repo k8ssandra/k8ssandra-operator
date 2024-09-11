@@ -946,7 +946,7 @@ func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framew
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, key, dc)
 	require.NoError(t, err)
-	require.Equal(t, *dc.Spec.ReadOnlyRootFilesystem, *kc.Spec.Cassandra.ReadOnlyRootFilesystem, "expected datacenter %s to have readOnlyRootFilesystem like it is in the kc", key.Name)
+	require.Equal(t, ptr.Deref(dc.Spec.ReadOnlyRootFilesystem, false), ptr.Deref(kc.Spec.Cassandra.ReadOnlyRootFilesystem, false), "expected datacenter %s to have readOnlyRootFilesystem like it is in the kc", key.Name)
 }
 
 // createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter
