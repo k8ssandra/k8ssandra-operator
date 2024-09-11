@@ -158,6 +158,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 							ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 								Insecure: &cassdcapi.ManagementApiAuthInsecureConfig{},
 							},
+							ReadOnlyRootFilesystem: ptr.To(true),
 						},
 					},
 				},
@@ -186,7 +187,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	require.NoError(err, "failed to get CassandraDatacenter")
 	require.True(dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser != nil && *dc.Spec.PodTemplateSpec.Spec.SecurityContext.RunAsUser == 999, "pod security context was not properly set")
 	require.True(dc.Spec.ManagementApiAuth.Insecure != nil, "management api auth was not properly set")
-
+	require.True(*dc.Spec.ReadOnlyRootFilesystem, "read only root filesystem was not properly set")
 	lastTransitionTime := metav1.Now()
 
 	t.Log("update datacenter status to scaling up")

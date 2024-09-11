@@ -799,6 +799,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
+	checkDatacenterReadOnlyRootFS(t, ctx, dcKey, f)
 	require.NoError(CheckLabelsAnnotationsCreated(dcKey, t, ctx, f))
 	// Check that the Cassandra cluster name override is passed to the cassdc without being modified
 	checkCassandraClusterName(t, ctx, k8ssandra, dcKey, f)
@@ -939,6 +940,14 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 	checkContainerDeleted(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
+}
+
+func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
+	t.Logf("check that datacenter %s in cluster %s uses readOnlyRootFilesystem", key.Name, key.K8sContext)
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, key, dc)
+	require.NoError(t, err)
+	require.True(t, *dc.Spec.ReadOnlyRootFilesystem, "expected datacenter %s to have readOnlyRootFilesystem set to true", key.Name)
 }
 
 // createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter
