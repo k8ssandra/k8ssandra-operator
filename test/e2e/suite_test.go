@@ -941,6 +941,14 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 }
 
+func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	t.Logf("check that datacenter %s in cluster %s uses readOnlyRootFilesystem", key.Name, key.K8sContext)
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, key, dc)
+	require.NoError(t, err)
+	require.Equal(t, ptr.Deref(dc.Spec.ReadOnlyRootFilesystem, false), ptr.Deref(kc.Spec.Cassandra.ReadOnlyRootFilesystem, false), "expected datacenter %s to have readOnlyRootFilesystem like it is in the kc", key.Name)
+}
+
 // createSingleDatacenterClusterWithUpgrade creates a K8ssandraCluster with one CassandraDatacenter
 // and one Stargate node that are deployed in the local cluster, using an older version of K8ssandraOperator.
 // Then it performs an upgrade to the latest version and checks that the cluster is ready and functional.

@@ -10671,6 +10671,11 @@ spec:
                             - name
                             type: object
                           type: array
+                        readOnlyRootFilesystem:
+                          description: |-
+                            ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
+                            new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
+                          type: boolean
                         resources:
                           description: Resources is the cpu and memory resources for
                             the cassandra container.
@@ -23112,6 +23117,11 @@ spec:
                       - name
                       type: object
                     type: array
+                  readOnlyRootFilesystem:
+                    description: |-
+                      ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
+                      new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
+                    type: boolean
                   resources:
                     description: Resources is the cpu and memory resources for the
                       cassandra container.
