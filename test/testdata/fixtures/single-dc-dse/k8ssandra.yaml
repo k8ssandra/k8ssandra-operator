@@ -8,8 +8,9 @@ spec:
     size: 1
     heapSize: 384Mi
   cassandra:
-    serverVersion: 6.8.26
+    serverVersion: 6.8.50
     serverType: dse
+    readOnlyRootFilesystem: true
     dseWorkloads:
       graphEnabled: false
       searchEnabled: false
