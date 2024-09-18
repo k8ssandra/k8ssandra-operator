@@ -1248,6 +1248,14 @@ The default is "mikefarah/yq:4".<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>readOnlyRootFilesystem</b></td>
+        <td>boolean</td>
+        <td>
+          ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
+new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandraresources">resources</a></b></td>
         <td>object</td>
         <td>
@@ -5515,6 +5523,14 @@ the pod are merged into their respective configuration files.<br/>
         <td>[]object</td>
         <td>
           Racks is a list of named racks. Note that racks are used to create node affinity. //<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>readOnlyRootFilesystem</b></td>
+        <td>boolean</td>
+        <td>
+          ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
+new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)<br/>
         </td>
         <td>false</td>
       </tr><tr>
