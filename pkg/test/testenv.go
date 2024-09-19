@@ -46,7 +46,7 @@ import (
 const (
 	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d-%s"
-	cassOperatorVersion       = "v1.22.1"
+	cassOperatorVersion       = "v1.22.4"
 	prometheusOperatorVersion = "v0.9.0"
 )
 
