@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## Unreleased
+
+* [BUGFIX] Upgrade cass-operator to v1.22.4 to fix security context overwrites
+
 ## v1.20.0 - 2024-09-18
 
 * [BUGFIX] [#1399](https://github.com/k8ssandra/k8ssandra-operator/issues/1399) Fixed SecretSyncController to handle multiple namespaces
