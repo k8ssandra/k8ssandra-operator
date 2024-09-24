@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sort"
 	"strconv"
 	"strings"
@@ -412,7 +413,10 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	} else {
 		if errors.IsNotFound(err) {
 			logger.Info("Creating rebuild task", "Task", taskKey)
-			if err = remoteClient.Create(ctx, desiredTask); err != nil {
+			if err = controllerutil.SetControllerReference(dc, desiredTask, r.Scheme); err != nil {
+				logger.Error(err, "Failed to set controller reference", "Task", taskKey)
+				return result.Error(err)
+			} else if err = remoteClient.Create(ctx, desiredTask); err != nil {
 				logger.Error(err, "Failed to create rebuild task", "Task", taskKey)
 				return result.Error(err)
 			}

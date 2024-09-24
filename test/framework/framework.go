@@ -704,7 +704,7 @@ func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition 
 func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
 	withStargate := f.NewWithStargate(ctx, key)
 	return withStargate(func(s *stargateapi.Stargate) bool {
-		return true
+		return f.IsOwnedByCassandraDatacenter(s)
 	})
 }
 
@@ -735,7 +735,7 @@ func (f *Framework) withReaper(ctx context.Context, key ClusterKey, condition fu
 func (f *Framework) ReaperExists(ctx context.Context, key ClusterKey) func() bool {
 	withReaper := f.NewWithReaper(ctx, key)
 	return withReaper(func(r *reaperapi.Reaper) bool {
-		return true
+		return f.IsOwnedByCassandraDatacenter(r)
 	})
 }
 
@@ -814,4 +814,18 @@ func (f *Framework) GetContactPointsService(
 		return nil, nil, err
 	}
 	return service, endpoints, nil
+}
+
+// IsOwnedByCassandraDatacenter checks that the given resource has an owner reference to a CassandraDatacenter.
+// We can't directly verify the deletion itself because controller-manager isn't actually running in EnvTest.
+// See also: https://github.com/kubernetes-sigs/controller-runtime/issues/626
+func (f *Framework) IsOwnedByCassandraDatacenter(resource metav1.Object) bool {
+	for _, ref := range resource.GetOwnerReferences() {
+		// Ideally we'd want to verify that ref.UID matches the CassandraDatacenter UID, but it's always readily
+		// available in all env tests. This should be good enough.
+		if ref.Kind == "CassandraDatacenter" && *ref.Controller {
+			return true
+		}
+	}
+	return false
 }

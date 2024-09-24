@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"os"
@@ -345,4 +346,35 @@ func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
 		return "default"
 	}
 	return operatorNamespace
+}
+
+// setupMedusaCleanup adds owner references to ensure that the remote resources created by reconcileMedusa are correctly
+// cleaned up when the CassandraDatacenter is deleted. We do that in a second pass because the CassandraDatacenter did
+// not exist yet at the time those resources were created.
+func (r *K8ssandraClusterReconciler) setupMedusaCleanup(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger,
+) result.ReconcileResult {
+	// Note: this ConfigMap is an edge case because it is not DC-specific. If two CassandraDatacenters are in the same
+	// namespace, they would share the same ConfigMap, so setting one of them as the owner is wrong.
+	// However, this is an unlikely scenario (DCs are usually in different contexts, let alone namespaces). Also, if we
+	// delete one DC and the other still needs the ConfigMap, it will be recreated.
+	configMapKey := client.ObjectKey{
+		Namespace: dc.Namespace,
+		// see pgk/medusa/reconcile.go
+		Name: fmt.Sprintf("%s-medusa", kc.SanitizedName()),
+	}
+	result := setDcOwnership(ctx, dc, configMapKey, &corev1.ConfigMap{}, remoteClient, r.Scheme, logger)
+	if result.Completed() {
+		return result
+	}
+
+	cronjobKey := client.ObjectKey{
+		Namespace: dc.Namespace,
+		Name:      medusa.MedusaPurgeCronJobName(kc.SanitizedName(), dc.SanitizedName()),
+	}
+	return setDcOwnership(ctx, dc, cronjobKey, &batchv1.CronJob{}, remoteClient, r.Scheme, logger)
 }

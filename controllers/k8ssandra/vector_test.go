@@ -152,7 +152,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 		assert.Fail(t, "error setting status ready", err)
 	}
 
-	// Check that the Vector config map was created
+	// Check that the Vector config map was created and is owned by the DC
 	vectorConfigMapKey := types.NamespacedName{Namespace: namespace, Name: telemetry.VectorAgentConfigMapName(kc.Name, dc1Key.Name)}
 	vectorConfigMap := &corev1.ConfigMap{}
 	require.Eventually(func() bool {
@@ -161,7 +161,7 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 			t.Logf("failed to get Vector config map: %v", err)
 			return false
 		}
-		return true
+		return f.IsOwnedByCassandraDatacenter(vectorConfigMap)
 	}, timeout, interval, "timed out waiting for Vector config map")
 
 	// Check that Vector configuration was set to the SystemLoggerResources
@@ -184,6 +184,5 @@ func createSingleDcClusterWithVector(t *testing.T, ctx context.Context, f *frame
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
-	f.AssertObjectDoesNotExist(ctx, t, framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: vectorConfigMapKey}, &corev1.ConfigMap{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }

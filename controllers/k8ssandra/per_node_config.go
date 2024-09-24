@@ -3,8 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"errors"
-
 	"github.com/go-logr/logr"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -171,4 +171,21 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 	}
 
 	return result.Continue()
+}
+
+// setupMedusaCleanup adds an owner reference to ensure that the remote ConfigMap created by
+// reconcileDefaultPerNodeConfiguration is correctly cleaned up when the CassandraDatacenter is deleted. We do that in a
+// second pass because the CassandraDatacenter did not exist yet at the time the ConfigMap was created.
+func (r *K8ssandraClusterReconciler) setupPerNodeConfigurationCleanup(
+	ctx context.Context,
+	kc *k8ssandraapi.K8ssandraCluster,
+	dc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	logger logr.Logger,
+) result.ReconcileResult {
+	configMapKey := client.ObjectKey{
+		Namespace: dc.Namespace,
+		Name:      nodeconfig.NewDefaultPerNodeConfigMapName(kc.CassClusterName(), dc.DatacenterName()),
+	}
+	return setDcOwnership(ctx, dc, configMapKey, &corev1.ConfigMap{}, remoteClient, r.Scheme, logger)
 }

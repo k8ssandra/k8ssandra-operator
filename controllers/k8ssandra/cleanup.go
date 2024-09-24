@@ -3,23 +3,18 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,7 +34,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 
 	logger.Info("Starting deletion")
 
-	kcKey := utils.GetKey(kc)
 	hasErrors := false
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
@@ -64,51 +58,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			}
 		} else if err = remoteClient.Delete(ctx, dc); err != nil {
 			logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
-			hasErrors = true
-		}
-
-		selector := k8ssandralabels.CleanedUpByLabels(kcKey)
-		stargateList := &stargateapi.StargateList{}
-		options := client.ListOptions{
-			Namespace:     namespace,
-			LabelSelector: labels.SelectorFromSet(selector),
-		}
-
-		err = remoteClient.List(ctx, stargateList, &options)
-		if err != nil {
-			logger.Error(err, "Failed to list Stargate objects", "Context", dcTemplate.K8sContext)
-			hasErrors = true
-			continue
-		}
-
-		for _, sg := range stargateList.Items {
-			if err = remoteClient.Delete(ctx, &sg); err != nil {
-				key := client.ObjectKey{Namespace: namespace, Name: sg.Name}
-				if !errors.IsNotFound(err) {
-					logger.Error(err, "Failed to delete Stargate", "Stargate", key,
-						"Context", dcTemplate.K8sContext)
-					hasErrors = true
-				}
-			}
-		}
-
-		if r.deleteReapers(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteDeployments(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteServices(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteK8ssandraConfigMaps(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
-			hasErrors = true
-		}
-
-		if r.deleteCronJobs(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
 		}
 	}
@@ -174,31 +123,7 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, cassDcName string, logger logr.Logger) result.ReconcileResult {
 	kcKey := utils.GetKey(kc)
 
-	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, cassDcName, nil)
-	if err != nil {
-		return result.Error(err)
-	}
-
-	if stargate != nil {
-		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", cassDcName, err))
-		}
-		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
-	}
-
-	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, cassDcName, remoteClient)
-	if err != nil {
-		return result.Error(err)
-	}
-
-	if reaper != nil {
-		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", cassDcName, err))
-		}
-		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
-	}
-
-	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
+	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName)
 	if err != nil {
 		return result.Error(err)
 	}
@@ -235,111 +160,20 @@ func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssa
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) findStargateForDeletion(
-	ctx context.Context,
-	kcKey client.ObjectKey,
-	dcName string,
-	remoteClient client.Client) (*stargateapi.Stargate, client.Client, error) {
-
-	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	stargateList := &stargateapi.StargateList{}
-	stargateName := kcKey.Name + "-" + dcName + "-stargate"
-
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, stargateList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
-			}
-			for _, stargate := range stargateList.Items {
-				if stargate.Name == stargateName {
-					return &stargate, remoteClient, nil
-				}
-			}
-		}
-	} else {
-		err := remoteClient.List(ctx, stargateList, options)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find Stargate (%s) for DC (%s) deletion: %v", stargateName, dcName, err)
-		}
-
-		for _, stargate := range stargateList.Items {
-			if stargate.Name == stargateName {
-				return &stargate, remoteClient, nil
-			}
-		}
-	}
-
-	return nil, nil, nil
-}
-
-func (r *K8ssandraClusterReconciler) findReaperForDeletion(
-	ctx context.Context,
-	kcKey client.ObjectKey,
-	dcName string,
-	remoteClient client.Client) (*reaperapi.Reaper, client.Client, error) {
-
-	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
-	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
-	reaperList := &reaperapi.ReaperList{}
-	reaperName := kcKey.Name + "-" + dcName + "-reaper"
-
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, reaperList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
-			}
-			for _, reaper := range reaperList.Items {
-				if reaper.Name == reaperName {
-					return &reaper, remoteClient, nil
-				}
-			}
-		}
-	} else {
-		err := remoteClient.List(ctx, reaperList, options)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find Reaper (%s) for DC (%s) deletion: %v", reaperName, dcName, err)
-		}
-
-		for _, reaper := range reaperList.Items {
-			if reaper.Name == reaperName {
-				return &reaper, remoteClient, nil
-			}
-		}
-	}
-
-	return nil, nil, nil
-}
-
 func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	ctx context.Context,
 	kcKey client.ObjectKey,
 	dcName string,
-	remoteClient client.Client) (*cassdcapi.CassandraDatacenter, client.Client, error) {
+) (*cassdcapi.CassandraDatacenter, client.Client, error) {
 	selector := k8ssandralabels.CleanedUpByLabels(kcKey)
 	options := &client.ListOptions{LabelSelector: labels.SelectorFromSet(selector)}
 	dcList := &cassdcapi.CassandraDatacenterList{}
 
-	if remoteClient == nil {
-		for _, remoteClient := range r.ClientCache.GetAllClients() {
-			err := remoteClient.List(ctx, dcList, options)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
-			}
-			for _, dc := range dcList.Items {
-				if dc.Name == dcName {
-					return &dc, remoteClient, nil
-				}
-			}
-		}
-	} else {
+	for _, remoteClient := range r.ClientCache.GetAllClients() {
 		err := remoteClient.List(ctx, dcList, options)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to find CassandraDatacenter (%s) for deletion: %v", dcName, err)
+			return nil, nil, fmt.Errorf("failed to CassandraDatacenter (%s) for DC (%s) deletion: %v", dcName, dcName, err)
 		}
-
 		for _, dc := range dcList.Items {
 			if dc.Name == dcName {
 				return &dc, remoteClient, nil
@@ -350,129 +184,35 @@ func (r *K8ssandraClusterReconciler) findDcForDeletion(
 	return nil, nil, nil
 }
 
-func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
+// setDcOwnership loads the remote resource identified by controlledKey, sets dc as its owner, and writes it back. If
+// the remote resource does not exist, this is a no-op.
+func setDcOwnership[T client.Object](
 	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
+	dc *cassdcapi.CassandraDatacenter,
+	controlledKey client.ObjectKey,
+	controlled T,
 	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
-	configMaps := &corev1.ConfigMapList{}
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	if err := remoteClient.List(ctx, configMaps, &options); err != nil {
-		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, rp := range configMaps.Items {
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !apierrors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete configmap", "ConfigMap", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
+	scheme *runtime.Scheme,
+	logger logr.Logger,
+) result.ReconcileResult {
+	if err := remoteClient.Get(ctx, controlledKey, controlled); err != nil {
+		if errors.IsNotFound(err) {
+			return result.Continue()
 		}
+		logger.Error(err, "Failed to get controlled resource", "key", controlledKey)
+		return result.Error(err)
 	}
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteServices(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
+	if controllerutil.HasControllerReference(controlled) {
+		// Assume this is us from a previous reconcile loop
+		return result.Continue()
 	}
-	serviceList := &corev1.ServiceList{}
-	if err := remoteClient.List(ctx, serviceList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list K8ssandra services", "Context", dcTemplate.K8sContext)
-		return true
+	if err := controllerutil.SetControllerReference(dc, controlled, scheme); err != nil {
+		logger.Error(err, "Failed to set DC owner reference", "key", controlledKey)
+		return result.Error(err)
 	}
-	for _, rp := range serviceList.Items {
-		kcLogger.Info("Deleting service", "Service", utils.GetKey(&rp))
-		if err := remoteClient.Delete(ctx, &rp); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: rp.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Service", "Service", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
+	if err := remoteClient.Update(ctx, controlled); err != nil {
+		logger.Error(err, "Failed to update controlled resource", "key", controlledKey)
+		return result.Error(err)
 	}
-
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteDeployments(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	deploymentList := &appsv1.DeploymentList{}
-	if err := remoteClient.List(ctx, deploymentList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list K8ssandra deployments", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, item := range deploymentList.Items {
-		kcLogger.Info("Deleting deployment", "Deployment", utils.GetKey(&item))
-		if err := remoteClient.Delete(ctx, &item); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete Deployment", "Deployment", key,
-					"Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		}
-	}
-
-	return
-}
-
-func (r *K8ssandraClusterReconciler) deleteCronJobs(
-	ctx context.Context,
-	kc *k8ssandraapi.K8ssandraCluster,
-	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
-	namespace string,
-	remoteClient client.Client,
-	kcLogger logr.Logger,
-) (hasErrors bool) {
-	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
-	options := client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labels.SelectorFromSet(selector),
-	}
-	cronJobList := &batchv1.CronJobList{}
-	if err := remoteClient.List(ctx, cronJobList, &options); err != nil {
-		kcLogger.Error(err, "Failed to list Medusa CronJobs", "Context", dcTemplate.K8sContext)
-		return true
-	}
-	for _, item := range cronJobList.Items {
-		kcLogger.Info("Deleting CronJob", "CronJob", utils.GetKey(&item))
-		if err := remoteClient.Delete(ctx, &item); err != nil {
-			key := client.ObjectKey{Namespace: namespace, Name: item.Name}
-			if !errors.IsNotFound(err) {
-				kcLogger.Error(err, "Failed to delete CronJob", "CronJob", key, "Context", dcTemplate.K8sContext)
-			}
-		}
-	}
-	return
+	return result.Continue()
 }

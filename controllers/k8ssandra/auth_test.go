@@ -127,8 +127,6 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
 // createSingleDcClusterAuth verifies that it is possible to create an authenticated cluster with one DC and with
@@ -240,8 +238,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
 // createSingleDcClusterAuthExternalSecrets verifies that kubernetes secrets for credentials are not created when
@@ -367,8 +363,6 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
 func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
