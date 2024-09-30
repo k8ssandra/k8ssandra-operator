@@ -155,6 +155,7 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Value: "true",
 		})
 
+		// we might have a general-purpose keystore and truststore
 		if reaper.Spec.HttpManagement.Keystores != nil {
 			envVars = append(envVars, corev1.EnvVar{
 				Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
@@ -164,6 +165,18 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 				Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
 				Value: "/etc/encryption/mgmt/truststore.jks",
 			})
+		}
+
+		// when we're a control plane, and we use http
+		// we might need to have specific stores per cluster managed by this Reaper instance
+		// we always deploy the secret that holds them, even if it never gets populated
+		if reaper.Spec.StorageType == api.StorageTypeLocal && reaper.Spec.DatacenterRef.Name == "" {
+			if reaper.Spec.HttpManagement.Enabled {
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORES_DIR",
+					Value: "/etc/encryption/mgmt/perClusterTruststores",
+				})
+			}
 		}
 	}
 
@@ -200,6 +213,21 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "management-api-keystore",
 			MountPath: "/etc/encryption/mgmt",
+		})
+	}
+
+	if reaper.Spec.HttpManagement.Enabled {
+		volumes = append(volumes, corev1.Volume{
+			Name: "management-api-keystores-per-cluster",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: GetTruststoresSecretName(reaper.Name),
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "management-api-keystores-per-cluster",
+			MountPath: "/etc/encryption/mgmt/perClusterTruststores",
 		})
 	}
 
@@ -286,7 +314,13 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 	return envVars, volumes, volumeMounts
 }
 
-func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string) corev1.PodSpec {
+func computePodSpec(
+	reaper *api.Reaper,
+	dc *cassdcapi.CassandraDatacenter,
+	initContainerResources *corev1.ResourceRequirements,
+	keystorePassword *string,
+	truststorePassword *string,
+) corev1.PodSpec {
 	envVars := computeEnvVars(reaper, dc)
 	volumes, volumeMounts := computeVolumes(reaper)
 	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
@@ -365,7 +399,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	}
 
 	if reaper.Spec.ReaperTemplate.StorageConfig == nil {
-		logger.Error(fmt.Errorf("reaper spec needs storage config when using memory sotrage type"), "missing storage config")
+		logger.Error(fmt.Errorf("reaper spec needs storage config when using 'local' sotrage type"), "missing storage config")
 		return nil
 	}
 

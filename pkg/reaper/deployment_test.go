@@ -314,6 +314,14 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+			Value: "true",
+		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORES_DIR",
+			Value: "/etc/encryption/mgmt/perClusterTruststores",
+		},
 	})
 
 }
@@ -734,6 +742,9 @@ func newTestControlPlaneReaper() *reaperapi.Reaper {
 			ReaperTemplate: reaperapi.ReaperTemplate{
 				StorageType:   "local",
 				StorageConfig: newTestStorageConfig(),
+				HttpManagement: reaperapi.HttpManagement{
+					Enabled: true,
+				},
 			},
 		},
 	}
