@@ -15,4 +15,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-
+* [FEATURE] [#1508](https://github.com/riptano/mission-control/issues/1508) Make k8ssandra-operator deploy Reaper capable of interaction with encrypted mgmt-api
