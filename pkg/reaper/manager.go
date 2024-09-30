@@ -68,7 +68,10 @@ func (r *restReaperManager) connect(ctx context.Context, reaperSvc, username, pa
 }
 
 func (r *restReaperManager) AddClusterToReaper(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) error {
-	return r.reaperClient.AddCluster(ctx, cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName), cassdc.GetSeedServiceName())
+	// this is a syntax trick coming from how Reaper parses hosts being added
+	// setting the cluster name allows Reaper to pick correct certs to do HTTPS with mgmt-api (if needed)
+	clusterName := cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName)
+	return r.reaperClient.AddCluster(ctx, clusterName, cassdc.GetSeedServiceName()+"@"+clusterName)
 }
 
 func (r *restReaperManager) VerifyClusterIsConfigured(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) (bool, error) {
