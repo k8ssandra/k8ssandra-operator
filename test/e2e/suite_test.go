@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"net/http"
 	"net/url"
 	"os"
@@ -272,7 +273,7 @@ func TestOperator(t *testing.T) {
 		testFunc:                     createReaperAndDatacenter,
 		fixture:                      framework.NewTestFixture("reaper", dataPlanes[0]),
 		skipK8ssandraClusterCleanup:  true,
-		doCassandraDatacenterCleanup: true,
+		doCassandraDatacenterCleanup: false,
 	}))
 	t.Run("CreateControlPlaneReaperAndDataCenter", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createControlPlaneReaperAndDatacenter,
@@ -1933,9 +1934,32 @@ func createKeyspaceAndTable(
 ) {
 	_, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, fmt.Sprintf("CREATE KEYSPACE %s WITH REPLICATION = {'class' : 'SimpleStrategy', 'replication_factor' : %d};", keyspace, replicationFactor))
 	require.NoError(t, err, "failed to create keyspace")
-
-	_, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, fmt.Sprintf("CREATE TABLE %s.%s (id int PRIMARY KEY);", keyspace, table))
+	_, err = f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, fmt.Sprintf("CREATE TABLE %s.%s (id INT PRIMARY KEY, v TEXT);", keyspace, table))
 	require.NoError(t, err, "failed to create table")
+}
+
+func verifyReaperSecrets(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	namespace, reaperName, cluster1Name, cluster2Name string,
+) {
+	// check that the secret now has 2 entries
+	updatedTruststoreSecret := &corev1.Secret{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: reaper.GetTruststoresSecretName(reaperName)}, updatedTruststoreSecret)
+	require.NoError(t, err, "failed to get reaper's truststore secret")
+	require.Len(t, updatedTruststoreSecret.Data, 4, "truststore secret should have 2 entries")
+
+	// check that updatedTruststoreSecret keys are made of correctly named truststore files
+	_, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-truststore.jks", cluster1Name)]
+	require.True(t, ok, "truststore secret should have key %s", cluster1Name)
+	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster1Name)]
+	require.True(t, ok, "truststore secret should have key %s", cluster1Name)
+
+	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
+	require.True(t, ok, "truststore secret should have key %s", cluster2Name)
+	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
+	require.True(t, ok, "truststore secret should have key %s", cluster2Name)
 }
 
 func checkKeyspaceNeverCreated(
@@ -1944,13 +1968,13 @@ func checkKeyspaceNeverCreated(
 	ctx context.Context,
 	k8sContext, namespace, clusterName, pod, keyspace string,
 ) {
-	require.Never(t, func() bool {
+	require.Eventually(t, func() bool {
 		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "DESCRIBE KEYSPACES")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)
 			return false
 		}
-		return strings.Contains(keyspaces, keyspace)
+		return !strings.Contains(keyspaces, keyspace)
 	}, 1*time.Minute, 3*time.Second)
 }
 
@@ -1961,7 +1985,7 @@ func checkKeyspaceExists(
 	k8sContext, namespace, clusterName, pod, keyspace string,
 ) {
 	require.Eventually(t, func() bool {
-		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "describe keyspaces")
+		keyspaces, err := f.ExecuteCql(ctx, k8sContext, namespace, clusterName, pod, "DESCRIBE KEYSPACES")
 		if err != nil {
 			t.Logf("failed to describe keyspaces: %v", err)
 			return false

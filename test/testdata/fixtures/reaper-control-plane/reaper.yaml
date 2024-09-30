@@ -17,3 +17,5 @@ spec:
     enabled: false
   uiUserSecretRef:
     name: reaper-ui-secret
+  containerImage:
+    tag: 6732873-tmp
