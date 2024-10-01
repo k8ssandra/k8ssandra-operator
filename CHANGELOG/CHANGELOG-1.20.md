@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+
+* [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
+
 ## v1.20.1 - 2024-09-19
 
 * [BUGFIX] Upgrade cass-operator to v1.22.4 to fix security context overwrites
