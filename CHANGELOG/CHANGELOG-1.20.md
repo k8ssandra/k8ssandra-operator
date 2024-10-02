@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
+* [CHANGE] Bump default Medusa version to 0.22.3
 
 ## v1.20.1 - 2024-09-19
 
