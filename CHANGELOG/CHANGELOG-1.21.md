@@ -15,5 +15,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-* [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
 * [CHANGE] Bump default Medusa version to 0.22.3
+* [BUGFIX] [#1409](https://github.com/k8ssandra/k8ssandra-operator/issues/1409) Vector would crash in the Cassandra log parsing if empty lines were present. Add automated tests for Vector parsing rules.
+* [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
