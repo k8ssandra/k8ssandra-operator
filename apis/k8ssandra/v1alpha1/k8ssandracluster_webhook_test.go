@@ -180,6 +180,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
 	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
 	t.Run("ReaperStorage", testReaperStorage)
+	t.Run("NoDCRename", testNoDCRename)
 }
 
 func testContextValidation(t *testing.T) {
@@ -635,7 +636,7 @@ func TestValidateUpdateNumTokens(t *testing.T) {
 	}
 }
 
-func TestAutomatedUpdateAnnotation(t *testing.T) {
+func testAutomatedUpdateAnnotation(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "automated-update-namespace")
 	cluster := createMinimalClusterObj("automated-update-test", "automated-update-namespace")
@@ -652,24 +653,10 @@ func TestAutomatedUpdateAnnotation(t *testing.T) {
 	require.Error(cluster.validateK8ssandraCluster())
 }
 
-func TestDcRemoved(t *testing.T) {
+func testNoDCRename(t *testing.T) {
 	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
 	kcNew := kcOld.DeepCopy()
-	kcOld.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
-		Meta: EmbeddedObjectMeta{
-			Name: "dc2",
-		},
-	})
-	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
-}
-
-func TestDcAdded(t *testing.T) {
-	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
-	kcNew := kcOld.DeepCopy()
-	kcNew.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
-		Meta: EmbeddedObjectMeta{
-			Name: "dc2",
-		},
-	})
-	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newdc1name"
+	_, err := kcNew.ValidateUpdate(kcOld)
+	require.Error(t, err)
 }
