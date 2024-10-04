@@ -635,7 +635,7 @@ func TestValidateUpdateNumTokens(t *testing.T) {
 	}
 }
 
-func testAutomatedUpdateAnnotation(t *testing.T) {
+func TestAutomatedUpdateAnnotation(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "automated-update-namespace")
 	cluster := createMinimalClusterObj("automated-update-test", "automated-update-namespace")
