@@ -119,6 +119,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
+	if err := validateK8ssandraCluster(*kc); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if kc.Spec.Cassandra == nil {
 		// TODO handle the scenario of CassandraClusterTemplate being set to nil after having a non-nil value
 		return ctrl.Result{}, nil
