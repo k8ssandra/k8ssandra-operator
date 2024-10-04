@@ -140,10 +140,14 @@ timeout_ms = 10000
 		Inputs: []string{"systemlog"},
 		Config: `source = '''
 del(.source_type)
+.message = string!(.message)
+.message = strip_whitespace(.message)
 . |= parse_groks!(.message, patterns: [
-  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
+  "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp_raw}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
   ]
 )
+.timestamp = parse_timestamp!(.timestamp_raw, format: "%Y-%m-%d %T,%3f")
+del(.timestamp_raw)
 pod_name, err = get_env_var("POD_NAME")
 if err == null {
   .pod_name = pod_name

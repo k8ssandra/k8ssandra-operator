@@ -134,12 +134,6 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - name: Install kustomize
-        uses: imranismail/setup-kustomize@v2
-        with:
-          kustomize-version: 4.x
-      - name: Log kustomize version
-        run: kustomize version
       - name: Install Kind
         run: go get sigs.k8s.io/kind
       - name: Set up Docker Buildx

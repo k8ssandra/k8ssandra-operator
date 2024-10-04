@@ -130,9 +130,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=k8ssandra-operator webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	./scripts/prepare-helm-release.sh
+	KUSTOMIZE=$(KUSTOMIZE) ./scripts/prepare-helm-release.sh
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -151,13 +151,22 @@ lint: golangci-lint ## Run golangci-lint against code.
 	$(GOLANGCI_LINT) run ./...
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
-test: manifests generate fmt vet lint envtest kustomize ## Run tests.
+test: manifests generate fmt vet lint envtest ## Run tests.
 ifdef TEST
 	@echo Running test $(TEST)
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -run="$(TEST)" -covermode=atomic -coverprofile coverage.out
 else
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(GO_FLAGS) ./apis/... ./pkg/... ./test/yq/... ./controllers/... -covermode=atomic -coverprofile coverage.out
 endif
+
+.PHONY: vector-test
+vector-test: ## Run vector tests
+	@echo Generating test files for Vector tests
+	$(eval TMP := $(shell mktemp -d))
+	VECTOR_TEST_FILES=true OUTPUT_PATH=$(TMP) go test -v ./pkg/telemetry -run=TestGenerateTomlTestFiles
+	@echo Running vector test files
+	OUTPUT_PATH=$(TMP) VECTOR=$(VECTOR) scripts/run-vector-tests.sh
+	rm -rf $(TMP)
 
 E2E_TEST_TIMEOUT ?= 3600s
 
@@ -326,6 +335,7 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
+VECTOR ?= $(LOCALBIN)/bin/vector
 
 ## Tool Versions
 CERT_MANAGER_VERSION ?= v1.12.2
@@ -345,6 +355,10 @@ cert-manager-multi: ## Install cert-manager to the clusters
 		kubectl config use-context kind-k8ssandra-$$i; \
 		make cert-manager;  \
 	done
+
+.PHONY: vector-install
+vector-install:
+	curl --proto '=https' --tlsv1.2 -sSfL https://sh.vector.dev | bash -s -- --prefix $(LOCALBIN) -y
 
 # Install NGINX in the current Kind cluster using Helm and a values file that is suitable for
 # running e2e tests locally with a cluster created with setup-kind-multicluster.sh. Helm must be
