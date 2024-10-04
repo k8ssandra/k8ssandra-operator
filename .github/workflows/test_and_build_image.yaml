@@ -50,9 +50,7 @@ jobs:
           fi
       - name: Run Vector tests
         run: |
-          sudo apt-get install --yes curl bc
-          curl --proto '=https' --tlsv1.2 -sSfL https://sh.vector.dev | bash -s -- -y
-          make $VECTOR=~/.vector/bin/vector vector-test
+          make vector-install vector-test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:

@@ -8,11 +8,15 @@
 
 set -e
 
+if [ -z "$KUSTOMIZE" ]; then
+    KUSTOMIZE=$(command -v kustomize)
+fi
+
 mkdir -p build/helm
 # Generate the CRDs
-kustomize build config/crd > charts/k8ssandra-operator/crds/k8ssandra-operator-crds.yaml
+$KUSTOMIZE build config/crd > charts/k8ssandra-operator/crds/k8ssandra-operator-crds.yaml
 # Generate the role.yaml and clusterrole.yaml files using the RBAC generated manifests
-kustomize build config/rbac > build/helm/k8ssandra-operator-rbac.yaml
+$KUSTOMIZE build config/rbac > build/helm/k8ssandra-operator-rbac.yaml
 cat charts/templates/role.tmpl.yaml | tee build/helm/role.yaml > /dev/null
 cat build/helm/k8ssandra-operator-rbac.yaml | yq 'select(di == 1).rules' | tee -a build/helm/role.yaml > /dev/null
 echo "{{- end }}" >> build/helm/role.yaml
