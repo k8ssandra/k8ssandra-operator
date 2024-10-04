@@ -2410,6 +2410,7 @@ func changeClusterDcNameFails(t *testing.T, ctx context.Context, f *framework.Fr
 	require.Error(err, "failed to update K8ssandraCluster")
 
 	// Change the cluster name
+	k8c.Spec.Cassandra.Datacenters[0].Meta.Name = "dc1"
 	k8c.Spec.Cassandra.ClusterName = newClusterName
 	err = f.Client.Update(ctx, k8c)
 	require.Error(err, "failed to update K8ssandraCluster")
