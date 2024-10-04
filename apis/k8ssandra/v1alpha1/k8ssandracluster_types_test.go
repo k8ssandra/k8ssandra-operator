@@ -220,21 +220,32 @@ func TestGenerationChanged(t *testing.T) {
 func TestDcRemoved(t *testing.T) {
 	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
 	kcNew := kcOld.DeepCopy()
+	require.False(t, DcRemoved(kcOld.Spec, kcNew.Spec))
 	kcOld.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
 		Meta: EmbeddedObjectMeta{
 			Name: "dc2",
 		},
 	})
 	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
+	kcOld = createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew = kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newName"
+	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
 }
 
 func TestDcAdded(t *testing.T) {
 	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
 	kcNew := kcOld.DeepCopy()
+	require.False(t, DcAdded(kcOld.Spec, kcNew.Spec))
 	kcNew.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
 		Meta: EmbeddedObjectMeta{
 			Name: "dc2",
 		},
 	})
+	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
+
+	kcOld = createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew = kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newName"
 	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
 }
