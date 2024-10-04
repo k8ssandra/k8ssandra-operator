@@ -20,11 +20,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"net"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	logrusr "github.com/bombsimon/logrusr/v2"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -649,4 +650,26 @@ func testAutomatedUpdateAnnotation(t *testing.T) {
 
 	cluster.Annotations[AutomatedUpdateAnnotation] = string("true")
 	require.Error(cluster.validateK8ssandraCluster())
+}
+
+func TestDcRemoved(t *testing.T) {
+	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew := kcOld.DeepCopy()
+	kcOld.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		Meta: EmbeddedObjectMeta{
+			Name: "dc2",
+		},
+	})
+	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
+}
+
+func TestDcAdded(t *testing.T) {
+	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew := kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		Meta: EmbeddedObjectMeta{
+			Name: "dc2",
+		},
+	})
+	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
 }
