@@ -9,7 +9,7 @@ import (
 
 func validateK8ssandraCluster(kc api.K8ssandraCluster) error {
 	oldDCs := make([]string, 0)
-	for dcName, _ := range kc.Status.Datacenters {
+	for dcName := range kc.Status.Datacenters {
 		oldDCs = append(oldDCs, dcName)
 	}
 	newDcs := make([]string, 0)
@@ -24,7 +24,7 @@ func validateK8ssandraCluster(kc api.K8ssandraCluster) error {
 			break
 		}
 	}
-	for dcName, _ := range kc.Status.Datacenters {
+	for dcName := range kc.Status.Datacenters {
 		if !utils.SliceContains(newDcs, dcName) {
 			wasRemoved = true
 			break
