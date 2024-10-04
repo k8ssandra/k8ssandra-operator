@@ -1,6 +1,9 @@
 package telemetry
 
 import (
+	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr/testr"
@@ -365,4 +368,96 @@ func TestOverrideSourcePossible(t *testing.T) {
 	assert.Equal(1, len(sinks))
 
 	assert.Equal("stdin", sources[0].Type)
+}
+
+func TestGenerateTomlTestFiles(t *testing.T) {
+	if os.Getenv("VECTOR_TEST_FILES") == "" {
+		t.Skip("Set VECTOR_TEST_FILES to generate vector test files")
+	}
+	outputDir := os.Getenv("OUTPUT_PATH")
+	if outputDir == "" {
+		fmt.Printf("No OUTPUT_PATH env variable set")
+		t.FailNow()
+	}
+	assert := assert.New(t)
+	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	assert.Equal(2, len(sources))
+	assert.Equal(2, len(transformers))
+	assert.Equal(1, len(sinks))
+
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Vector: &telemetry.VectorSpec{
+			Enabled: ptr.To[bool](true),
+			Components: &telemetry.VectorComponentsSpec{
+				Sources:    sources,
+				Sinks:      sinks,
+				Transforms: transformers,
+			},
+		},
+	}
+
+	// Vector components are provided in the Telemetry spec, build the Vector sink config from them
+	vectorConfigToml := BuildCustomVectorToml(telemetrySpec)
+
+	b := strings.Builder{}
+	fmt.Fprint(&b, vectorConfigToml)
+
+	// Append tests
+
+	fmt.Fprint(&b, `
+[[tests]]
+name = "Test parsing normal Cassandra logs"
+
+[[tests.inputs]]
+insert_at = "parse_cassandra_log"
+value = "WARN  [ScheduledTasks:1] 2024-10-01 12:31:17,694  LeaksDetectorImpl.java:306 - LEAK: RandomAccessReader/RandomAccessReader was not released before it was garbage-collected. This resource is a debugging aid, no negative consequences follow from this leak. However, please report this nonetheless even if auto-cleaning succeeded. Auto cleaning result: not attempted, no cleaner."
+
+[[tests.outputs]]
+extract_from = "parse_cassandra_log"
+
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.loglevel, "WARN")
+assert_eq!(.thread, "ScheduledTasks:1")
+assert!(is_timestamp(.timestamp))
+assert!(is_string(.message))
+assert!(is_string(.line))
+assert!(exists(.class))
+'''
+`)
+
+	assert.NoError(os.WriteFile(fmt.Sprintf("%s/vector-simple.toml", outputDir), []byte(b.String()), 0644))
+
+	b.Reset()
+	fmt.Fprint(&b, vectorConfigToml)
+
+	fmt.Fprint(&b, `
+[[tests]]
+name = "Test parsing normal Cassandra logs"
+
+[[tests.inputs]]
+insert_at = "parse_cassandra_log"
+value = '''
+WARN  [ScheduledTasks:1] 2024-10-01 12:31:17,694  LeaksDetectorImpl.java:306 - LEAK: RandomAccessReader/RandomAccessReader was not released before it was garbage-collected. This resource is a debugging aid, no negative consequences follow from this leak. However, please report this nonetheless even if auto-cleaning succeeded. Auto cleaning result: not attempted, no cleaner."
+
+
+'''
+
+[[tests.outputs]]
+extract_from = "parse_cassandra_log"
+
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.loglevel, "WARN")
+assert_eq!(.thread, "ScheduledTasks:1")
+assert!(is_timestamp(.timestamp))
+assert!(is_string(.message))
+assert!(is_string(.line))
+assert!(exists(.class))
+'''
+`)
+
+	assert.NoError(os.WriteFile(fmt.Sprintf("%s/vector-emptyline.toml", outputDir), []byte(b.String()), 0644))
 }

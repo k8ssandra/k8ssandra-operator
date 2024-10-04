@@ -17,6 +17,9 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
 * [CHANGE] Bump default Medusa version to 0.22.3
+* [BUGFIX] [#1409](https://github.com/k8ssandra/k8ssandra-operator/issues/1409) Vector would crash in the Cassandra log parsing if empty lines were present. Add automated tests for Vector parsing rules.
+* [BUGFIX] [#1425](https://github.com/k8ssandra/k8ssandra-operator/issues/1425) prepare-helm-release.sh requires kustomize to be in the path and that makes make manifests fail.
+
 
 ## v1.20.1 - 2024-09-19
 
