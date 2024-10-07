@@ -18,9 +18,10 @@ package v1alpha1
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Masterminds/semver/v3"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -172,7 +173,9 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warning
 	if err := validateUpdateNumTokens(oldCluster.Spec.Cassandra, r.Spec.Cassandra); err != nil {
 		return nil, err
 	}
-
+	if DcRemoved(oldCluster.Spec, r.Spec) && DcAdded(oldCluster.Spec, r.Spec) {
+		return nil, fmt.Errorf("renaming, as well as adding and removing DCs at the same time is prohibited as it can cause data loss")
+	}
 	// Verify that the cluster name override was not changed
 	if r.Spec.Cassandra.ClusterName != oldCluster.Spec.Cassandra.ClusterName {
 		return nil, ErrClusterName

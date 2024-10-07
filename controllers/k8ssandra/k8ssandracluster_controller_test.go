@@ -116,7 +116,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterWithEncryptionOptionsExternalSecrets", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptionsExternalSecrets))
 	t.Run("StopDatacenter", testEnv.ControllerTest(ctx, stopDc))
 	t.Run("ConvertSystemReplicationAnnotation", testEnv.ControllerTest(ctx, convertSystemReplicationAnnotation))
-	t.Run("ChangeClusterNameFails", testEnv.ControllerTest(ctx, changeClusterNameFails))
+	t.Run("ChangeClusterDcNameFails", testEnv.ControllerTest(ctx, changeClusterDcNameFails))
 	t.Run("InjectContainersAndVolumes", testEnv.ControllerTest(ctx, injectContainersAndVolumes))
 	t.Run("CreateMultiDcDseCluster", testEnv.ControllerTest(ctx, createMultiDcDseCluster))
 	t.Run("PerNodeConfiguration", testEnv.ControllerTest(ctx, perNodeConfiguration))
@@ -2334,7 +2334,7 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 
 // Create a cluster with server and client encryption but client encryption stores missing.
 // Verify that dc1 never gets created.
-func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+func changeClusterDcNameFails(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
 	clusterName := "cluster-with-encryption"
@@ -2362,6 +2362,13 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 					{
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc1",
+						},
+						K8sContext: f.DataPlaneContexts[0],
+						Size:       dc1Size,
+					},
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc2",
 						},
 						K8sContext: f.DataPlaneContexts[0],
 						Size:       dc1Size,
@@ -2398,7 +2405,12 @@ func changeClusterNameFails(t *testing.T, ctx context.Context, f *framework.Fram
 	err = f.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterName}, k8c)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
+	k8c.Spec.Cassandra.Datacenters[0].Meta.Name = "newDC1"
+	err = f.Client.Update(ctx, k8c)
+	require.Error(err, "failed to update K8ssandraCluster")
+
 	// Change the cluster name
+	k8c.Spec.Cassandra.Datacenters[0].Meta.Name = "dc1"
 	k8c.Spec.Cassandra.ClusterName = newClusterName
 	err = f.Client.Update(ctx, k8c)
 	require.Error(err, "failed to update K8ssandraCluster")
