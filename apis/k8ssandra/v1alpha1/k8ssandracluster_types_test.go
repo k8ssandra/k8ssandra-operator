@@ -10,6 +10,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestK8ssandraCluster(t *testing.T) {
@@ -214,4 +215,37 @@ func TestGenerationChanged(t *testing.T) {
 	assert.False(kc.GenerationChanged())
 	kc.ObjectMeta.Generation = 3
 	assert.True(kc.GenerationChanged())
+}
+
+func TestDcRemoved(t *testing.T) {
+	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew := kcOld.DeepCopy()
+	require.False(t, DcRemoved(kcOld.Spec, kcNew.Spec))
+	kcOld.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		Meta: EmbeddedObjectMeta{
+			Name: "dc2",
+		},
+	})
+	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
+	kcOld = createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew = kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newName"
+	require.True(t, DcRemoved(kcOld.Spec, kcNew.Spec))
+}
+
+func TestDcAdded(t *testing.T) {
+	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew := kcOld.DeepCopy()
+	require.False(t, DcAdded(kcOld.Spec, kcNew.Spec))
+	kcNew.Spec.Cassandra.Datacenters = append(kcOld.Spec.Cassandra.Datacenters, CassandraDatacenterTemplate{
+		Meta: EmbeddedObjectMeta{
+			Name: "dc2",
+		},
+	})
+	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
+
+	kcOld = createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew = kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newName"
+	require.True(t, DcAdded(kcOld.Spec, kcNew.Spec))
 }

@@ -20,11 +20,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"net"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	logrusr "github.com/bombsimon/logrusr/v2"
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -179,6 +180,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
 	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
 	t.Run("ReaperStorage", testReaperStorage)
+	t.Run("NoDCRename", testNoDCRename)
 }
 
 func testContextValidation(t *testing.T) {
@@ -649,4 +651,12 @@ func testAutomatedUpdateAnnotation(t *testing.T) {
 
 	cluster.Annotations[AutomatedUpdateAnnotation] = string("true")
 	require.Error(cluster.validateK8ssandraCluster())
+}
+
+func testNoDCRename(t *testing.T) {
+	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
+	kcNew := kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newdc1name"
+	_, err := kcNew.ValidateUpdate(kcOld)
+	require.Error(t, err)
 }

@@ -573,3 +573,34 @@ func (kc *K8ssandraCluster) GetClusterIdHash() string {
 func (k *K8ssandraCluster) GenerationChanged() bool {
 	return k.Status.ObservedGeneration < k.Generation
 }
+
+func DcAdded(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {
+	oldDcs := make([]string, 0)
+	for _, dc := range oldSpec.Cassandra.Datacenters {
+		oldDcs = append(oldDcs, dc.Meta.Name)
+	}
+	wasAdded := false
+	for _, dc := range newSpec.Cassandra.Datacenters {
+		if !utils.SliceContains(oldDcs, dc.Meta.Name) {
+			wasAdded = true
+			break
+		}
+	}
+	return wasAdded
+
+}
+
+func DcRemoved(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {
+	newDcs := make([]string, 0)
+	for _, dc := range newSpec.Cassandra.Datacenters {
+		newDcs = append(newDcs, dc.Meta.Name)
+	}
+	wasRemoved := false
+	for _, dc := range oldSpec.Cassandra.Datacenters {
+		if !utils.SliceContains(newDcs, dc.Meta.Name) {
+			wasRemoved = true
+			break
+		}
+	}
+	return wasRemoved
+}
