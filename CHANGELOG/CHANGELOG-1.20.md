@@ -13,13 +13,13 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.20.2 - 2024-10-07
 
 * [DOCS] [#1469](https://github.com/riptano/mission-control/issues/1469) Add docs for Reaper's Control Plane deployment mode
 * [CHANGE] Bump default Medusa version to 0.22.3
 * [BUGFIX] [#1409](https://github.com/k8ssandra/k8ssandra-operator/issues/1409) Vector would crash in the Cassandra log parsing if empty lines were present. Add automated tests for Vector parsing rules.
 * [BUGFIX] [#1425](https://github.com/k8ssandra/k8ssandra-operator/issues/1425) prepare-helm-release.sh requires kustomize to be in the path and that makes make manifests fail.
-
+* [BUGFIX] [#1422](https://github.com/k8ssandra/k8ssandra-operator/issues/1422) Changing a DC name should be forbidden
 
 ## v1.20.1 - 2024-09-19
 
