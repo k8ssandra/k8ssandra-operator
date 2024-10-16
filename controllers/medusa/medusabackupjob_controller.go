@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -72,9 +73,9 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	backup := instance.DeepCopy()
+	backupJob := instance.DeepCopy()
 
-	cassdcKey := types.NamespacedName{Namespace: backup.Namespace, Name: backup.Spec.CassandraDatacenter}
+	cassdcKey := types.NamespacedName{Namespace: backupJob.Namespace, Name: backupJob.Spec.CassandraDatacenter}
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err = r.Get(ctx, cassdcKey, cassdc)
 	if err != nil {
@@ -83,12 +84,12 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Set an owner reference on the backup job so that it can be cleaned up when the cassandra datacenter is deleted
-	if backup.OwnerReferences == nil {
-		if err = controllerutil.SetControllerReference(cassdc, backup, r.Scheme); err != nil {
+	if backupJob.OwnerReferences == nil {
+		if err = controllerutil.SetControllerReference(cassdc, backupJob, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", cassdcKey)
 			return ctrl.Result{}, err
 		}
-		if err = r.Update(ctx, backup); err != nil {
+		if err = r.Update(ctx, backupJob); err != nil {
 			logger.Error(err, "failed to update MedusaBackupJob with owner reference", "CassandraDatacenter", cassdcKey)
 			return ctrl.Result{}, err
 		} else {
@@ -104,16 +105,16 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// If there is anything in progress, simply requeue the request until each pod has finished or errored
-	if len(backup.Status.InProgress) > 0 {
+	if len(backupJob.Status.InProgress) > 0 {
 		logger.Info("There are backups in progress, checking them..")
-		progress := make([]string, 0, len(backup.Status.InProgress))
-		patch := client.MergeFrom(backup.DeepCopy())
+		progress := make([]string, 0, len(backupJob.Status.InProgress))
+		patch := client.MergeFrom(backupJob.DeepCopy())
 
 	StatusCheck:
-		for _, podName := range backup.Status.InProgress {
+		for _, podName := range backupJob.Status.InProgress {
 			for _, pod := range pods {
 				if podName == pod.Name {
-					status, err := backupStatus(ctx, backup.ObjectMeta.Name, &pod, r.ClientFactory, logger)
+					status, err := backupStatus(ctx, backupJob.ObjectMeta.Name, &pod, r.ClientFactory, logger)
 					if err != nil {
 						return ctrl.Result{}, err
 					}
@@ -121,9 +122,9 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 					if status == medusa.StatusType_IN_PROGRESS {
 						progress = append(progress, podName)
 					} else if status == medusa.StatusType_SUCCESS {
-						backup.Status.Finished = append(backup.Status.Finished, podName)
+						backupJob.Status.Finished = append(backupJob.Status.Finished, podName)
 					} else if status == medusa.StatusType_FAILED || status == medusa.StatusType_UNKNOWN {
-						backup.Status.Failed = append(backup.Status.Failed, podName)
+						backupJob.Status.Failed = append(backupJob.Status.Failed, podName)
 					}
 
 					continue StatusCheck
@@ -131,9 +132,9 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 		}
 
-		if len(backup.Status.InProgress) != len(progress) {
-			backup.Status.InProgress = progress
-			if err := r.Status().Patch(ctx, backup, patch); err != nil {
+		if len(backupJob.Status.InProgress) != len(progress) {
+			backupJob.Status.InProgress = progress
+			if err := r.Status().Patch(ctx, backupJob, patch); err != nil {
 				logger.Error(err, "failed to patch status")
 				return ctrl.Result{}, err
 			}
@@ -147,39 +148,46 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// If the backup is already finished, there is nothing to do.
-	if medusaBackupFinished(backup) {
+	if medusaBackupFinished(backupJob) {
 		logger.Info("Backup operation is already finished")
 		return ctrl.Result{Requeue: false}, nil
 	}
 
 	// First check to see if the backup is already in progress
-	if !backup.Status.StartTime.IsZero() {
+	if !backupJob.Status.StartTime.IsZero() {
 		// If there is anything in progress, simply requeue the request
-		if len(backup.Status.InProgress) > 0 {
+		if len(backupJob.Status.InProgress) > 0 {
 			logger.Info("Backup is still in progress")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
+		// there is nothing in progress, so the job is finished (not yet sure if successfully)
+		// Regardless of the success, we set the job finish time
+		// Note that the time here is not accurate, but that is ok. For now we are just
+		// using it as a completion marker.
+		patch := client.MergeFrom(backupJob.DeepCopy())
+		backupJob.Status.FinishTime = metav1.Now()
+		if err := r.Status().Patch(ctx, backupJob, patch); err != nil {
+			logger.Error(err, "failed to patch status with finish time")
+			return ctrl.Result{}, err
+		}
+
+		// if there are failures, we will end here and not proceed with creating a backup object
+		if len(backupJob.Status.Failed) > 0 {
+			logger.Info("Backup failed on some nodes", "BackupName", backupJob.Name, "Failed", backupJob.Status.Failed)
+			return ctrl.Result{Requeue: false}, nil
+		}
+
 		logger.Info("backup complete")
 
-		// The MedusaBackupJob is finished and we now need to create the MedusaBackup object.
-		backupSummary, err := r.getBackupSummary(ctx, backup, pods, logger)
+		// The MedusaBackupJob is finished successfully and we now need to create the MedusaBackup object.
+		backupSummary, err := r.getBackupSummary(ctx, backupJob, pods, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get backup summary")
 			return ctrl.Result{}, err
 		}
-		if err := r.createMedusaBackup(ctx, backup, backupSummary, logger); err != nil {
+		if err := r.createMedusaBackup(ctx, backupJob, backupSummary, logger); err != nil {
 			logger.Error(err, "Failed to create MedusaBackup")
-			return ctrl.Result{}, err
-		}
-
-		// Set the finish time
-		// Note that the time here is not accurate, but that is ok. For now we are just
-		// using it as a completion marker.
-		patch := client.MergeFrom(backup.DeepCopy())
-		backup.Status.FinishTime = metav1.Now()
-		if err := r.Status().Patch(ctx, backup, patch); err != nil {
-			logger.Error(err, "failed to patch status with finish time")
 			return ctrl.Result{}, err
 		}
 
@@ -195,31 +203,31 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, medusa.BackupSidecarNotFound
 	}
 
-	patch := client.MergeFromWithOptions(backup.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.MergeFromWithOptions(backupJob.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
-	backup.Status.StartTime = metav1.Now()
+	backupJob.Status.StartTime = metav1.Now()
 
-	if err := r.Status().Patch(ctx, backup, patch); err != nil {
+	if err := r.Status().Patch(ctx, backupJob, patch); err != nil {
 		logger.Error(err, "Failed to patch status")
 		// We received a stale object, requeue for next processing
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	logger.Info("Starting backups")
-	patch = client.MergeFrom(backup.DeepCopy())
+	patch = client.MergeFrom(backupJob.DeepCopy())
 
 	for _, p := range pods {
 		logger.Info("starting backup", "CassandraPod", p.Name)
-		_, err := doMedusaBackup(ctx, backup.ObjectMeta.Name, backup.Spec.Type, &p, r.ClientFactory, logger)
+		_, err := doMedusaBackup(ctx, backupJob.ObjectMeta.Name, backupJob.Spec.Type, &p, r.ClientFactory, logger)
 		if err != nil {
 			logger.Error(err, "backup failed", "CassandraPod", p.Name)
 		}
 
-		backup.Status.InProgress = append(backup.Status.InProgress, p.Name)
+		backupJob.Status.InProgress = append(backupJob.Status.InProgress, p.Name)
 	}
 	// logger.Info("finished backup operations")
-	if err := r.Status().Patch(context.Background(), backup, patch); err != nil {
-		logger.Error(err, "failed to patch status", "Backup", fmt.Sprintf("%s/%s", backup.Name, backup.Namespace))
+	if err := r.Status().Patch(context.Background(), backupJob, patch); err != nil {
+		logger.Error(err, "failed to patch status", "Backup", fmt.Sprintf("%s/%s", backupJob.Name, backupJob.Namespace))
 	}
 
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
@@ -317,10 +325,17 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+		logger.Error(err, "Could not make a new medusa client")
 		return medusa.StatusType_UNKNOWN, err
 	} else {
 		resp, err := medusaClient.BackupStatus(ctx, name)
 		if err != nil {
+			// the gRPC client does not return proper NotFound error, we need to check the payload too
+			if errors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
+				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
+				return medusa.StatusType_UNKNOWN, nil
+			}
+			logger.Error(err, fmt.Sprintf("getting backup status for backup %s and pod %s failed", name, pod.Name))
 			return medusa.StatusType_UNKNOWN, err
 		}
 
