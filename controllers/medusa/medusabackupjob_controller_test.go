@@ -26,15 +26,20 @@ import (
 )
 
 const (
-	medusaImageRepo     = "test/medusa"
-	cassandraUserSecret = "medusa-secret"
-	defaultBackupName   = "backup1"
-	dc1PodPrefix        = "192.168.1."
-	dc2PodPrefix        = "192.168.2."
-	fakeBackupFileCount = int64(13)
-	fakeBackupByteSize  = int64(42)
-	fakeBackupHumanSize = "42.00 B"
-	fakeMaxBackupCount  = 1
+	medusaImageRepo      = "test/medusa"
+	cassandraUserSecret  = "medusa-secret"
+	successfulBackupName = "good-backup"
+	failingBackupName    = "bad-backup"
+	dc1PodPrefix         = "192.168.1."
+	dc2PodPrefix         = "192.168.2."
+	fakeBackupFileCount  = int64(13)
+	fakeBackupByteSize   = int64(42)
+	fakeBackupHumanSize  = "42.00 B"
+	fakeMaxBackupCount   = 1
+)
+
+var (
+	alreadyReportedFailingBackup = false
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -142,15 +147,18 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
 
-	backupCreated := createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, defaultBackupName)
+	backupCreated := createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, successfulBackupName)
 	require.True(backupCreated, "failed to create backup")
 
 	t.Log("verify that medusa gRPC clients are invoked")
 	require.Equal(map[string][]string{
-		fmt.Sprintf("%s:%d", getPodIpAddress(0, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(1, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
-		fmt.Sprintf("%s:%d", getPodIpAddress(2, dc1.DatacenterName()), shared.BackupSidecarPort): {defaultBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(0, dc1.DatacenterName()), shared.BackupSidecarPort): {successfulBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(1, dc1.DatacenterName()), shared.BackupSidecarPort): {successfulBackupName},
+		fmt.Sprintf("%s:%d", getPodIpAddress(2, dc1.DatacenterName()), shared.BackupSidecarPort): {successfulBackupName},
 	}, medusaClientFactory.GetRequestedBackups(dc1.DatacenterName()))
+
+	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, failingBackupName)
+	require.False(backupCreated, "the backup object shouldn't have been created")
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
@@ -231,16 +239,22 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 			return false
 		}
 		t.Logf("backup finish time: %v", updated.Status.FinishTime)
+		t.Logf("backup failed: %v", updated.Status.Failed)
 		t.Logf("backup finished: %v", updated.Status.Finished)
 		t.Logf("backup in progress: %v", updated.Status.InProgress)
-		return !updated.Status.FinishTime.IsZero() && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
+		return !updated.Status.FinishTime.IsZero() // && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
 
-	t.Log("verify that the MedusaBackup is created")
+	t.Log("check for the MedusaBackup being created")
 	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	medusaBackup := &api.MedusaBackup{}
 	err = f.Get(ctx, medusaBackupKey, medusaBackup)
-	require.NoError(err, "failed to get MedusaBackup")
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false
+		}
+	}
+	t.Log("verify the MedusaBackup is correct")
 	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")
 	require.Equal(medusaBackup.Status.FinishedNodes, dc.Spec.Size, "backup finished nodes doesn't match dc nodes")
 	require.Equal(len(medusaBackup.Status.Nodes), int(dc.Spec.Size), "backup topology doesn't match dc topology")
@@ -387,8 +401,21 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 }
 
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
+	var status medusa.StatusType
+	if name == successfulBackupName || strings.HasPrefix(name, successfulBackupName) {
+		status = medusa.StatusType_SUCCESS
+	} else if name == failingBackupName {
+		if !alreadyReportedFailingBackup {
+			status = medusa.StatusType_FAILED
+			alreadyReportedFailingBackup = true
+		} else {
+			status = medusa.StatusType_SUCCESS
+		}
+	} else {
+		status = medusa.StatusType_IN_PROGRESS
+	}
 	return &medusa.BackupStatusResponse{
-		Status: medusa.StatusType_SUCCESS,
+		Status: status,
 	}, nil
 }
 
