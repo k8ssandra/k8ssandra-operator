@@ -292,6 +292,12 @@ Clean:
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
 	vectorConfigToml := ""
+
+	if telemetrySpec.Vector.Api != nil && telemetrySpec.Vector.Api.Enabled != nil && *telemetrySpec.Vector.Api.Enabled {
+		vectorConfigToml += "[api]\n"
+		vectorConfigToml += "enabled = true\n"
+	}
+
 	for _, source := range telemetrySpec.Vector.Components.Sources {
 		vectorConfigToml += fmt.Sprintf("\n[sources.%s]\n", source.Name)
 		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", source.Type)
