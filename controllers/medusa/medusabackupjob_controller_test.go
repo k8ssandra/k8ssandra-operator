@@ -3,7 +3,6 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
 	"strings"
 	"sync"
@@ -422,7 +421,8 @@ func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medu
 	} else if name == missingBackupName {
 		if !alreadyReportedMissingBackup {
 			alreadyReportedMissingBackup = true
-			return nil, newNotFoundError()
+			// reproducing what the gRPC client would send. sadly, it's not a proper NotFound error
+			return nil, fmt.Errorf("rpc error: code = NotFound desc = backup <%s> does not exist", name)
 		} else {
 			status = medusa.StatusType_SUCCESS
 		}
@@ -432,14 +432,6 @@ func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medu
 	return &medusa.BackupStatusResponse{
 		Status: status,
 	}, nil
-}
-
-func newNotFoundError() error {
-	resource := schema.GroupResource{
-		Group:    "error-group",
-		Resource: "error-resource",
-	}
-	return errors.NewNotFound(resource, "not-found-error")
 }
 
 func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {

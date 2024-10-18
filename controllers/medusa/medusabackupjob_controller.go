@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -329,7 +330,8 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 	} else {
 		resp, err := medusaClient.BackupStatus(ctx, name)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			// the gRPC client does not return proper NotFound error, we need to check the payload too
+			if errors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
 				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
 				return medusa.StatusType_UNKNOWN, nil
 			}
