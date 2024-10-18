@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	backup1 = "backup1"
-	backup2 = "backup2"
-	backup3 = "backup3"
-	backup4 = "backup4"
+	backup1 = "good-backup1"
+	backup2 = "good-backup2"
+	backup3 = "good-backup3"
+	backup4 = "good-backup4"
 )
 
 func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
