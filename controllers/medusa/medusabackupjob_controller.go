@@ -324,10 +324,16 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+		logger.Error(err, "Could not make a new medusa client")
 		return medusa.StatusType_UNKNOWN, err
 	} else {
 		resp, err := medusaClient.BackupStatus(ctx, name)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
+				return medusa.StatusType_UNKNOWN, nil
+			}
+			logger.Error(err, fmt.Sprintf("getting backup status for backup %s and pod %s failed", name, pod.Name))
 			return medusa.StatusType_UNKNOWN, err
 		}
 

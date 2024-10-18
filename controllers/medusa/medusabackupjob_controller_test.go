@@ -3,6 +3,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ const (
 	cassandraUserSecret  = "medusa-secret"
 	successfulBackupName = "good-backup"
 	failingBackupName    = "bad-backup"
+	missingBackupName    = "missing-backup"
 	dc1PodPrefix         = "192.168.1."
 	dc2PodPrefix         = "192.168.2."
 	fakeBackupFileCount  = int64(13)
@@ -40,6 +42,7 @@ const (
 
 var (
 	alreadyReportedFailingBackup = false
+	alreadyReportedMissingBackup = false
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -157,7 +160,12 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 		fmt.Sprintf("%s:%d", getPodIpAddress(2, dc1.DatacenterName()), shared.BackupSidecarPort): {successfulBackupName},
 	}, medusaClientFactory.GetRequestedBackups(dc1.DatacenterName()))
 
+	// a failing backup is one that actually starts but fails (on one pod)
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, failingBackupName)
+	require.False(backupCreated, "the backup object shouldn't have been created")
+
+	// a missing backup is one that never gets to start (on one pod)
+	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, missingBackupName)
 	require.False(backupCreated, "the backup object shouldn't have been created")
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -238,10 +246,10 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		if err != nil {
 			return false
 		}
-		t.Logf("backup finish time: %v", updated.Status.FinishTime)
-		t.Logf("backup failed: %v", updated.Status.Failed)
-		t.Logf("backup finished: %v", updated.Status.Finished)
-		t.Logf("backup in progress: %v", updated.Status.InProgress)
+		t.Logf("backup %s finish time: %v", backupName, updated.Status.FinishTime)
+		t.Logf("backup %s failed: %v", backupName, updated.Status.Failed)
+		t.Logf("backup %s finished: %v", backupName, updated.Status.Finished)
+		t.Logf("backup %s in progress: %v", backupName, updated.Status.InProgress)
 		return !updated.Status.FinishTime.IsZero() // && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
 	}, timeout, interval)
 
@@ -411,12 +419,27 @@ func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medu
 		} else {
 			status = medusa.StatusType_SUCCESS
 		}
+	} else if name == missingBackupName {
+		if !alreadyReportedMissingBackup {
+			alreadyReportedMissingBackup = true
+			return nil, newNotFoundError()
+		} else {
+			status = medusa.StatusType_SUCCESS
+		}
 	} else {
 		status = medusa.StatusType_IN_PROGRESS
 	}
 	return &medusa.BackupStatusResponse{
 		Status: status,
 	}, nil
+}
+
+func newNotFoundError() error {
+	resource := schema.GroupResource{
+		Group:    "error-group",
+		Resource: "error-resource",
+	}
+	return errors.NewNotFound(resource, "not-found-error")
 }
 
 func (c *fakeMedusaClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
