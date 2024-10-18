@@ -13,7 +13,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.20.3 - 2024-10-18
 
 * [CHANGE] Upgrade cass-operator's chart to 0.54.0 (v1.22.4) to allow overriding default image coordinates
 
