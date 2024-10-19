@@ -461,3 +461,76 @@ assert!(exists(.class))
 
 	assert.NoError(os.WriteFile(fmt.Sprintf("%s/vector-emptyline.toml", outputDir), []byte(b.String()), 0644))
 }
+
+func TestBuildCustomVectorTomlWithApiConfig(t *testing.T) {
+	tests := []struct {
+		name  string
+		tspec *telemetry.TelemetrySpec
+		want  string
+	}{
+		{
+			"API enabled",
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
+					Enabled: ptr.To(true),
+					Api: &telemetry.ApiConfig{
+						Enabled: ptr.To(true),
+					},
+					Components: &telemetry.VectorComponentsSpec{
+						Sinks: []telemetry.VectorSinkSpec{
+							{
+								Name: "console",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			},
+			`[api]
+enabled = true
+
+[sinks.console]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+		{
+			"API disabled",
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
+					Enabled: ptr.To(true),
+					Api: &telemetry.ApiConfig{
+						Enabled: ptr.To(false),
+					},
+					Components: &telemetry.VectorComponentsSpec{
+						Sinks: []telemetry.VectorSinkSpec{
+							{
+								Name: "console",
+								Type: "console",
+								Inputs: []string{
+									"test",
+									"test2",
+								},
+							},
+						},
+					},
+				},
+			},
+			`
+[sinks.console]
+type = "console"
+inputs = ["test", "test2"]
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildCustomVectorToml(tt.tspec)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
