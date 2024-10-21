@@ -15,4 +15,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-
+* [FEATURE] [#1034](https://github.com/k8ssandra/k8ssandra-operator/issues/1034) Add support for priorityClassName
