@@ -249,7 +249,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		t.Logf("backup %s failed: %v", backupName, updated.Status.Failed)
 		t.Logf("backup %s finished: %v", backupName, updated.Status.Finished)
 		t.Logf("backup %s in progress: %v", backupName, updated.Status.InProgress)
-		return !updated.Status.FinishTime.IsZero() // && len(updated.Status.Finished) == 3 && len(updated.Status.InProgress) == 0
+		return !updated.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
 	t.Log("check for the MedusaBackup being created")
@@ -370,8 +370,26 @@ func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backup
 }
 
 func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
+
 	backups := make([]*medusa.BackupSummary, 0)
+
 	for _, name := range c.RequestedBackups {
+
+		// return status based on the backup name
+		// since we're implementing altogether different method of the Medusa client, we cannot reuse the BackupStatus logic
+		// but we still want to "mock" failing backups
+		// this does not get called per node/pod, se we don't need to track counts of what we returned
+		var status medusa.StatusType
+		if strings.HasPrefix(name, "good") {
+			status = *medusa.StatusType_SUCCESS.Enum()
+		} else if strings.HasPrefix(name, "bad") {
+			status = *medusa.StatusType_FAILED.Enum()
+		} else if strings.HasPrefix(name, "missing") {
+			status = *medusa.StatusType_UNKNOWN.Enum()
+		} else {
+			status = *medusa.StatusType_IN_PROGRESS.Enum()
+		}
+
 		backup := &medusa.BackupSummary{
 			BackupName:    name,
 			StartTime:     0,
@@ -380,7 +398,7 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 			FinishedNodes: 3,
 			TotalObjects:  fakeBackupFileCount,
 			TotalSize:     fakeBackupByteSize,
-			Status:        *medusa.StatusType_SUCCESS.Enum(),
+			Status:        status,
 			Nodes: []*medusa.BackupNode{
 				{
 					Host:       "host1",
@@ -408,17 +426,19 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 }
 
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
+	// return different status for differently named backups
+	// but for each not-successful backup, return not-a-success only once
 	var status medusa.StatusType
-	if name == successfulBackupName || strings.HasPrefix(name, successfulBackupName) {
+	if strings.HasPrefix(name, successfulBackupName) {
 		status = medusa.StatusType_SUCCESS
-	} else if name == failingBackupName {
+	} else if strings.HasPrefix(name, failingBackupName) {
 		if !alreadyReportedFailingBackup {
 			status = medusa.StatusType_FAILED
 			alreadyReportedFailingBackup = true
 		} else {
 			status = medusa.StatusType_SUCCESS
 		}
-	} else if name == missingBackupName {
+	} else if strings.HasPrefix(name, missingBackupName) {
 		if !alreadyReportedMissingBackup {
 			alreadyReportedMissingBackup = true
 			// reproducing what the gRPC client would send. sadly, it's not a proper NotFound error
