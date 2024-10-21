@@ -269,6 +269,10 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
 		} else {
 			for _, backup := range remoteBackups {
+				if backup.Status != medusa.StatusType_SUCCESS {
+					logger.Info(fmt.Sprintf("Skipping sync of backup %s because it wasn't a success", backup.BackupName))
+					continue
+				}
 				logger.Info("Syncing Backup", "Backup", backup.BackupName)
 				// Create backups that should exist but are missing
 				backupKey := types.NamespacedName{Namespace: task.Namespace, Name: backup.BackupName}
