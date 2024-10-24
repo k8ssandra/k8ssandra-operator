@@ -235,17 +235,27 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 
 func createMultiDcClusterWithControlPlaneReaper(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
+	reaperName := "reaper"
 
 	cpr := &reaperapi.Reaper{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      "reaper",
+			Name:      reaperName,
 		},
 		Spec: newControlPlaneReaper(),
 	}
 
 	err := f.Client.Create(ctx, cpr)
 	require.NoError(err, "failed to create control plane reaper")
+
+	rts := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      reaper.GetTruststoresSecretName(reaperName),
+		},
+	}
+	err = f.Client.Create(ctx, rts)
+	require.NoError(err, "failed to create reaper's truststore secret")
 
 	cpReaperKey := framework.ClusterKey{
 		K8sContext: f.ControlPlaneContext,
@@ -307,9 +317,6 @@ func createMultiDcClusterWithControlPlaneReaper(t *testing.T, ctx context.Contex
 	// check that reapers were not created together with cass DCs
 	verifyReaperAbsent(t, f, ctx, kc, f.DataPlaneContexts[0], dc1Key, namespace)
 	verifyReaperAbsent(t, f, ctx, kc, f.DataPlaneContexts[1], dc2Key, namespace)
-
-	// check the kc is added to reaper
-	verifyClusterRegistered(t, f, ctx, kc, namespace)
 
 	err = f.DeleteK8ssandraCluster(ctx, utils.GetKey(kc), timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
@@ -400,8 +407,4 @@ func verifyReaperAbsent(t *testing.T, f *framework.Framework, ctx context.Contex
 	reaper := &reaperapi.Reaper{}
 	err := f.Get(ctx, reaperKey, reaper)
 	require.True(t, err != nil && errors.IsNotFound(err), fmt.Sprintf("reaper %s should not be created in dc %s", reaperKey, dcKey))
-}
-
-func verifyClusterRegistered(t *testing.T, f *framework.Framework, ctx context.Context, kc *api.K8ssandraCluster, namespace string) {
-
 }
