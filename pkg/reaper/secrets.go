@@ -94,5 +94,5 @@ func secretToEnvVars(secret *corev1.Secret, envUsernameParam, envPasswordParam s
 }
 
 func GetTruststoresSecretName(reaperName string) string {
-	return fmt.Sprintf("%s-truststores", reaperName)
+	return fmt.Sprintf("%s-ts", reaperName)
 }
