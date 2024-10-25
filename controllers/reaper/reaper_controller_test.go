@@ -566,9 +566,9 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
 	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
-	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
+	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0]
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1]
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
 }
 
@@ -601,11 +601,11 @@ func testCreateReaperWithHttpAuthEnabled(t *testing.T, ctx context.Context, k8sC
 
 	// In this configuration, we expect Reaper to also have a mount for the http auth secrets
 	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
-	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
+	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0]
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2]
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
-	truststoresVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	truststoresVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1]
 	assert.Equal(t, "management-api-keystores-per-cluster", truststoresVolumeMount.Name)
 
 	// when we delete reaper, the STS and the secret both go away due to the owner reference
