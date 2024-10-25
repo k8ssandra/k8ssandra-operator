@@ -308,7 +308,9 @@ func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace stri
 func createControlPlaneReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	reaperName := "reaper1"
 	cluster1Name := "enc-mgmt"
+	cluster1DcName := "c1dc1"
 	cluster2Name := "enc-mgmt-2"
+	cluster2DcName := "c2dc1"
 
 	reaperKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: reaperName}}
 	c1dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1", cluster1Name)}}
@@ -319,7 +321,7 @@ func createControlPlaneReaperAndDatacenter(t *testing.T, ctx context.Context, na
 	checkDatacenterReady(t, ctx, c2dc1Key, f)
 
 	t.Log("Verify Reaper received k8ssandra-cluster secrets")
-	verifyReaperSecrets(t, f, ctx, namespace, reaperName, cluster1Name, cluster2Name)
+	verifyReaperSecrets(t, f, ctx, namespace, reaperName, cluster1Name, cluster1DcName, cluster2Name, cluster2DcName)
 
 	c1dc1Prefix := DcPrefix(t, f, c1dc1Key)
 	c2dc1Prefix := DcPrefix(t, f, c2dc1Key)

@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -1942,7 +1943,7 @@ func verifyReaperSecrets(
 	t *testing.T,
 	f *framework.E2eFramework,
 	ctx context.Context,
-	namespace, reaperName, cluster1Name, cluster2Name string,
+	namespace, reaperName, cluster1Name, cluster1DcName, cluster2Name, cluster2DcName string,
 ) {
 	// check that the secret now has 2 entries
 	updatedTruststoreSecret := &corev1.Secret{}
@@ -1951,15 +1952,20 @@ func verifyReaperSecrets(
 	require.Len(t, updatedTruststoreSecret.Data, 4, "truststore secret should have 2 entries")
 
 	// check that updatedTruststoreSecret keys are made of correctly named truststore files
-	_, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-truststore.jks", cluster1Name)]
+	c1ts, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-truststore.jks", cluster1Name)]
 	require.True(t, ok, "truststore secret should have key %s", cluster1Name)
-	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster1Name)]
+	c1ks, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster1Name)]
 	require.True(t, ok, "truststore secret should have key %s", cluster1Name)
 
-	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
+	// compare the secrets in reaper's truststore with the actual secrets the cluster uses
+	verifyTruststoreFingerprints(t, f, ctx, namespace, cluster1Name, cluster1DcName, c1ts, c1ks)
+
+	c2ts, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
 	require.True(t, ok, "truststore secret should have key %s", cluster2Name)
-	_, ok = updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
+	c2ks, ok := updatedTruststoreSecret.Data[fmt.Sprintf("%s-keystore.jks", cluster2Name)]
 	require.True(t, ok, "truststore secret should have key %s", cluster2Name)
+
+	verifyTruststoreFingerprints(t, f, ctx, namespace, cluster2Name, cluster2DcName, c2ts, c2ks)
 }
 
 func checkKeyspaceNeverCreated(
@@ -2385,4 +2391,21 @@ func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyDcLevel"] == "anAnnotationValueDCLevel")
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyClusterLevel"] == "anAnnotationValueClusterLevel")
 	return nil
+}
+
+func verifyTruststoreFingerprints(
+	t *testing.T,
+	f *framework.E2eFramework,
+	ctx context.Context,
+	namespace, clusterName, dcName string,
+	reapersTruststore, reapersKeystore []byte,
+) {
+	c1SecretName := fmt.Sprintf("%s-%s-%s-c-mgtm-ks", clusterName, clusterName, dcName)
+	c1SecretKey := types.NamespacedName{Namespace: namespace, Name: c1SecretName}
+	c1Secret := &corev1.Secret{}
+	err := f.Client.Get(ctx, c1SecretKey, c1Secret)
+	require.NoError(t, err, "failed to get secret %s", c1SecretKey)
+	actualTs, actualKs := c1Secret.Data["truststore.jks"], c1Secret.Data["keystore.jks"]
+	require.Equal(t, sha256.Sum256(reapersTruststore), sha256.Sum256(actualTs))
+	require.Equal(t, sha256.Sum256(reapersKeystore), sha256.Sum256(actualKs))
 }
