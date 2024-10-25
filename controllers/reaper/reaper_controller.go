@@ -504,18 +504,18 @@ func (r *ReaperReconciler) reconcileTrustStoresSecret(ctx context.Context, actua
 	}
 	if err := r.Client.Get(ctx, sKey, s); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Creating Reaper's truststore ConfigMap", "ConfigMap", sKey)
+			logger.Info("Creating Reaper's truststore Secret", "Secret", sKey)
 			if err = controllerutil.SetControllerReference(actualReaper, s, r.Scheme); err != nil {
-				logger.Error(err, "Failed to set owner on truststore ConfigMap")
+				logger.Error(err, "Failed to set owner on truststore Secret")
 				return err
 			}
 			if err = r.Client.Create(ctx, s); err != nil {
-				logger.Error(err, "Failed to create Reaper's truststore ConfigMap")
+				logger.Error(err, "Failed to create Reaper's truststore Secret")
 				return err
 			}
 			return nil
 		}
-		logger.Error(err, "Failed to get Reaper's truststores ConfigMap")
+		logger.Error(err, "Failed to get Reaper's truststore Secret")
 		return err
 	}
 	return nil
