@@ -2,6 +2,7 @@ package reaper
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
@@ -599,14 +600,21 @@ func testCreateReaperWithHttpAuthEnabled(t *testing.T, ctx context.Context, k8sC
 	assert.True(t, truststoresSecret.Data == nil)
 	assert.Equal(t, 0, len(truststoresSecret.Data))
 
+	reaperContainerIdx, foundReaper := cassandra.FindContainer(&sts.Spec.Template, "reaper")
+	assert.True(t, foundReaper, "reaper container not found in reaper's STS template")
+
+	reaperContainer := sts.Spec.Template.Spec.Containers[reaperContainerIdx]
 	// In this configuration, we expect Reaper to also have a mount for the http auth secrets
-	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
-	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0]
-	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2]
-	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
-	truststoresVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1]
-	assert.Equal(t, "management-api-keystores-per-cluster", truststoresVolumeMount.Name)
+	assert.Len(t, reaperContainer.VolumeMounts, 3)
+
+	_, foundConfVolume := cassandra.FindVolume(&sts.Spec.Template, "conf")
+	assert.True(t, foundConfVolume, "conf volume not found in reaper's STS template")
+
+	_, foundDataVolume := cassandra.FindVolume(&sts.Spec.Template, "reaper-data")
+	assert.True(t, foundDataVolume, "reaper-data volume not found in reaper's STS template")
+
+	_, foundTruststoresVolume := cassandra.FindVolume(&sts.Spec.Template, "management-api-keystores-per-cluster")
+	assert.True(t, foundTruststoresVolume, "management-api-keystores-per-cluster volume not found in reaper's STS template")
 
 	// when we delete reaper, the STS and the secret both go away due to the owner reference
 	// however, that does not happen in env tests
