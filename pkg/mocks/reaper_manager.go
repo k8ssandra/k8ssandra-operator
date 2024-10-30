@@ -4,9 +4,10 @@ package mocks
 
 import (
 	context "context"
-	alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	k8ssandrav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -58,8 +59,8 @@ func (_m *ReaperManager) Connect(ctx context.Context, _a1 *v1alpha1.Reaper, user
 	return r0
 }
 
-// ConnectWithReaperRef provides a mock function with given fields: ctx, reaperRef, username, password
-func (_m *ReaperManager) ConnectWithReaperRef(ctx context.Context, kc *alpha1.K8ssandraCluster, username, password string) error {
+// ConnectWithReaperRef provides a mock function with given fields: ctx, kc, username, password
+func (_m *ReaperManager) ConnectWithReaperRef(ctx context.Context, kc *k8ssandrav1alpha1.K8ssandraCluster, username string, password string) error {
 	ret := _m.Called(ctx, kc, username, password)
 
 	if len(ret) == 0 {
@@ -67,7 +68,7 @@ func (_m *ReaperManager) ConnectWithReaperRef(ctx context.Context, kc *alpha1.K8
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *alpha1.K8ssandraCluster, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *k8ssandrav1alpha1.K8ssandraCluster, string, string) error); ok {
 		r0 = rf(ctx, kc, username, password)
 	} else {
 		r0 = ret.Error(0)

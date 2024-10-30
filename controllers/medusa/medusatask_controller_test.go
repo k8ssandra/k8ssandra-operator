@@ -16,10 +16,12 @@ import (
 )
 
 const (
-	backup1 = "backup1"
-	backup2 = "backup2"
-	backup3 = "backup3"
-	backup4 = "backup4"
+	backup1 = "good-backup1"
+	backup2 = "good-backup2"
+	backup3 = "good-backup3"
+	backup4 = "good-backup4"
+	backup5 = "bad-backup5"
+	backup6 = "missing-backup6"
 )
 
 func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -152,9 +154,18 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	require.True(backup3Created, "failed to create backup3")
 	backup4Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup4)
 	require.True(backup4Created, "failed to create backup4")
+	backup5Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup5)
+	require.False(backup5Created, "failed to create backup5")
+	backup6Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup6)
+	require.False(backup6Created, "failed to create backup6")
 
-	// Ensure that 4 backups and backup jobs were created
-	checkBackupsAndJobs(require, ctx, 4, namespace, f, []string{})
+	// Ensure that 6 backups jobs, but only 4 backups were created (two jobs did not succeed on some pods)
+	checkBackupsAndJobs(require, ctx, 6, 4, namespace, f, []string{})
+
+	checkSyncTask(require, ctx, namespace, "dc2", f)
+
+	// Ensure the sync task did not create backups for the failed jobs
+	checkBackupsAndJobs(require, ctx, 6, 4, namespace, f, []string{})
 
 	// Purge backups and verify that only one out of three remains
 	t.Log("purge backups")
@@ -209,7 +220,7 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 
 	// Ensure that 2 backups and backup jobs were deleted
 	deletedBackups := []string{backup1, backup2}
-	checkBackupsAndJobs(require, ctx, 2, namespace, f, deletedBackups)
+	checkBackupsAndJobs(require, ctx, 4, 2, namespace, f, deletedBackups)
 
 	medusaBackup4Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, backup4)
 	medusaBackup4 := &api.MedusaBackup{}
@@ -222,19 +233,57 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	verifyObjectDoesNotExist(ctx, t, f, dc2Key, &cassdcapi.CassandraDatacenter{})
 }
 
-func checkBackupsAndJobs(require *require.Assertions, ctx context.Context, expectedLen int, namespace string, f *framework.Framework, deleted []string) {
+func checkBackupsAndJobs(require *require.Assertions, ctx context.Context, expectedJobsLen, expectedBackupsLen int, namespace string, f *framework.Framework, deleted []string) {
 	var backups api.MedusaBackupList
 	err := f.List(ctx, framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "list-backups"), &backups)
 	require.NoError(err, "failed to list medusabackup")
-	require.Len(backups.Items, expectedLen, "expected %d backups, got %d", expectedLen, len(backups.Items))
+	require.Len(backups.Items, expectedBackupsLen, "expected %d backups, got %d", expectedBackupsLen, len(backups.Items))
 
 	var jobs api.MedusaBackupJobList
 	err = f.List(ctx, framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "list-backup-jobs"), &jobs)
 	require.NoError(err, "failed to list medusabackupjobs")
-	require.Len(jobs.Items, expectedLen, "expected %d jobs, got %d", expectedLen, len(jobs.Items))
+	require.Len(jobs.Items, expectedJobsLen, "expected %d jobs, got %d", expectedJobsLen, len(jobs.Items))
 
 	for _, d := range deleted {
 		require.NotContains(backups.Items, d, "MedusaBackup %s to have been deleted", d)
 		require.NotContains(jobs.Items, d, "MedusaBackupJob %s to have been deleted", d)
 	}
+}
+
+func checkSyncTask(require *require.Assertions, ctx context.Context, namespace, dc string, f *framework.Framework) {
+	syncTaskName := "sync-backups"
+
+	// create a sync task
+	syncTask := &api.MedusaTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      syncTaskName,
+			Labels: map[string]string{
+				"app": "medusa",
+			},
+		},
+		Spec: api.MedusaTaskSpec{
+			CassandraDatacenter: dc,
+			Operation:           "sync",
+		},
+	}
+	syncTaskKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, syncTaskName)
+	err := f.Create(ctx, syncTaskKey, syncTask)
+	require.NoError(err, "failed to create sync task")
+
+	// wait for sync task to finish
+	require.Eventually(func() bool {
+		updated := &api.MedusaTask{}
+		err := f.Get(ctx, syncTaskKey, updated)
+		if err != nil {
+			return false
+		}
+
+		v, ok := updated.Labels["app"]
+		if !ok || v != "medusa" {
+			return false
+		}
+
+		return !updated.Status.FinishTime.IsZero()
+	}, timeout, interval)
 }
