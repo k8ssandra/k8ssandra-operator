@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#1383](https://github.com/k8ssandra/k8ssandra-operator/issues/1383) Do not create MedusaBackup if MadusaBakupJob did not fully succeed
+* [ENHANCEMENT] [#1667](https://github.com/k8ssahttps://github.com/k8ssandra/k8ssandra/issues/1667) Add `skipSchemaMigration` option to `K8ssandraCluster.spec.reaper`

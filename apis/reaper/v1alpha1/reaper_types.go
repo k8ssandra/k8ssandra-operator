@@ -160,6 +160,14 @@ type ReaperTemplate struct {
 	// +kubebuilder:default={enabled: false}
 	// +optional
 	HttpManagement HttpManagement `json:"httpManagement"`
+
+	// Whether to skip schema migration. Schema migration is done in an init container on every Reaper deployment and
+	// can slow down Reaper's startup time. Besides, schema migration requires reading data at QUORUM. It can be skipped
+	// if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
+	// example, because a DC is down).
+	// +optional
+	// +kubebuilder:default=false
+	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and
@@ -290,14 +298,6 @@ type ReaperSpec struct {
 	// Client encryption stores which are used by Cassandra and Reaper.
 	// +optional
 	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
-
-	// Whether to skip schema migration. Schema migration is done in an init container on every Reaper deployment and
-	// can slow down Reaper's startup time. Besides, schema migration requires reading data at QUORUM. It can be skipped
-	// if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
-	// example, because a DC is down).
-	// +optional
-	// +kubebuilder:default=false
-	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
 }
 
 // ReaperProgress is a word summarizing the state of a Reaper resource.
