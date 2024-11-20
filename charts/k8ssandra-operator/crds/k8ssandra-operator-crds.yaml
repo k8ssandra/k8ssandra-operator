@@ -28730,6 +28730,14 @@ spec:
                             type: string
                         type: object
                     type: object
+                  skipSchemaMigration:
+                    default: false
+                    description: |-
+                      Whether to skip schema migration. Schema migration is done in an init container on every Reaper deployment and
+                      can slow down Reaper's startup time. Besides, schema migration requires reading data at QUORUM. It can be skipped
+                      if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
+                      example, because a DC is down).
+                    type: boolean
                   storageConfig:
                     description: |-
                       If StorageType is "local", Reaper will need a Persistent Volume to persist its data. This field allows
