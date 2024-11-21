@@ -20,6 +20,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}   
       serviceAccountName: {{ include "k8ssandra-common.fullname" . }}-crd-upgrader-k8ssandra
+      {{- if .Values.client.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.client.podSecurityContext | nindent 8 }}
+      {{- end }}
       containers:
         - name: crd-upgrade-job-k8ssandra
           image: {{ include "k8ssandra-common.flattenedImage" .Values.client.image }}
@@ -34,11 +38,14 @@ spec:
               value: {{ .Values.client.proxy }}
             {{- end }}
           args:
-            - -upgradecrds
-            - --targetVersion
+            - helm
+            - upgrade
+            - --chartVersion
             - {{ .Chart.Version }}
             - --chartName
             - {{ .Chart.Name }}
+            - --chartRepo
+            - k8ssandra
       {{- if .Values.nodeSelector }}
       nodeSelector: {{ toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}
