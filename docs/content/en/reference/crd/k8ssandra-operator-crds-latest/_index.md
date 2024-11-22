@@ -54856,6 +54856,18 @@ the secrets into the necessary resources<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>skipSchemaMigration</b></td>
+        <td>boolean</td>
+        <td>
+          Whether to skip schema migration. Schema migration is done in an init container on every Reaper deployment and
+can slow down Reaper's startup time. Besides, schema migration requires reading data at QUORUM. It can be skipped
+if you know that the schema is already up-to-date, or if you know upfront that QUORUM cannot be achieved (for
+example, because a DC is down).<br/>
+          <br/>
+            <i>Default</i>: false<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecreaperstorageconfig">storageConfig</a></b></td>
         <td>object</td>
         <td>
