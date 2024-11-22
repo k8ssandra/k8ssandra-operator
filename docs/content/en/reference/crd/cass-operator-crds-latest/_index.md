@@ -248,8 +248,7 @@ that an update to the secret will trigger an update of the StatefulSets.<br/>
         <td><b>datacenterName</b></td>
         <td>string</td>
         <td>
-          DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value.
-It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself.
+          DatacenterName allows to override the name of the Cassandra datacenter. In Cassandra the DC name will be overridden by this value.
 This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC.
 Use cautiously.<br/>
         </td>
@@ -22685,6 +22684,15 @@ This field is used to perform validation checks preventing a user from changing 
 with the management API<br/>
           <br/>
             <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>metadataVersion</b></td>
+        <td>integer</td>
+        <td>
+          <br/>
+          <br/>
+            <i>Format</i>: int64<br/>
         </td>
         <td>false</td>
       </tr><tr>
