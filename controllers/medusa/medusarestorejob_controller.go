@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/utils/ptr"
 	"net"
 	"time"
 
@@ -274,7 +275,12 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 	}
 
 	for _, pod := range pods {
-		addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+		medusaPort := shared.BackupSidecarPort
+		explicitPort, found := cassandra.FindContainerPort(ptr.To(pod), "medusa", "grpc")
+		if found {
+			medusaPort = explicitPort
+		}
+		addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 		if medusaClient, err := r.ClientFactory.NewClient(ctx, addr); err != nil {
 			logger.Error(err, "Failed to create Medusa client", "address", addr)
 		} else {

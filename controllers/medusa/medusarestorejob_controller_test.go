@@ -68,6 +68,9 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 						Name: cassandraUserSecret,
 					},
 				},
+				ServiceProperties: api.Service{
+					GrpcPort: 4567,
+				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,
 				},

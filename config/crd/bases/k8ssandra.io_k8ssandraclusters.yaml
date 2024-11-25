@@ -26387,6 +26387,15 @@ spec:
                             type: string
                         type: object
                     type: object
+                  serviceProperties:
+                    description: Provides all service related properties for Medusa.
+                    properties:
+                      grpcPort:
+                        description: |-
+                          GrpcPort to listen on when running as gRPC service
+                          Included grpc in the field name to avoid misunderstanding with storage.port
+                        type: integer
+                    type: object
                   storageProperties:
                     description: Provides all storage backend related properties for
                       backups.

@@ -86,6 +86,10 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 						Name: cassandraUserSecret,
 					},
 				},
+				// adding this did not actually break any assertions
+				ServiceProperties: api.Service{
+					GrpcPort: 1234,
+				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,
 				},

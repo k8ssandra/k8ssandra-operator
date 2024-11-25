@@ -117,6 +117,13 @@ type Storage struct {
 	PodStorage *PodStorageSettings `json:"podStorage,omitempty"`
 }
 
+type Service struct {
+	// GrpcPort to listen on when running as gRPC service
+	// Included grpc in the field name to avoid misunderstanding with storage.port
+	// +optional
+	GrpcPort int `json:"grpcPort,omitempty"`
+}
+
 type PodStorageSettings struct {
 	// Settings for the pod's storage when backups use the local storage provider.
 
@@ -159,6 +166,9 @@ type MedusaClusterTemplate struct {
 
 	// Provides all storage backend related properties for backups.
 	StorageProperties Storage `json:"storageProperties,omitempty"`
+
+	// Provides all service related properties for Medusa.
+	ServiceProperties Service `json:"serviceProperties,omitempty"`
 
 	// Certificates for Medusa if client encryption is enabled in Cassandra.
 	// The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".

@@ -19,6 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"net"
 	"strings"
 
@@ -315,7 +316,12 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 }
 
 func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (string, error) {
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	medusaPort := shared.BackupSidecarPort
+	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
+	if found {
+		medusaPort = explicitPort
+	}
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return "", err
@@ -332,7 +338,12 @@ func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupTy
 }
 
 func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (medusa.StatusType, error) {
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	medusaPort := shared.BackupSidecarPort
+	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
+	if found {
+		medusaPort = explicitPort
+	}
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		logger.Error(err, "Could not make a new medusa client")

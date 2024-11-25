@@ -486,6 +486,33 @@ func FindInitContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName 
 	return -1, false
 }
 
+func FindPort(container *corev1.Container, portName string) (int32, bool) {
+	if container.Ports != nil {
+		for _, port := range container.Ports {
+			if port.Name == portName {
+				return port.ContainerPort, true
+			}
+		}
+	}
+	return -1, false
+}
+func FindContainerPort(pod *corev1.Pod, containerName, podName string) (int, bool) {
+	if pod.Spec.Containers != nil {
+		for _, container := range pod.Spec.Containers {
+			if container.Name == containerName {
+				if container.Ports != nil {
+					for _, port := range container.Ports {
+						if port.Name == podName {
+							return int(port.ContainerPort), true
+						}
+					}
+				}
+			}
+		}
+	}
+	return -1, false
+}
+
 func FindVolume(dcPodTemplateSpec *corev1.PodTemplateSpec, volumeName string) (int, bool) {
 	if dcPodTemplateSpec != nil {
 		for i, volume := range dcPodTemplateSpec.Spec.Volumes {
