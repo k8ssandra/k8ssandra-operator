@@ -148,7 +148,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				return result.Error(fmt.Errorf("CassandraDatacenter %s has cluster name %s, but expected %s. Cluster name cannot be changed in an existing cluster", dcKey, actualDc.Spec.ClusterName, cassClusterName)), actualDcs
 			}
 
-			r.setStatusForDatacenter(kc, actualDc)
+			r.setStatusForDatacenter(kc, actualDc, dcConfig.K8sContext)
 
 			r.reconcileContactPointsService(ctx, kc, actualDc, remoteClient, dcLogger)
 
@@ -309,7 +309,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	return result.Continue(), actualDcs
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter) {
+func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, targetContext string) {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus, 0)
 	}
@@ -318,9 +318,15 @@ func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraClu
 
 	if found {
 		dc.Status.DeepCopyInto(kdcStatus.Cassandra)
+		if kdcStatus.ContextName != targetContext {
+			// This is pretty fatal situation if it happens to actually change the context, but for updates from previous versions we need it
+			kdcStatus.ContextName = targetContext
+		}
+		kc.Status.Datacenters[dc.Name] = kdcStatus
 	} else {
 		kc.Status.Datacenters[dc.Name] = api.K8ssandraStatus{
-			Cassandra: dc.Status.DeepCopy(),
+			ContextName: targetContext,
+			Cassandra:   dc.Status.DeepCopy(),
 		}
 	}
 }

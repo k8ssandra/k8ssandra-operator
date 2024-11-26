@@ -2,10 +2,11 @@ package reaper
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -131,10 +132,7 @@ func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, test
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-cassdc-pod1",
 			Namespace: testNamespace,
-			Labels: map[string]string{
-				cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassandraClusterName),
-				cassdcapi.DatacenterLabel: cassandraDatacenterName,
-			},
+			Labels:    cassdc.GetDatacenterLabels(),
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
@@ -162,11 +160,8 @@ func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, test
 			Namespace: testNamespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{{Name: "mgmt-api-http", Port: int32(8080)}},
-			Selector: map[string]string{
-				cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassandraClusterName),
-				cassdcapi.DatacenterLabel: cassandraDatacenterName,
-			},
+			Ports:    []corev1.ServicePort{{Name: "mgmt-api-http", Port: int32(8080)}},
+			Selector: cassdc.GetDatacenterLabels(),
 		},
 	}
 	err = k8sClient.Create(ctx, service)

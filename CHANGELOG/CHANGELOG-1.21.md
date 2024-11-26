@@ -15,8 +15,10 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] [#1450](https://github.com/k8ssandra/k8ssandra-operator/issues/1450) Update datacenter labels to use Kubernetes resource names for CassandraDatacenter, not the cleaned override name. Update to cass-operator 1.23.0
 * [CHANGE] [#1441](https://github.com/k8ssandra/k8ssandra-operator/issues/1441) Use k8ssandra-client instead of k8ssandra-tools for CRD upgrades
-* [BUGFIX] [#1383](https://github.com/k8ssandra/k8ssandra-operator/issues/1383) Do not create MedusaBackup if MedusaBakupJob did not fully succeed
 * [ENHANCEMENT] [#1667](https://github.com/k8ssahttps://github.com/k8ssandra/k8ssandra/issues/1667) Add `skipSchemaMigration` option to `K8ssandraCluster.spec.reaper`
 * [FEATURE] [#1034](https://github.com/k8ssandra/k8ssandra-operator/issues/1034) Add support for priorityClassName
 * [BUGFIX] [#1454](https://github.com/k8ssandra/k8ssandra-operator/issues/1454) Do not try to work out backup status if there are no pods
+* [BUGFIX] [#1383](https://github.com/k8ssandra/k8ssandra-operator/issues/1383) Do not create MedusaBackup if MedusaBakupJob did not fully succeed
+* [BUGFIX] [#1460](https://github.com/k8ssandra/k8ssandra-operator/issues/1460) Fix podName calculations in medusa's hostmap.go to account for unbalanced racks also

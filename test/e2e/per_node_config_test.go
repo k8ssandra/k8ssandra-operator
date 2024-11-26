@@ -29,15 +29,17 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 	dc1Prefix := DcPrefix(t, f, dc1Key)
+	configKey1Prefix := DcPrefixOverride(t, f, dc1Key)
 
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc2Key.Name)
 	dc2Prefix := DcPrefix(t, f, dc2Key)
+	configKey2Prefix := DcPrefixOverride(t, f, dc2Key)
 
 	t.Log("check that the ConfigMaps were created")
 
-	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-per-node-config", dc1Prefix))
-	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-per-node-config", dc2Prefix))
+	perNodeConfigMapKey1 := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-per-node-config", configKey1Prefix))
+	perNodeConfigMapKey2 := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-per-node-config", configKey2Prefix))
 
 	assert.Eventually(t, func() bool {
 		return f.Get(ctx, perNodeConfigMapKey1, &corev1.ConfigMap{}) == nil &&

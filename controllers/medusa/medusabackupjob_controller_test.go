@@ -243,6 +243,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		},
 	}
 
+	t.Logf("creating MedusaBackupJob %s", backupKey)
 	err := f.Create(ctx, backupKey, backup)
 	require.NoError(err, "failed to create MedusaBackupJob")
 
@@ -258,9 +259,13 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		verifyBackupJobStarted(require.Never, t, dc, f, ctx, backupKey)
 	}
 
+	// TODO That previous check does not actually verify that the MedusaBackup has yet been written (if it should be), so we need to wait a bit more
+	time.Sleep(500 * time.Millisecond)
+
 	t.Log("check for the MedusaBackup being created")
 	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	medusaBackup := &api.MedusaBackup{}
+	t.Logf("getting MedusaBackup %s", medusaBackupKey)
 	err = f.Get(ctx, medusaBackupKey, medusaBackup)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -268,6 +273,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 			return false
 		}
 	}
+
 	t.Log("verify the MedusaBackup is correct")
 	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")
 	require.Equal(medusaBackup.Status.FinishedNodes, dc.Spec.Size, "backup finished nodes doesn't match dc nodes")
@@ -556,20 +562,17 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 	_ = f.CreateNamespace(dcKey.Namespace)
 	for i := int32(0); i < dc.Spec.Size; i++ {
 		pod := &corev1.Pod{}
-		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
+		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.LabelResourceName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
 		err := f.Get(ctx, podKey, pod)
 		if err != nil {
 			if errors.IsNotFound(err) {
-				t.Logf("pod %s-%s-%d not found", dc.Spec.ClusterName, dc.DatacenterName(), i)
+				t.Logf("pod %s-%s-%d not found: %s", dc.Spec.ClusterName, dc.LabelResourceName(), i, dc.Name)
 				pod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
 						Name:      podName,
-						Labels: map[string]string{
-							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
-							cassdcapi.DatacenterLabel: dc.DatacenterName(),
-						},
+						Labels:    dc.GetDatacenterLabels(),
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -588,7 +591,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 				require.NoError(t, err, "failed to create datacenter pod")
 
 				patch := client.MergeFrom(pod.DeepCopy())
-				pod.Status.PodIP = getPodIpAddress(int(i), dc.DatacenterName())
+				pod.Status.PodIP = getPodIpAddress(int(i), dc.LabelResourceName())
 
 				err = f.PatchStatus(ctx, pod, patch, podKey)
 				require.NoError(t, err, "failed to patch datacenter pod status")

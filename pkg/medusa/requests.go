@@ -2,7 +2,6 @@ package medusa
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -63,7 +62,7 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 			return nil, &ctrl.Result{}, nil
 		}
 		f.Log.Error(err, "Failed to get MedusaRestoreJob")
-		return nil, &ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		return nil, &ctrl.Result{}, err
 	}
 
 	backup := &api.MedusaBackup{}
@@ -71,7 +70,7 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 	err = f.Get(ctx, backupKey, backup)
 	if err != nil {
 		f.Log.Error(err, "Failed to get MedusaBackup", "MedusaBackup", backupKey)
-		return nil, &ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		return nil, &ctrl.Result{}, err
 	}
 
 	dc := &cassdcapi.CassandraDatacenter{}
@@ -80,7 +79,7 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 	if err != nil {
 		// TODO The datacenter does not have to exist for a remote restore
 		f.Log.Error(err, "Failed to get CassandraDatacenter", "CassandraDatacenter", dcKey)
-		return nil, &ctrl.Result{RequeueAfter: 10 * time.Second}, err
+		return nil, &ctrl.Result{}, err
 	}
 
 	reqLogger := f.Log.WithValues(

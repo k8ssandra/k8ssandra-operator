@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ComputeInitialTokens computes initial tokens for each DC, assign those tokens to the first RF
@@ -146,18 +148,24 @@ func assignInitialTokens(dcConfigs []*DatacenterConfig, infos []*tokenAllocation
 			racks = []cassdcapi.Rack{{Name: "default"}}
 		}
 
+		dc := &cassdcapi.CassandraDatacenter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: dcConfig.Meta.Name,
+			},
+			Spec: cassdcapi.CassandraDatacenterSpec{
+				ClusterName: dcConfig.Cluster,
+			},
+		}
+
 		// First, generate RF pod names since we need to assign tokens to the RF first nodes
 		// only. Note: we know that RF < dc.Size, that has been checked before, so we will never
 		// generate a pod name that doesn't exist.
 		var podNames []string
 		for i := 0; i < infos[dcIndex].rf; i++ {
-			rackIndex := i % len(racks)
+			rack := racks[i%len(racks)]
+			stsName := reconciliation.NewNamespacedNameForStatefulSet(dc, rack.Name)
 			podIndex := i / len(racks)
-			podName := fmt.Sprintf("%s-%s-%s-sts-%d",
-				cassdcapi.CleanupForKubernetes(dcConfig.Cluster),
-				dcConfig.CassDcName(),
-				cassdcapi.CleanupSubdomain(racks[rackIndex].Name),
-				podIndex)
+			podName := fmt.Sprintf("%s-%d", stsName.Name, podIndex)
 			podNames = append(podNames, podName)
 		}
 

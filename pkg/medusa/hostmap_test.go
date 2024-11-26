@@ -8,6 +8,7 @@ import (
 	pkgtest "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 type mockgRPCClient struct{}
@@ -102,6 +103,43 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 	result, err := getTargetRackFQDNs(cassDc)
 	assert.NoError(t, err, err)
 	expectedSourceRacks := map[NodeLocation][]string{
+		{Rack: "default", DC: "test-dc2"}: {"test-cluster-dc2-default-sts-0", "test-cluster-dc2-default-sts-1", "test-cluster-dc2-default-sts-2"},
+	}
+	assert.Equal(t, expectedSourceRacks, result)
+	cassDc.Spec.Racks = []cassdcapi.Rack{
+		{Name: "rack1"},
+		{Name: "rack2"},
+		{Name: "rack3"},
+	}
+	expectedSourceRacks = map[NodeLocation][]string{
+		{Rack: "rack1", DC: "test-dc2"}: {"test-cluster-dc2-rack1-sts-0"},
+		{Rack: "rack2", DC: "test-dc2"}: {"test-cluster-dc2-rack2-sts-0"},
+		{Rack: "rack3", DC: "test-dc2"}: {"test-cluster-dc2-rack3-sts-0"},
+	}
+	result, err = getTargetRackFQDNs(cassDc)
+	assert.NoError(t, err, err)
+	assert.Equal(t, expectedSourceRacks, result)
+}
+
+func TestGetTargetRackFQDNsExistingOverride(t *testing.T) {
+	cassDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dc2",
+			Namespace: "default",
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:    "test-cluster",
+			DatacenterName: "test-dc2",
+			Size:           3,
+		},
+		Status: cassdcapi.CassandraDatacenterStatus{
+			DatacenterName: ptr.To[string]("test-dc2"),
+		},
+	}
+
+	result, err := getTargetRackFQDNs(cassDc)
+	assert.NoError(t, err, err)
+	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "default", DC: "test-dc2"}: {"test-cluster-test-dc2-default-sts-0", "test-cluster-test-dc2-default-sts-1", "test-cluster-test-dc2-default-sts-2"},
 	}
 	assert.Equal(t, expectedSourceRacks, result)
@@ -136,7 +174,7 @@ func TestGetTargetRackFQDNsOverrides(t *testing.T) {
 	result, err := getTargetRackFQDNs(cassDc)
 	assert.NoError(t, err, err)
 	expectedSourceRacks := map[NodeLocation][]string{
-		{Rack: "default", DC: "testdc2"}: {"testcluster-testdc2-default-sts-0", "testcluster-testdc2-default-sts-1", "testcluster-testdc2-default-sts-2"},
+		{Rack: "default", DC: "Test DC2"}: {"testcluster-test-dc2-default-sts-0", "testcluster-test-dc2-default-sts-1", "testcluster-test-dc2-default-sts-2"},
 	}
 	assert.Equal(t, expectedSourceRacks, result)
 	cassDc.Spec.Racks = []cassdcapi.Rack{
@@ -145,9 +183,9 @@ func TestGetTargetRackFQDNsOverrides(t *testing.T) {
 		{Name: "rack3"},
 	}
 	expectedSourceRacks = map[NodeLocation][]string{
-		{Rack: "rack1", DC: "testdc2"}: {"testcluster-testdc2-rack1-sts-0"},
-		{Rack: "rack2", DC: "testdc2"}: {"testcluster-testdc2-rack2-sts-0"},
-		{Rack: "rack3", DC: "testdc2"}: {"testcluster-testdc2-rack3-sts-0"},
+		{Rack: "rack1", DC: "Test DC2"}: {"testcluster-test-dc2-rack1-sts-0"},
+		{Rack: "rack2", DC: "Test DC2"}: {"testcluster-test-dc2-rack2-sts-0"},
+		{Rack: "rack3", DC: "Test DC2"}: {"testcluster-test-dc2-rack3-sts-0"},
 	}
 	result, err = getTargetRackFQDNs(cassDc)
 	assert.NoError(t, err, err)
