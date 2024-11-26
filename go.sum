@@ -1440,6 +1440,10 @@ github.com/jung-kurt/gofpdf v1.0.0/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=
 github.com/k8ssandra/cass-operator v1.22.4 h1:kcVVSvm6H50j+ZyOCBlYEfwaoxd755NjSQSBt3SfIpg=
 github.com/k8ssandra/cass-operator v1.22.4/go.mod h1:KtROSvoTwB6eFzcRjOmTUAGkbDHnNtK4ayk4KDllHy4=
+github.com/k8ssandra/cass-operator v1.22.5-0.20241125124432-e580f21c32b0 h1:cfiFwmZ/34HhMGMoWgftgPAFAQKfgO6SAl4aQi2Y8L4=
+github.com/k8ssandra/cass-operator v1.22.5-0.20241125124432-e580f21c32b0/go.mod h1:KtROSvoTwB6eFzcRjOmTUAGkbDHnNtK4ayk4KDllHy4=
+github.com/k8ssandra/cass-operator v1.22.5-0.20241126093431-702a150a723b h1:7KynNvhDEgmfNGiJZloR8f/XFsQUF9CJvWP3kJ4a4v0=
+github.com/k8ssandra/cass-operator v1.22.5-0.20241126093431-702a150a723b/go.mod h1:KtROSvoTwB6eFzcRjOmTUAGkbDHnNtK4ayk4KDllHy4=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5 h1:Dq0VdM960G3AbhYwFuaebmsE08IzOYHYhngUfDmWaAc=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5/go.mod h1:WsQymIaVT39xbcstZhdqynUS13AGzP2p6U9Hsk1oy5M=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51/go.mod h1:CzGEWj7cYgsdH8dAjBGEr58BoE7ScuLd+fwFZ44+/x8=
