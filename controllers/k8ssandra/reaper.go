@@ -19,6 +19,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -242,11 +243,8 @@ func (r *K8ssandraClusterReconciler) setStatusForReaper(kc *api.K8ssandraCluster
 
 func (r *K8ssandraClusterReconciler) removeReaperStatus(kc *api.K8ssandraCluster, dcName string) {
 	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
-		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
-			Reaper:    nil,
-			Cassandra: kdcStatus.Cassandra.DeepCopy(),
-			Stargate:  kdcStatus.Stargate.DeepCopy(),
-		}
+		kdcStatus.Reaper = nil
+		kc.Status.Datacenters[dcName] = kdcStatus
 	}
 }
 

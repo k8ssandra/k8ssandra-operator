@@ -3,9 +3,10 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"strconv"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	"strconv"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -134,9 +135,7 @@ func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 
 func (r *defaultManagementApiFacade) fetchDatacenterPods() ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
-	labels := client.MatchingLabels{
-		cassdcapi.DatacenterLabel: cassdcapi.CleanLabelValue(r.dc.DatacenterName()),
-		cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(r.dc.Spec.ClusterName)}
+	labels := client.MatchingLabels(r.dc.GetDatacenterLabels())
 	if err := r.k8sClient.List(r.ctx, podList, labels); err != nil {
 		return nil, err
 	} else {
@@ -303,7 +302,7 @@ func (r *defaultManagementApiFacade) EnsureKeyspaceReplication(keyspaceName stri
 		if actualReplication, err := r.GetKeyspaceReplication(keyspaceName); err != nil {
 			return err
 		} else if CompareReplications(actualReplication, replication) {
-			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication", keyspaceName))
+			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication: %v", keyspaceName, replication))
 			return nil
 		} else {
 			r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v but has wrong replication, altering it. Expected: %v / Got: %v", keyspaceName, r.dc.Spec.ClusterName, replication, actualReplication))
