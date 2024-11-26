@@ -627,18 +627,6 @@ func testCreateReaperWithHttpAuthEnabled(t *testing.T, ctx context.Context, k8sC
 		return errors.IsNotFound(err)
 	}, timeout, interval, "reaper stateful set deletion check failed")
 
-	assert.Eventually(t, func() bool {
-		err = k8sClient.Get(ctx, stsKey, sts)
-		// we'd expect errors.IsNotFound(err) here, except for some reason this is not happening in env tests
-		return err == nil
-	}, timeout, interval, "reaper stateful set deletion check failed")
-
-	assert.Eventually(t, func() bool {
-		err = k8sClient.Get(ctx, secretKey, truststoresSecret)
-		// again, we'd expect errors.IsNotFound(err) ...
-		return err == nil
-	}, timeout, interval, "reaper truststore secret deletion check failed")
-
 	// so we delete stuff manually
 	err = k8sClient.Delete(ctx, sts)
 	require.NoError(t, err)
