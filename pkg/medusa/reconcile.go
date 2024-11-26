@@ -114,9 +114,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 
     [grpc]
     enabled = 1
-	{{- if .Spec.Medusa.ServiceProperties.GrpcPort }}
-	port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
-	{{- end }}
+    {{- if .Spec.Medusa.ServiceProperties.GrpcPort }}
+    port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
+    {{- end }}
 
     [logging]
     level = DEBUG
