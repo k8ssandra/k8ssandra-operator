@@ -34,7 +34,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	dc1Prefix := DcPrefix(t, f, dc1Key)
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
 	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate", dc1Prefix))
 	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper", dc1Prefix))
 	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate", dc2Prefix))

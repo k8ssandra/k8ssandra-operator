@@ -156,7 +156,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	dc1Prefix := DcPrefix(t, f, dc1Key)
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
 
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-reaper"}}
@@ -241,7 +241,7 @@ func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespac
 	checkDatacenterReady(t, ctx, dc2Key, f)
 
 	dc1Prefix := DcPrefix(t, f, dc1Key)
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
 
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-reaper"}}

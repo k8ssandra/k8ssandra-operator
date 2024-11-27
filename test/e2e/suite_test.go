@@ -1625,7 +1625,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
 	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -1743,7 +1743,7 @@ func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Cont
 		return kdcStatus.Stargate.IsReady()
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	dc2Prefix := DcPrefix(t, f, dc2Key)
+	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
 	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -2145,6 +2145,17 @@ func DcPrefix(
 	err := f.Get(context.Background(), dcKey, cassdc)
 	require.NoError(t, err)
 	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.Name))
+}
+
+func DcPrefixOverride(
+	t *testing.T,
+	f *framework.E2eFramework,
+	dcKey framework.ClusterKey) string {
+	// Get the cassdc object
+	cassdc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(context.Background(), dcKey, cassdc)
+	require.NoError(t, err)
+	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.DatacenterName()))
 }
 
 func DcClusterName(

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -99,13 +100,16 @@ func waitForAllComponentsReady(
 	// pod that has authentication enabled while we just turned it off.
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[0]}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[1]}
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate1Key.Name))
+
+	stargate1Prefix, _ := strings.CutSuffix(stargate1Key.Name, "-stargate")
+	stargate2Prefix, _ := strings.CutSuffix(stargate2Key.Name, "-stargate")
+	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate1Prefix))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-reaper", reaper1Key.Name))
+	err = kubectl.RolloutStatus(ctx, options1, "deployment", reaper1Key.Name)
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate2Key.Name))
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate2Prefix))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-reaper", reaper2Key.Name))
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", reaper2Key.Name)
 	assert.NoError(t, err)
 }
 
