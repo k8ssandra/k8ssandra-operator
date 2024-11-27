@@ -19,3 +19,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1383](https://github.com/k8ssandra/k8ssandra-operator/issues/1383) Do not create MedusaBackup if MedusaBakupJob did not fully succeed
 * [ENHANCEMENT] [#1667](https://github.com/k8ssahttps://github.com/k8ssandra/k8ssandra/issues/1667) Add `skipSchemaMigration` option to `K8ssandraCluster.spec.reaper`
 * [FEATURE] [#1034](https://github.com/k8ssandra/k8ssandra-operator/issues/1034) Add support for priorityClassName
+* [BUGFIX] [#1454](https://github.com/k8ssandra/k8ssandra-operator/issues/1454) Do not try to work out backup status if there are no pods
