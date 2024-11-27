@@ -64,7 +64,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	// Additional seed nodes should never be part of the current datacenter
 	filteredSeeds := make([]corev1.Pod, 0)
 	for _, seed := range seeds {
-		if seed.Labels[cassdcapi.DatacenterLabel] != dc.DatacenterName() {
+		if seed.Labels[cassdcapi.DatacenterLabel] != dc.Name {
 			filteredSeeds = append(filteredSeeds, seed)
 		}
 	}

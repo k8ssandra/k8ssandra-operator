@@ -302,7 +302,7 @@ func (r *defaultManagementApiFacade) EnsureKeyspaceReplication(keyspaceName stri
 		if actualReplication, err := r.GetKeyspaceReplication(keyspaceName); err != nil {
 			return err
 		} else if CompareReplications(actualReplication, replication) {
-			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication", keyspaceName))
+			r.logger.Info(fmt.Sprintf("Keyspace %s has desired replication: %v", keyspaceName, replication))
 			return nil
 		} else {
 			r.logger.Info(fmt.Sprintf("keyspace %s already exists in cluster %v but has wrong replication, altering it. Expected: %v / Got: %v", keyspaceName, r.dc.Spec.ClusterName, replication, actualReplication))

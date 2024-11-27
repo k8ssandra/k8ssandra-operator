@@ -46,18 +46,19 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
 	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate-service", DcPrefix(t, f, dc1Key)), stargateRestHostAndPort, stargateGrpcHostAndPort)
-	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper-service", DcPrefix(t, f, dc1Key)), reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dc1Key), stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
+
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate-service", stargate1Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper-service", reaper1Key.Name), reaperRestHostAndPort)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, stargate1Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
 	stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
 	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate-service", DcPrefix(t, f, dc2Key)), stargateRestHostAndPort, stargateGrpcHostAndPort)
-	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper-service", DcPrefix(t, f, dc2Key)), reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, DcPrefix(t, f, dc2Key), stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
+	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate-service", stargate2Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
+	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper-service", reaper2Key.Name), reaperRestHostAndPort)
+	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, stargate2Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
@@ -98,13 +99,13 @@ func waitForAllComponentsReady(
 	// pod that has authentication enabled while we just turned it off.
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[0]}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[1]}
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", DcPrefix(t, f, dc1Key)))
+	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate1Key.Name))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc1Key)))
+	err = kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-reaper", reaper1Key.Name))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", DcPrefix(t, f, dc2Key)))
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate2Key.Name))
 	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-reaper", DcPrefix(t, f, dc2Key)))
+	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-reaper", reaper2Key.Name))
 	assert.NoError(t, err)
 }
 
