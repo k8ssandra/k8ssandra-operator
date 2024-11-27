@@ -103,6 +103,10 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		logger.Error(err, "Failed to get datacenter pods")
 		return ctrl.Result{}, err
 	}
+	if len(pods) == 0 {
+		logger.Info("No pods found for datacenter", "CassandraDatacenter", cassdcKey)
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	// If there is anything in progress, simply requeue the request until each pod has finished or errored
 	if len(backupJob.Status.InProgress) > 0 {
@@ -185,6 +189,11 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if err != nil {
 			logger.Error(err, "Failed to get backup summary")
 			return ctrl.Result{}, err
+		}
+		if backupSummary == nil {
+			// if a backup is complete, but we fail to find the summary, we're in a non-recoverable situation
+			logger.Info("Backup summary not found", "backupJob", backupJob)
+			return ctrl.Result{Requeue: false}, nil
 		}
 		if err := r.createMedusaBackup(ctx, backupJob, backupSummary, logger); err != nil {
 			logger.Error(err, "Failed to create MedusaBackup")

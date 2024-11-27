@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -31,6 +32,7 @@ const (
 	successfulBackupName = "good-backup"
 	failingBackupName    = "bad-backup"
 	missingBackupName    = "missing-backup"
+	backupWithNoPods     = "backup-with-no-pods"
 	dc1PodPrefix         = "192.168.1."
 	dc2PodPrefix         = "192.168.2."
 	fakeBackupFileCount  = int64(13)
@@ -167,6 +169,10 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, missingBackupName)
 	require.False(backupCreated, "the backup object shouldn't have been created")
 
+	// in K8OP-294 we found out we can try to make backups on StatefulSets with no pods
+	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backupWithNoPods)
+	require.False(backupCreated, "the backup object shouldn't have been created")
+
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
@@ -202,13 +208,23 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		}
 	}
 
-	createDatacenterPods(t, f, ctx, dcKey, dc)
+	if backupName != backupWithNoPods {
+		createDatacenterPods(t, f, ctx, dcKey, dc)
+	}
 
 	dcCopy := dc.DeepCopy()
 	dcKeyCopy := framework.NewClusterKey(f.DataPlaneContexts[0], dcKey.Namespace+"-copy", dcKey.Name)
 	dcCopy.ObjectMeta.Namespace = dc.Namespace + "-copy"
 
-	createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
+	if backupName != backupWithNoPods {
+		createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
+	}
+
+	// clean up the pods to keep the environment reusable
+	if backupName != backupWithNoPods {
+		defer deleteDatacenterPods(t, f, ctx, dcKey, dc)
+		defer deleteDatacenterPods(t, f, ctx, dcKeyCopy, dc)
+	}
 
 	t.Log("creating MedusaBackupJob")
 	backupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
@@ -225,32 +241,14 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	err := f.Create(ctx, backupKey, backup)
 	require.NoError(err, "failed to create MedusaBackupJob")
 
-	t.Log("verify that the backups are started")
-	require.Eventually(func() bool {
-		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
-		updated := &api.MedusaBackupJob{}
-		err := f.Get(ctx, backupKey, updated)
-		if err != nil {
-			t.Logf("failed to get MedusaBackupJob: %v", err)
-			return false
-		}
-		return !updated.Status.StartTime.IsZero()
-	}, timeout, interval)
-
-	t.Log("verify the backup finished")
-	require.Eventually(func() bool {
-		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
-		updated := &api.MedusaBackupJob{}
-		err := f.Get(ctx, backupKey, updated)
-		if err != nil {
-			return false
-		}
-		t.Logf("backup %s finish time: %v", backupName, updated.Status.FinishTime)
-		t.Logf("backup %s failed: %v", backupName, updated.Status.Failed)
-		t.Logf("backup %s finished: %v", backupName, updated.Status.Finished)
-		t.Logf("backup %s in progress: %v", backupName, updated.Status.InProgress)
-		return !updated.Status.FinishTime.IsZero()
-	}, timeout, interval)
+	if backupName != backupWithNoPods {
+		t.Log("verify that the backups start eventually")
+		verifyBackupJobStarted(require.Eventually, t, dc, f, ctx, backupKey)
+		verifyBackupJobFinished(t, require, dc, f, ctx, backupKey, backupName)
+	} else {
+		t.Log("verify that the backups never start")
+		verifyBackupJobStarted(require.Never, t, dc, f, ctx, backupKey)
+	}
 
 	t.Log("check for the MedusaBackup being created")
 	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
@@ -258,6 +256,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	err = f.Get(ctx, medusaBackupKey, medusaBackup)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// exit the test if the backup was not created. this happens for some backup names on purpose
 			return false
 		}
 	}
@@ -272,6 +271,43 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	require.Equal(int(dc.Spec.Size), len(medusaClientFactory.GetRequestedBackups(dc.DatacenterName())))
 
 	return true
+}
+
+func verifyBackupJobFinished(t *testing.T, require *require.Assertions, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, ctx context.Context, backupKey framework.ClusterKey, backupName string) {
+	t.Log("verify the backup finished")
+	require.Eventually(func() bool {
+		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
+		updated := &api.MedusaBackupJob{}
+		err := f.Get(ctx, backupKey, updated)
+		if err != nil {
+			return false
+		}
+		t.Logf("backup %s finish time: %v", backupName, updated.Status.FinishTime)
+		t.Logf("backup %s failed: %v", backupName, updated.Status.Failed)
+		t.Logf("backup %s finished: %v", backupName, updated.Status.Finished)
+		t.Logf("backup %s in progress: %v", backupName, updated.Status.InProgress)
+		return !updated.Status.FinishTime.IsZero()
+	}, timeout, interval)
+}
+
+func verifyBackupJobStarted(
+	verifyFunction func(condition func() bool, waitFor time.Duration, tick time.Duration, msgAndArgs ...interface{}),
+	t *testing.T,
+	dc *cassdcapi.CassandraDatacenter,
+	f *framework.Framework,
+	ctx context.Context,
+	backupKey framework.ClusterKey,
+) {
+	verifyFunction(func() bool {
+		t.Logf("Requested backups: %v", medusaClientFactory.GetRequestedBackups(dc.DatacenterName()))
+		updated := &api.MedusaBackupJob{}
+		err := f.Get(ctx, backupKey, updated)
+		if err != nil {
+			t.Logf("failed to get MedusaBackupJob: %v", err)
+			return false
+		}
+		return !updated.Status.StartTime.IsZero()
+	}, timeout, interval)
 }
 
 func reconcileReplicatedSecret(ctx context.Context, t *testing.T, f *framework.Framework, kc *k8ss.K8ssandraCluster) {
@@ -486,6 +522,26 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 		}
 	}
 	return nil
+}
+
+func deleteDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
+	for i := int32(0); i < dc.Spec.Size; i++ {
+		pod := &corev1.Pod{}
+		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
+		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
+		err := f.Get(ctx, podKey, pod)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				t.Logf("failed to get pod %s: %v", podKey, err)
+			}
+		} else {
+			err = f.Delete(ctx, podKey, pod)
+			if err != nil {
+				t.Logf("failed to delete pod %s: %v", podKey, err)
+			}
+		}
+
+	}
 }
 
 func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
