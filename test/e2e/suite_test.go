@@ -1242,7 +1242,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc2Key) + "-stargate",
+			Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
 		},
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
@@ -1251,7 +1251,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc2Key) + "-reaper",
+			Name:      DcPrefixOverride(t, f, dc2Key) + "-reaper",
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)
@@ -1457,7 +1457,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc2Key) + "-stargate",
+			Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
 		},
 	}
 	checkStargateReady(t, f, ctx, sg2Key)
@@ -1466,7 +1466,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 		K8sContext: f.DataPlaneContexts[1],
 		NamespacedName: types.NamespacedName{
 			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc2Key) + "-reaper",
+			Name:      DcPrefixOverride(t, f, dc2Key) + "-reaper",
 		},
 	}
 	checkReaperReady(t, f, ctx, reaper2Key)
