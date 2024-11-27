@@ -266,6 +266,7 @@ func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationForDecommissio
 		if err != nil {
 			return result.Error(fmt.Errorf("failed to get replication for keyspace (%s): %v", ks, err))
 		}
+		logger.Info("checking keyspace replication", "keyspace", ks, "replication", replication, "decommissioning_dc", decommDc)
 		if _, hasReplicas := replication[decommDc]; hasReplicas {
 			return result.Error(fmt.Errorf("cannot decommission DC %s: keyspace %s still has replicas on it", decommDc, ks))
 		}

@@ -32,7 +32,7 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc2Key.Name)
-	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
+	dc2Prefix := DcPrefix(t, f, dc2Key)
 
 	t.Log("check that the ConfigMaps were created")
 

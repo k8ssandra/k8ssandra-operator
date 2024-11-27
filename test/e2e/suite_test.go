@@ -803,7 +803,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	// Check that the Cassandra cluster name override is passed to the cassdc without being modified
 	checkCassandraClusterName(t, ctx, k8ssandra, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
-	dcPrefix := DcPrefix(t, f, dcKey)
+	dcPrefix := DcPrefixOverride(t, f, dcKey)
 	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
 	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 4))
@@ -1493,7 +1493,7 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 		err = f.Client.Get(ctx, kcKey, kc)
 		require.NoError(err, "failed to get K8ssandraCluster %s", kcKey)
 		return kc.Status.Error != "None" && strings.Contains(kc.Status.Error, fmt.Sprintf("cannot decommission DC %s", dc2Name))
-	}, 5*time.Minute, 5*time.Second, "timed out waiting for an error on dc2 removal")
+	}, 5*time.Minute, 1*time.Second, "timed out waiting for an error on dc2 removal")
 
 	t.Log("alter keyspaces to remove replicas from DC2")
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), DcPrefix(t, f, dc1Key)+"-default-sts-0",
@@ -1626,6 +1626,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
 	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
+	dc2PodPrefix := DcPrefix(t, f, dc2Key)
 	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
 	checkStargateReady(t, f, ctx, stargateKey)
 
@@ -1667,7 +1668,7 @@ func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, name
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
 	t.Log("check nodes in dc2 see nodes in dc1")
-	pod = dc2Prefix + "-rack1-sts-0"
+	pod = dc2PodPrefix + "-rack1-sts-0"
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)

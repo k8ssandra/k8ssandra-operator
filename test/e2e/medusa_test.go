@@ -190,7 +190,7 @@ func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string
 	t.Log("Checking that the purge Cron Job exists")
 	// check that the cronjob exists
 	cronJob := &batchv1.CronJob{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.LabelResourceName())), cronJob)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
 	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dc1.LabelResourceName())
 	require.Equal("k8ssandra-operator", cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName, "Service account name is not correct")
 	// create a Job from the cronjob spec
@@ -224,7 +224,7 @@ func checkNoPurgeCronJob(t *testing.T, ctx context.Context, namespace string, dc
 	require.NoError(err, "Error getting the CassandraDatacenter")
 	// ensure the cronjob was not created
 	cronJob := &batchv1.CronJob{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.LabelResourceName())), cronJob)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
 	require.Error(err, "Cronjob should not exist")
 }
 
@@ -239,7 +239,7 @@ func checkPurgeCronJobDeleted(t *testing.T, ctx context.Context, namespace strin
 	require.Eventually(func() bool {
 		// ensure the cronjob was deleted
 		cronJob := &batchv1.CronJob{}
-		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.LabelResourceName())), cronJob)
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
 		return errors.IsNotFound(err)
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge CronJob wasn't deleted within timeout")
 }
