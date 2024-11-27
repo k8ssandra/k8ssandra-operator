@@ -502,10 +502,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
 						Name:      podName,
-						Labels: map[string]string{
-							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
-							cassdcapi.DatacenterLabel: dc.Name,
-						},
+						Labels:    dc.GetDatacenterLabels(),
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{

@@ -2144,7 +2144,7 @@ func DcPrefix(
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(context.Background(), dcKey, cassdc)
 	require.NoError(t, err)
-	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.Name))
+	return framework.CleanupForKubernetes(fmt.Sprintf("%s-%s", cassdc.Spec.ClusterName, cassdc.DatacenterName()))
 }
 
 func DcClusterName(

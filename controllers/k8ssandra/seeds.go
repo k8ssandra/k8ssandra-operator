@@ -35,7 +35,7 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 		list := &corev1.PodList{}
 		selector := map[string]string{
 			cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassClusterName),
-			cassdcapi.DatacenterLabel: dcTemplate.CassDcName(),
+			cassdcapi.DatacenterLabel: dcTemplate.Meta.Name,
 			cassdcapi.SeedNodeLabel:   "true",
 		}
 
