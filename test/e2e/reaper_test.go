@@ -166,11 +166,11 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	t.Logf("check Stargate auth keyspace created in both clusters. DC prefixes: %s / %s ", dc1Prefix, reaperStargate2Prefix)
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", stargate.AuthKeyspace)
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), reaperStargate2Prefix+"-default-sts-0", stargate.AuthKeyspace)
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", stargate.AuthKeyspace)
 
 	t.Log("check Reaper custom keyspace created in both clusters")
 	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dc1Prefix+"-default-sts-0", "reaper_ks")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), reaperStargate2Prefix+"-default-sts-0", "reaper_ks")
+	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[1], namespace, kc.SanitizedName(), dc2Prefix+"-default-sts-0", "reaper_ks")
 
 	checkStargateReady(t, f, ctx, stargate1Key)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
