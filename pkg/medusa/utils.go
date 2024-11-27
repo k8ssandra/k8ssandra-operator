@@ -14,7 +14,7 @@ func GetCassandraDatacenterPods(ctx context.Context, cassdc *cassdcapi.Cassandra
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels{
 		cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(cassdc.Spec.ClusterName),
-		cassdcapi.DatacenterLabel: cassdc.DatacenterName(),
+		cassdcapi.DatacenterLabel: cassdc.Name,
 	}
 	if err := r.List(ctx, podList, labels, client.InNamespace(cassdc.Namespace)); err != nil {
 		logger.Error(err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", cassdc.DatacenterName())

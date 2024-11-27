@@ -2239,7 +2239,7 @@ func checkInjectedVolumePresence(t *testing.T, ctx context.Context, f *framework
 		return fmt.Errorf("cannot find busybox injected container in pod template spec")
 	}
 
-	cassandraPods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey, cassdc.DatacenterName())
+	cassandraPods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey, cassdc.Name)
 	require.NoError(t, err, "failed listing Cassandra pods")
 	cassandraIndex, cassandraFound := findContainerInPod(t, cassandraPods[0], "cassandra")
 	require.True(t, cassandraFound, "cannot find cassandra container in cassandra pod")
