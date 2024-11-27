@@ -66,6 +66,9 @@ func testMedusaIniFull(t *testing.T) {
 					Secure:                   false,
 					BackupGracePeriodInDays:  7,
 				},
+				ServiceProperties: medusaapi.Service{
+					GrpcPort: 55055,
+				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: "test-superuser",
 				},
@@ -90,6 +93,7 @@ func testMedusaIniFull(t *testing.T) {
 	assert.Contains(t, medusaIni, "port = 9001")
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
+	assert.Contains(t, medusaIni, "port = 55055")
 }
 
 func testMedusaIniNoPrefix(t *testing.T) {
@@ -512,6 +516,10 @@ func TestInitContainerDefaultResources(t *testing.T) {
 	logger := logr.New(logr.Discard().GetSink())
 
 	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	medusaPort, found := cassandra.FindPort(medusaContainer, "grpc")
+	assert.True(t, found, "Couldn't find medusa grpc port")
+	assert.Equal(t, int32(50051), medusaPort, "expected medusa grpc port to NOT be set")
+
 	assert.NoError(t, err)
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
 	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
@@ -541,6 +549,9 @@ func TestInitContainerCustomResources(t *testing.T) {
 				Name: "secret",
 			},
 			BucketName: "bucket",
+		},
+		ServiceProperties: medusaapi.Service{
+			GrpcPort: 55055,
 		},
 		CassandraUserSecretRef: corev1.LocalObjectReference{
 			Name: "test-superuser",
@@ -573,6 +584,11 @@ func TestInitContainerCustomResources(t *testing.T) {
 
 	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
 	assert.NoError(t, err)
+
+	medusaPort, found := cassandra.FindPort(medusaContainer, "grpc")
+	assert.True(t, found, "Couldn't find medusa grpc port")
+	assert.Equal(t, int32(55055), medusaPort, "expected medusa grpc port to be set")
+
 	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
 	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
@@ -641,21 +657,23 @@ func TestGenerateMedusaProbe(t *testing.T) {
 		FailureThreshold:    500,
 	}
 
-	customProbe, err := generateMedusaProbe(customProbeSettings)
+	customProbe, err := generateMedusaProbe(customProbeSettings, 55055)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(100), customProbe.InitialDelaySeconds)
 	assert.Equal(t, int32(200), customProbe.TimeoutSeconds)
 	assert.Equal(t, int32(300), customProbe.PeriodSeconds)
 	assert.Equal(t, int32(400), customProbe.SuccessThreshold)
 	assert.Equal(t, int32(500), customProbe.FailureThreshold)
+	assert.Contains(t, customProbe.Exec.Command[1], "55055")
 
-	defaultProbe, err := generateMedusaProbe(nil)
+	defaultProbe, err := generateMedusaProbe(nil, 55155)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(DefaultProbeInitialDelay), defaultProbe.InitialDelaySeconds)
 	assert.Equal(t, int32(DefaultProbeTimeout), defaultProbe.TimeoutSeconds)
 	assert.Equal(t, int32(DefaultProbePeriod), defaultProbe.PeriodSeconds)
 	assert.Equal(t, int32(DefaultProbeSuccessThreshold), defaultProbe.SuccessThreshold)
 	assert.Equal(t, int32(DefaultProbeFailureThreshold), defaultProbe.FailureThreshold)
+	assert.Contains(t, defaultProbe.Exec.Command[1], "55155")
 
 	// Test that changing the probe handler is rejected
 	rejectedProbe := &corev1.Probe{
@@ -670,7 +688,7 @@ func TestGenerateMedusaProbe(t *testing.T) {
 			},
 		},
 	}
-	probe, err := generateMedusaProbe(rejectedProbe)
+	probe, err := generateMedusaProbe(rejectedProbe, 55055)
 	assert.Error(t, err)
 	assert.Nil(t, probe)
 }

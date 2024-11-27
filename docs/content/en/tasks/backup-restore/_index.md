@@ -86,6 +86,9 @@ spec:
       #   accessModes:
       #     - ReadWriteOnce
       #   size: 100Mi
+    serviceProperties:
+      # which port will Medusa's gRPC server listen on
+      grpcPort: 50051
 ```
 
 The definition above requires a secret named `medusa-bucket-key` to be present in the target namespace before the `K8ssandraCluster` object gets created. Use the following format for this secret: 
