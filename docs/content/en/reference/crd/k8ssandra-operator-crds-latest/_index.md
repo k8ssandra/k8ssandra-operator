@@ -54718,10 +54718,10 @@ and must contain two keys: "username" and "password".<br/>
         <td>object</td>
         <td>
           The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.1".
+The default is "thelastpickle/cassandra-reaper:3.7.0".
 TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.6.1]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.7.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56694,7 +56694,7 @@ TODO: Add other useful fields. apiVersion, kind, uid?<br/>
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.1".
+The default is "thelastpickle/cassandra-reaper:3.7.0".
 TODO: update with real release version.
 
 <table>
@@ -84691,10 +84691,10 @@ and must contain two keys: "username" and "password".<br/>
         <td>object</td>
         <td>
           The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.1".
+The default is "thelastpickle/cassandra-reaper:3.7.0".
 TODO: update with real release version.<br/>
           <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.6.1]<br/>
+            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:3.7.0]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -86876,7 +86876,7 @@ TODO: Add other useful fields. apiVersion, kind, uid?<br/>
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:3.6.1".
+The default is "thelastpickle/cassandra-reaper:3.7.0".
 TODO: update with real release version.
 
 <table>
