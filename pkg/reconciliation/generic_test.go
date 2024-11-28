@@ -44,7 +44,7 @@ func Test_ReconcileObject_UpdateDone(t *testing.T) {
 	assert.NoError(t, err)
 	// If we reconcile again, we should move into the Done state.
 	recRes = ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsDone())
+	assert.False(t, recRes.Completed())
 }
 
 func Test_ReconcileObject_CreateSuccess(t *testing.T) {

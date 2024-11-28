@@ -109,11 +109,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 				return result.Error(err)
 			}
 			purgeCronJob.SetLabels(labels.CleanedUpByLabels(kcKey))
-			recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob)
-			switch {
-			case recRes.IsError():
-				return recRes
-			case recRes.IsRequeue():
+			if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *purgeCronJob); recRes.Completed() {
 				return recRes
 			}
 		} else {
@@ -173,12 +169,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			return result.Error(err)
 		}
 
-		res := r.reconcileRemoteBucketSecretsDeprecated(ctx, r.ClientCache.GetLocalClient(), kc, logger)
-		switch {
-		case res.IsError():
-			logger.Error(res.GetError(), "Failed to reconcile Medusa bucket secrets")
-			return res
-		case res.IsRequeue():
+		if res := r.reconcileRemoteBucketSecretsDeprecated(ctx, r.ClientCache.GetLocalClient(), kc, logger); res.Completed() {
 			return res
 		}
 	}
@@ -202,11 +193,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaConfigMap(
 		desiredConfigMap := medusa.CreateMedusaConfigMap(namespace, kc.SanitizedName(), medusaIni)
 		kcKey := utils.GetKey(kc)
 		desiredConfigMap.SetLabels(labels.CleanedUpByLabels(kcKey))
-		recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap)
-		switch {
-		case recRes.IsError():
-			return recRes
-		case recRes.IsRequeue():
+		if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *desiredConfigMap); recRes.Completed() {
 			return recRes
 		}
 	}
