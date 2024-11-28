@@ -208,22 +208,23 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		}
 	}
 
-	if backupName != backupWithNoPods {
-		createDatacenterPods(t, f, ctx, dcKey, dc)
-	}
+	createDatacenterPods(t, f, ctx, dcKey, dc)
 
 	dcCopy := dc.DeepCopy()
 	dcKeyCopy := framework.NewClusterKey(f.DataPlaneContexts[0], dcKey.Namespace+"-copy", dcKey.Name)
 	dcCopy.ObjectMeta.Namespace = dc.Namespace + "-copy"
 
-	if backupName != backupWithNoPods {
-		createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
-	}
+	createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
 
-	// clean up the pods to keep the environment reusable
-	if backupName != backupWithNoPods {
-		defer deleteDatacenterPods(t, f, ctx, dcKey, dc)
-		defer deleteDatacenterPods(t, f, ctx, dcKeyCopy, dc)
+	// one test scenario needs to have no pods available in the STSs (see #1454)
+	// we reproduce that by deleting the pods. we need this for the medusa backup controller tests to work
+	// however, we need to bring them back up because medusa task controller tests interact with them later
+	// both backup and task controller tests use this function to verify backups
+	if backupName == backupWithNoPods {
+		deleteDatacenterPods(t, f, ctx, dcKey, dc)
+		deleteDatacenterPods(t, f, ctx, dcKeyCopy, dc)
+		defer createDatacenterPods(t, f, ctx, dcKey, dc)
+		defer createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
 	}
 
 	t.Log("creating MedusaBackupJob")
