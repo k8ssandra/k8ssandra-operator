@@ -18,12 +18,13 @@ package medusa
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,7 +68,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		logger.Error(err, "Failed to get MedusaBackupJob")
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -190,11 +191,6 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			logger.Error(err, "Failed to get backup summary")
 			return ctrl.Result{}, err
 		}
-		if backupSummary == nil {
-			// if a backup is complete, but we fail to find the summary, we're in a non-recoverable situation
-			logger.Info("Backup summary not found", "backupJob", backupJob)
-			return ctrl.Result{Requeue: false}, nil
-		}
 		if err := r.createMedusaBackup(ctx, backupJob, backupSummary, logger); err != nil {
 			logger.Error(err, "Failed to create MedusaBackup")
 			return ctrl.Result{}, err
@@ -257,7 +253,7 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 			}
 		}
 	}
-	return nil, nil
+	return nil, errors.New("backup summary couldn't be found")
 }
 
 func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, backupSummary *medusa.BackupSummary, logger logr.Logger) error {
@@ -266,7 +262,7 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 	backupKey := types.NamespacedName{Namespace: backup.ObjectMeta.Namespace, Name: backup.Name}
 	backupResource := &medusav1alpha1.MedusaBackup{}
 	if err := r.Get(ctx, backupKey, backupResource); err != nil {
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			// Backup doesn't exist, create it
 			startTime := backup.Status.StartTime
 			finishTime := metav1.Now()
@@ -340,7 +336,7 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 		resp, err := medusaClient.BackupStatus(ctx, name)
 		if err != nil {
 			// the gRPC client does not return proper NotFound error, we need to check the payload too
-			if errors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
+			if apiErrors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
 				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
 				return medusa.StatusType_UNKNOWN, nil
 			}
