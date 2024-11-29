@@ -433,35 +433,40 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 			status = *medusa.StatusType_IN_PROGRESS.Enum()
 		}
 
-		backup := &medusa.BackupSummary{
-			BackupName:    name,
-			StartTime:     0,
-			FinishTime:    10,
-			TotalNodes:    3,
-			FinishedNodes: 3,
-			TotalObjects:  fakeBackupFileCount,
-			TotalSize:     fakeBackupByteSize,
-			Status:        status,
-			Nodes: []*medusa.BackupNode{
-				{
-					Host:       "host1",
-					Tokens:     []int64{1, 2, 3},
-					Datacenter: "dc1",
-					Rack:       "rack1",
+		var backup *medusa.BackupSummary
+		if strings.HasPrefix(name, backupWithNoPods) {
+			backup = nil
+		} else {
+			backup = &medusa.BackupSummary{
+				BackupName:    name,
+				StartTime:     0,
+				FinishTime:    10,
+				TotalNodes:    3,
+				FinishedNodes: 3,
+				TotalObjects:  fakeBackupFileCount,
+				TotalSize:     fakeBackupByteSize,
+				Status:        status,
+				Nodes: []*medusa.BackupNode{
+					{
+						Host:       "host1",
+						Tokens:     []int64{1, 2, 3},
+						Datacenter: "dc1",
+						Rack:       "rack1",
+					},
+					{
+						Host:       "host2",
+						Tokens:     []int64{1, 2, 3},
+						Datacenter: "dc1",
+						Rack:       "rack1",
+					},
+					{
+						Host:       "host3",
+						Tokens:     []int64{1, 2, 3},
+						Datacenter: "dc1",
+						Rack:       "rack1",
+					},
 				},
-				{
-					Host:       "host2",
-					Tokens:     []int64{1, 2, 3},
-					Datacenter: "dc1",
-					Rack:       "rack1",
-				},
-				{
-					Host:       "host3",
-					Tokens:     []int64{1, 2, 3},
-					Datacenter: "dc1",
-					Rack:       "rack1",
-				},
-			},
+			}
 		}
 		backups = append(backups, backup)
 	}
