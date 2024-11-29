@@ -526,7 +526,7 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 }
 
 func deleteDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
-	for i := int32(0); i < dc.Spec.Size; i++ {
+	for i := 0; i < int(dc.Spec.Size); i++ {
 		pod := &corev1.Pod{}
 		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
