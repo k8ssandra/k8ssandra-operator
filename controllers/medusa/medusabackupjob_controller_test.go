@@ -535,18 +535,10 @@ func deleteDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 		pod := &corev1.Pod{}
 		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
-		err := f.Get(ctx, podKey, pod)
+		err := f.Delete(ctx, podKey, pod)
 		if err != nil {
-			if !errors.IsNotFound(err) {
-				t.Logf("failed to get pod %s: %v", podKey, err)
-			}
-		} else {
-			err = f.Delete(ctx, podKey, pod)
-			if err != nil {
-				t.Logf("failed to delete pod %s: %v", podKey, err)
-			}
+			t.Logf("failed to delete pod %s: %v", podKey, err)
 		}
-
 	}
 }
 
