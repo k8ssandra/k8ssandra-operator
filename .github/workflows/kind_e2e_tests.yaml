@@ -82,6 +82,7 @@ jobs:
           - CreateSingleReaperNoStargate
           - CreateSingleReaperWStargateAndHTTP
           - CreateReaperAndDatacenter
+          - CreateControlPlaneReaperAndDataCenter
           - CreateSingleMedusaJob
           - CreateMultiDcSingleMedusaJob
           - CreateSingleDseMedusaJob

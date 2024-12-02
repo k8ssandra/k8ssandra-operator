@@ -30,6 +30,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -203,6 +204,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 			return vectorReconcileResult, err
 		} else if vectorReconcileResult.Requeue {
 			return vectorReconcileResult, nil
+		}
+	}
+
+	if actualReaper.Spec.HttpManagement.Enabled {
+		err := r.reconcileTrustStoresSecret(ctx, actualReaper, logger)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -483,4 +491,32 @@ func (r *ReaperReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Complete(r)
+}
+
+func (r *ReaperReconciler) reconcileTrustStoresSecret(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) error {
+	sName := reaper.GetTruststoresSecretName(actualReaper.Name)
+	sKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: sName}
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      sName,
+			Namespace: actualReaper.Namespace,
+		},
+	}
+	if err := r.Client.Get(ctx, sKey, s); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Creating Reaper's truststore Secret", "Secret", sKey)
+			if err = controllerutil.SetControllerReference(actualReaper, s, r.Scheme); err != nil {
+				logger.Error(err, "Failed to set owner on truststore Secret")
+				return err
+			}
+			if err = r.Client.Create(ctx, s); err != nil {
+				logger.Error(err, "Failed to create Reaper's truststore Secret")
+				return err
+			}
+			return nil
+		}
+		logger.Error(err, "Failed to get Reaper's truststore Secret")
+		return err
+	}
+	return nil
 }

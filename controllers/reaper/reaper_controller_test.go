@@ -2,6 +2,8 @@ package reaper
 
 import (
 	"context"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 	"testing"
@@ -64,6 +66,7 @@ func TestReaper(t *testing.T) {
 	t.Run("CreateReaperWithAuthEnabled", reaperControllerTest(ctx, testEnv, testCreateReaperWithAuthEnabled))
 	t.Run("CreateReaperWithAuthEnabledExternalSecret", reaperControllerTest(ctx, testEnv, testCreateReaperWithAuthEnabledExternalSecret))
 	t.Run("CreateReaperWithLocalStorageBackend", reaperControllerTest(ctx, testEnv, testCreateReaperWithLocalStorageType))
+	t.Run("CreateReaperWithHttpAuthEnabled", reaperControllerTest(ctx, testEnv, testCreateReaperWithHttpAuthEnabled))
 }
 
 func newMockManager() reaper.Manager {
@@ -564,10 +567,71 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
 	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
-	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
+	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0]
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1]
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
+}
+
+func testCreateReaperWithHttpAuthEnabled(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
+	t.Log("create the Reaper object")
+	r := newReaper(testNamespace)
+	r.Spec.StorageType = reaperapi.StorageTypeLocal
+	r.Spec.StorageConfig = newStorageConfig()
+	r.Spec.HttpManagement.Enabled = true
+
+	err := k8sClient.Create(ctx, r)
+	require.NoError(t, err)
+
+	t.Log("check that the stateful set is created")
+	stsKey := types.NamespacedName{Namespace: testNamespace, Name: reaperName}
+	sts := &appsv1.StatefulSet{}
+
+	require.Eventually(t, func() bool {
+		return k8sClient.Get(ctx, stsKey, sts) == nil
+	}, timeout, interval, "stateful set creation check failed")
+
+	// if the http auth is enabled, reaper controller should prepare the secret where k8s controller will place per-cluster secrets
+	secretKey := types.NamespacedName{Namespace: testNamespace, Name: reaper.GetTruststoresSecretName(r.Name)}
+	truststoresSecret := &corev1.Secret{}
+	require.Eventually(t, func() bool {
+		return k8sClient.Get(ctx, secretKey, truststoresSecret) == nil
+	}, timeout, interval, "truststore secret creation check failed")
+	assert.True(t, truststoresSecret.Data == nil)
+	assert.Equal(t, 0, len(truststoresSecret.Data))
+
+	reaperContainerIdx, foundReaper := cassandra.FindContainer(&sts.Spec.Template, "reaper")
+	assert.True(t, foundReaper, "reaper container not found in reaper's STS template")
+
+	reaperContainer := sts.Spec.Template.Spec.Containers[reaperContainerIdx]
+	// In this configuration, we expect Reaper to also have a mount for the http auth secrets
+	assert.Len(t, reaperContainer.VolumeMounts, 3)
+
+	_, foundConfVolume := cassandra.FindVolume(&sts.Spec.Template, "conf")
+	assert.True(t, foundConfVolume, "conf volume not found in reaper's STS template")
+
+	_, foundDataVolume := cassandra.FindVolume(&sts.Spec.Template, "reaper-data")
+	assert.True(t, foundDataVolume, "reaper-data volume not found in reaper's STS template")
+
+	_, foundTruststoresVolume := cassandra.FindVolume(&sts.Spec.Template, "management-api-keystores-per-cluster")
+	assert.True(t, foundTruststoresVolume, "management-api-keystores-per-cluster volume not found in reaper's STS template")
+
+	// when we delete reaper, the STS and the secret both go away due to the owner reference
+	// however, that does not happen in env tests
+	err = k8sClient.Delete(ctx, r)
+	require.NoError(t, err)
+
+	reaperKey := types.NamespacedName{Namespace: testNamespace, Name: reaperName}
+	assert.Eventually(t, func() bool {
+		err = k8sClient.Get(ctx, reaperKey, r)
+		return errors.IsNotFound(err)
+	}, timeout, interval, "reaper stateful set deletion check failed")
+
+	// so we delete stuff manually
+	err = k8sClient.Delete(ctx, sts)
+	require.NoError(t, err)
+	err = k8sClient.Delete(ctx, truststoresSecret)
+	require.NoError(t, err)
 }
 
 // Check if env var exists

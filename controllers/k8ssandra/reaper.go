@@ -29,6 +29,7 @@ import (
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -100,6 +101,13 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	// we might have nil-ed the template because a DC got stopped, so we need to re-check
 	if reaperTemplate != nil {
 		if reaperTemplate.HasReaperRef() {
+
+			if uses, conf := usesHttpAuth(kc, actualDc); uses {
+				if err := addManagementApiSecretsToReaper(ctx, remoteClient, kc, actualDc, logger, conf); err != nil {
+					return result.Error(err)
+				}
+			}
+
 			logger.Info("ReaperRef present, registering with referenced Reaper instead of creating a new one")
 			return r.addClusterToExternalReaper(ctx, kc, actualDc, logger)
 		}
@@ -267,6 +275,22 @@ func getSingleReaperDcName(kc *api.K8ssandraCluster) string {
 	return ""
 }
 
+func usesHttpAuth(kc *api.K8ssandraCluster, actualDc *cassdcapi.CassandraDatacenter) (bool, *cassdcapi.ManagementApiAuthManualConfig) {
+	// check for the mgmt api auth config in the cass-dc object of the DC were in
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if !dc.Stopped && dc.DatacenterName == actualDc.DatacenterName() {
+			return true, dc.ManagementApiAuth.Manual
+		}
+	}
+	// if that wasn't found, then check for the mgmt api auth config in the cluster object
+	if kc.Spec.Cassandra.ManagementApiAuth != nil {
+		if kc.Spec.Cassandra.ManagementApiAuth.Manual != nil {
+			return true, kc.Spec.Cassandra.ManagementApiAuth.Manual
+		}
+	}
+	return false, nil
+}
+
 func (r *K8ssandraClusterReconciler) addClusterToExternalReaper(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
@@ -289,4 +313,70 @@ func (r *K8ssandraClusterReconciler) addClusterToExternalReaper(
 		}
 	}
 	return result.Continue()
+}
+
+func addManagementApiSecretsToReaper(
+	ctx context.Context,
+	remoteClient client.Client,
+	kc *api.K8ssandraCluster,
+	actualDc *cassdcapi.CassandraDatacenter,
+	logger logr.Logger,
+	authConfig *cassdcapi.ManagementApiAuthManualConfig,
+) error {
+
+	reaperName := kc.Spec.Reaper.ReaperRef.Name
+
+	reaperNamespace := kc.Spec.Reaper.ReaperRef.Namespace
+	if reaperNamespace == "" {
+		reaperNamespace = kc.Namespace
+	}
+
+	tssName := reaper.GetTruststoresSecretName(reaperName)
+	tssKey := client.ObjectKey{Namespace: reaperNamespace, Name: tssName}
+
+	tss := &corev1.Secret{}
+	if err := remoteClient.Get(ctx, tssKey, tss); err != nil {
+		logger.Error(err, "failed to get Reaper's truststore secret")
+		return err
+	}
+
+	cs := &corev1.Secret{}
+	csName := authConfig.ClientSecretName + "-ks"
+	csKey := client.ObjectKey{Namespace: kc.Namespace, Name: csName}
+	if err := remoteClient.Get(ctx, csKey, cs); err != nil {
+		logger.Error(err, "failed to get k8ssandra cluster client secret", "secretName", csName)
+		return err
+	}
+
+	clusterName := cassdcapi.CleanupForKubernetes(actualDc.Spec.ClusterName)
+	clustersTruststore := clusterName + "-truststore.jks"
+	clustersKeystore := clusterName + "-keystore.jks"
+
+	// check if the reaper's big secret already has entry for this cluster
+	if tss.Data == nil {
+		tss.Data = make(map[string][]byte)
+	}
+	_, hasTruststore := tss.Data[clustersTruststore]
+	_, hasKeystore := tss.Data[clustersKeystore]
+
+	if hasTruststore && hasKeystore {
+		logger.Info("Cluster secrets already present in Reapers secret", "reaperName", reaperName, "clusterName", kc.Name)
+		return nil
+	}
+
+	logger.Info("Patching Reaper's truststores with new secrets", "reaperName", reaperName, "clusterName", kc.Name)
+
+	patch := client.MergeFrom(tss.DeepCopy())
+	if !hasTruststore {
+		tss.Data[clustersTruststore] = cs.Data["truststore.jks"]
+	}
+	if !hasKeystore {
+		tss.Data[clustersKeystore] = cs.Data["keystore.jks"]
+	}
+	if err := remoteClient.Patch(ctx, tss, patch); err != nil {
+		logger.Error(err, "failed to patch reaper's config map")
+		return err
+	}
+
+	return nil
 }
