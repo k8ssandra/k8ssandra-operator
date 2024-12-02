@@ -33,6 +33,7 @@ const (
 	failingBackupName    = "bad-backup"
 	missingBackupName    = "missing-backup"
 	backupWithNoPods     = "backup-with-no-pods"
+	backupWithNilSummary = "backup-with-nil-summary"
 	dc1PodPrefix         = "192.168.1."
 	dc2PodPrefix         = "192.168.2."
 	fakeBackupFileCount  = int64(13)
@@ -171,6 +172,9 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 
 	// in K8OP-294 we found out we can try to make backups on StatefulSets with no pods
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backupWithNoPods)
+	require.False(backupCreated, "the backup object shouldn't have been created")
+	// in that same effort, we also found out we can have nil instead of backup sumamry
+	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backupWithNilSummary)
 	require.False(backupCreated, "the backup object shouldn't have been created")
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -434,7 +438,7 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 		}
 
 		var backup *medusa.BackupSummary
-		if strings.HasPrefix(name, backupWithNoPods) {
+		if strings.HasPrefix(name, backupWithNilSummary) {
 			backup = nil
 		} else {
 			backup = &medusa.BackupSummary{
