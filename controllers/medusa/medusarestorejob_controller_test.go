@@ -2,10 +2,11 @@ package medusa
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"sync"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -156,15 +157,15 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	backup.Status.TotalNodes = dc1.Spec.Size
 	backup.Status.Nodes = []*api.MedusaBackupNode{
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 	}
@@ -195,7 +196,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	}), timeout*5, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
 
 	t.Log("delete datacenter pods to simulate shutdown")
-	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "real-dc1"})
+	err = f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "dc1"})
 	require.NoError(err, "failed to delete datacenter pods")
 
 	restore = &api.MedusaRestoreJob{}
@@ -463,15 +464,15 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 	backup.Status.TotalNodes = dc1.Spec.Size
 	backup.Status.Nodes = []*api.MedusaBackupNode{
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 		{
-			Datacenter: "real-dc1",
+			Datacenter: "dc1",
 			Rack:       "default",
 		},
 	}
@@ -636,13 +637,13 @@ func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.Bac
 			Status:     *medusa.StatusType_SUCCESS.Enum(),
 			Nodes: []*medusa.BackupNode{
 				{
-					Host: "node1", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node1", Datacenter: "dc1", Rack: "rack1",
 				},
 				{
-					Host: "node2", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node2", Datacenter: "dc1", Rack: "rack1",
 				},
 				{
-					Host: "node3", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node3", Datacenter: "dc1", Rack: "rack1",
 				},
 			},
 		},

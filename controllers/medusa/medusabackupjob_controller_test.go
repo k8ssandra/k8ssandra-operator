@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -204,12 +205,6 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 
 	createDatacenterPods(t, f, ctx, dcKey, dc)
 
-	dcCopy := dc.DeepCopy()
-	dcKeyCopy := framework.NewClusterKey(f.DataPlaneContexts[0], dcKey.Namespace+"-copy", dcKey.Name)
-	dcCopy.ObjectMeta.Namespace = dc.Namespace + "-copy"
-
-	createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
-
 	t.Log("creating MedusaBackupJob")
 	backupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	backup := &api.MedusaBackupJob{
@@ -222,6 +217,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		},
 	}
 
+	t.Logf("creating MedusaBackupJob %s", backupKey)
 	err := f.Create(ctx, backupKey, backup)
 	require.NoError(err, "failed to create MedusaBackupJob")
 
@@ -252,15 +248,20 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		return !updated.Status.FinishTime.IsZero()
 	}, timeout, interval)
 
+	// TODO That previous check does not actually verify that the MedusaBackup has yet been written (if it should be), so we need to wait a bit more
+	time.Sleep(500 * time.Millisecond)
+
 	t.Log("check for the MedusaBackup being created")
 	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	medusaBackup := &api.MedusaBackup{}
+	t.Logf("getting MedusaBackup %s", medusaBackupKey)
 	err = f.Get(ctx, medusaBackupKey, medusaBackup)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false
 		}
 	}
+
 	t.Log("verify the MedusaBackup is correct")
 	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")
 	require.Equal(medusaBackup.Status.FinishedNodes, dc.Spec.Size, "backup finished nodes doesn't match dc nodes")
@@ -502,10 +503,7 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
 						Name:      podName,
-						Labels: map[string]string{
-							cassdcapi.ClusterLabel:    cassdcapi.CleanLabelValue(dc.Spec.ClusterName),
-							cassdcapi.DatacenterLabel: dc.DatacenterName(),
-						},
+						Labels:    dc.GetDatacenterLabels(),
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
