@@ -18,7 +18,6 @@ package medusa
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -34,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -253,7 +253,7 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 			}
 		}
 	}
-	return nil, errors.New("backup summary couldn't be found")
+	return nil, reconcile.TerminalError(fmt.Errorf("backup summary couldn't be found"))
 }
 
 func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, backupSummary *medusa.BackupSummary, logger logr.Logger) error {
