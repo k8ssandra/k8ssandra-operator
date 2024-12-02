@@ -56,8 +56,9 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		}
 	}
 
-	decommCassDcName, dcNameOverride := k8ssandra.GetDatacenterForDecommission(kc)
-	logger.Info("Checking if user keyspace replication needs to be updated", "decommissioning_dc", decommCassDcName, "dc_name_override", dcNameOverride)
+	decommCassDcName, _ := k8ssandra.GetDatacenterForDecommission(kc)
+
+	logger.Info("Checking if user keyspace replication needs to be updated", "decommissioning_dc", decommCassDcName)
 	decommission := false
 	if decommCassDcName != "" {
 		decommission = kc.Status.Datacenters[decommCassDcName].DecommissionProgress == api.DecommUpdatingReplication
@@ -65,10 +66,17 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	status := kc.Status.Datacenters[decommCassDcName]
 
 	if decommission {
-		decommDcName := decommCassDcName
-		if dcNameOverride != "" {
-			decommDcName = dcNameOverride
+		kcKey := utils.GetKey(kc)
+		dc, _, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, remoteClient)
+		if err != nil {
+			return result.Error(err)
 		}
+
+		decommDcName := decommCassDcName
+		if dc.Spec.DatacenterName != "" {
+			decommCassDcName = dc.Spec.DatacenterName
+		}
+
 		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
 			return recResult
 		}
