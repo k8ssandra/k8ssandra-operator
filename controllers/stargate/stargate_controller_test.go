@@ -3,6 +3,7 @@ package stargate
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
@@ -39,6 +40,10 @@ const (
 var managementApiFactory = &testutils.FakeManagementApiFactory{}
 
 func TestStargate(t *testing.T) {
+
+	os.Setenv("REQUEUE_DEFAULT_DELAY", "10ms")
+	os.Setenv("REQUEUE_LONG_DELAY", "10ms")
+
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv := &testutils.TestEnv{}

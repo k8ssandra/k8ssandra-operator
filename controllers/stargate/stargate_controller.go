@@ -160,7 +160,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if stargateConfigResult, err := r.reconcileStargateConfigMap(ctx, stargate, dcConfig, userStargateCassandraYaml, userStargateCqlYaml, req.Namespace, *actualDc, logger); err != nil {
 		return ctrl.Result{}, err
 	} else {
-		if stargateConfigResult.Requeue {
+		if stargateConfigResult.Requeue || stargateConfigResult.RequeueAfter > 0 {
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 	}
@@ -198,7 +198,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// reconcile Vector configmap
 	if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *stargate, actualDc, r.Client, logger); err != nil {
 		return vectorReconcileResult, err
-	} else if vectorReconcileResult.Requeue {
+	} else if vectorReconcileResult.Requeue || vectorReconcileResult.RequeueAfter > 0 {
 		return vectorReconcileResult, nil
 	}
 
