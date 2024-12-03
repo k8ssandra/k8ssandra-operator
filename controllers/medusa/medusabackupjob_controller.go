@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -67,7 +68,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		logger.Error(err, "Failed to get MedusaBackupJob")
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -102,6 +103,10 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err != nil {
 		logger.Error(err, "Failed to get datacenter pods")
 		return ctrl.Result{}, err
+	}
+	if len(pods) == 0 {
+		logger.Info("No pods found for datacenter", "CassandraDatacenter", cassdcKey)
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// If there is anything in progress, simply requeue the request until each pod has finished or errored
@@ -240,6 +245,11 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 			return nil, err
 		} else {
 			for _, remoteBackup := range remoteBackups {
+				if remoteBackup == nil {
+					err := fmt.Errorf("backup %s summary is nil", backup.Name)
+					logger.Error(err, "remote backup is nil")
+					return nil, err
+				}
 				logger.Info("found backup", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
 				if backup.ObjectMeta.Name == remoteBackup.BackupName {
 					return remoteBackup, nil
@@ -248,7 +258,7 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 			}
 		}
 	}
-	return nil, nil
+	return nil, reconcile.TerminalError(fmt.Errorf("backup summary couldn't be found"))
 }
 
 func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, backupSummary *medusa.BackupSummary, logger logr.Logger) error {
@@ -257,7 +267,7 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 	backupKey := types.NamespacedName{Namespace: backup.ObjectMeta.Namespace, Name: backup.Name}
 	backupResource := &medusav1alpha1.MedusaBackup{}
 	if err := r.Get(ctx, backupKey, backupResource); err != nil {
-		if errors.IsNotFound(err) {
+		if apiErrors.IsNotFound(err) {
 			// Backup doesn't exist, create it
 			startTime := backup.Status.StartTime
 			finishTime := metav1.Now()
@@ -331,7 +341,7 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 		resp, err := medusaClient.BackupStatus(ctx, name)
 		if err != nil {
 			// the gRPC client does not return proper NotFound error, we need to check the payload too
-			if errors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
+			if apiErrors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
 				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
 				return medusa.StatusType_UNKNOWN, nil
 			}
