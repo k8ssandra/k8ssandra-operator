@@ -249,7 +249,10 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	if backupName != backupWithNoPods {
 		t.Log("verify that the backups start eventually")
 		verifyBackupJobStarted(require.Eventually, t, dc, f, ctx, backupKey)
-		verifyBackupJobFinished(t, require, dc, f, ctx, backupKey, backupName)
+		if backupName != backupWithNilSummary {
+			// backup that will receive a nil summary will never finish, can't assert on that
+			verifyBackupJobFinished(t, require, dc, f, ctx, backupKey, backupName)
+		}
 	} else {
 		t.Log("verify that the backups never start")
 		verifyBackupJobStarted(require.Never, t, dc, f, ctx, backupKey)
@@ -536,9 +539,12 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 
 func deleteDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
 	for i := 0; i < int(dc.Spec.Size); i++ {
-		pod := &corev1.Pod{}
+
 		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: podKey.Name, Namespace: podKey.Namespace},
+		}
 		err := f.Delete(ctx, podKey, pod)
 		if err != nil {
 			t.Logf("failed to delete pod %s: %v", podKey, err)

@@ -245,6 +245,11 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 			return nil, err
 		} else {
 			for _, remoteBackup := range remoteBackups {
+				if remoteBackup == nil {
+					err := fmt.Errorf("backup %s summary is nil", backup.Name)
+					logger.Error(err, "remote backup is nil")
+					return nil, err
+				}
 				logger.Info("found backup", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
 				if backup.ObjectMeta.Name == remoteBackup.BackupName {
 					return remoteBackup, nil
