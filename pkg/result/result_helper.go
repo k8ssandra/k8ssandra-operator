@@ -32,11 +32,13 @@ var _ error = reconcile.TerminalError(nil)
 //	// Possibly inspect the result (e.g. to set an error field in the status)
 //	return recResult.Output()
 type ReconcileResult interface {
-	// Completed indicates that this result is *NOT* a [Continue].
+	// Completed indicates that the current iteration of the reconciliation loop is complete, and the top-level
+	// Reconcile() method should return [ReconcileResult.Output] to the controller runtime.
 	//
-	// In other words, it means that the current iteration of the reconciliation loop is complete, and the top-level
-	// Reconcile() method should return to the controller runtime (either with a success or terminal error that will
-	// stop the entire reconciliation loop, or a requeue or regular error that will trigger a retry).
+	// This returns true for a [Done] or terminal [Error] (where the output will stop the entire reconciliation loop);
+	// and for a [RequeueSoon] or regular [Error] (where the output will trigger a retry).
+	//
+	// This returns false for a [Continue].
 	Completed() bool
 	// Output converts this result into a format that the main Reconcile() method can return to the controller runtime.
 	//
