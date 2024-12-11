@@ -323,6 +323,13 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 		})
 	}
 
+	// Additional mounts from medusa spec
+	logger.Info(fmt.Sprintf("Mounting additional volumeMounts %v", medusaSpec.StorageProperties.VolumeMounts))
+
+	if medusaSpec.StorageProperties.VolumeMounts != nil {
+		volumeMounts = append(volumeMounts, medusaSpec.StorageProperties.VolumeMounts...)
+	}
+
 	return volumeMounts
 }
 

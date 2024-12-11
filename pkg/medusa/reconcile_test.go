@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -705,4 +706,40 @@ func TestPurgeCronJobNameTooLong(t *testing.T) {
 	// Call the function with the test inputs
 	_, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.NotNil(t, err)
+}
+
+func TestMedusaVolumeMounts(t *testing.T) {
+	mountName := "testMount"
+	mountPath := "/home/cassandra/config"
+
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			BucketName:      "bucket",
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      mountName,
+				MountPath: mountPath,
+			}},
+		},
+		CassandraUserSecretRef: corev1.LocalObjectReference{
+			Name: "test-superuser",
+		},
+	}
+
+	dcConfig := cassandra.DatacenterConfig{}
+
+	logger := logr.New(logr.Discard().GetSink())
+
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
+
+	assert.NoError(t, err)
+
+	volumeMounts := medusaContainer.VolumeMounts
+
+	assert.NotNil(t, volumeMounts)
+
+	idx := slices.IndexFunc(volumeMounts, func(c corev1.VolumeMount) bool { return c.Name == mountName })
+	assert.NotEqual(t, idx, -1)
+
+	assert.Equal(t, volumeMounts[idx].MountPath, mountPath)
 }
