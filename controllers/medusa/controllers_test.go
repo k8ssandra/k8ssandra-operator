@@ -24,7 +24,7 @@ import (
 
 const (
 	timeout  = time.Second * 5
-	interval = time.Millisecond * 500
+	interval = time.Millisecond * 100
 )
 
 var (
@@ -38,9 +38,9 @@ func TestCassandraBackupRestore(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 
-	testEnv1 := setupMedusaBackupTestEnv(t, ctx)
-	defer testEnv1.Stop(t)
-	t.Run("TestMedusaBackupDatacenter", testEnv1.ControllerTest(ctx, testMedusaBackupDatacenter))
+	testEnv := setupMedusaBackupTestEnv(t, ctx)
+	defer testEnv.Stop(t)
+	t.Run("TestMedusaBackupDatacenter", testEnv.ControllerTest(ctx, testMedusaBackupDatacenter))
 
 	testEnv2 := setupMedusaTaskTestEnv(t, ctx)
 	defer testEnv2.Stop(t)
@@ -48,16 +48,16 @@ func TestCassandraBackupRestore(t *testing.T) {
 
 	testEnv3 := setupMedusaRestoreJobTestEnv(t, ctx)
 	defer testEnv3.Stop(t)
-	defer cancel()
 	t.Run("TestMedusaRestoreDatacenter", testEnv3.ControllerTest(ctx, testMedusaRestoreDatacenter))
 
 	t.Run("TestValidationErrorStopsRestore", testEnv3.ControllerTest(ctx, testValidationErrorStopsRestore))
 
 	testEnv4 := setupMedusaConfigurationTestEnv(t, ctx)
 	defer testEnv4.Stop(t)
-	defer cancel()
 	t.Run("TestMedusaConfiguration", testEnv4.ControllerTest(ctx, testMedusaConfiguration))
 
+	// This cancel is called here to ensure the correct ordering for defer, as testEnv.Stop() calls must be done before the context is cancelled
+	defer cancel()
 }
 
 func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {

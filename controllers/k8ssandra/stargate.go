@@ -121,10 +121,10 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	if found {
 		if kdcStatus.Stargate == nil {
 			kdcStatus.Stargate = stargate.Status.DeepCopy()
-			kc.Status.Datacenters[dcName] = kdcStatus
 		} else {
 			stargate.Status.DeepCopyInto(kdcStatus.Stargate)
 		}
+		kc.Status.Datacenters[dcName] = kdcStatus
 	} else {
 		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
 			Stargate: stargate.Status.DeepCopy(),
@@ -166,10 +166,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 
 func (r *K8ssandraClusterReconciler) removeStargateStatus(kc *api.K8ssandraCluster, dcName string) {
 	if kdcStatus, found := kc.Status.Datacenters[dcName]; found {
-		kc.Status.Datacenters[dcName] = api.K8ssandraStatus{
-			Stargate:  nil,
-			Cassandra: kdcStatus.Cassandra.DeepCopy(),
-			Reaper:    kdcStatus.Reaper.DeepCopy(),
-		}
+		kdcStatus.Stargate = nil
+		kc.Status.Datacenters[dcName] = kdcStatus
 	}
 }
