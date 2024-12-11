@@ -59,7 +59,6 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	decommCassDcName := k8ssandra.GetDatacenterForDecommission(kc)
 
 	logger.Info("Checking if user keyspace replication needs to be updated", "decommissioning_dc", decommCassDcName)
-	logger.Info("Status of datacenters", "status", kc.Status.Datacenters)
 	decommission := false
 	status := kc.Status.Datacenters[decommCassDcName]
 	if decommCassDcName != "" {
