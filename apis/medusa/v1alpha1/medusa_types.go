@@ -115,6 +115,10 @@ type Storage struct {
 	// Pod storage settings for the local storage provider
 	// +optional
 	PodStorage *PodStorageSettings `json:"podStorage,omitempty"`
+
+	// Volume mounts for Medusa container.
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 type PodStorageSettings struct {
