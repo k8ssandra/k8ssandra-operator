@@ -13599,6 +13599,11 @@ spec:
                                         type: object
                                       vector:
                                         properties:
+                                          api:
+                                            properties:
+                                              enabled:
+                                                type: boolean
+                                            type: object
                                           components:
                                             properties:
                                               sinks:
@@ -14144,6 +14149,11 @@ spec:
                                   type: object
                                 vector:
                                   properties:
+                                    api:
+                                      properties:
+                                        enabled:
+                                          type: boolean
+                                      type: object
                                     components:
                                       properties:
                                         sinks:
@@ -16630,6 +16640,11 @@ spec:
                               type: object
                             vector:
                               properties:
+                                api:
+                                  properties:
+                                    enabled:
+                                      type: boolean
+                                  type: object
                                 components:
                                   properties:
                                     sinks:
@@ -25536,6 +25551,11 @@ spec:
                         type: object
                       vector:
                         properties:
+                          api:
+                            properties:
+                              enabled:
+                                type: boolean
+                            type: object
                           components:
                             properties:
                               sinks:
@@ -29048,6 +29068,11 @@ spec:
                         type: object
                       vector:
                         properties:
+                          api:
+                            properties:
+                              enabled:
+                                type: boolean
+                            type: object
                           components:
                             properties:
                               sinks:
@@ -30811,6 +30836,11 @@ spec:
                         type: object
                       vector:
                         properties:
+                          api:
+                            properties:
+                              enabled:
+                                type: boolean
+                            type: object
                           components:
                             properties:
                               sinks:
@@ -35145,6 +35175,11 @@ spec:
                     type: object
                   vector:
                     properties:
+                      api:
+                        properties:
+                          enabled:
+                            type: boolean
+                        type: object
                       components:
                         properties:
                           sinks:
@@ -38531,6 +38566,11 @@ spec:
                           type: object
                         vector:
                           properties:
+                            api:
+                              properties:
+                                enabled:
+                                  type: boolean
+                              type: object
                             components:
                               properties:
                                 sinks:
@@ -39061,6 +39101,11 @@ spec:
                     type: object
                   vector:
                     properties:
+                      api:
+                        properties:
+                          enabled:
+                            type: boolean
+                        type: object
                       components:
                         properties:
                           sinks:
