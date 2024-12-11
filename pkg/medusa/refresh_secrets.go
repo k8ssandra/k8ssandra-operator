@@ -52,7 +52,7 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 		case recRes.IsRequeue():
 			requeues++
 			continue
-		case recRes.IsDone():
+		case !recRes.Completed():
 			continue
 		}
 		if requeues > 0 {

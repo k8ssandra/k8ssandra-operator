@@ -18,7 +18,8 @@ type Reconcileable[T any] interface {
 	*T
 }
 
-// Try with U, a type of any whose POINTER still fulfils Reoncilable...
+// ReconcileObject ensures that desiredObject exists in the given state, either by creating it, or updating it if it
+// already exists.
 func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient client.Client, requeueDelay time.Duration, desiredObject U) result.ReconcileResult {
 	objectKey := types.NamespacedName{
 		Name:      T(&desiredObject).GetName(),
@@ -38,10 +39,9 @@ func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient cli
 				}
 				return result.Error(err)
 			}
-			return result.RequeueSoon(requeueDelay)
-		} else {
-			return result.Error(err)
+			return result.Continue()
 		}
+		return result.Error(err)
 	}
 
 	if !annotations.CompareHashAnnotations(T(currentCm), T(&desiredObject)) {
@@ -51,7 +51,6 @@ func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient cli
 		if err := kClient.Update(ctx, T(currentCm)); err != nil {
 			return result.Error(err)
 		}
-		return result.RequeueSoon(requeueDelay)
 	}
-	return result.Done()
+	return result.Continue()
 }
