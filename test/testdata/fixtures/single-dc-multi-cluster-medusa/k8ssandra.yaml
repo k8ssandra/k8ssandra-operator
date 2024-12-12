@@ -81,3 +81,5 @@ spec:
       host: minio-service.minio.svc.cluster.local
       port: 9000
       secure: false
+    serviceProperties:
+      grpcPort: 55055

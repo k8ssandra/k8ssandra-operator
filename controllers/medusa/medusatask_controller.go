@@ -19,6 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"net"
 	"sync"
 
@@ -413,7 +414,12 @@ func (r *MedusaTaskReconciler) scheduleSyncForPurge(task *medusav1alpha1.MedusaT
 }
 
 func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	medusaPort := shared.BackupSidecarPort
+	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
+	if found {
+		medusaPort = explicitPort
+	}
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
@@ -423,7 +429,12 @@ func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.P
 }
 
 func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	medusaPort := shared.BackupSidecarPort
+	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
+	if found {
+		medusaPort = explicitPort
+	}
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
@@ -434,7 +445,12 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 }
 
 func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(shared.BackupSidecarPort))
+	medusaPort := shared.BackupSidecarPort
+	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
+	if found {
+		medusaPort = explicitPort
+	}
+	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
