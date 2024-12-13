@@ -21,6 +21,15 @@ type Reconcileable[T any] interface {
 // ReconcileObject ensures that desiredObject exists in the given state, either by creating it, or updating it if it
 // already exists.
 func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient client.Client, requeueDelay time.Duration, desiredObject U) result.ReconcileResult {
+	recResult, _ := ReconcileAndGetObject[U, T](ctx, kClient, requeueDelay, desiredObject)
+	return recResult
+}
+
+// ReconcileAndGetObject ensures that desiredObject exists in the given state, either by creating it, or updating it if
+// it already exists. It returns the current state of the object on the server after the reconciliation.
+func ReconcileAndGetObject[U any, T Reconcileable[U]](
+	ctx context.Context, kClient client.Client, requeueDelay time.Duration, desiredObject U,
+) (result.ReconcileResult, *U) {
 	objectKey := types.NamespacedName{
 		Name:      T(&desiredObject).GetName(),
 		Namespace: T(&desiredObject).GetNamespace(),
@@ -35,13 +44,13 @@ func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient cli
 		if errors.IsNotFound(err) {
 			if err := kClient.Create(ctx, T(&desiredObject)); err != nil {
 				if errors.IsAlreadyExists(err) {
-					return result.RequeueSoon(requeueDelay)
+					return result.RequeueSoon(requeueDelay), nil
 				}
-				return result.Error(err)
+				return result.Error(err), nil
 			}
-			return result.Continue()
+			return result.Continue(), &desiredObject
 		}
-		return result.Error(err)
+		return result.Error(err), nil
 	}
 
 	if !annotations.CompareHashAnnotations(T(currentCm), T(&desiredObject)) {
@@ -49,8 +58,9 @@ func ReconcileObject[U any, T Reconcileable[U]](ctx context.Context, kClient cli
 		T(&desiredObject).DeepCopyInto(currentCm)
 		T(currentCm).SetResourceVersion(resourceVersion)
 		if err := kClient.Update(ctx, T(currentCm)); err != nil {
-			return result.Error(err)
+			return result.Error(err), nil
 		}
+		return result.Continue(), currentCm
 	}
-	return result.Continue()
+	return result.Continue(), currentCm
 }
