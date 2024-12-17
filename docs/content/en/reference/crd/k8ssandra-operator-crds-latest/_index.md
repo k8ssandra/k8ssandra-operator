@@ -1234,6 +1234,13 @@ The default is "mikefarah/yq:4".<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>podPriorityClassName</b></td>
+        <td>string</td>
+        <td>
+          PodPriorityClassName defines the priority class name for the Cassandra pods.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandrapodsecuritycontext">podSecurityContext</a></b></td>
         <td>object</td>
         <td>
@@ -5509,6 +5516,13 @@ name of a configuration file (typically, cassandra.yaml). The value of the entry
 to be a YAML fragment that contains the per-node configuration for each pod. When the pod is
 started, the per-node ConfigMap is mounted and the contents of each entry corresponding to
 the pod are merged into their respective configuration files.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>podPriorityClassName</b></td>
+        <td>string</td>
+        <td>
+          PodPriorityClassName defines the priority class name for the Cassandra pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
