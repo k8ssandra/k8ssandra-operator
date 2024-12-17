@@ -374,6 +374,7 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	dcConfig.DseWorkloads = mergedOptions.DseWorkloads
 	dcConfig.ManagementApiAuth = mergedOptions.ManagementApiAuth
 	dcConfig.PodTemplateSpec.Spec.SecurityContext = mergedOptions.PodSecurityContext
+	dcConfig.PodTemplateSpec.Spec.PriorityClassName = mergedOptions.PodPriorityClassName
 	dcConfig.PerNodeInitContainerImage = mergedOptions.PerNodeConfigInitContainerImage
 	dcConfig.ServiceAccount = mergedOptions.ServiceAccount
 	dcConfig.ReadOnlyRootFilesystem = mergedOptions.ReadOnlyRootFilesystem

@@ -425,6 +425,10 @@ type DatacenterOptions struct {
 	// +optional
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 
+	// PodPriorityClassName defines the priority class name for the Cassandra pods.
+	// +optional
+	PodPriorityClassName string `json:"podPriorityClassName,omitempty"`
+
 	// ManagementApiAuth defines the authentication settings for the management API in the Cassandra pods.
 	// +optional
 	ManagementApiAuth *cassdcapi.ManagementApiAuthConfig `json:"managementApiAuth,omitempty"`

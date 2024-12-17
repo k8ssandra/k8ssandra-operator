@@ -9494,6 +9494,10 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
+                        podPriorityClassName:
+                          description: PodPriorityClassName defines the priority class
+                            name for the Cassandra pods.
+                          type: string
                         podSecurityContext:
                           description: PodSecurityContext defines the security context
                             for the Cassandra pods.
@@ -21955,6 +21959,10 @@ spec:
                       The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
                       configuration. This is only useful when PerNodeConfigMapRef is set.
                       The default is "mikefarah/yq:4".
+                    type: string
+                  podPriorityClassName:
+                    description: PodPriorityClassName defines the priority class name
+                      for the Cassandra pods.
                     type: string
                   podSecurityContext:
                     description: PodSecurityContext defines the security context for

@@ -1281,6 +1281,46 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Set priority class name at cluster level",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					PodPriorityClassName: "mock-priority",
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				McacEnabled: true,
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers:        []corev1.Container{{Name: "cassandra"}},
+						PriorityClassName: "mock-priority",
+					},
+				},
+			},
+		},
+		{
+			name: "Override priority class name",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					PodPriorityClassName: "ignored-priority",
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					PodPriorityClassName: "mock-priority",
+				},
+			},
+			want: &DatacenterConfig{
+				McacEnabled: true,
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers:        []corev1.Container{{Name: "cassandra"}},
+						PriorityClassName: "mock-priority",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1374,6 +1414,17 @@ func TestNewDatacenter_ServiceAccount(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, template.ServiceAccount, dc.Spec.ServiceAccountName)
+}
+
+func TestNewDatacenter_PodPriorityClassName(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.PodTemplateSpec.Spec.PriorityClassName = "mock-priority"
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, "mock-priority", dc.Spec.PodTemplateSpec.Spec.PriorityClassName)
 }
 
 // TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.
