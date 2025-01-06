@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -21,8 +22,8 @@ func GetCassandraDatacenterPods(ctx context.Context, cassdc *cassdcapi.Cassandra
 		return nil, err
 	}
 
-	pods := make([]corev1.Pod, 0)
-	pods = append(pods, podList.Items...)
-
-	return pods, nil
+	if podList.Items != nil {
+		return podList.Items, nil
+	}
+	return nil, errors.New("podList came with nil Items field")
 }
