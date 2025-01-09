@@ -626,7 +626,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
 			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
-				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask"} {
+				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask", "ConfigMaps"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
 				}

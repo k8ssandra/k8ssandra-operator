@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,15 +134,31 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 }
 
 func (r *K8ssandraCluster) validateStatefulsetNameSize() error {
+	clusterName := r.ObjectMeta.Name
+	if r.Spec.Cassandra.ClusterName != "" {
+		clusterName = r.Spec.Cassandra.ClusterName
+	}
+
 	for _, dc := range r.Spec.Cassandra.Datacenters {
+		realDc := &cassdcapi.CassandraDatacenter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: dc.Meta.Name,
+			},
+			Spec: cassdcapi.CassandraDatacenterSpec{
+				ClusterName: clusterName,
+			},
+		}
+
 		if len(dc.Racks) > 0 {
 			for _, rack := range dc.Racks {
-				if len(r.SanitizedName()+"-"+dc.CassDcName()+"-"+rack.Name+"-sts-") > 60 {
+				stsName := reconciliation.NewNamespacedNameForStatefulSet(realDc, rack.Name)
+				if len(stsName.Name) > 60 {
 					return fmt.Errorf("the name of the statefulset for rack %s in DC %s is too long", rack.Name, dc.CassDcName())
 				}
 			}
 		} else {
-			if len(r.SanitizedName()+"-"+dc.CassDcName()+"-default-sts-") > 60 {
+			stsName := reconciliation.NewNamespacedNameForStatefulSet(realDc, "default")
+			if len(stsName.Name) > 60 {
 				return fmt.Errorf("the name of the statefulset for DC %s is too long", dc.CassDcName())
 			}
 		}

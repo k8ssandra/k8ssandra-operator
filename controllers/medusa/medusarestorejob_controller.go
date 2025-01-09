@@ -20,10 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"net"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -237,7 +238,7 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 	// StatefulSets are scaled back up.
 
 	statefulsetList := &appsv1.StatefulSetList{}
-	labels := client.MatchingLabels{cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(req.Datacenter.Spec.ClusterName), cassdcapi.DatacenterLabel: req.Datacenter.DatacenterName()}
+	labels := client.MatchingLabels{cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(req.Datacenter.Spec.ClusterName), cassdcapi.DatacenterLabel: req.Datacenter.Name}
 
 	if err := r.List(ctx, statefulsetList, labels); err != nil {
 		req.Log.Error(err, "Failed to get StatefulSets")

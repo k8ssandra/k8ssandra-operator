@@ -144,7 +144,7 @@ func (r *K8ssandraClusterReconciler) checkFinalizer(ctx context.Context, kc *api
 }
 
 func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-	dcName, dcNameOverride := k8ssandra.GetDatacenterForDecommission(kc)
+	dcName := k8ssandra.GetDatacenterForDecommission(kc)
 	if dcName == "" {
 		return result.Continue()
 	}
@@ -163,76 +163,78 @@ func (r *K8ssandraClusterReconciler) checkDcDeletion(ctx context.Context, kc *ap
 	default:
 		logger.Info("Proceeding with DC deletion", "DC", dcName)
 
-		cassDcName := dcName
-		if dcNameOverride != "" {
-			cassDcName = dcNameOverride
-		}
-		return r.deleteDc(ctx, kc, dcName, cassDcName, logger)
+		return r.deleteDc(ctx, kc, dcName, logger)
 	}
 }
 
-func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, cassDcName string, logger logr.Logger) result.ReconcileResult {
+func (r *K8ssandraClusterReconciler) deleteDc(ctx context.Context, kc *api.K8ssandraCluster, dcName string, logger logr.Logger) result.ReconcileResult {
 	kcKey := utils.GetKey(kc)
 
-	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, cassDcName, nil)
+	dcRemoteClient, err := r.ClientCache.GetRemoteClient(kc.Status.Datacenters[dcName].ContextName)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	dc, _, err := r.findDcForDeletion(ctx, kcKey, dcName, dcRemoteClient)
+	if err != nil {
+		return result.Error(err)
+	}
+
+	if dc == nil {
+		// Deletion was already done
+		delete(kc.Status.Datacenters, dcName)
+		logger.Info("DC deletion finished", "DC", dcName)
+		return result.Continue()
+	}
+
+	stargate, remoteClient, err := r.findStargateForDeletion(ctx, kcKey, dc.DatacenterName(), nil)
 	if err != nil {
 		return result.Error(err)
 	}
 
 	if stargate != nil {
 		if err = remoteClient.Delete(ctx, stargate); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", cassDcName, err))
+			return result.Error(fmt.Errorf("failed to delete Stargate for dc (%s): %v", dc.DatacenterName(), err))
 		}
 		logger.Info("Deleted Stargate", "Stargate", utils.GetKey(stargate))
 	}
 
-	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, cassDcName, remoteClient)
+	reaper, remoteClient, err := r.findReaperForDeletion(ctx, kcKey, dc.DatacenterName(), remoteClient)
 	if err != nil {
 		return result.Error(err)
 	}
 
 	if reaper != nil {
 		if err = remoteClient.Delete(ctx, reaper); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", cassDcName, err))
+			return result.Error(fmt.Errorf("failed to delete Reaper for dc (%s): %v", dc.DatacenterName(), err))
 		}
 		logger.Info("Deleted Reaper", "Reaper", utils.GetKey(reaper))
 	}
 
-	dc, remoteClient, err := r.findDcForDeletion(ctx, kcKey, dcName, remoteClient)
-	if err != nil {
+	if err := r.deleteContactPointsService(ctx, kc, dc, logger); err != nil {
 		return result.Error(err)
 	}
 
-	if dc != nil {
-		if err := r.deleteContactPointsService(ctx, kc, dc, logger); err != nil {
-			return result.Error(err)
-		}
-
-		if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
-			logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
-			// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
-			return result.Done()
-		}
-
-		if !annotations.HasAnnotationWithValue(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true") {
-			patch := client.MergeFrom(dc.DeepCopy())
-			annotations.AddAnnotation(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true")
-			if err = remoteClient.Patch(ctx, dc, patch); err != nil {
-				return result.Error(fmt.Errorf("failed to add %s annotation to dc: %v", cassdcapi.DecommissionOnDeleteAnnotation, err))
-			}
-		}
-
-		if err = remoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
-			return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
-		}
-		logger.Info("Deleted CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
+	if dc.GetConditionStatus(cassdcapi.DatacenterDecommission) == corev1.ConditionTrue {
+		logger.Info("CassandraDatacenter decommissioning in progress", "CassandraDatacenter", utils.GetKey(dc))
 		// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
 		return result.Done()
 	}
 
-	delete(kc.Status.Datacenters, dcName)
-	logger.Info("DC deletion finished", "DC", dcName)
-	return result.Continue()
+	if !annotations.HasAnnotationWithValue(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true") {
+		patch := client.MergeFrom(dc.DeepCopy())
+		annotations.AddAnnotation(dc, cassdcapi.DecommissionOnDeleteAnnotation, "true")
+		if err = dcRemoteClient.Patch(ctx, dc, patch); err != nil {
+			return result.Error(fmt.Errorf("failed to add %s annotation to dc: %v", cassdcapi.DecommissionOnDeleteAnnotation, err))
+		}
+	}
+
+	if err = dcRemoteClient.Delete(ctx, dc); err != nil && !errors.IsNotFound(err) {
+		return result.Error(fmt.Errorf("failed to delete CassandraDatacenter (%s): %v", dcName, err))
+	}
+	logger.Info("Deleted CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
+	// There is no need to requeue here. Reconciliation will be trigger by updates made by cass-operator.
+	return result.Done()
 }
 
 func (r *K8ssandraClusterReconciler) findStargateForDeletion(
