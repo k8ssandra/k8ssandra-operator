@@ -22,4 +22,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1454](https://github.com/k8ssandra/k8ssandra-operator/issues/1454) Do not try to work out backup status if there are no pods
 * [BUGFIX] [#1383](https://github.com/k8ssandra/k8ssandra-operator/issues/1383) Do not create MedusaBackup if MedusaBakupJob did not fully succeed
 * [BUGFIX] [#1460](https://github.com/k8ssandra/k8ssandra-operator/issues/1460) Fix podName calculations in medusa's hostmap.go to account for unbalanced racks also
-* [BUGFIX] [#1466](https://github.com/k8ssandra/k8ssandra-operator/issues/1466) Do not overwrite existing status fields or forget to write the changes. Also, add new ContextName for the Datacenter to know where it used to be. 
+* [BUGFIX] [#1466](https://github.com/k8ssandra/k8ssandra-operator/issues/1466) Do not overwrite existing status fields or forget to write the changes. Also, add new ContextName for the Datacenter to know where it used to be.
+* [ENHANCEMENT] [#1465](https://github.com/k8ssandra/k8ssandra/issues/1465) Add `volumeMounts` option to `K8ssandraCluster.spec.medusa`

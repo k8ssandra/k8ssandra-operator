@@ -383,6 +383,13 @@ func (in *MedusaClusterTemplate) DeepCopyInto(out *MedusaClusterTemplate) {
 	}
 	out.CassandraUserSecretRef = in.CassandraUserSecretRef
 	in.StorageProperties.DeepCopyInto(&out.StorageProperties)
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	out.CertificatesSecretRef = in.CertificatesSecretRef
 	if in.InitContainerResources != nil {
 		in, out := &in.InitContainerResources, &out.InitContainerResources
