@@ -419,7 +419,7 @@ func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.P
 	if found {
 		medusaPort = explicitPort
 	}
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
+	addr := makeMedusaAddress(pod, medusaPort)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
@@ -434,7 +434,7 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 	if found {
 		medusaPort = explicitPort
 	}
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
+	addr := makeMedusaAddress(pod, medusaPort)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
@@ -450,7 +450,7 @@ func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.Clien
 	if found {
 		medusaPort = explicitPort
 	}
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
+	addr := makeMedusaAddress(pod, medusaPort)
 	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
 		return nil, err
 	} else {
@@ -477,4 +477,8 @@ func (r *MedusaTaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&medusav1alpha1.MedusaTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
+}
+
+func makeMedusaAddress(medusaPod *corev1.Pod, medusaPort int) string {
+	return net.JoinHostPort(medusaPod.Status.PodIP, fmt.Sprint(medusaPort))
 }
