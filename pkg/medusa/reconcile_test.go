@@ -706,3 +706,31 @@ func TestPurgeCronJobNameTooLong(t *testing.T) {
 	_, err := PurgeCronJob(dcConfig, clusterName, namespace, logger)
 	assert.NotNil(t, err)
 }
+
+func TestMedusaVolumeMounts(t *testing.T) {
+	mountName := "testMount"
+	mountPath := "/home/cassandra/test-mount"
+
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		VolumeMounts: []corev1.VolumeMount{{
+			Name:      mountName,
+			MountPath: mountPath,
+		}},
+	}
+	dcConfig := cassandra.DatacenterConfig{}
+	logger := logr.New(logr.Discard().GetSink())
+
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, medusaContainer.VolumeMounts)
+
+	mountFound := false
+	for _, mount := range medusaContainer.VolumeMounts {
+		if mount.Name == mountName && mount.MountPath == mountPath {
+			mountFound = true
+			break
+		}
+	}
+
+	assert.True(t, mountFound)
+}

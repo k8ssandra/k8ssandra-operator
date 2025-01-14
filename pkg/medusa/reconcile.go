@@ -8,18 +8,17 @@ import (
 	"text/template"
 
 	"github.com/adutra/goalesce"
+	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
-
-	"github.com/go-logr/logr"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -321,6 +320,10 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 			Name:      "mgmt-encryption",
 			MountPath: "/etc/encryption/mgmt",
 		})
+	}
+
+	if medusaSpec.VolumeMounts != nil {
+		volumeMounts = append(volumeMounts, medusaSpec.VolumeMounts...)
 	}
 
 	return volumeMounts
