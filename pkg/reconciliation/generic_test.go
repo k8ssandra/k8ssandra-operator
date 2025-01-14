@@ -32,7 +32,8 @@ func Test_ReconcileObject_UpdateDone(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	// Launch reconciliation.
 	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsRequeue())
+	// Should update immediately and signal we can continue
+	assert.False(t, recRes.Completed())
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}
 	err := kClient.Get(ctx,
@@ -42,15 +43,13 @@ func Test_ReconcileObject_UpdateDone(t *testing.T) {
 		},
 		afterUpdateCM)
 	assert.NoError(t, err)
-	// If we reconcile again, we should move into the Done state.
-	recRes = ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsDone())
 }
 
 func Test_ReconcileObject_CreateSuccess(t *testing.T) {
 	kClient := testutils.NewFakeClientWRestMapper() // Reset the Client
 	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsRequeue())
+	// Should create immediately and signal we can continue
+	assert.False(t, recRes.Completed())
 	actualCm := &corev1.ConfigMap{}
 	err := kClient.Get(ctx, types.NamespacedName{Name: desiredObject.Name, Namespace: desiredObject.Namespace}, actualCm)
 	assert.NoError(t, err)
@@ -75,7 +74,7 @@ func Test_ReconcileObject_UpdateSuccess(t *testing.T) {
 	}
 	// Launch reconciliation.
 	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
-	assert.True(t, recRes.IsRequeue())
+	assert.False(t, recRes.Completed())
 	annotations.AddHashAnnotation(&desiredObject)
 	// After the update we should see the expected ConfigMap
 	afterUpdateCM := &corev1.ConfigMap{}

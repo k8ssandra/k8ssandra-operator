@@ -842,7 +842,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to patch K8ssandraCluster in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
+	checkContainerPresenceEventually(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Log("check that if Stargate is deleted directly it gets re-created")
@@ -853,7 +853,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(err, "failed to delete Stargate in namespace %s", namespace)
 	checkStargateReady(t, f, ctx, stargateKey)
 
-	checkContainerPresence(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
+	checkContainerPresenceEventually(t, ctx, f, stargateDeploymentKey, k8ssandra, getPodTemplateSpec, stargate.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, stargate.VectorAgentConfigMapName)
 
 	t.Log("delete Stargate in k8ssandracluster resource")
@@ -2334,6 +2334,15 @@ func checkContainerPresence(t *testing.T, ctx context.Context, f *framework.E2eF
 	podTempSpec := specFunction(t, ctx, f, podKey, kc)
 	_, containerFound := cassandra.FindContainer(podTempSpec, containerName)
 	require.True(t, containerFound, "cannot find Container in pod template spec")
+}
+
+func checkContainerPresenceEventually(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, kc *api.K8ssandraCluster, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec, containerName string) {
+	t.Logf("check that %s contains Container named %s", podKey.Name, containerName)
+	require.Eventually(t, func() bool {
+		podTempSpec := specFunction(t, ctx, f, podKey, kc)
+		_, containerFound := cassandra.FindContainer(podTempSpec, containerName)
+		return containerFound
+	}, polling.stargateReady.timeout, polling.stargateReady.interval, "cannot find Container in pod template spec")
 }
 
 func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFramework, podKey framework.ClusterKey, kc *api.K8ssandraCluster, specFunction func(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec, containerName string) {
