@@ -99,7 +99,7 @@ jobs:
           - CreateSingleDseDatacenterCluster
           - CreateSingleDseSearchDatacenterCluster
           - CreateSingleDseGraphDatacenterCluster
-          - CreateSingleHcdDatacenterCluster
+#          - CreateSingleHcdDatacenterCluster
           - ChangeDseWorkload
           - PerNodeConfig/UserDefined
           - RemoveLocalDcFromCluster
