@@ -79,6 +79,9 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 					},
 					MaxBackupCount: 1,
 				},
+				ServiceProperties: api.Service{
+					GrpcPort: 7890,
+				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: cassandraUserSecret,
 				},

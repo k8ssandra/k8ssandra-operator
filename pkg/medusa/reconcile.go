@@ -25,7 +25,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.22.3"
+	DefaultMedusaVersion         = "97aa0276"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
@@ -114,6 +114,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 
     [grpc]
     enabled = 1
+    {{- if .Spec.Medusa.ServiceProperties.GrpcPort }}
+    port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
+    {{- end }}
 
     [logging]
     level = DEBUG
@@ -226,19 +229,23 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	setImage(medusaSpec.ContainerImage, medusaContainer)
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
 	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "GRPC")
+	var grpcPort = DefaultMedusaPort
+	if medusaSpec.ServiceProperties.GrpcPort != 0 {
+		grpcPort = medusaSpec.ServiceProperties.GrpcPort
+	}
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{
 			Name:          "grpc",
-			ContainerPort: DefaultMedusaPort,
+			ContainerPort: int32(grpcPort),
 			Protocol:      "TCP",
 		},
 	}
 
-	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe)
+	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort)
 	if err != nil {
 		return nil, err
 	}
-	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe)
+	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe, grpcPort)
 	if err != nil {
 		return nil, err
 	}
@@ -545,9 +552,9 @@ func PurgeCronJob(dcConfig *cassandra.DatacenterConfig, clusterName, namespace s
 	return purgeCronJob, nil
 }
 
-func generateMedusaProbe(configuredProbe *corev1.Probe) (*corev1.Probe, error) {
+func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int) (*corev1.Probe, error) {
 	// Goalesce the custom probe with the default probe,
-	defaultProbe := defaultMedusaProbe()
+	defaultProbe := defaultMedusaProbe(grpcPort)
 	if configuredProbe == nil {
 		return defaultProbe, nil
 	}
@@ -561,12 +568,12 @@ func generateMedusaProbe(configuredProbe *corev1.Probe) (*corev1.Probe, error) {
 	return &mergedProbe, nil
 }
 
-func defaultMedusaProbe() *corev1.Probe {
+func defaultMedusaProbe(grpcPort int) *corev1.Probe {
 	// Goalesce the custom probe with the default probe,
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
-				Command: []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", DefaultMedusaPort)},
+				Command: []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", grpcPort)},
 			},
 		},
 		InitialDelaySeconds: DefaultProbeInitialDelay,

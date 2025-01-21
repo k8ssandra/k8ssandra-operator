@@ -41,4 +41,6 @@ spec:
         name: medusa-bucket-key
       host: test-hl.minio.svc.cluster.local
       port: 9000
-      secure: false 
+      secure: false
+    serviceProperties:
+      grpcPort: 55055
