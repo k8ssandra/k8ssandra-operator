@@ -1140,8 +1140,7 @@ Example:
         <td><b>datacenterName</b></td>
         <td>string</td>
         <td>
-          DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value.
-It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself.
+          DatacenterName allows to override the name of the Cassandra datacenter. In Cassandra the DC name will be overridden by this value.
 This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC.
 Use cautiously.<br/>
         </td>
@@ -1231,6 +1230,13 @@ configuration. This is only useful when PerNodeConfigMapRef is set.
 The default is "mikefarah/yq:4".<br/>
           <br/>
             <i>Default</i>: mikefarah/yq:4<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>podPriorityClassName</b></td>
+        <td>string</td>
+        <td>
+          PodPriorityClassName defines the priority class name for the Cassandra pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5405,8 +5411,7 @@ Example:
         <td><b>datacenterName</b></td>
         <td>string</td>
         <td>
-          DatacenterName allows to override the name of the Cassandra datacenter. Kubernetes objects will be named after a sanitized version of it if set, and if not metadata.name. In Cassandra the DC name will be overridden by this value.
-It may generate some confusion as objects created for the DC will have a different name than the CasandraDatacenter object itself.
+          DatacenterName allows to override the name of the Cassandra datacenter. In Cassandra the DC name will be overridden by this value.
 This setting can create conflicts if multiple DCs coexist in the same namespace if metadata.name for a DC with no override is set to the same value as the override name of another DC.
 Use cautiously.<br/>
         </td>
@@ -5509,6 +5514,13 @@ name of a configuration file (typically, cassandra.yaml). The value of the entry
 to be a YAML fragment that contains the per-node configuration for each pod. When the pod is
 started, the per-node ConfigMap is mounted and the contents of each entry corresponding to
 the pod are merged into their respective configuration files.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>podPriorityClassName</b></td>
+        <td>string</td>
+        <td>
+          PodPriorityClassName defines the priority class name for the Cassandra pods.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -53021,6 +53033,13 @@ Defaults to true.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaserviceproperties">serviceProperties</a></b></td>
+        <td>object</td>
+        <td>
+          Provides all service related properties for Medusa.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspecmedusastorageproperties">storageProperties</a></b></td>
         <td>object</td>
         <td>
@@ -54407,6 +54426,34 @@ In addition, if HostProcess is true then HostNetwork must also be set to true.<b
 Defaults to the user specified in image metadata if unspecified.
 May also be set in PodSecurityContext. If set in both SecurityContext and
 PodSecurityContext, the value specified in SecurityContext takes precedence.<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.serviceProperties
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusa)</sup></sup>
+
+
+
+Provides all service related properties for Medusa.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>grpcPort</b></td>
+        <td>integer</td>
+        <td>
+          GrpcPort to listen on when running as gRPC service
+Included grpc in the field name to avoid misunderstanding with storage.port<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -63693,6 +63740,13 @@ K8ssandraStatus defines the observed of a k8ssandra instance
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>contextName</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>decommissionProgress</b></td>
         <td>string</td>
         <td>
@@ -63772,6 +63826,15 @@ This field is used to perform validation checks preventing a user from changing 
 with the management API<br/>
           <br/>
             <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>metadataVersion</b></td>
+        <td>integer</td>
+        <td>
+          <br/>
+          <br/>
+            <i>Format</i>: int64<br/>
         </td>
         <td>false</td>
       </tr><tr>
