@@ -37,6 +37,7 @@ spec:
         concurrent_writes: 2
         concurrent_counter_writes: 2
       jvmOptions:
+        cassandra_ring_delay_ms: 0
         heapSize: 512Mi
         heapNewGenSize: 256Mi
         gc: CMS
@@ -69,3 +70,9 @@ spec:
             nodeAffinityLabels:
               "topology.kubernetes.io/zone": region2-zone2
     mgmtAPIHeap: 64Mi
+  reaper:
+    reaperRef:
+      name: reaper1
+      namespace: test-0
+    uiUserSecretRef:
+      name: reaper-ui-secret

@@ -15,6 +15,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	dc1Namespace := "test-1"
 	dc2Namespace := "test-2"
+	reaperNamespace := "test-0"
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
@@ -84,4 +85,24 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	t.Log("check nodes in dc2 see nodes in dc1")
 	pod = DcPrefix(t, f, dc2Key) + "-rack1-sts-0"
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], dc2Namespace, pod, count, 0, "-u", username, "-pw", password)
+
+	t.Log("check that cluster was registered in Reaper")
+	reaperKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: reaperNamespace, Name: "reaper1"}}
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
+	dcPrefix := DcPrefix(t, f, dcKey)
+	checkReaperReady(t, f, ctx, reaperKey)
+	createKeyspaceAndTable(t, f, ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.Name, dcPrefix+"-rack1-sts-0", "test_ks", "test_table", 2)
+
+	t.Log("deploying Reaper ingress routes in context", f.ControlPlaneContext)
+	reaperRestHostAndPort := ingressConfigs[f.ControlPlaneContext].ReaperRest
+	f.DeployReaperIngresses(t, f.ControlPlaneContext, k8ssandra.Namespace, "reaper1-service", reaperRestHostAndPort)
+	defer f.UndeployAllIngresses(t, f.ControlPlaneContext, k8ssandra.Namespace)
+	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
+
+	t.Run("TestReaperApi[0]", func(t *testing.T) {
+		t.Log("test Reaper API in context", f.ControlPlaneContext)
+		secretKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: k8ssandra.Namespace, Name: "reaper-ui-secret"}}
+		username, password := retrieveCredentials(t, f, ctx, secretKey)
+		testReaperApi(t, ctx, f.ControlPlaneContext, DcClusterName(t, f, dcKey), "test_ks", username, password)
+	})
 }
