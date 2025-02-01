@@ -25,3 +25,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1466](https://github.com/k8ssandra/k8ssandra-operator/issues/1466) Do not overwrite existing status fields or forget to write the changes. Also, add new ContextName for the Datacenter to know where it used to be. 
 * [ENHANCEMENT] [#1455](https://github.com/k8ssandra/k8ssandra-operator/issues/1455) Expose configuration of Medusa's gRPC server port
 * [BUGFIX] [#1471](https://github.com/k8ssandra/k8ssandra-operator/issues/1471) Use namespaced service name when registering k8ssandra cluster to Reaper
+* [BUGFIX] Upgrade cass-operator helm chart to 0.55.0 (1.23.0)
