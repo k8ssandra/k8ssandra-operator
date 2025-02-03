@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.21.0 - 2025-02-03
+
 * [CHANGE] [#1450](https://github.com/k8ssandra/k8ssandra-operator/issues/1450) Update datacenter labels to use Kubernetes resource names for CassandraDatacenter, not the cleaned override name. Update to cass-operator 1.23.0
 * [CHANGE] [#1441](https://github.com/k8ssandra/k8ssandra-operator/issues/1441) Use k8ssandra-client instead of k8ssandra-tools for CRD upgrades
 * [ENHANCEMENT] [#1667](https://github.com/k8ssahttps://github.com/k8ssandra/k8ssandra/issues/1667) Add `skipSchemaMigration` option to `K8ssandraCluster.spec.reaper`
