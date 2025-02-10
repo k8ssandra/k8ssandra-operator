@@ -15,6 +15,10 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.21.1 - 2025-02-10
+
+* [CHANGE] [#1484](https://github.com/k8ssandra/k8ssandra-operator/issues/1484) Update Medusa version to 0.23.0
+
 ## v1.21.0 - 2025-02-03
 
 * [CHANGE] [#1450](https://github.com/k8ssandra/k8ssandra-operator/issues/1450) Update datacenter labels to use Kubernetes resource names for CassandraDatacenter, not the cleaned override name. Update to cass-operator 1.23.0
