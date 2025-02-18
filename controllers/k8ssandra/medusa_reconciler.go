@@ -3,16 +3,10 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
-	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"os"
-
 	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
-	replication "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	medusa "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -20,11 +14,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -60,15 +54,10 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			}
 		}
 
-		if medusaSpec.StorageProperties.StorageSecretRef.Name == "" {
-			medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
-			if medusaSpec.StorageProperties.CredentialsType == "role-based" && medusaSpec.StorageProperties.StorageProvider == "s3" {
-				// It's okay for the secret ref to be unset
-				medusaSpec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: ""}
-			} else {
-				return result.Error(fmt.Errorf("medusa storage secret is not defined for storage provider %s", medusaSpec.StorageProperties.StorageProvider))
-			}
+		if err := r.validateStorageCredentials(medusaSpec); err != nil {
+			return result.Error(err)
 		}
+
 		if res := r.reconcileMedusaConfigMap(ctx, remoteClient, kc, dcConfig, logger, dcNamespace); res.Completed() {
 			return res
 		}
@@ -168,12 +157,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			logger.Error(err, "Failed to reconcile Medusa CQL user secret")
 			return result.Error(err)
 		}
-
-		if res := r.reconcileRemoteBucketSecretsDeprecated(ctx, r.ClientCache.GetLocalClient(), kc, logger); res.Completed() {
-			return res
-		}
 	}
-
 	logger.Info("Medusa user secrets successfully reconciled")
 	return result.Continue()
 }
@@ -213,20 +197,19 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 		return result.Continue()
 	}
 	storageProperties := &medusaapi.MedusaConfiguration{}
-	// Deprecated: This code path can be removed at version 1.17, as MedusaConfigs should now always be namespace-local to the K8ssandraCluster referencing them.
-	configNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, desiredKc.Namespace)
-	configKey := types.NamespacedName{Namespace: configNamespace, Name: medusaSpec.MedusaConfigurationRef.Name}
-	// End of block to be deprecated.
+	configKey := types.NamespacedName{Namespace: desiredKc.Namespace, Name: medusaSpec.MedusaConfigurationRef.Name}
 
 	if err := remoteClient.Get(ctx, configKey, storageProperties); err != nil {
 		logger.Error(err, "failed to get MedusaConfiguration", "MedusaConfigKey", configKey, "K8ssandraCluster", desiredKc)
 		return result.Error(err)
 	}
+
 	// check if the StorageProperties from the cluster have the prefix field set
 	// it is required to be present because that's the single thing that differentiates backups of two different clusters
 	if desiredKc.Spec.Medusa.StorageProperties.Prefix == "" {
 		return result.Error(fmt.Errorf("StorageProperties.Prefix is not set in K8ssandraCluster %s", utils.GetKey(desiredKc)))
 	}
+
 	// try to merge the storage properties. goalesce gives priority to the 2nd argument,
 	// so stuff in the cluster overrides stuff in the config object
 	mergedProperties, err := goalesce.DeepMerge(storageProperties.Spec.StorageProperties, desiredKc.Spec.Medusa.StorageProperties)
@@ -234,96 +217,10 @@ func (r *K8ssandraClusterReconciler) mergeStorageProperties(
 		logger.Error(err, "failed to merge MedusaConfiguration StorageProperties")
 		return result.Error(err)
 	}
-	// medusaapi.MedusaConfiguration comes with a storage corev1.Secret containing the credentials to access the storage
-	// we make a copy of that secret for each cluster/dc, and then point to it with a corev1.LocalObjectReference
-	// when we do the copy, we name the secret as <cluster-name>-<original-secret-name>
-	// here we need to update the reference to point to that copied secret
-	if desiredKc.Namespace != medusaSpec.MedusaConfigurationRef.Name {
-		// Deprecated: when we remove the ability to reference a non-namespace-local MedusaConfig in v 1.17,
-		// this if statement should be eliminated.
-		mergedProperties.StorageSecretRef.Name = fmt.Sprintf("%s-%s", desiredKc.Name, mergedProperties.StorageSecretRef.Name)
-	} // imagine an else here which just contains `mergedProperties.StorageSecretRef.Name = mergedProperties.StorageSecretRef.Name`, since this is a no-op.
 
 	// copy the merged properties back into the cluster
 	mergedProperties.DeepCopyInto(&desiredKc.Spec.Medusa.StorageProperties)
 	return result.Continue()
-}
-
-// Deprecated: This code path can be removed at version 1.17, as MedusaConfigs should now always be namespace-local to the K8ssandraCluster referencing them. At that point, we no longer
-// need this code, because it is mainly concerned with copying the bucket secrets into the K8ssandraCluster's namespace.
-func (r *K8ssandraClusterReconciler) reconcileRemoteBucketSecretsDeprecated(
-	ctx context.Context,
-	c client.Client,
-	kc *api.K8ssandraCluster,
-	logger logr.Logger,
-) result.ReconcileResult {
-	logger.Info("Reconciling Medusa bucket secrets")
-	medusaSpec := kc.Spec.Medusa
-
-	// there is nothing to reconcile if we're not using Medusa configuration reference
-	if medusaSpec == nil || medusaSpec.MedusaConfigurationRef.Name == "" {
-		logger.Info("MedusaConfigurationRef is not set, skipping bucket secret reconciliation")
-		return result.Continue()
-	}
-
-	// This is the deprecated code path. Moving forward we will use a replicated secret with a prefix, but we will remove this code path after v1.17.
-	// fetch the referenced configuration
-	medusaConfigName := medusaSpec.MedusaConfigurationRef.Name
-	medusaConfigNamespace := utils.FirstNonEmptyString(medusaSpec.MedusaConfigurationRef.Namespace, kc.Namespace)
-	medusaConfigKey := types.NamespacedName{Namespace: medusaConfigNamespace, Name: medusaConfigName}
-	medusaConfig := &medusaapi.MedusaConfiguration{}
-	if err := c.Get(ctx, medusaConfigKey, medusaConfig); err != nil {
-		logger.Error(err, fmt.Sprintf("could not get MedusaConfiguration %s/%s", medusaConfigNamespace, medusaConfigName))
-		return result.Error(err)
-	}
-
-	repSecret := replication.ReplicatedSecret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kc.GetClusterIdHash() + "-" + medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
-			Namespace: medusaConfigNamespace,
-			Labels: map[string]string{
-				k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
-				k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
-			},
-			Annotations: map[string]string{
-				k8ssandraapi.PurposeAnnotation: "This replicated secret is designed for the old codepath in the Medusa reconciler within the k8ssandra cluster controller. In this deprecated path, a MedusaConfig could reside in a different namespace to the K8ssandraCluster. This ReplicatedSecret ensures that the bucket secret is copied into the K8ssandraCluster's namespace. This codepath will be removed in v1.17.",
-			},
-		},
-		Spec: replication.ReplicatedSecretSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					medusaapi.MedusaStorageSecretIdentifierLabel: utils.HashNameNamespace(
-						medusaConfig.Spec.StorageProperties.StorageSecretRef.Name,
-						medusaConfigNamespace),
-				},
-			},
-			ReplicationTargets: []replication.ReplicationTarget{
-				{
-					Namespace:    kc.Namespace,
-					TargetPrefix: kc.Name + "-",
-					DropLabels: []string{
-						medusaapi.MedusaStorageSecretIdentifierLabel,
-					},
-					AddLabels: map[string]string{
-						k8ssandraapi.K8ssandraClusterNameLabel:      kc.Name,
-						k8ssandraapi.K8ssandraClusterNamespaceLabel: kc.Namespace,
-						k8ssandraapi.ReplicatedByLabel:              k8ssandraapi.ReplicatedByLabelValue,
-					},
-				},
-			},
-		},
-	}
-	if err := controllerutil.SetControllerReference(kc, &repSecret, r.Scheme); err != nil {
-		return result.Error(err)
-	}
-	if err := controllerutil.SetOwnerReference(kc, &repSecret, r.Scheme); err != nil {
-		return result.Error(err)
-	}
-	// TODO: this should also have finalizer logic included in the k8ssandraCluster finalizer to remove the replicated secret if it is no longer being used.
-	// TODO: this should probably have a finalizer on it too so that the replicatedSecret cannot be deleted.
-
-	return reconciliation.ReconcileObject(ctx, c, r.DefaultDelay, repSecret)
-
 }
 
 func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
@@ -332,4 +229,21 @@ func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
 		return "default"
 	}
 	return operatorNamespace
+}
+
+func (r *K8ssandraClusterReconciler) validateStorageCredentials(medusaSpec *medusaapi.MedusaClusterTemplate) error {
+
+	// we must specify either storage secret or role-based credentials
+	if medusaSpec.StorageProperties.StorageSecretRef.Name == "" && medusaSpec.StorageProperties.CredentialsType != medusa.CredentialsTypeRoleBased {
+		return fmt.Errorf("must specify either a storge secret or use role-based credentials")
+	}
+
+	// if a storage secret is set, we error if role-based credentials are set too
+	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
+		if medusaSpec.StorageProperties.CredentialsType == medusa.CredentialsTypeRoleBased {
+			return fmt.Errorf("cannot specify both a storage secret and role-based credentials: %s", medusaSpec.StorageProperties.StorageSecretRef.Name)
+		}
+	}
+
+	return nil
 }

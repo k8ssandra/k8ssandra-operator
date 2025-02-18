@@ -102,6 +102,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
 	t.Run("CreateSingleDcClusterWithMedusaConfigRef", testEnv.ControllerTest(ctx, createSingleDcClusterWithMedusaConfigRef))
+	t.Run("CreateSingleDcClusterWithoutStorageCredentials", testEnv.ControllerTest(ctx, createSingleDcClusterWithoutStorageCredentials))
 	t.Run("CreateSingleDcClusterWithManagementApiSecured", testEnv.ControllerTest(ctx, createSingleDcClusterWithManagementApiSecured))
 	t.Run("CreatingSingleDcClusterWithoutPrefixInClusterSpecFail", testEnv.ControllerTest(ctx, creatingSingleDcClusterWithoutPrefixInClusterSpecFails))
 	t.Run("CreateMultiDcClusterWithReplicatedSecrets", testEnv.ControllerTest(ctx, createMultiDcClusterWithReplicatedSecrets))
