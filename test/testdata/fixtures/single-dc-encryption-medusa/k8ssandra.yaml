@@ -34,7 +34,8 @@ spec:
     readOnlyRootFilesystem: true
     datacenters:
       - metadata:
-          name: dc1
+          name: test-dc1
+        datacenterName: dc1
         k8sContext: kind-k8ssandra-0
         size: 2
         storageConfig:
