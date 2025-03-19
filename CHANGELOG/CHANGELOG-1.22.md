@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE](https://github.com/k8ssandra/k8ssandra-operator/issues/1499) Bump cassandra-operator to v1.23.2 / 0.55.1 Helm chart
+* [BUGFIX] [#1489](https://github.com/k8ssandra/k8ssandra-operator/issues/1489) Fix reconciliation of Medusa with config without credentials file.
