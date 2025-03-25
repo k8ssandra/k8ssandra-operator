@@ -436,9 +436,9 @@ type DatacenterOptions struct {
 
 	// The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
 	// configuration. This is only useful when PerNodeConfigMapRef is set.
-	// The default is "mikefarah/yq:4".
+	// The default is "k8ssandra/k8ssandra-client:v0.6.3".
 	// +optional
-	// +kubebuilder:default="mikefarah/yq:4"
+	// +kubebuilder:default="k8ssandra/k8ssandra-client:v0.6.3"
 	PerNodeConfigInitContainerImage string `json:"perNodeConfigInitContainerImage,omitempty"`
 
 	// The k8s service account to use for the Cassandra pods
