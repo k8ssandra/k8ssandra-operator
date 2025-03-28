@@ -18,6 +18,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## v1.21.1 - 2025-02-10
 
 * [CHANGE] [#1484](https://github.com/k8ssandra/k8ssandra-operator/issues/1484) Update Medusa version to 0.23.0
+* [CHANGE] [#1505](https://github.com/k8ssandra/k8ssandra-operator/issues/1505) Replace yq Docker images with k8ssandra-client ones
 
 ## v1.21.0 - 2025-02-03
 

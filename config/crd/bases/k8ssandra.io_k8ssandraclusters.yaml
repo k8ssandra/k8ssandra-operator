@@ -9468,11 +9468,11 @@ spec:
                               type: object
                           type: object
                         perNodeConfigInitContainerImage:
-                          default: mikefarah/yq:4
+                          default: k8ssandra/k8ssandra-client:v0.6.3
                           description: |-
                             The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
                             configuration. This is only useful when PerNodeConfigMapRef is set.
-                            The default is "mikefarah/yq:4".
+                            The default is "k8ssandra/k8ssandra-client:v0.6.3".
                           type: string
                         perNodeConfigMapRef:
                           description: |-
@@ -21952,11 +21952,11 @@ spec:
                         type: object
                     type: object
                   perNodeConfigInitContainerImage:
-                    default: mikefarah/yq:4
+                    default: k8ssandra/k8ssandra-client:v0.6.3
                     description: |-
                       The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
                       configuration. This is only useful when PerNodeConfigMapRef is set.
-                      The default is "mikefarah/yq:4".
+                      The default is "k8ssandra/k8ssandra-client:v0.6.3".
                     type: string
                   podPriorityClassName:
                     description: PodPriorityClassName defines the priority class name
