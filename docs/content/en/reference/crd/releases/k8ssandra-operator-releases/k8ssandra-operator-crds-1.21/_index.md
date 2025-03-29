@@ -1,9 +1,9 @@
 ---
-title: "K8ssandra-operator CRDs latest build"
-linkTitle: "K8ssandra-operator CRDs latest build"
+title: "K8ssandra-operator CRDs v1.21"
+linkTitle: "K8ssandra-operator CRDs v1.21"
 weight: 1
 description: >
-  Configuration reference for the CRDs used with K8ssandra-operator latest build.  
+  Configuration reference for the CRDs used with K8ssandra-operator v1.21.  
 ---
 
 Packages:
@@ -1227,9 +1227,9 @@ api heap.<br/>
         <td>
           The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
 configuration. This is only useful when PerNodeConfigMapRef is set.
-The default is "k8ssandra/k8ssandra-client:v0.6.3".<br/>
+The default is "mikefarah/yq:4".<br/>
           <br/>
-            <i>Default</i>: k8ssandra/k8ssandra-client:v0.6.3<br/>
+            <i>Default</i>: mikefarah/yq:4<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5498,9 +5498,9 @@ api heap.<br/>
         <td>
           The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
 configuration. This is only useful when PerNodeConfigMapRef is set.
-The default is "k8ssandra/k8ssandra-client:v0.6.3".<br/>
+The default is "mikefarah/yq:4".<br/>
           <br/>
-            <i>Default</i>: k8ssandra/k8ssandra-client:v0.6.3<br/>
+            <i>Default</i>: mikefarah/yq:4<br/>
         </td>
         <td>false</td>
       </tr><tr>
