@@ -8,7 +8,7 @@ spec:
     storageProvider: s3_compatible
     bucketName: k8ssandra-medusa
     storageSecretRef:
-      name: medusa-bucket-key
+      name: multicluster-medusa-bucket-key
     host: minio-service.minio.svc.cluster.local
     port: 9000
     secure: false

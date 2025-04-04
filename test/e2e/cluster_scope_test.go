@@ -24,8 +24,8 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dc1Key, f)
-	verifyBucketKeyPresent(t, f, ctx, klusterNamespace, dc1Key.K8sContext, k8ssandra)
-	verifyBucketKeyPresent(t, f, ctx, dc1Key.Namespace, dc1Key.K8sContext, k8ssandra)
+	verifyBucketKeyPresent(t, f, ctx, k8ssandra, klusterNamespace, dc1Key.K8sContext, multiClusterBucketSecretName)
+	verifyBucketKeyPresent(t, f, ctx, k8ssandra, dc1Key.Namespace, dc1Key.K8sContext, multiClusterBucketSecretName)
 
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
@@ -44,7 +44,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: dc2Namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
-	verifyBucketKeyPresent(t, f, ctx, dc2Namespace, dc2Key.K8sContext, k8ssandra)
+	verifyBucketKeyPresent(t, f, ctx, k8ssandra, dc2Namespace, dc2Key.K8sContext, multiClusterBucketSecretName)
 
 	t.Log("check k8ssandra cluster status")
 	require.Eventually(func() bool {
@@ -70,8 +70,8 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check replicated secret mounted")
-	checkReplicatedSecretMounted(t, ctx, f, dc1Key, dc1Namespace, k8ssandra)
-	checkReplicatedSecretMounted(t, ctx, f, dc2Key, dc2Namespace, k8ssandra)
+	checkReplicatedSecretMounted(t, ctx, f, dc1Key, multiClusterBucketSecretName)
+	checkReplicatedSecretMounted(t, ctx, f, dc2Key, multiClusterBucketSecretName)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
