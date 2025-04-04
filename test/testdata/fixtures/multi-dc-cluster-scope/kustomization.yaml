@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # need this one to be created in namespace test-1
-  # the one from ../medusa-bucket-key.yaml is created in namespace test-0
   - medusa-bucket-key.yaml
   - medusa-config.yaml
   - reaper.yaml
