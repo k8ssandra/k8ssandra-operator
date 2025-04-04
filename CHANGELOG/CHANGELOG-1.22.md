@@ -17,3 +17,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] [#1499](https://github.com/k8ssandra/k8ssandra-operator/issues/1499) Bump cassandra-operator to v1.23.2 / 0.55.2 Helm chart
 * [CHANGE] [#1505](https://github.com/k8ssandra/k8ssandra-operator/issues/1505) Replace yq Docker images with k8ssandra-client ones
+* [CHANGE] [#1508](https://github.com/k8ssandra/k8ssandra-operator/issues/1508) Bump Medusa to 0.24.0
