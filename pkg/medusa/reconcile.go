@@ -25,7 +25,7 @@ import (
 const (
 	DefaultMedusaImageRepository = "k8ssandra"
 	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.22.3"
+	DefaultMedusaVersion         = "0.24.0"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
