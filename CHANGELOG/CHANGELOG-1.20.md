@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] #1505 Replace yq Docker images with k8ssandra-client ones
 * [CHANGE] [#1508](https://github.com/k8ssandra/k8ssandra-operator/issues/1508) Bump Medusa to 0.24.0
+* [TESTING] Upgrade linter and fix CI linting issue
 
 ## v1.20.3 - 2024-10-18
 

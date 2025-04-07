@@ -150,7 +150,7 @@ func HasReplicatedSecrets(ctx context.Context, c client.Client, kcKey client.Obj
 	}
 
 	repSec := &replicationapi.ReplicatedSecret{}
-	err := c.Get(ctx, types.NamespacedName{Name: kcKey.Name, Namespace: kcKey.Namespace}, repSec)
+	err := c.Get(ctx, kcKey, repSec)
 	if err != nil {
 		return false
 	}
