@@ -13,8 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.21.2 - 2025-04-07
 
+* [CHANGE] [#1505](https://github.com/k8ssandra/k8ssandra-operator/issues/1505) Replace yq Docker images with k8ssandra-client ones
+* [CHANGE] [#1508](https://github.com/k8ssandra/k8ssandra-operator/issues/1508) Bump Medusa to 0.24.0
 * [TESTING] Upgrade linter and fix CI linting issue
 
 ## v1.21.1 - 2025-02-10
