@@ -526,9 +526,12 @@ func TestInitContainerDefaultResources(t *testing.T) {
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, 2, len(dcConfig.PodTemplateSpec.Spec.InitContainers))
+
 	// Init container resources
 	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	assert.True(t, found, "Couldn't find medusa-restore init container")
+	medusaContainerIndex, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, "medusa")
+	assert.True(t, found, "Couldn't find medusa container")
 
 	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Memory(), "expected init container memory request to be set")
 	assert.Equal(t, resource.MustParse(InitContainerCpuRequest), *dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].Resources.Requests.Cpu(), "expected init container cpu request to be set")
@@ -539,6 +542,18 @@ func TestInitContainerDefaultResources(t *testing.T) {
 	assert.Equal(t, resource.MustParse(MainContainerCpuRequest), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Requests.Cpu(), "expected main container cpu request to be set")
 	assert.Equal(t, resource.MustParse(MainContainerMemLimit), *dcConfig.PodTemplateSpec.Spec.Containers[0].Resources.Limits.Memory(), "expected main container memory limit to be set")
 
+	// Medusa container volumes
+	assert.True(t, hasTmpVolume(dcConfig.PodTemplateSpec.Spec.Containers[medusaContainerIndex].VolumeMounts))
+	assert.True(t, hasTmpVolume(dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].VolumeMounts))
+}
+
+func hasTmpVolume(volumeMounts []corev1.VolumeMount) bool {
+	for _, vm := range volumeMounts {
+		if vm.Name == "medusa-tmp" {
+			return true
+		}
+	}
+	return false
 }
 
 func TestInitContainerCustomResources(t *testing.T) {
