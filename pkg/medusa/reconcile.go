@@ -304,6 +304,10 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 			Name:      "podinfo",
 			MountPath: "/etc/podinfo",
 		},
+		{ // Medusa's /tmp backed by emptyDir to support RO FS
+			Name:      "medusa-tmp",
+			MountPath: "/tmp",
+		},
 	}
 
 	// Mount client encryption certificates if the secret ref is provided.
@@ -493,6 +497,20 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 			Exists:      found,
 		})
 	}
+
+	// empty dir to back /tmp
+	emptyDirVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "medusa-tmp")
+	emptyDirVolume := &corev1.Volume{
+		Name: "medusa-tmp",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
+	newVolumes = append(newVolumes, medusaVolume{
+		Volume:      emptyDirVolume,
+		VolumeIndex: emptyDirVolumeIndex,
+		Exists:      found,
+	})
 
 	return newVolumes
 }

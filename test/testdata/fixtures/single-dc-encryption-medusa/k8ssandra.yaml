@@ -27,6 +27,14 @@ spec:
       secure: false 
     certificatesSecretRef:
       name: client-certificates
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsUser: 999
+      runAsNonRoot: true
   cassandra:
     clusterName: "First Cluster"
     serverVersion: 4.1.5
