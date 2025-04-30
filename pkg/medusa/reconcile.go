@@ -43,6 +43,8 @@ const (
 	MedusaBackupsVolumeName  = "medusa-backups"
 	MedusaBackupsMountPath   = "/mnt/backups"
 	serviceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
+
+	CredentialsTypeRoleBased = "role-based"
 )
 
 var (
