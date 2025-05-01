@@ -341,8 +341,8 @@ the number of racks cannot easily be changed once a datacenter is deployed.<br/>
         <td><b>readOnlyRootFilesystem</b></td>
         <td>boolean</td>
         <td>
-          ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
-new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)<br/>
+          ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. This is enabled by default when using OSS Cassandra 4.1.0 and or newer, DSE 6.8 and newer (from datastax/dse-mgmtapi-6_8 repository) or HCD.
+If serverImage override is used, this setting defaults to false.<br/>
         </td>
         <td>false</td>
       </tr><tr>
