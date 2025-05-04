@@ -69,6 +69,11 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 						}},
 					},
 				},
+				CassandraConfig: api.CassandraConfig{
+					JvmOptions: api.JvmOptions{
+						AdditionalOptions: []string{"-Dcom.sun.management.jmxremote.authenticate=false"},
+					},
+				},
 			},
 			client.ObjectKey{Namespace: "ns1", Name: "k8c"},
 			false,
@@ -173,6 +178,11 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 								Name: "another-container",
 							},
 						},
+					},
+				},
+				CassandraConfig: api.CassandraConfig{
+					JvmOptions: api.JvmOptions{
+						AdditionalOptions: []string{"-Dcom.sun.management.jmxremote.authenticate=false"},
 					},
 				},
 			},
