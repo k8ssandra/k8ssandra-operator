@@ -400,7 +400,7 @@ func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 
 	// reaper with cassandra-storage backend and this config has just one volume - for configuration
-	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 1)
+	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
 
 	autoSchedulingEnabled := false
 	for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
@@ -620,7 +620,7 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 	assert.Equal(t, ptr.To[int32](1), sts.Spec.Replicas)
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
-	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
 	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
 	assert.Equal(t, "conf", confVolumeMount.Name)
 	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
