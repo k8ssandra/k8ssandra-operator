@@ -84,6 +84,41 @@ func TestNewDeployment(t *testing.T) {
 
 	assert.Equal(t, "docker.io/test/reaper:latest", container.Image)
 	assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy)
+
+	// Verify temp directory volume
+	t.Log("check that temp directory volume is properly configured")
+	var tempDirVolume *corev1.Volume
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == "temp-dir" {
+			tempDirVolume = &volume
+			break
+		}
+	}
+	assert.NotNil(t, tempDirVolume, "temp-dir volume not found")
+	assert.NotNil(t, tempDirVolume.EmptyDir, "temp-dir volume is not of type EmptyDir")
+
+	// Verify temp directory volume mount in main container
+	var tempDirMount *corev1.VolumeMount
+	for _, mount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in main container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
+	// Verify temp directory volume mount in init container
+	tempDirMount = nil
+	for _, mount := range deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
 	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",

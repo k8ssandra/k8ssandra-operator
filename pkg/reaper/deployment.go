@@ -179,12 +179,22 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
+		{
+			Name: "temp-dir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
 	}
 
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "conf",
 			MountPath: "/etc/cassandra-reaper/config",
+		},
+		{
+			Name:      "temp-dir",
+			MountPath: "/tmp",
 		},
 	}
 

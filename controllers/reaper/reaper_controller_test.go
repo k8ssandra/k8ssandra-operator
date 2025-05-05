@@ -209,6 +209,40 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	// one secret should have been collected, from the main container image
 	assert.Equal(t, []corev1.LocalObjectReference{{Name: "main-secret"}}, deployment.Spec.Template.Spec.ImagePullSecrets)
 
+	// Verify temp directory volume
+	t.Log("check that temp directory volume is properly configured")
+	var tempDirVolume *corev1.Volume
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == "temp-dir" {
+			tempDirVolume = &volume
+			break
+		}
+	}
+	assert.NotNil(t, tempDirVolume, "temp-dir volume not found")
+	assert.NotNil(t, tempDirVolume.EmptyDir, "temp-dir volume is not of type EmptyDir")
+
+	// Verify temp directory volume mount in main container
+	var tempDirMount *corev1.VolumeMount
+	for _, mount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in main container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
+	// Verify temp directory volume mount in init container
+	tempDirMount = nil
+	for _, mount := range deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
 	// Verify security contexts
 	t.Log("check that security contexts are properly set")
 
