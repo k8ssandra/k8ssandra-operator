@@ -81,10 +81,19 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: reaper.Spec.Keyspace,
 		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
-		})
+		if isReaperPostV4(reaper) {
+			// For Reaper v4 and above, we need to specify the contact points as a JSON array of objects, with the host and port
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_CASS_CONTACT_POINTS",
+				Value: fmt.Sprintf("[{\"host\": \"%s\", \"port\": 9042}]", dc.GetDatacenterServiceName()),
+			})
+		} else {
+			// For Reaper v3 and below, we can use the old format
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_CASS_CONTACT_POINTS",
+				Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
+			})
+		}
 	}
 
 	if reaper.Spec.AutoScheduling.Enabled {
@@ -688,4 +697,18 @@ func setDeploymentReplicas(desiredDeployment *client.Object, numberOfReplicas *i
 		return err
 	}
 	return nil
+}
+
+func isReaperPostV4(reaper *api.Reaper) bool {
+	tag := DefaultVersion
+	if reaper.Spec.ContainerImage != nil && reaper.Spec.ContainerImage.Tag != "" {
+		tag = reaper.Spec.ContainerImage.Tag
+	}
+
+	v, err := semver.NewVersion(tag)
+	if err != nil {
+		return true // Default to true if version parsing fails
+	}
+
+	return v.Major() >= 4
 }

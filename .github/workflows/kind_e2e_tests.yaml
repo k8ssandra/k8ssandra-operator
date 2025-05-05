@@ -80,8 +80,7 @@ jobs:
           - CreateSingleDatacenterCluster
           # - CreateStargateAndDatacenter
           - CreateSingleReaperNoStargate
-          # - CreateSingleReaperWStargateAndHTTP
-          # - CreateReaperAndDatacenter # This test isn't using k8ssandra-operator, some old test ported from reaper-operator
+          - CreateSingleReaperV4
           - CreateSingleMedusaJob
           - CreateMultiDcSingleMedusaJob
           - CreateSingleDseMedusaJob

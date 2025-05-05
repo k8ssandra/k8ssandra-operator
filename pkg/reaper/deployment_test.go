@@ -978,3 +978,128 @@ func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
 	}
 	assert.True(t, found)
 }
+
+func TestIsReaperPostV4(t *testing.T) {
+	tests := []struct {
+		name     string
+		reaper   *reaperapi.Reaper
+		expected bool
+	}{
+		{
+			name: "v3 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "3.2.0",
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "v4 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "4.0.0",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "v5 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "5.0.0",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "no container image specified",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{},
+			},
+			expected: false,
+		},
+		{
+			name: "no tag specified",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isReaperPostV4(tt.reaper)
+			if result != tt.expected {
+				t.Errorf("isReaperPostV4() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestReaperV4ContactPointsFormat(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.ContainerImage = &images.Image{
+		Repository: "test",
+		Name:       "reaper",
+		Tag:        "4.0.0",
+		PullPolicy: corev1.PullAlways,
+	}
+	dc := newTestDatacenter()
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	// Find the REAPER_CASS_CONTACT_POINTS env var
+	var contactPointsEnvVar *corev1.EnvVar
+	for _, env := range container.Env {
+		if env.Name == "REAPER_CASS_CONTACT_POINTS" {
+			contactPointsEnvVar = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
+		"REAPER_CASS_CONTACT_POINTS should be formatted as a JSON array with host and port for Reaper v4")
+}
+
+func TestDefaultReaperContactPointsFormat(t *testing.T) {
+	reaper := newTestReaper()
+	dc := newTestDatacenter()
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	// Find the REAPER_CASS_CONTACT_POINTS env var
+	var contactPointsEnvVar *corev1.EnvVar
+	for _, env := range container.Env {
+		if env.Name == "REAPER_CASS_CONTACT_POINTS" {
+			contactPointsEnvVar = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+	assert.Equal(t, "[cluster1-dc1-service]", contactPointsEnvVar.Value,
+		"REAPER_CASS_CONTACT_POINTS should be formatted as an array of hosts for Reaper v3 and below")
+}
