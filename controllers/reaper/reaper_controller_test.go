@@ -623,7 +623,7 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
 	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
 }
 
