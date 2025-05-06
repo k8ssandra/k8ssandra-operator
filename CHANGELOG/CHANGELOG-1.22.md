@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.22.0 - 2025-05-06
+
 * [CHANGE] [#1520](https://github.com/k8ssandra/k8ssandra-operator/issues/1520) Reaper should have a secure securityContext configuration by default.
 * [CHANGE] [#1499](https://github.com/k8ssandra/k8ssandra-operator/issues/1499) Bump cassandra-operator to v1.23.2 / 0.55.2 Helm chart
 * [CHANGE] [#1505](https://github.com/k8ssandra/k8ssandra-operator/issues/1505) Replace yq Docker images with k8ssandra-client ones
