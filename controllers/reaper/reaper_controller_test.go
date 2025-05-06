@@ -34,7 +34,7 @@ const (
 	cassandraDatacenterName = "test-dc"
 
 	timeout  = time.Second * 5
-	interval = time.Millisecond * 250
+	interval = time.Millisecond * 50
 )
 
 var currentTest *testing.T

@@ -458,7 +458,9 @@ func testMedusaPrefixMissing(t *testing.T) {
 	clusterWithMedusa := createMinimalClusterObj("with-medusa", "short-namespace")
 	clusterWithMedusa.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
 		StorageProperties: medusaapi.Storage{
-			Prefix: "",
+			StorageProvider: "s3_compatible",
+			BucketName:      "not-real",
+			Prefix:          "",
 		},
 	}
 	err = k8sClient.Create(ctx, clusterWithMedusa)
@@ -470,7 +472,9 @@ func testMedusaPrefixMissing(t *testing.T) {
 			Name: "medusa-config",
 		},
 		StorageProperties: medusaapi.Storage{
-			Prefix: "",
+			StorageProvider: "s3_compatible",
+			BucketName:      "not-real",
+			Prefix:          "",
 		},
 	}
 	err = k8sClient.Create(ctx, clusterWithoutPrefix)
@@ -482,7 +486,9 @@ func testMedusaPrefixMissing(t *testing.T) {
 			Name: "medusa-config",
 		},
 		StorageProperties: medusaapi.Storage{
-			Prefix: "some-prefix",
+			StorageProvider: "s3_compatible",
+			BucketName:      "not-real",
+			Prefix:          "some-prefix",
 		},
 	}
 	err = k8sClient.Create(ctx, clusterWithPrefix)
@@ -509,7 +515,9 @@ func testMedusaNonLocalNamespace(t *testing.T) {
 			Name:      "medusa-config",
 		},
 		StorageProperties: medusaapi.Storage{
-			Prefix: "some-prefix",
+			StorageProvider: "s3_compatible",
+			BucketName:      "not-real",
+			Prefix:          "some-prefix",
 		},
 	}
 	err := badCluster.validateK8ssandraCluster()

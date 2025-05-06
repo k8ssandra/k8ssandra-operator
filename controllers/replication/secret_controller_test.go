@@ -31,7 +31,7 @@ import (
 
 const (
 	timeout  = time.Minute * 5
-	interval = time.Millisecond * 500
+	interval = time.Millisecond * 50
 )
 
 var (
@@ -668,7 +668,7 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 			return false
 		}
 		return string(localSecret.Data["key"]) == string(remoteSecret.Data["key"])
-	}, timeout*3, interval)
+	}, timeout, interval)
 
 	t.Log("update secret content")
 	localSecret := &corev1.Secret{}
@@ -681,7 +681,7 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 			return false
 		}
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
-	}, timeout*3, interval)
+	}, timeout, interval)
 
 }
 

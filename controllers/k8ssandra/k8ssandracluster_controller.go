@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -247,22 +246,32 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&reaperapi.Reaper{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&v1.ConfigMap{},
+	cb = cb.Watches(&corev1.ConfigMap{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&v1.Endpoints{},
+	cb = cb.Watches(&corev1.Endpoints{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 
 	for _, c := range clusters {
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{}),
-			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &stargateapi.Stargate{}),
-			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &reaperapi.Reaper{}),
-			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &v1.ConfigMap{}),
-			handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &v1.Endpoints{}),
-			handler.EnqueueRequestsFromMapFunc(endpointsFilter))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *cassdcapi.CassandraDatacenter) []reconcile.Request {
+				return clusterLabelFilter(ctx, obj)
+			})))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &stargateapi.Stargate{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *stargateapi.Stargate) []reconcile.Request {
+				return clusterLabelFilter(ctx, obj)
+			})))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &reaperapi.Reaper{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *reaperapi.Reaper) []reconcile.Request {
+				return clusterLabelFilter(ctx, obj)
+			})))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &corev1.ConfigMap{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.ConfigMap) []reconcile.Request {
+				return clusterLabelFilter(ctx, obj)
+			})))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &corev1.Endpoints{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.Endpoints) []reconcile.Request {
+				return clusterLabelFilter(ctx, obj)
+			})))
 	}
 
 	return cb.Complete(r)

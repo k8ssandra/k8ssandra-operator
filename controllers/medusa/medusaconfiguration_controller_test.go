@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 func testMedusaConfiguration(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -27,6 +26,7 @@ func testMedusaConfiguration(t *testing.T, ctx context.Context, f *framework.Fra
 
 func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 
 	bucketKeySecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -39,8 +39,8 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 	}
 
 	t.Log("Creating medusa bucket key secret")
-	err := f.Client.Create(ctx, bucketKeySecret)
-	require.NoError(err, "failed to create medusa bucket key secret")
+	// err := f.Client.Create(ctx, bucketKeySecret)
+	require.NoError(f.Create(ctx, dc1Key, bucketKeySecret), "failed to create medusa bucket key secret")
 
 	medusaConfig := &api.MedusaConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -57,17 +57,20 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 			},
 		},
 	}
-	err = f.Client.Create(ctx, medusaConfig)
-	require.NoError(err, "failed to create medusa configuration")
+	// err = f.Client.Create(ctx, medusaConfig)
+	require.NoError(f.Create(ctx, dc1Key, medusaConfig), "failed to create medusa configuration")
 	require.Eventually(func() bool {
 		updated := &api.MedusaConfiguration{}
-		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config", Namespace: namespace}, updated)
-		if err != nil {
+		configKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "medusa-config")
+
+		if err := f.Get(ctx, configKey, updated); err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
 		}
 		updatedSecret := &corev1.Secret{}
-		require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: "medusa-bucket-key", Namespace: namespace}, updatedSecret))
+		bucketKeySecretKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "medusa-bucket-key")
+		require.NoError(f.Get(ctx, bucketKeySecretKey, updatedSecret))
+		// require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: "medusa-bucket-key", Namespace: namespace}, updatedSecret))
 		//Ensure that the unique label has been added to the secret.
 		if updatedSecret.Labels[api.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(updatedSecret.Name, updatedSecret.Namespace) {
 			return false
@@ -85,6 +88,7 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 
 func testMedusaConfigurationKo(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 
 	medusaConfig := &api.MedusaConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -101,12 +105,11 @@ func testMedusaConfigurationKo(t *testing.T, ctx context.Context, f *framework.F
 			},
 		},
 	}
-	err := f.Client.Create(ctx, medusaConfig)
-	require.NoError(err, "failed to create medusa configuration")
+	configKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "medusa-config-ko")
+	require.NoError(f.Create(ctx, dc1Key, medusaConfig), "failed to create medusa configuration")
 	require.Eventually(func() bool {
 		updated := &api.MedusaConfiguration{}
-		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config-ko", Namespace: namespace}, updated)
-		if err != nil {
+		if err := f.Get(ctx, configKey, updated); err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
 		}
@@ -122,7 +125,7 @@ func testMedusaConfigurationKo(t *testing.T, ctx context.Context, f *framework.F
 
 	require.Never(func() bool {
 		updated := &api.MedusaConfiguration{}
-		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config-ko", Namespace: namespace}, updated)
+		err := f.Get(ctx, dc1Key, updated)
 		if err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
@@ -142,6 +145,7 @@ func testMedusaConfigurationKo(t *testing.T, ctx context.Context, f *framework.F
 // The secret can be defined in the K8ssandraCluster object directly without being referenced by the medusa configuration.
 func testMedusaConfigurationNoSecret(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
+	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, "dc1")
 
 	medusaConfig := &api.MedusaConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -155,12 +159,11 @@ func testMedusaConfigurationNoSecret(t *testing.T, ctx context.Context, f *frame
 			},
 		},
 	}
-	err := f.Client.Create(ctx, medusaConfig)
-	require.NoError(err, "failed to create medusa configuration")
+	configKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "medusa-config-no-secret")
+	require.NoError(f.Create(ctx, dc1Key, medusaConfig), "failed to create medusa configuration")
 	require.Eventually(func() bool {
 		updated := &api.MedusaConfiguration{}
-		err := f.Client.Get(ctx, types.NamespacedName{Name: "medusa-config-no-secret", Namespace: namespace}, updated)
-		if err != nil {
+		if err := f.Get(ctx, configKey, updated); err != nil {
 			t.Logf("failed to get medusa configuration: %v", err)
 			return false
 		}

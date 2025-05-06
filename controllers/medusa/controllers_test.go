@@ -41,20 +41,10 @@ func TestCassandraBackupRestore(t *testing.T) {
 	testEnv := setupMedusaBackupTestEnv(t, ctx)
 	defer testEnv.Stop(t)
 	t.Run("TestMedusaBackupDatacenter", testEnv.ControllerTest(ctx, testMedusaBackupDatacenter))
-
-	testEnv2 := setupMedusaTaskTestEnv(t, ctx)
-	defer testEnv2.Stop(t)
-	t.Run("TestMedusaTasks", testEnv2.ControllerTest(ctx, testMedusaTasks))
-
-	testEnv3 := setupMedusaRestoreJobTestEnv(t, ctx)
-	defer testEnv3.Stop(t)
-	t.Run("TestMedusaRestoreDatacenter", testEnv3.ControllerTest(ctx, testMedusaRestoreDatacenter))
-
-	t.Run("TestValidationErrorStopsRestore", testEnv3.ControllerTest(ctx, testValidationErrorStopsRestore))
-
-	testEnv4 := setupMedusaConfigurationTestEnv(t, ctx)
-	defer testEnv4.Stop(t)
-	t.Run("TestMedusaConfiguration", testEnv4.ControllerTest(ctx, testMedusaConfiguration))
+	t.Run("TestMedusaTasks", testEnv.ControllerTest(ctx, testMedusaTasks))
+	t.Run("TestMedusaRestoreDatacenter", testEnv.ControllerTest(ctx, testMedusaRestoreDatacenter))
+	t.Run("TestValidationErrorStopsRestore", testEnv.ControllerTest(ctx, testValidationErrorStopsRestore))
+	t.Run("TestMedusaConfiguration", testEnv.ControllerTest(ctx, testMedusaConfiguration))
 
 	// This cancel is called here to ensure the correct ordering for defer, as testEnv.Stop() calls must be done before the context is cancelled
 	defer cancel()
@@ -67,92 +57,20 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			managementApi.SetT(t)
 			managementApi.UseDefaultAdapter()
 		},
-	}
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		return []string{}, nil
-	}
-
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
-
-	medusaClientFactory = NewMedusaClientFactory()
-
-	err := testEnv.Start(ctx, t, func(controlPlaneMgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&k8ssandractrl.K8ssandraClusterReconciler{
-			ReconcilerConfig: reconcilerConfig,
-			Client:           controlPlaneMgr.GetClient(),
-			Scheme:           scheme.Scheme,
-			ClientCache:      clientCache,
-			ManagementApi:    managementApi,
-			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
-		}).SetupWithManager(controlPlaneMgr, clusters)
-		if err != nil {
-			return err
-		}
-
-		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			whServer := webhook.NewServer(webhook.Options{
-				Port:    env.WebhookInstallOptions.LocalServingPort,
-				Host:    env.WebhookInstallOptions.LocalServingHost,
-				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
-			})
-
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
-				Scheme:         scheme.Scheme,
-				WebhookServer:  whServer,
-				Metrics:        metricsserver.Options{BindAddress: "0"},
-				LeaderElection: false,
-			})
-			if err != nil {
-				return err
-			}
-			err = (&MedusaBackupJobReconciler{
-				ReconcilerConfig: reconcilerConfig,
-				Client:           dataPlaneMgr.GetClient(),
-				Scheme:           scheme.Scheme,
-				ClientFactory:    medusaClientFactory,
-			}).SetupWithManager(dataPlaneMgr)
-			if err != nil {
-				return err
-			}
-			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
-
-			go func() {
-				err := dataPlaneMgr.Start(ctx)
-				if err != nil {
-					t.Errorf("failed to start manager: %s", err)
-				}
-			}()
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("failed to start test environment: %s", err)
-	}
-	return testEnv
-}
-
-func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {
-	testEnv := &testutils.MultiClusterTestEnv{
-		NumDataPlanes: 1,
-		BeforeTest: func(t *testing.T) {
-			managementApi.SetT(t)
-			managementApi.UseDefaultAdapter()
+		AfterTest: func(t *testing.T) {
+			medusaClientFactory.Clear()
 		},
 	}
-
 	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
 		return []string{}, nil
 	}
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
+	reconcilerConfig.DefaultDelay = 50 * time.Millisecond
+	reconcilerConfig.LongDelay = 150 * time.Millisecond
 
+	medusaClientFactory = NewMedusaClientFactory()
 	medusaRestoreClientFactory := NewMedusaClientRestoreFactory()
 
 	err := testEnv.Start(ctx, t, func(controlPlaneMgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
@@ -185,175 +103,43 @@ func setupMedusaRestoreJobTestEnv(t *testing.T, ctx context.Context) *testutils.
 			if err != nil {
 				return err
 			}
+			if err := (&MedusaBackupJobReconciler{
+				ReconcilerConfig: reconcilerConfig,
+				Client:           dataPlaneMgr.GetClient(),
+				Scheme:           scheme.Scheme,
+				ClientFactory:    medusaClientFactory,
+			}).SetupWithManager(dataPlaneMgr); err != nil {
+				return err
+			}
 
-			err = (&MedusaRestoreJobReconciler{
+			if err := (&MedusaTaskReconciler{
+				ReconcilerConfig: reconcilerConfig,
+				Client:           dataPlaneMgr.GetClient(),
+				Scheme:           scheme.Scheme,
+				ClientFactory:    medusaClientFactory,
+			}).SetupWithManager(dataPlaneMgr); err != nil {
+				return err
+			}
+
+			if err := (&MedusaRestoreJobReconciler{
 				ReconcilerConfig: reconcilerConfig,
 				Client:           dataPlaneMgr.GetClient(),
 				Scheme:           scheme.Scheme,
 				ClientFactory:    medusaRestoreClientFactory,
-			}).SetupWithManager(dataPlaneMgr)
-			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
-			if err != nil {
+			}).SetupWithManager(dataPlaneMgr); err != nil {
 				return err
 			}
-			go func() {
-				err := dataPlaneMgr.Start(ctx)
-				if err != nil {
-					t.Errorf("failed to start manager: %s", err)
-				}
-			}()
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("failed to start test environment: %s", err)
-	}
-	return testEnv
-}
 
-func setupMedusaTaskTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {
-	testEnv := &testutils.MultiClusterTestEnv{
-		NumDataPlanes: 1,
-		BeforeTest: func(t *testing.T) {
-			managementApi.SetT(t)
-			managementApi.UseDefaultAdapter()
-		},
-	}
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		return []string{}, nil
-	}
-
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
-
-	medusaClientFactory = NewMedusaClientFactory()
-
-	err := testEnv.Start(ctx, t, func(controlPlaneMgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&k8ssandractrl.K8ssandraClusterReconciler{
-			ReconcilerConfig: reconcilerConfig,
-			Client:           controlPlaneMgr.GetClient(),
-			Scheme:           scheme.Scheme,
-			ClientCache:      clientCache,
-			ManagementApi:    managementApi,
-			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
-		}).SetupWithManager(controlPlaneMgr, clusters)
-		if err != nil {
-			return err
-		}
-
-		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			whServer := webhook.NewServer(webhook.Options{
-				Port:    env.WebhookInstallOptions.LocalServingPort,
-				Host:    env.WebhookInstallOptions.LocalServingHost,
-				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
-			})
-
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
-				Scheme:         scheme.Scheme,
-				WebhookServer:  whServer,
-				Metrics:        metricsserver.Options{BindAddress: "0"},
-				LeaderElection: false,
-			})
-			if err != nil {
-				return err
-			}
-			err = (&MedusaTaskReconciler{
+			if err := (&MedusaConfigurationReconciler{
 				ReconcilerConfig: reconcilerConfig,
 				Client:           dataPlaneMgr.GetClient(),
 				Scheme:           scheme.Scheme,
-				ClientFactory:    medusaClientFactory,
-			}).SetupWithManager(dataPlaneMgr)
-			if err != nil {
-				return err
-			}
-			err = (&MedusaBackupJobReconciler{
-				ReconcilerConfig: reconcilerConfig,
-				Client:           dataPlaneMgr.GetClient(),
-				Scheme:           scheme.Scheme,
-				ClientFactory:    medusaClientFactory,
-			}).SetupWithManager(dataPlaneMgr)
-			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
-
-			if err != nil {
-				return err
-			}
-			go func() {
-				err := dataPlaneMgr.Start(ctx)
-				if err != nil {
-					t.Errorf("failed to start manager: %s", err)
-				}
-			}()
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("failed to start test environment: %s", err)
-	}
-	return testEnv
-}
-
-func setupMedusaConfigurationTestEnv(t *testing.T, ctx context.Context) *testutils.MultiClusterTestEnv {
-	testEnv := &testutils.MultiClusterTestEnv{
-		NumDataPlanes: 1,
-		BeforeTest: func(t *testing.T) {
-			managementApi.SetT(t)
-			managementApi.UseDefaultAdapter()
-		},
-	}
-	seedsResolver.callback = func(dc *cassdcapi.CassandraDatacenter) ([]string, error) {
-		return []string{}, nil
-	}
-
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
-
-	medusaClientFactory = NewMedusaClientFactory()
-
-	err := testEnv.Start(ctx, t, func(controlPlaneMgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
-		err := (&MedusaConfigurationReconciler{
-			ReconcilerConfig: reconcilerConfig,
-			Client:           controlPlaneMgr.GetClient(),
-			Scheme:           scheme.Scheme,
-		}).SetupWithManager(controlPlaneMgr)
-		if err != nil {
-			return err
-		}
-		for _, env := range testEnv.GetDataPlaneEnvTests() {
-			whServer := webhook.NewServer(webhook.Options{
-				Port:    env.WebhookInstallOptions.LocalServingPort,
-				Host:    env.WebhookInstallOptions.LocalServingHost,
-				CertDir: env.WebhookInstallOptions.LocalServingCertDir,
-				TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
-			})
-
-			dataPlaneMgr, err := ctrl.NewManager(env.Config, ctrl.Options{
-				Scheme:         scheme.Scheme,
-				WebhookServer:  whServer,
-				Metrics:        metricsserver.Options{BindAddress: "0"},
-				LeaderElection: false,
-			})
-			if err != nil {
-				return err
-			}
-			err = (&MedusaConfigurationReconciler{
-				ReconcilerConfig: reconcilerConfig,
-				Client:           dataPlaneMgr.GetClient(),
-				Scheme:           scheme.Scheme,
-			}).SetupWithManager(dataPlaneMgr)
-			if err != nil {
+			}).SetupWithManager(dataPlaneMgr); err != nil {
 				return err
 			}
 
 			secretswebhook.SetupSecretsInjectorWebhook(dataPlaneMgr)
 
-			if err != nil {
-				return err
-			}
 			go func() {
 				err := dataPlaneMgr.Start(ctx)
 				if err != nil {

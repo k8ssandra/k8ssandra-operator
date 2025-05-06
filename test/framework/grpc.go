@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"time"
 
 	"github.com/stargate/stargate-grpc-go-client/stargate/pkg/auth"
 	"google.golang.org/grpc"
@@ -29,11 +28,7 @@ func (f *E2eFramework) GetStargateGrpcConnection(
 	config := &tls.Config{}
 	config.RootCAs = certPool
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	return grpc.DialContext(ctx, string(grpcEndpoint), grpc.WithTransportCredentials(credentials.NewTLS(config)),
-		grpc.WithBlock(),
+	return grpc.NewClient(string(grpcEndpoint), grpc.WithTransportCredentials(credentials.NewTLS(config)),
 		grpc.WithPerRPCCredentials(
 			auth.NewTableBasedTokenProvider(
 				fmt.Sprintf("http://%v/v1/auth", authEndpoint), username, password,

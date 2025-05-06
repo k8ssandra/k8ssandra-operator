@@ -418,14 +418,18 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 		return requests
 	}
 
+	toMatchingReplicatesTyped := func(ctx context.Context, secret *corev1.Secret) []reconcile.Request {
+		return toMatchingReplicates(ctx, secret)
+	}
+
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(
-			source.Kind(c.GetCache(), &corev1.Secret{}),
-			handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+			source.Kind(c.GetCache(), &corev1.Secret{},
+				handler.TypedEnqueueRequestsFromMapFunc(toMatchingReplicatesTyped)))
 	}
 
 	return cb.Complete(s)

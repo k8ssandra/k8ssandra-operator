@@ -34,7 +34,7 @@ import (
 
 const (
 	timeout  = time.Second * 5
-	interval = time.Millisecond * 500
+	interval = time.Millisecond * 50
 )
 
 var managementApiFactory = &testutils.FakeManagementApiFactory{}
