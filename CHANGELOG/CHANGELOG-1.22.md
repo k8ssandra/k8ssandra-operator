@@ -20,4 +20,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#1505](https://github.com/k8ssandra/k8ssandra-operator/issues/1505) Replace yq Docker images with k8ssandra-client ones
 * [CHANGE] [#1508](https://github.com/k8ssandra/k8ssandra-operator/issues/1508) Bump Medusa to 0.24.0
 * [CHANGE] [#1516](https://github.com/k8ssandra/k8ssandra-operator/pull/1516) Add support for read-only file systems to Medusa containers
+* [CHANGE] Bump cassandra-operator to the 0.56.0 Helm chart
 * [BUGFIX] [#1489](https://github.com/k8ssandra/k8ssandra-operator/issues/1489) Fix reconciliation of Medusa with config without credentials file.
