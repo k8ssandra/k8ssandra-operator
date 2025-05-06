@@ -2,12 +2,13 @@ package reaper
 
 import (
 	"fmt"
+	"math"
+	"strings"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"k8s.io/utils/ptr"
-	"math"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
@@ -178,12 +179,22 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
+		{
+			Name: "temp-dir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
 	}
 
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "conf",
 			MountPath: "/etc/cassandra-reaper/config",
+		},
+		{
+			Name:      "temp-dir",
+			MountPath: "/tmp",
 		},
 	}
 
@@ -303,6 +314,34 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 		initContainers = nil
 	}
 
+	// Default security context settings
+	defaultPodSecurityContext := &corev1.PodSecurityContext{
+		RunAsNonRoot: ptr.To(true),
+		FSGroup:      ptr.To[int64](1000),
+	}
+
+	defaultContainerSecurityContext := &corev1.SecurityContext{
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To[int64](1000),
+		RunAsGroup:               ptr.To[int64](1000),
+		ReadOnlyRootFilesystem:   ptr.To(true),
+		AllowPrivilegeEscalation: ptr.To(false),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+
+	// Use provided security contexts if specified, otherwise use defaults
+	podSecurityContext := reaper.Spec.PodSecurityContext
+	if podSecurityContext == nil {
+		podSecurityContext = defaultPodSecurityContext
+	}
+
+	containerSecurityContext := reaper.Spec.SecurityContext
+	if containerSecurityContext == nil {
+		containerSecurityContext = defaultContainerSecurityContext
+	}
+
 	return corev1.PodSpec{
 		Affinity:       reaper.Spec.Affinity,
 		InitContainers: initContainers,
@@ -311,7 +350,7 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 				Name:            "reaper",
 				Image:           mainImage.String(),
 				ImagePullPolicy: mainImage.PullPolicy,
-				SecurityContext: reaper.Spec.SecurityContext,
+				SecurityContext: containerSecurityContext,
 				Ports: []corev1.ContainerPort{
 					{
 						Name:          "app",
@@ -333,7 +372,7 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 		},
 		ServiceAccountName: reaper.Spec.ServiceAccountName,
 		Tolerations:        reaper.Spec.Tolerations,
-		SecurityContext:    reaper.Spec.PodSecurityContext,
+		SecurityContext:    podSecurityContext,
 		ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage),
 		Volumes:            volumes,
 	}
@@ -452,12 +491,29 @@ func computeInitContainers(
 	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
 	var initContainers []corev1.Container
 	if !reaper.Spec.SkipSchemaMigration {
+		// Default security context for init container
+		defaultInitContainerSecurityContext := &corev1.SecurityContext{
+			RunAsNonRoot:             ptr.To(true),
+			RunAsUser:                ptr.To[int64](1000),
+			ReadOnlyRootFilesystem:   ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		}
+
+		// Use provided security context if specified, otherwise use default
+		initContainerSecurityContext := reaper.Spec.InitContainerSecurityContext
+		if initContainerSecurityContext == nil {
+			initContainerSecurityContext = defaultInitContainerSecurityContext
+		}
+
 		initContainers = append(initContainers,
 			corev1.Container{
 				Name:            "reaper-schema-init",
 				Image:           mainImage.String(),
 				ImagePullPolicy: mainImage.PullPolicy,
-				SecurityContext: reaper.Spec.InitContainerSecurityContext,
+				SecurityContext: initContainerSecurityContext,
 				Env:             envVars,
 				Args:            []string{"schema-migration"},
 				VolumeMounts:    volumeMounts,

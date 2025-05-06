@@ -209,6 +209,68 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	// one secret should have been collected, from the main container image
 	assert.Equal(t, []corev1.LocalObjectReference{{Name: "main-secret"}}, deployment.Spec.Template.Spec.ImagePullSecrets)
 
+	// Verify temp directory volume
+	t.Log("check that temp directory volume is properly configured")
+	var tempDirVolume *corev1.Volume
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == "temp-dir" {
+			tempDirVolume = &volume
+			break
+		}
+	}
+	assert.NotNil(t, tempDirVolume, "temp-dir volume not found")
+	assert.NotNil(t, tempDirVolume.EmptyDir, "temp-dir volume is not of type EmptyDir")
+
+	// Verify temp directory volume mount in main container
+	var tempDirMount *corev1.VolumeMount
+	for _, mount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in main container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
+	// Verify temp directory volume mount in init container
+	tempDirMount = nil
+	for _, mount := range deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
+	// Verify security contexts
+	t.Log("check that security contexts are properly set")
+
+	// Check pod security context
+	assert.NotNil(t, deployment.Spec.Template.Spec.SecurityContext)
+	assert.True(t, *deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *deployment.Spec.Template.Spec.SecurityContext.FSGroup)
+
+	// Check main container security context
+	mainContainer := deployment.Spec.Template.Spec.Containers[0]
+	assert.NotNil(t, mainContainer.SecurityContext)
+	assert.True(t, *mainContainer.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *mainContainer.SecurityContext.RunAsUser)
+	assert.True(t, *mainContainer.SecurityContext.ReadOnlyRootFilesystem)
+	assert.False(t, *mainContainer.SecurityContext.AllowPrivilegeEscalation)
+	assert.NotNil(t, mainContainer.SecurityContext.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, mainContainer.SecurityContext.Capabilities.Drop)
+
+	// Check init container security context
+	initContainer := deployment.Spec.Template.Spec.InitContainers[0]
+	assert.NotNil(t, initContainer.SecurityContext)
+	assert.True(t, *initContainer.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *initContainer.SecurityContext.RunAsUser)
+	assert.True(t, *initContainer.SecurityContext.ReadOnlyRootFilesystem)
+	assert.False(t, *initContainer.SecurityContext.AllowPrivilegeEscalation)
+	assert.NotNil(t, initContainer.SecurityContext.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, initContainer.SecurityContext.Capabilities.Drop)
+
 	t.Log("update deployment to be ready")
 	patchDeploymentStatus(t, ctx, deployment, 1, 1, k8sClient)
 
@@ -338,7 +400,7 @@ func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 
 	// reaper with cassandra-storage backend and this config has just one volume - for configuration
-	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 1)
+	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
 
 	autoSchedulingEnabled := false
 	for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
@@ -558,10 +620,10 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 	assert.Equal(t, ptr.To[int32](1), sts.Spec.Replicas)
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
-	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
 	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
 }
 

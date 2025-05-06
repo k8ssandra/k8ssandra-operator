@@ -2,6 +2,7 @@ package reaper
 
 import (
 	"fmt"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,6 +15,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -55,11 +57,23 @@ func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *c
 			vectorImage = reaper.Spec.Telemetry.Vector.Image
 		}
 
+		// Default security context for vector container
+		defaultVectorSecurityContext := &corev1.SecurityContext{
+			RunAsNonRoot:             ptr.To(true),
+			RunAsUser:                ptr.To[int64](1000),
+			ReadOnlyRootFilesystem:   ptr.To(true),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Drop: []corev1.Capability{"ALL"},
+			},
+		}
+
 		// Create the definition of the Vector agent container
 		vectorAgentContainer := corev1.Container{
 			Name:            VectorContainerName,
 			Image:           vectorImage,
 			ImagePullPolicy: corev1.PullIfNotPresent,
+			SecurityContext: defaultVectorSecurityContext,
 			Env: []corev1.EnvVar{
 				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
 				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},

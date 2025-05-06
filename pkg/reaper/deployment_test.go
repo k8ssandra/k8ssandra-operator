@@ -1,8 +1,9 @@
 package reaper
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	"testing"
+
+	appsv1 "k8s.io/api/apps/v1"
 
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -83,6 +84,41 @@ func TestNewDeployment(t *testing.T) {
 
 	assert.Equal(t, "docker.io/test/reaper:latest", container.Image)
 	assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy)
+
+	// Verify temp directory volume
+	t.Log("check that temp directory volume is properly configured")
+	var tempDirVolume *corev1.Volume
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == "temp-dir" {
+			tempDirVolume = &volume
+			break
+		}
+	}
+	assert.NotNil(t, tempDirVolume, "temp-dir volume not found")
+	assert.NotNil(t, tempDirVolume.EmptyDir, "temp-dir volume is not of type EmptyDir")
+
+	// Verify temp directory volume mount in main container
+	var tempDirMount *corev1.VolumeMount
+	for _, mount := range deployment.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in main container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
+	// Verify temp directory volume mount in init container
+	tempDirMount = nil
+	for _, mount := range deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts {
+		if mount.Name == "temp-dir" {
+			tempDirMount = &mount
+			break
+		}
+	}
+	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
+	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
+
 	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
@@ -496,54 +532,84 @@ func TestAffinity(t *testing.T) {
 }
 
 func TestContainerSecurityContext(t *testing.T) {
-	readOnlyRootFilesystemOverride := true
-	securityContext := &corev1.SecurityContext{
-		ReadOnlyRootFilesystem: &readOnlyRootFilesystemOverride,
-	}
 	reaper := newTestReaper()
-	reaper.Spec.SecurityContext = securityContext
-	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-	podSpec := deployment.Spec.Template.Spec
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
 
-	assert.Len(t, podSpec.Containers, 1, "Expected a single container to exist")
-	assert.Equal(t, podSpec.Containers[0].Name, "reaper")
-	assert.EqualValues(t, securityContext, podSpec.Containers[0].SecurityContext, "securityContext does not match for container")
+	// Test default security context
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.NotNil(t, container.SecurityContext)
+	assert.True(t, *container.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *container.SecurityContext.RunAsUser)
+	assert.True(t, *container.SecurityContext.ReadOnlyRootFilesystem)
+	assert.False(t, *container.SecurityContext.AllowPrivilegeEscalation)
+	assert.NotNil(t, container.SecurityContext.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, container.SecurityContext.Capabilities.Drop)
+
+	// Test custom security context
+	customSecurityContext := &corev1.SecurityContext{
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To[int64](2000),
+		ReadOnlyRootFilesystem:   ptr.To(true),
+		AllowPrivilegeEscalation: ptr.To(false),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+	reaper.Spec.SecurityContext = customSecurityContext
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	container = deployment.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, customSecurityContext, container.SecurityContext)
 }
 
 func TestSchemaInitContainerSecurityContext(t *testing.T) {
-	readOnlyRootFilesystemOverride := true
-	initContainerSecurityContext := &corev1.SecurityContext{
-		ReadOnlyRootFilesystem: &readOnlyRootFilesystemOverride,
-	}
-	nonInitContainerSecurityContext := &corev1.SecurityContext{
-		ReadOnlyRootFilesystem: &readOnlyRootFilesystemOverride,
-	}
-
 	reaper := newTestReaper()
-	reaper.Spec.SecurityContext = nonInitContainerSecurityContext
-	reaper.Spec.InitContainerSecurityContext = initContainerSecurityContext
-	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-	podSpec := deployment.Spec.Template.Spec
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
 
-	assert.Equal(t, podSpec.InitContainers[0].Name, "reaper-schema-init")
-	assert.Len(t, podSpec.InitContainers, 1, "Expected a single schema init container to exist")
-	assert.EqualValues(t, initContainerSecurityContext, podSpec.InitContainers[0].SecurityContext, "securityContext does not match for schema init container")
+	// Test default security context
+	initContainer := deployment.Spec.Template.Spec.InitContainers[0]
+	assert.NotNil(t, initContainer.SecurityContext)
+	assert.True(t, *initContainer.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *initContainer.SecurityContext.RunAsUser)
+	assert.True(t, *initContainer.SecurityContext.ReadOnlyRootFilesystem)
+	assert.False(t, *initContainer.SecurityContext.AllowPrivilegeEscalation)
+	assert.NotNil(t, initContainer.SecurityContext.Capabilities)
+	assert.Equal(t, []corev1.Capability{"ALL"}, initContainer.SecurityContext.Capabilities.Drop)
+
+	// Test custom security context
+	customSecurityContext := &corev1.SecurityContext{
+		RunAsNonRoot:             ptr.To(true),
+		RunAsUser:                ptr.To[int64](2000),
+		ReadOnlyRootFilesystem:   ptr.To(true),
+		AllowPrivilegeEscalation: ptr.To(false),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+	reaper.Spec.InitContainerSecurityContext = customSecurityContext
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	initContainer = deployment.Spec.Template.Spec.InitContainers[0]
+	assert.Equal(t, customSecurityContext, initContainer.SecurityContext)
 }
 
 func TestPodSecurityContext(t *testing.T) {
-	runAsUser := int64(8675309)
-	podSecurityContext := &corev1.PodSecurityContext{
-		RunAsUser: &runAsUser,
-	}
 	reaper := newTestReaper()
-	reaper.Spec.PodSecurityContext = podSecurityContext
-	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-	podSpec := deployment.Spec.Template.Spec
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
 
-	assert.EqualValues(t, podSecurityContext, podSpec.SecurityContext, "podSecurityContext expected at pod level")
+	// Test default security context
+	podSpec := deployment.Spec.Template.Spec
+	assert.NotNil(t, podSpec.SecurityContext)
+	assert.True(t, *podSpec.SecurityContext.RunAsNonRoot)
+	assert.Equal(t, int64(1000), *podSpec.SecurityContext.FSGroup)
+
+	// Test custom security context
+	customPodSecurityContext := &corev1.PodSecurityContext{
+		RunAsNonRoot: ptr.To(true),
+		FSGroup:      ptr.To[int64](2000),
+	}
+	reaper.Spec.PodSecurityContext = customPodSecurityContext
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	podSpec = deployment.Spec.Template.Spec
+	assert.Equal(t, customPodSecurityContext, podSpec.SecurityContext)
 }
 
 func TestSkipSchemaMigration(t *testing.T) {
