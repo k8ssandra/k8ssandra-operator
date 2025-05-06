@@ -1,0 +1,64 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: jmx-repairs-dse
+  namespace: radovan-dse-ssbr-7tk7x4n7
+spec:
+  auth: true
+  cassandra:
+    config:
+      jvmOptions:
+        gc: G1GC
+        heapSize: 1Gi
+    datacenters:
+      - config:
+          jvmOptions:
+            additionalOptions:
+              - '-Dcom.sun.management.jmxremote.rmi.port=7199'
+              - >-
+                -Djava.management.rmi/com.sun.jmx.remote.internal.rmi=ALL-UNNAMED
+            cassandra_ring_delay_ms: 0
+            gc: G1GC
+            jmx_connection_type: remote-no-auth
+            jmx_port: 7199
+        datacenterName: dc1
+        metadata:
+          name: jmx-repairs-dc1
+          pods: {}
+          services:
+            additionalSeedService: {}
+            allPodsService: {}
+            dcService: {}
+            nodePortService: {}
+            seedService: {}
+        perNodeConfigInitContainerImage: k8ssandra/k8ssandra-client:dc8ac644
+        perNodeConfigMapRef: {}
+        racks:
+          - name: r1
+        size: 2
+        stopped: false
+    mgmtAPIHeap: 64Mi
+    serverType: dse
+    serverVersion: 6.8.50
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2Gi
+        storageClassName: standard
+  reaper:
+    ServiceAccountName: default
+    containerImage:
+      name: cassandra-reaper
+      repository: thelastpickle
+      tag: 3.6.1
+    deploymentMode: PER_DC
+    heapSize: 2Gi
+    httpManagement:
+      enabled: false
+    keyspace: reaper_db
+    secretsProvider: internal
+    storageType: cassandra
+  secretsProvider: internal

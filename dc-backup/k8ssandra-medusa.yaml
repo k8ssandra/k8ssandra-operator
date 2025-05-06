@@ -1,0 +1,6 @@
+  medusa:
+    storageProperties:
+      storageProvider: s3
+      prefix: test
+      medusaConfigurationRef:
+        name: rad-s3
