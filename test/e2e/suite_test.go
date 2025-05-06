@@ -258,6 +258,12 @@ func TestOperator(t *testing.T) {
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: true,
 	}))
+	t.Run("CreateSingleReaperV4", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createSingleReaper,
+		fixture:                      framework.NewTestFixture("single-dc-reaper-v4", controlPlane),
+		skipK8ssandraClusterCleanup:  false,
+		doCassandraDatacenterCleanup: true,
+	}))
 	t.Run("CreateSingleReaperWStargateAndHTTP", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleReaper,
 		fixture:                      framework.NewTestFixture("stargate-reaper-http", controlPlane),
