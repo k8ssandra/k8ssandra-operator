@@ -339,7 +339,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.NoError(t, err, "failed to stop dc3")
 	withDc3 := f.NewWithDatacenter(ctx, dc3Key)
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
-		return assert.True(t, dc3.Spec.Stopped)
+		return dc3.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc3 to be stopped")
 	err = f.SetDatacenterStatusStopped(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status stopped")
@@ -378,7 +378,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	})
 	require.NoError(t, err, "failed to start dc3")
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
-		return assert.False(t, dc3.Spec.Stopped)
+		return !dc3.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc3 to be stopped")
 	err = f.SetDatacenterStatusReady(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status ready")
