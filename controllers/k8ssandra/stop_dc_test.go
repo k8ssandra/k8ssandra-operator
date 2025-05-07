@@ -194,7 +194,7 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	require.NoError(t, err, "failed to stop dc1")
 	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
-		return assert.True(t, dc1.Spec.Stopped)
+		return dc1.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc1 to be stopped")
 	err = f.SetDatacenterStatusStopped(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status stopped")
@@ -226,7 +226,7 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	})
 	require.NoError(t, err, "failed to start dc1")
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
-		return assert.False(t, dc1.Spec.Stopped)
+		return !dc1.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc1 to be started")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status ready")
