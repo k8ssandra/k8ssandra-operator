@@ -1541,6 +1541,8 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: medusaapi.Storage{
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
@@ -1926,6 +1928,8 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: medusaapi.Storage{
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
