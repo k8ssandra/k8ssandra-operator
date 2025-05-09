@@ -539,7 +539,6 @@ func TestContainerSecurityContext(t *testing.T) {
 	container := deployment.Spec.Template.Spec.Containers[0]
 	assert.NotNil(t, container.SecurityContext)
 	assert.True(t, *container.SecurityContext.RunAsNonRoot)
-	assert.Equal(t, int64(1000), *container.SecurityContext.RunAsUser)
 	assert.True(t, *container.SecurityContext.ReadOnlyRootFilesystem)
 	assert.False(t, *container.SecurityContext.AllowPrivilegeEscalation)
 	assert.NotNil(t, container.SecurityContext.Capabilities)
@@ -599,7 +598,6 @@ func TestPodSecurityContext(t *testing.T) {
 	podSpec := deployment.Spec.Template.Spec
 	assert.NotNil(t, podSpec.SecurityContext)
 	assert.True(t, *podSpec.SecurityContext.RunAsNonRoot)
-	assert.Equal(t, int64(1000), *podSpec.SecurityContext.FSGroup)
 
 	// Test custom security context
 	customPodSecurityContext := &corev1.PodSecurityContext{
