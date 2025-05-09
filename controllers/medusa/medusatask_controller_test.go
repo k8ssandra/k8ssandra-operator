@@ -74,6 +74,8 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: api.Storage{
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
@@ -158,9 +160,9 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 	backup4Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup4)
 	require.True(backup4Created, "failed to create backup4")
 	backup5Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup5)
-	require.False(backup5Created, "failed to create backup5")
+	require.False(backup5Created, "failed to fail backup5")
 	backup6Created := createAndVerifyMedusaBackup(dc2Key, dc2, f, ctx, require, t, namespace, backup6)
-	require.False(backup6Created, "failed to create backup6")
+	require.False(backup6Created, "failed to fail backup6")
 
 	// Ensure that 6 backups jobs, but only 4 backups were created (two jobs did not succeed on some pods)
 	checkBackupsAndJobs(require, ctx, 6, 4, namespace, f, []string{})

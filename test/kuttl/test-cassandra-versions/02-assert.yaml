@@ -6,6 +6,8 @@ metadata:
 status:
   conditions:
   - status: "True"
+    type: PodReadyToStartContainers
+  - status: "True"
     type: Initialized
   - status: "True"
     type: Ready
@@ -22,6 +24,8 @@ metadata:
 status:
   conditions:
   - status: "True"
+    type: PodReadyToStartContainers
+  - status: "True"
     type: Initialized
   - status: "True"
     type: Ready
@@ -37,6 +41,8 @@ metadata:
   namespace: k8ssandra-operator
 status:
   conditions:
+  - status: "True"
+    type: PodReadyToStartContainers
   - status: "True"
     type: Initialized
   - status: "True"

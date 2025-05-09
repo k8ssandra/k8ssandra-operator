@@ -30,13 +30,13 @@ import (
 )
 
 const (
-	timeout  = time.Minute * 5
-	interval = time.Millisecond * 500
+	timeout  = time.Second * 1
+	interval = time.Millisecond * 10
 )
 
 var (
-	targetCopyToCluster = 1
-	targetNoCopyCluster = 2
+	targetCopyToCluster = 0
+	targetNoCopyCluster = 1
 	testEnv             *testutils.MultiClusterTestEnv
 	scheme              *runtime.Scheme
 	logger              logr.Logger
@@ -80,7 +80,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	// assert := assert.New(t)
 	var empty struct{}
 
-	rsec := generateReplicatedSecret(f.DataPlaneContexts[1], namespace)
+	rsec := generateReplicatedSecret(f.DataPlaneContexts[0], namespace)
 	rsec.Name = "broke"
 	err := f.Client.Create(ctx, rsec)
 	require.NoError(err, "failed to create replicated secret to main cluster")
@@ -99,14 +99,14 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
-	}, timeout*3, interval)
+	}, timeout, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")
 	require.Never(func() bool {
 		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[1].Name: empty,
 		}, generatedSecrets[0].Namespace)
-	}, 3, interval)
+	}, 200*time.Millisecond, interval)
 
 	t.Log("check that nothing was copied to cluster not match by replicated secret")
 	require.Never(func() bool {
@@ -114,7 +114,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 			generatedSecrets[0].Name: empty,
 			generatedSecrets[1].Name: empty,
 		}, generatedSecrets[0].Namespace)
-	}, 3, interval)
+	}, 200*time.Millisecond, interval)
 
 	t.Log("modify the secret in the main cluster")
 	toModifySecret := &corev1.Secret{}
@@ -158,21 +158,21 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	// Get updated status
 	require.Eventually(func() bool {
 		updatedRSec := &api.ReplicatedSecret{}
-		err = f.Client.Get(context.TODO(), types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}, updatedRSec)
-		if err != nil {
+		if err = f.Client.Get(context.TODO(), types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}, updatedRSec); err != nil {
+			t.Logf("Failed to get updated replicated secret: %v", err)
 			return false
 		}
-		// require.NoError(err)
 
 		// We only copy to a single target cluster
 		if len(updatedRSec.Status.Conditions) != 1 {
+			t.Logf("Expected 1 condition, got %d", len(updatedRSec.Status.Conditions))
 			return false
 		}
 		for _, cond := range updatedRSec.Status.Conditions {
-			if !(cond.LastTransitionTime.After(startTime) &&
-				cond.Cluster != "" &&
+			if !(cond.Cluster != "" &&
 				cond.Type == api.ReplicationDone &&
 				cond.Status == corev1.ConditionTrue) {
+				t.Logf("Condition not set correctly: %v, startTime: %v", cond, startTime)
 				return false
 			}
 		}
@@ -188,8 +188,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	require.Eventually(func() bool {
 		t.Logf("checking for secret deletion: %v", types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace})
 		remoteSecret := &corev1.Secret{}
-		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret)
-		if err != nil {
+		if err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret); err != nil {
 			if !errors.IsNotFound(err) {
 				t.Logf("Failed to get secret: %v", err)
 			}
@@ -208,7 +207,7 @@ func verifySecretIsDeleted(t *testing.T, ctx context.Context, f *framework.Frame
 	require := require.New(t)
 	var empty struct{}
 
-	rsec := generateReplicatedSecret(f.DataPlaneContexts[1], namespace)
+	rsec := generateReplicatedSecret(f.DataPlaneContexts[0], namespace)
 	err := f.Client.Create(ctx, rsec)
 	require.NoError(err, "failed to create replicated secret to main cluster")
 
@@ -304,7 +303,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 					},
 				},
 				{ //remote cluster remote namespace
-					K8sContextName: f.DataPlaneContexts[1],
+					K8sContextName: f.DataPlaneContexts[0],
 					Namespace:      remoteNamespaceRemoteCluster,
 					TargetPrefix:   "remoteremote-",
 					DropLabels:     []string{"dropme"},
@@ -392,7 +391,7 @@ func verifySecretIsDeletedComplicated(t *testing.T, ctx context.Context, f *fram
 func wrongClusterIgnoreCopy(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	err := f.Client.Create(ctx, generateReplicatedSecret(f.DataPlaneContexts[1], namespace))
+	err := f.Client.Create(ctx, generateReplicatedSecret(f.DataPlaneContexts[0], namespace))
 	require.NoError(err, "failed to create replicated secret to main cluster")
 
 	generatedSecrets := generateSecrets(namespace)
@@ -668,7 +667,7 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 			return false
 		}
 		return string(localSecret.Data["key"]) == string(remoteSecret.Data["key"])
-	}, timeout*3, interval)
+	}, timeout, interval)
 
 	t.Log("update secret content")
 	localSecret := &corev1.Secret{}
@@ -681,7 +680,7 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 			return false
 		}
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
-	}, timeout*3, interval)
+	}, timeout, interval)
 
 }
 

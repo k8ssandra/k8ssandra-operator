@@ -36,14 +36,14 @@ func SetupSecretsInjectorWebhook(mgr ctrl.Manager) {
 // to include mechanisms for mounting secrets
 type podSecretsInjector struct {
 	Client  client.Client
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 // podSecretsInjector Implements admission.Handler.
 var _ admission.Handler = &podSecretsInjector{}
 
 // InjectDecoder injects the decoder into the podSecretsInjector
-func (p *podSecretsInjector) InjectDecoder(d *admission.Decoder) error {
+func (p *podSecretsInjector) InjectDecoder(d admission.Decoder) error {
 	p.decoder = d
 	return nil
 }

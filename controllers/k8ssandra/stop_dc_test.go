@@ -194,18 +194,18 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	require.NoError(t, err, "failed to stop dc1")
 	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
-		return assert.True(t, dc1.Spec.Stopped)
+		return dc1.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc1 to be stopped")
 	err = f.SetDatacenterStatusStopped(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status stopped")
 
 	t.Log("wait for the dc conditions to be met")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) &&
-			assert.Len(t, kc.Status.Datacenters, 2) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.NoError(c, err)
+		assert.Len(c, kc.Status.Datacenters, 2)
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	t.Log("check that stargate sg1 was deleted")
@@ -226,18 +226,19 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	})
 	require.NoError(t, err, "failed to start dc1")
 	require.Eventually(t, withDc1(func(dc1 *cassdcapi.CassandraDatacenter) bool {
-		return assert.False(t, dc1.Spec.Stopped)
+		return !dc1.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc1 to be started")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(t, err, "failed to set dc1 status ready")
 
 	t.Log("wait for the dc conditions to be met")
-	require.Eventually(t, func() bool {
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) &&
-			assert.Len(t, kc.Status.Datacenters, 2) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.NoError(c, err)
+		assert.Len(c, kc.Status.Datacenters, 2)
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	t.Log("check that stargate sg1 was created")
@@ -312,19 +313,19 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.NoError(t, err, "failed to patch reaper status")
 
 	t.Log("wait for the dc conditions to be met")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) &&
-			assert.Len(t, kc.Status.Datacenters, 3) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Stargate.GetConditionStatus(stargateapi.StargateReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Stargate.GetConditionStatus(stargateapi.StargateReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Stargate.GetConditionStatus(stargateapi.StargateReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Reaper.GetConditionStatus(reaperapi.ReaperReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Reaper.GetConditionStatus(reaperapi.ReaperReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
+		assert.NoError(c, err)
+		assert.Len(c, kc.Status.Datacenters, 3)
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	// From now on, only expect the updated replication including dc3 to be enforced on all keyspaces
@@ -338,19 +339,19 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.NoError(t, err, "failed to stop dc3")
 	withDc3 := f.NewWithDatacenter(ctx, dc3Key)
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
-		return assert.True(t, dc3.Spec.Stopped)
+		return dc3.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc3 to be stopped")
 	err = f.SetDatacenterStatusStopped(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status stopped")
 
 	t.Log("wait for the dc conditions to be met")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) &&
-			assert.Len(t, kc.Status.Datacenters, 3) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped))
+		assert.NoError(c, err)
+		assert.Len(c, kc.Status.Datacenters, 3)
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	t.Log("check that stargate sg1 is still present")
@@ -377,19 +378,19 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	})
 	require.NoError(t, err, "failed to start dc3")
 	require.Eventually(t, withDc3(func(dc3 *cassdcapi.CassandraDatacenter) bool {
-		return assert.False(t, dc3.Spec.Stopped)
+		return !dc3.Spec.Stopped
 	}), timeout, interval, "timeout waiting for dc3 to be stopped")
 	err = f.SetDatacenterStatusReady(ctx, dc3Key)
 	require.NoError(t, err, "failed to set dc3 status ready")
 
 	t.Log("wait for the dc conditions to be met")
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Client.Get(ctx, kcKey, kc)
-		return assert.NoError(t, err) &&
-			assert.Len(t, kc.Status.Datacenters, 3) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady)) &&
-			assert.Equal(t, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.NoError(c, err)
+		assert.Len(c, kc.Status.Datacenters, 3)
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
+		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
 	t.Log("check that stargate sg1 is still present")

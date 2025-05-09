@@ -13,6 +13,7 @@ metadata:
   name: config1
 spec:
   storageProperties:
+    storageProvider: s3_compatible
     storageSecretRef:
       name: test-secret
     bucketName: test

@@ -356,11 +356,11 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
-	kTaskLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
+	kTaskLabelFilter := func(ctx context.Context, obj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
-		taskName := labels.GetLabel(mapObj, api.K8ssandraTaskNameLabel)
-		taskNamespace := labels.GetLabel(mapObj, api.K8ssandraTaskNamespaceLabel)
+		taskName := labels.GetLabel(obj, api.K8ssandraTaskNameLabel)
+		taskNamespace := labels.GetLabel(obj, api.K8ssandraTaskNamespaceLabel)
 
 		if taskName != "" && taskNamespace != "" {
 			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: taskNamespace, Name: taskName}})
@@ -368,11 +368,15 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 		return requests
 	}
 
+	kTaskTypedLabelFilter := func(ctx context.Context, task *cassapi.CassandraTask) []reconcile.Request {
+		return kTaskLabelFilter(ctx, task)
+	}
+
 	cb = cb.Watches(&cassapi.CassandraTask{},
-		handler.EnqueueRequestsFromMapFunc(kTaskLabelFilter))
+		handler.TypedEnqueueRequestsFromMapFunc(kTaskLabelFilter))
 
 	for _, c := range clusters {
-		cb.WatchesRawSource(source.Kind(c.GetCache(), &cassapi.CassandraTask{}), handler.EnqueueRequestsFromMapFunc(kTaskLabelFilter))
+		cb.WatchesRawSource(source.Kind(c.GetCache(), &cassapi.CassandraTask{}, handler.TypedEnqueueRequestsFromMapFunc(kTaskTypedLabelFilter)))
 	}
 
 	return cb.Complete(r)

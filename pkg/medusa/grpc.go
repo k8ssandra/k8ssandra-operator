@@ -3,7 +3,6 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -15,20 +14,15 @@ type defaultClient struct {
 }
 
 type ClientFactory interface {
-	NewClient(ctx context.Context, address string) (Client, error)
+	NewClient(address string) (Client, error)
 }
 
 type DefaultFactory struct {
-	cancelFunc context.CancelFunc
 }
 
-func (f *DefaultFactory) NewClient(ctx context.Context, address string) (Client, error) {
-	callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	conn, err := grpc.DialContext(callCtx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), grpc.WithDefaultCallOptions(grpc.WaitForReady(false), grpc.MaxCallRecvMsgSize(1024*1024*512)))
-	f.cancelFunc = cancel
-
+func (f *DefaultFactory) NewClient(address string) (Client, error) {
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.WaitForReady(false), grpc.MaxCallRecvMsgSize(1024*1024*512)))
 	if err != nil {
-		defer cancel()
 		return nil, fmt.Errorf("failed to create gRPC connection to %s: %s", address, err)
 	}
 

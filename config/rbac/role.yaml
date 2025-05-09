@@ -8,6 +8,21 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  - endpoints
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -16,22 +31,9 @@ rules:
   - ""
   resources:
   - pods
-  - services
   verbs:
   - get
   - list
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - apps
@@ -45,13 +47,6 @@ rules:
   - list
   - patch
   - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - statefulsets
-  verbs:
-  - list
   - watch
 - apiGroups:
   - batch
@@ -92,6 +87,7 @@ rules:
   - control.k8ssandra.io
   resources:
   - cassandratasks
+  - k8ssandratasks
   verbs:
   - create
   - delete
@@ -109,18 +105,6 @@ rules:
 - apiGroups:
   - control.k8ssandra.io
   resources:
-  - k8ssandratasks
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - control.k8ssandra.io
-  resources:
   - k8ssandratasks/finalizers
   verbs:
   - update
@@ -132,63 +116,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - endpoints
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - k8ssandra.io
   resources:
@@ -228,6 +155,10 @@ rules:
   - medusa.k8ssandra.io
   resources:
   - medusabackupjobs
+  - medusabackups
+  - medusabackupschedules
+  - medusaconfigurations
+  - medusatasks
   verbs:
   - create
   - delete
@@ -240,90 +171,21 @@ rules:
   - medusa.k8ssandra.io
   resources:
   - medusabackupjobs/finalizers
+  - medusabackups/finalizers
+  - medusabackupschedules/finalizers
+  - medusaconfigurations/finalizers
+  - medusatasks/finalizers
   verbs:
   - update
 - apiGroups:
   - medusa.k8ssandra.io
   resources:
   - medusabackupjobs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusabackups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusabackups/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
   - medusabackups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusabackupschedules
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusabackupschedules/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
   - medusabackupschedules/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusaconfigurations
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusaconfigurations/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
   - medusaconfigurations/status
+  - medusarestorejobs/status
+  - medusatasks/status
   verbs:
   - get
   - patch
@@ -339,40 +201,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusarestorejobs/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusatasks
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusatasks/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - medusa.k8ssandra.io
-  resources:
-  - medusatasks/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - monitoring.coreos.com
   resources:

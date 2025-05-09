@@ -57,7 +57,7 @@ type MedusaConfigurationReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx).WithValues("medusabackupjob", req.NamespacedName)
+	logger := log.FromContext(ctx).WithValues("medusaconfiguration", req.NamespacedName)
 
 	logger.Info("Starting reconciliation")
 

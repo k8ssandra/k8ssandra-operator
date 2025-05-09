@@ -19,9 +19,10 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"net"
 	"sync"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -420,7 +421,7 @@ func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.P
 		medusaPort = explicitPort
 	}
 	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -435,7 +436,7 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 		medusaPort = explicitPort
 	}
 	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -451,7 +452,7 @@ func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.Clien
 		medusaPort = explicitPort
 	}
 	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()

@@ -64,6 +64,8 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: api.Storage{
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
@@ -376,6 +378,8 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: api.Storage{
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
@@ -606,7 +610,7 @@ func NewMedusaClientRestoreFactory() *fakeMedusaRestoreClientFactory {
 	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
 }
 
-func (f *fakeMedusaRestoreClientFactory) NewClient(ctx context.Context, address string) (medusa.Client, error) {
+func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Client, error) {
 	f.clientsMutex.Lock()
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]

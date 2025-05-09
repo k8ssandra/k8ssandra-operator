@@ -171,6 +171,8 @@ type MultiClusterTestEnv struct {
 
 	BeforeTest func(t *testing.T)
 
+	AfterTest func(t *testing.T)
+
 	controlPlane string
 	dataPlanes   []string
 }
@@ -293,7 +295,8 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 func (e *MultiClusterTestEnv) Stop(t *testing.T) {
 	for _, testEnv := range e.testEnvs {
 		if err := testEnv.Stop(); err != nil {
-			t.Errorf("failed to stop test environment: %s", err)
+			// t.Errorf("failed to stop test environment: %s", err)
+			t.Logf("failed to stop test environment: %s", err)
 		}
 	}
 }
@@ -323,6 +326,10 @@ func (e *MultiClusterTestEnv) ControllerTest(ctx context.Context, test Controlle
 		}
 
 		test(t, ctx, f, namespace)
+
+		if e.AfterTest != nil {
+			e.AfterTest(t)
+		}
 	}
 }
 

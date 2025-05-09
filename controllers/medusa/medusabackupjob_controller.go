@@ -19,9 +19,10 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"net"
 	"strings"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 
 	corev1 "k8s.io/api/core/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -323,7 +324,7 @@ func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupTy
 	}
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		return "", err
 	} else {
 		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name, "Address", addr)
@@ -345,7 +346,7 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFacto
 	}
 	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
 	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(ctx, addr); err != nil {
+	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
 		logger.Error(err, "Could not make a new medusa client")
 		return medusa.StatusType_UNKNOWN, err
 	} else {
