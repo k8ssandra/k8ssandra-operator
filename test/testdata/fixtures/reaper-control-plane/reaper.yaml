@@ -10,8 +10,6 @@ spec:
     resources:
       requests:
         storage: 256Mi
-  httpManagement:
-    enabled: true
   heapSize: 256Mi
   autoScheduling:
     enabled: false
