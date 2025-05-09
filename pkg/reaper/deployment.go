@@ -317,13 +317,10 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 	// Default security context settings
 	defaultPodSecurityContext := &corev1.PodSecurityContext{
 		RunAsNonRoot: ptr.To(true),
-		FSGroup:      ptr.To[int64](1000),
 	}
 
 	defaultContainerSecurityContext := &corev1.SecurityContext{
 		RunAsNonRoot:             ptr.To(true),
-		RunAsUser:                ptr.To[int64](1000),
-		RunAsGroup:               ptr.To[int64](1000),
 		ReadOnlyRootFilesystem:   ptr.To(true),
 		AllowPrivilegeEscalation: ptr.To(false),
 		Capabilities: &corev1.Capabilities{
@@ -494,7 +491,6 @@ func computeInitContainers(
 		// Default security context for init container
 		defaultInitContainerSecurityContext := &corev1.SecurityContext{
 			RunAsNonRoot:             ptr.To(true),
-			RunAsUser:                ptr.To[int64](1000),
 			ReadOnlyRootFilesystem:   ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{

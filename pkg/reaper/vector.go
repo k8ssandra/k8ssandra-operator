@@ -60,7 +60,6 @@ func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *c
 		// Default security context for vector container
 		defaultVectorSecurityContext := &corev1.SecurityContext{
 			RunAsNonRoot:             ptr.To(true),
-			RunAsUser:                ptr.To[int64](1000),
 			ReadOnlyRootFilesystem:   ptr.To(true),
 			AllowPrivilegeEscalation: ptr.To(false),
 			Capabilities: &corev1.Capabilities{

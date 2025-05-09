@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1530](https://github.com/k8ssandra/k8ssandra-operator/issues/1530) Remove runAsUser/runAsGroup/fsGroup definitions from Reaper defaultSecurityContexts
+
 ## v1.22.0 - 2025-05-06
 
 * [CHANGE] [#1520](https://github.com/k8ssandra/k8ssandra-operator/issues/1520) Reaper should have a secure securityContext configuration by default.

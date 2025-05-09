@@ -249,13 +249,11 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	// Check pod security context
 	assert.NotNil(t, deployment.Spec.Template.Spec.SecurityContext)
 	assert.True(t, *deployment.Spec.Template.Spec.SecurityContext.RunAsNonRoot)
-	assert.Equal(t, int64(1000), *deployment.Spec.Template.Spec.SecurityContext.FSGroup)
 
 	// Check main container security context
 	mainContainer := deployment.Spec.Template.Spec.Containers[0]
 	assert.NotNil(t, mainContainer.SecurityContext)
 	assert.True(t, *mainContainer.SecurityContext.RunAsNonRoot)
-	assert.Equal(t, int64(1000), *mainContainer.SecurityContext.RunAsUser)
 	assert.True(t, *mainContainer.SecurityContext.ReadOnlyRootFilesystem)
 	assert.False(t, *mainContainer.SecurityContext.AllowPrivilegeEscalation)
 	assert.NotNil(t, mainContainer.SecurityContext.Capabilities)
@@ -265,7 +263,6 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	initContainer := deployment.Spec.Template.Spec.InitContainers[0]
 	assert.NotNil(t, initContainer.SecurityContext)
 	assert.True(t, *initContainer.SecurityContext.RunAsNonRoot)
-	assert.Equal(t, int64(1000), *initContainer.SecurityContext.RunAsUser)
 	assert.True(t, *initContainer.SecurityContext.ReadOnlyRootFilesystem)
 	assert.False(t, *initContainer.SecurityContext.AllowPrivilegeEscalation)
 	assert.NotNil(t, initContainer.SecurityContext.Capabilities)
