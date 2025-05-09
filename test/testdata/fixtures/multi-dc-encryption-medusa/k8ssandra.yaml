@@ -25,7 +25,7 @@ spec:
       name: global-medusa-config
     storageProperties:
       storageProvider: s3_compatible
-      bucketName: not-real
+      bucketName: k8ssandra-medusa
       prefix: test
       concurrentTransfers: 4
     certificatesSecretRef:
