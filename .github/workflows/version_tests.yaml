@@ -59,12 +59,11 @@ jobs:
     strategy:
       matrix:
         k8s_version:
-          - "1.21"
-          - "1.22"
-          - "1.23"
+          - "1.31"
         serverVersion:
-          - 3.11.14
-          - 4.0.3
+          - "4.0.17"
+          - "4.1.8"
+          - "5.0.4"
         kuttl-test:
           - test-cassandra-versions
     steps:
@@ -100,7 +99,7 @@ jobs:
           make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" kind-load-image
       - name: Run kuttl test
         run: |
-          # We are running tests against k8s 1.21
+          # We are running tests against k8s 1.31
           # Additional versions must be added in kind config files under ./test/config/kind
 
           # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
