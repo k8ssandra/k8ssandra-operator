@@ -58,7 +58,7 @@ jobs:
     name: Run kuttl tests
     strategy:
       matrix:
-        k8s_version: ["1.21"]
+        k8s_version: ["1.31"]
         kuttl-test:
           - test-servicemonitors
           - test-user-defined-ns
@@ -96,7 +96,7 @@ jobs:
           make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" kind-load-image
       - name: Run kuttl test
         run: |
-          # We are running tests against k8s 1.21
+          # We are running tests against k8s 1.31
           # Additional versions must be added in kind config files under ./test/config/kind
 
           # Currently we aren't using the kuttl-test Makefile target while trying to iron out the
