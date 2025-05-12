@@ -164,6 +164,7 @@ vector-test: ## Run vector tests
 	@echo Generating test files for Vector tests
 	$(eval TMP := $(shell mktemp -d))
 	VECTOR_TEST_FILES=true OUTPUT_PATH=$(TMP) go test -v ./pkg/telemetry -run=TestGenerateTomlTestFiles
+	VECTOR_TEST_FILES=false OUTPUT_PATH=$(TMP) go test -v ./pkg/telemetry -run=TestBuildCustomVectorTomlWithApiConfig
 	@echo Running vector test files
 	OUTPUT_PATH=$(TMP) VECTOR=$(VECTOR) scripts/run-vector-tests.sh
 	rm -rf $(TMP)

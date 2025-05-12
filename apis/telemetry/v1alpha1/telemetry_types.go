@@ -43,6 +43,11 @@ type VectorSpec struct {
 	ScrapeInterval *metav1.Duration `json:"scrapeInterval,omitempty"`
 
 	Components *VectorComponentsSpec `json:"components,omitempty"`
+	Api        *ApiConfig            `json:"api,omitempty"`
+}
+
+type ApiConfig struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type VectorComponentsSpec struct {
