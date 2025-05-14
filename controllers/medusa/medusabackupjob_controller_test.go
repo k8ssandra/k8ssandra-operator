@@ -269,7 +269,6 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	medusaBackup := &api.MedusaBackup{}
 	if backupName != backupWithNoPods && strings.HasPrefix(backupName, "good") {
 		require.Eventually(func() bool {
-			// medusaBackup := &api.MedusaBackup{}
 			if err := f.Get(ctx, backupKey, medusaBackup); err != nil {
 				t.Logf("failed to get MedusaBackup: %v", err)
 				if errors.IsNotFound(err) {
@@ -282,19 +281,6 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 	} else {
 		return false
 	}
-
-	/*
-		t.Log("check for the MedusaBackup being created")
-		medusaBackup := &api.MedusaBackup{}
-		t.Logf("getting MedusaBackup %s", backupKey)
-		if err := f.Get(ctx, backupKey, medusaBackup); err != nil {
-			t.Logf("failed to get MedusaBackup: %v", err)
-			if errors.IsNotFound(err) {
-				// exit the test if the backup was not created. this happens for some backup names on purpose
-				return false
-			}
-		}
-	*/
 
 	t.Log("verify the MedusaBackup is correct")
 	require.Equal(medusaBackup.Status.TotalNodes, dc.Spec.Size, "backup total nodes doesn't match dc nodes")

@@ -39,7 +39,6 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 	}
 
 	t.Log("Creating medusa bucket key secret")
-	// err := f.Client.Create(ctx, bucketKeySecret)
 	require.NoError(f.Create(ctx, dc1Key, bucketKeySecret), "failed to create medusa bucket key secret")
 
 	medusaConfig := &api.MedusaConfiguration{
@@ -57,7 +56,6 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 			},
 		},
 	}
-	// err = f.Client.Create(ctx, medusaConfig)
 	require.NoError(f.Create(ctx, dc1Key, medusaConfig), "failed to create medusa configuration")
 	require.Eventually(func() bool {
 		updated := &api.MedusaConfiguration{}
@@ -70,7 +68,6 @@ func testMedusaConfigurationOk(t *testing.T, ctx context.Context, f *framework.F
 		updatedSecret := &corev1.Secret{}
 		bucketKeySecretKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, "medusa-bucket-key")
 		require.NoError(f.Get(ctx, bucketKeySecretKey, updatedSecret))
-		// require.NoError(f.Client.Get(ctx, types.NamespacedName{Name: "medusa-bucket-key", Namespace: namespace}, updatedSecret))
 		//Ensure that the unique label has been added to the secret.
 		if updatedSecret.Labels[api.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(updatedSecret.Name, updatedSecret.Namespace) {
 			return false
