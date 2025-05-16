@@ -169,6 +169,7 @@ func (f *Framework) List(ctx context.Context, key ClusterKey, obj client.ObjectL
 	if err != nil {
 		return err
 	}
+	opts = append(opts, client.InNamespace(key.Namespace))
 	return remoteClient.List(ctx, obj, opts...)
 }
 

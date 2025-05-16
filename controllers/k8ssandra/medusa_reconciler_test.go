@@ -3,9 +3,10 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"strings"
 	"testing"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -65,6 +66,8 @@ func MedusaConfig(name, namespace string) *medusaapi.MedusaConfiguration {
 		},
 		Spec: medusaapi.MedusaConfigurationSpec{
 			StorageProperties: medusaapi.Storage{
+				StorageProvider:     "s3_compatible",
+				BucketName:          "not-real",
 				Prefix:              prefixFromMedusaConfig,
 				ConcurrentTransfers: concurrentTransfersFromMedusaConfig,
 			},
@@ -101,6 +104,8 @@ func medusaTemplate(configObjectReference *corev1.ObjectReference) *medusaapi.Me
 			Repository: medusaImageRepo,
 		},
 		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3_compatible",
+			BucketName:      "not-real",
 			StorageSecretRef: corev1.LocalObjectReference{
 				Name: cassandraUserSecret,
 			},
@@ -448,6 +453,9 @@ func verifyConfigMap(r *require.Assertions, ctx context.Context, f *framework.Fr
 	configMap := &corev1.ConfigMap{}
 	r.Eventually(func() bool {
 		if err := f.Get(ctx, configMapKey, configMap); err != nil {
+			if errors.IsNotFound(err) {
+				return false
+			}
 			r.NoError(err, "failed to get Medusa ConfigMap")
 			return false
 		}
@@ -577,7 +585,9 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 					Name: originalConfigName,
 				},
 				StorageProperties: medusaapi.Storage{
-					Prefix: "some-prefix",
+					StorageProvider: "s3_compatible",
+					BucketName:      "not-real",
+					Prefix:          "some-prefix",
 				},
 			},
 		},

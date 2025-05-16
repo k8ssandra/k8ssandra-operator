@@ -63,10 +63,11 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	rsec := &api.ReplicatedSecret{}
 	if err := localClient.Get(ctx, req.NamespacedName, rsec); err != nil {
 		if errors.IsNotFound(err) {
+			logger.Error(err, "Failed to get replicated secret, it may have been deleted", "ReplicatedSecret", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		logger.Error(err, "Failed to get replicated secret", "ReplicatedSecret", req.NamespacedName)
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{}, err
 	}
 	// Deletion and finalizer logic
 	if rsec.GetDeletionTimestamp() != nil {
@@ -154,9 +155,8 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			delete(s.selectors, req.NamespacedName)
 			s.selectorMutex.Unlock()
 			controllerutil.RemoveFinalizer(rsec, replicatedResourceFinalizer)
-			err := localClient.Update(ctx, rsec)
-			if err != nil {
-				return ctrl.Result{Requeue: true}, err
+			if err := localClient.Update(ctx, rsec); err != nil {
+				return ctrl.Result{}, err
 			}
 		}
 		return ctrl.Result{}, nil
@@ -167,6 +167,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		err := localClient.Update(ctx, rsec)
 		if err != nil {
 			logger.Error(err, "Failed to get add finalizer to replicated secret", "ReplicatedSecret", req.NamespacedName)
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, err
 	}
@@ -175,7 +176,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
 	if err != nil {
 		logger.Error(err, "Failed to transform to label selector", "ReplicatedSecret", req.NamespacedName)
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{}, err
 	}
 
 	// Update the selector in cache always (comparing is pointless)
@@ -187,14 +188,14 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	secrets, err := s.fetchAllMatchingSecrets(ctx, selector, req.Namespace)
 	if err != nil {
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName, "namespace", req.Namespace)
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{}, err
 	}
 	// Verify secrets have up-to-date hashes
 	for i := range secrets {
 		sec := &secrets[i]
 		if err := s.verifyHashAnnotation(ctx, sec); err != nil {
 			logger.Error(err, "Failed to update secret hashes", "ReplicatedSecret", req.NamespacedName, "Secret", sec.Name)
-			return reconcile.Result{Requeue: true}, err
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -213,7 +214,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			remoteClient, err = s.ClientCache.GetRemoteClient(target.K8sContextName)
 			if err != nil {
 				logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
-				return ctrl.Result{Requeue: true}, err
+				return ctrl.Result{}, err
 			}
 		}
 
@@ -295,13 +296,13 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	err = localClient.Status().Patch(ctx, rsec, patch)
 	if err != nil {
 		logger.Error(err, "Failed to update replicated secret last transition time", "ReplicatedSecret", req.NamespacedName)
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{}, err
 	}
 
 	// If any cluster had failed state, retry
 	for _, cond := range rsec.Status.Conditions {
 		if cond.Status == corev1.ConditionFalse {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("replication failed")
+			return ctrl.Result{}, fmt.Errorf("replication failed")
 		}
 	}
 	return ctrl.Result{}, err
@@ -418,14 +419,18 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 		return requests
 	}
 
+	toMatchingReplicatesTyped := func(ctx context.Context, secret *corev1.Secret) []reconcile.Request {
+		return toMatchingReplicates(ctx, secret)
+	}
+
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(
-			source.Kind(c.GetCache(), &corev1.Secret{}),
-			handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+			source.Kind(c.GetCache(), &corev1.Secret{},
+				handler.TypedEnqueueRequestsFromMapFunc(toMatchingReplicatesTyped)))
 	}
 
 	return cb.Complete(s)

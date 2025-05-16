@@ -82,9 +82,11 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 					Repository: medusaImageRepo,
 				},
 				StorageProperties: api.Storage{
+					StorageProvider: "s3_compatible",
 					StorageSecretRef: corev1.LocalObjectReference{
 						Name: cassandraUserSecret,
 					},
+					BucketName: "not-real",
 				},
 				// adding this did not actually break any assertions
 				ServiceProperties: api.Service{
@@ -184,6 +186,7 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
 	verifyObjectDoesNotExist(ctx, t, f, dc1Key, &cassdcapi.CassandraDatacenter{})
+	verifyObjectDoesNotExist(ctx, t, f, kcKey, &k8ss.K8ssandraCluster{})
 }
 
 func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, ctx context.Context, require *require.Assertions, t *testing.T, namespace, backupName string) bool {
@@ -263,19 +266,20 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		verifyBackupJobStarted(require.Never, t, dc, f, ctx, backupKey)
 	}
 
-	// TODO That previous check does not actually verify that the MedusaBackup has yet been written (if it should be), so we need to wait a bit more
-	time.Sleep(500 * time.Millisecond)
-
-	t.Log("check for the MedusaBackup being created")
-	medusaBackupKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, backupName)
 	medusaBackup := &api.MedusaBackup{}
-	t.Logf("getting MedusaBackup %s", medusaBackupKey)
-	err = f.Get(ctx, medusaBackupKey, medusaBackup)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// exit the test if the backup was not created. this happens for some backup names on purpose
-			return false
-		}
+	if backupName != backupWithNoPods && strings.HasPrefix(backupName, "good") {
+		require.Eventually(func() bool {
+			if err := f.Get(ctx, backupKey, medusaBackup); err != nil {
+				t.Logf("failed to get MedusaBackup: %v", err)
+				if errors.IsNotFound(err) {
+					// exit the test if the backup was not created. this happens for some backup names on purpose
+					return false
+				}
+			}
+			return true
+		}, timeout, interval)
+	} else {
+		return false
 	}
 
 	t.Log("verify the MedusaBackup is correct")
@@ -300,6 +304,7 @@ func verifyBackupJobFinished(t *testing.T, require *require.Assertions, dc *cass
 		if err != nil {
 			return false
 		}
+		t.Logf("Backup finished: %s", backupKey)
 		t.Logf("backup %s finish time: %v", backupName, updated.Status.FinishTime)
 		t.Logf("backup %s failed: %v", backupName, updated.Status.Failed)
 		t.Logf("backup %s finished: %v", backupName, updated.Status.Finished)
@@ -377,7 +382,15 @@ func NewMedusaClientFactory() *fakeMedusaClientFactory {
 	return &fakeMedusaClientFactory{clients: make(map[string]*fakeMedusaClient, 0)}
 }
 
-func (f *fakeMedusaClientFactory) NewClient(ctx context.Context, address string) (medusa.Client, error) {
+func (f *fakeMedusaClientFactory) Clear() {
+	f.clientsMutex.Lock()
+	defer f.clientsMutex.Unlock()
+	for _, client := range f.clients {
+		client.Clear()
+	}
+}
+
+func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, error) {
 	f.clientsMutex.Lock()
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]
@@ -418,6 +431,10 @@ func newFakeMedusaClient(dcName string) *fakeMedusaClient {
 	alreadyReportedFailingBackup = false
 	alreadyReportedMissingBackup = false
 	return &fakeMedusaClient{RequestedBackups: make([]string, 0), DcName: dcName}
+}
+
+func (c *fakeMedusaClient) Clear() {
+	c.RequestedBackups = make([]string, 0)
 }
 
 func (c *fakeMedusaClient) Close() error {

@@ -55,7 +55,7 @@ IMG ?= $(IMAGE_TAG_BASE):latest
 CRD_OPTIONS ?= "crd"
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.27.x
+ENVTEST_K8S_VERSION = 1.31.x
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -97,7 +97,7 @@ NUM_CLUSTERS = 2
 NUM_WORKER_NODES = 4
 
 # The version of the Kind image to run end-to-end tests.
-KIND_NODE_VERSION = v1.27.1
+KIND_NODE_VERSION = v1.31.6
 
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
@@ -334,13 +334,13 @@ undeploy: kustomize ## Undeploy controller from the K8s cluster specified in ~/.
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
-GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint # TODO Add linting to the GHA also
+GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 VECTOR ?= $(LOCALBIN)/bin/vector
 
 ## Tool Versions
 CERT_MANAGER_VERSION ?= v1.12.2
 KUSTOMIZE_VERSION ?= v4.5.7
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.4
 GOLINT_VERSION ?= 1.64.8
 
 cert-manager: ## Install cert-manager to the cluster
@@ -425,10 +425,11 @@ golangci-lint:
 	fi
 	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLINT_VERSION)
 
+
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(ENVTEST) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
