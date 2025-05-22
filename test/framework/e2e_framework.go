@@ -160,10 +160,6 @@ replacements:
     fieldPaths:
       - metadata.namespace
   - select:
-      kind: ClusterRoleBinding
-    fieldPaths:
-      - subjects.0.namespace
-  - select:
       name: cass-operator-validating-webhook-configuration
       kind: ValidatingWebhookConfiguration
     fieldPaths:
