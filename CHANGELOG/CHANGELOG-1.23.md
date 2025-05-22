@@ -19,3 +19,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#1519](https://github.com/k8ssandra/k8ssandra-operator/issues/1519) Update cass-operator to version 1.24, Kubernetes dependencies to 1.31.x series, controller-runtime dependencies
 * [ENHANCEMENT] Add support for common annotations and labels in the helm chart
 * [BUGFIX] [#1538](https://github.com/k8ssandra/k8ssandra-operator/issues/1538) Fix perNodeConfig init-container to mount Volume "tmp" for the readOnlyRootFilesystem clusters
+* [BUGFIX] [#1538](https://github.com/k8ssandra/k8ssandra-operator/issues/1538) Fix perNodeConfig init-container to mount Volume "tmp" for the readOnlyRootFilesystem clusters
+* [TESTING] [#1532](https://github.com/k8ssandra/k8ssandra-operator/issues/1532) Update the base Cassandra version to 5.0.4 in tests
+* [TESTING] [#955](https://github.com/k8ssandra/k8ssandra-operator/issues/955) Update to kustomize v5.6.0 and fix the tests to correctly render the templates
