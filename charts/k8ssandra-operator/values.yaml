@@ -78,7 +78,7 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.6.4
+    tag: v0.7.0
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io
