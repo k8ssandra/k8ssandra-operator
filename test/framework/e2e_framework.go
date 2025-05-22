@@ -155,6 +155,23 @@ patches:
     - op: replace
       path: /spec/dnsNames/1
       value: cass-operator-webhook-service.{{ .Namespace }}.svc.cluster.local
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
 replacements:
 - source: 
     kind: Namespace
@@ -228,6 +245,23 @@ patches:
     - op: replace
       path: /spec/dnsNames/1
       value: cass-operator-webhook-service.{{ .Namespace }}.svc.cluster.local
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
 replacements:
 - source: 
     kind: Namespace
