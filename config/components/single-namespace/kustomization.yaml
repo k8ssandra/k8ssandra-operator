@@ -12,14 +12,19 @@ replacements:
         namespace: cass-operator
       fieldPaths:
       - metadata.namespace
-    - select:
-        name: cass-operator-manager-rolebinding
-        kind: ClusterRoleBinding
-      fieldPaths:
-      - subjects.0.namespace
+    # - select:
+    #     name: cass-operator-manager-rolebinding
+    #     kind: ClusterRoleBinding
+    #   fieldPaths:
+    #   - subjects.0.namespace
     - select:
         name: cass-operator-validating-webhook-configuration
         kind: ValidatingWebhookConfiguration
+      fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
+    - select:
+        name: cass-operator-validating-webhook-configuration
+        kind: MutatingWebhookConfiguration
       fieldPaths:
       - webhooks.0.clientConfig.service.namespace
     - select:
