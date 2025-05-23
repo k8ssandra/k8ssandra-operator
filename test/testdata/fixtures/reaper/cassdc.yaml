@@ -23,7 +23,7 @@ spec:
       authenticator: PasswordAuthenticator
       authorizer: CassandraAuthorizer
       role_manager: CassandraRoleManager
-    jvm-options:
+    jvm-server-options:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
