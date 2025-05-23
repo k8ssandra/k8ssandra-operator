@@ -49,7 +49,7 @@ spec:
       thrift_prepared_statements_cache_size_mb: 1
       truncate_request_timeout_in_ms: 60000
       write_request_timeout_in_ms: 60000
-    jvm-options:
+    jvm-server-options:
       garbage_collector: G1GC
       initial_heap_size: 402653184
       max_heap_size: 402653184
