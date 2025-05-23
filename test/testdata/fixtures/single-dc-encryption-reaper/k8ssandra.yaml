@@ -18,7 +18,7 @@ spec:
       enabled: false
     heapSize: 256Mi
   cassandra:
-    serverVersion: 5.0.4
+    serverVersion: 4.1.8
     datacenters:
       - metadata:
           name: dc1
