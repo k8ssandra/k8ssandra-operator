@@ -43,22 +43,7 @@ spec:
       cassandraYaml:
         auto_snapshot: false
         memtable_flush_writers: 1
-        commitlog_segment_size_in_mb: 2
         concurrent_compactors: 1
-        compaction_throughput_mb_per_sec: 0
-        sstable_preemptive_open_interval_in_mb: 0
-        key_cache_size_in_mb: 0
-        thrift_prepared_statements_cache_size_mb: 1
-        prepared_statements_cache_size_mb: 1
-        slow_query_log_timeout_in_ms: 0
-        cas_contention_timeout_in_ms: 10000
-        counter_write_request_timeout_in_ms: 10000
-        range_request_timeout_in_ms: 10000
-        read_request_timeout_in_ms: 10000
-        request_timeout_in_ms: 10000
-        truncate_request_timeout_in_ms: 60000
-        write_request_timeout_in_ms: 10000
-        counter_cache_size_in_mb: 0
         concurrent_reads: 2
         concurrent_writes: 2
         concurrent_counter_writes: 2

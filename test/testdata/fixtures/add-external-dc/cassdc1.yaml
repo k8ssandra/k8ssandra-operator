@@ -26,29 +26,14 @@ spec:
       authenticator: PasswordAuthenticator
       authorizer: CassandraAuthorizer
       auto_snapshot: false
-      cas_contention_timeout_in_ms: 60000
-      commitlog_segment_size_in_mb: 2
-      compaction_throughput_mb_per_sec: 0
       concurrent_compactors: 1
       concurrent_counter_writes: 2
       concurrent_reads: 2
       concurrent_writes: 2
-      counter_cache_size_in_mb: 0
-      counter_write_request_timeout_in_ms: 60000
-      key_cache_size_in_mb: 0
       memtable_flush_writers: 1
       num_tokens: 256
-      prepared_statements_cache_size_mb: 1
-      range_request_timeout_in_ms: 60000
-      read_request_timeout_in_ms: 60000
-      request_timeout_in_ms: 60000
       role_manager: CassandraRoleManager
-      slow_query_log_timeout_in_ms: 0
-      sstable_preemptive_open_interval_in_mb: 0
       start_rpc: false
-      thrift_prepared_statements_cache_size_mb: 1
-      truncate_request_timeout_in_ms: 60000
-      write_request_timeout_in_ms: 60000
     jvm-server-options:
       garbage_collector: G1GC
       initial_heap_size: 402653184
