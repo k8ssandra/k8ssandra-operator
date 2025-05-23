@@ -127,6 +127,8 @@ func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) err
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: {{ .Namespace }}
+
 resources:
 - {{ .ControlPlaneComponent }}
 
@@ -216,6 +218,8 @@ replacements:
 	dataPlaneTmpl := `
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
+namespace: {{ .Namespace }}
 
 resources:
 - {{ .DataPlaneComponent }}
