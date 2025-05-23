@@ -38,20 +38,3 @@ spec:
         datacenterName: real-dc2
   reaper:
     heapSize: 256Mi
-  stargate:
-    size: 1
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    livenessProbe:
-      initialDelaySeconds: 60
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20

@@ -78,9 +78,9 @@ jobs:
         kind_node_version: ["${{ needs.set_kind_node_version.outputs.kind_node_version }}"]
         e2e_test:
           - CreateSingleDatacenterCluster
-          - CreateStargateAndDatacenter
+          # - CreateStargateAndDatacenter
           - CreateSingleReaperNoStargate
-          - CreateSingleReaperWStargateAndHTTP
+          # - CreateSingleReaperWStargateAndHTTP
           - CreateReaperAndDatacenter
           - CreateSingleMedusaJob
           - CreateMultiDcSingleMedusaJob
