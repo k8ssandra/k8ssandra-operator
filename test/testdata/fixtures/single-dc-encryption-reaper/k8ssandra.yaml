@@ -18,8 +18,7 @@ spec:
       enabled: false
     heapSize: 256Mi
   cassandra:
-    serverVersion: 3.11.14
-    serverImage: "k8ssandra/cass-management-api:3.11.14"
+    serverVersion: 5.0.4
     datacenters:
       - metadata:
           name: dc1
