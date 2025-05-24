@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: 6.8.26
+    serverVersion: 6.8.57
     serverType: dse
     networking:
       hostNetwork: true

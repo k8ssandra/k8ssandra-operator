@@ -16,10 +16,8 @@ spec:
   config:
     cassandra-env-sh:
       additional-jvm-opts:
-        - >-
-          -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy
-        - >-
-          -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config
+        - -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy
+        - -Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config
         - '-Dcassandra.jmx.remote.login.config=CassandraLogin'
         - '-Dcom.sun.management.jmxremote.authenticate=true'
     cassandra-yaml:
