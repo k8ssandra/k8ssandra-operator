@@ -37,8 +37,7 @@ spec:
       runAsNonRoot: true
   cassandra:
     clusterName: "First Cluster"
-    serverVersion: 4.1.5
-    serverImage: "k8ssandra/cass-management-api:4.1.5"
+    serverVersion: 4.1.8
     readOnlyRootFilesystem: true
     datacenters:
       - metadata:

@@ -34,8 +34,7 @@ spec:
     heapSize: 256Mi
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: "4.0.13"
-    serverImage: "k8ssandra/cass-management-api:4.0.13"
+    serverVersion: "4.0.17"
     datacenters:
       - metadata:
           name: dc1
